@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String?
+  salt              String?
+  fullName          String?
+  isEmailVerified   Boolean   @default(false)
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?
+  riskTolerance     String?   @default("moderate")
+  investmentHorizon Int?      @default(5)
+  monthlyBudget     Float?    @default(0)
+  shariaMode        Boolean   @default(false)
+  onboardingCompleted Boolean @default(false)
+  interestedSectors   String?   @default("[]")
+  language          String    @default("ar")
+  theme             String    @default("dark")
+  subscriptionPlan  String    @default("free") // free, pro, annual
+  subscriptionEndsAt DateTime?
+  analysisUsageMonth String?   // e.g. "2026-03"
+  analysisUsageCount Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  sessions          Session[]
+  auditLogs         AuditLog[]
+  portfolios        Portfolio[]
+  goals             Goal[]
+  watchlists        Watchlist[]
+  analyses          Analysis[]
+}
+
+model Session {
+  id                 String   @id @default(uuid())
+  userId             String
+  refreshTokenHash   String   @unique
+  ipHash             String
+  userAgentHash      String
+  deviceFingerprint  String?
+  expiresAt          DateTime
+  createdAt          DateTime @default(now())
+  lastUsedAt         DateTime @default(now())
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  ipHash    String
+  userAgent String
+  result    String
+  metadata  String?  // JSON string
+  timestamp DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Portfolio {
+  id        String   @id @default(uuid())
+  userId    String
+  ticker    String
+  shares    Float
+  avgPrice  Float
+  buyDate   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Goal {
+  id           String   @id @default(uuid())
+  userId       String
+  name         String
+  targetAmount Float
+  targetDate   DateTime
+  type         String   // apartment, car, retirement, etc.
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Watchlist {
+  id        String   @id @default(uuid())
+  userId    String
+  ticker    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Analysis {
+  id        String   @id @default(uuid())
+  userId    String
+  ticker    String
+  content   String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

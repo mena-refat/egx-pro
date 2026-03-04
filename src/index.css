@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply transition-colors duration-300;
+  }
+  
+  .dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+  
+  body:not(.dark) {
+    @apply bg-slate-50 text-slate-900;
+  }
+}
+
+@layer components {
+  .card-base {
+    @apply rounded-3xl border transition-all duration-300;
+  }
+  
+  .dark .card-base {
+    @apply bg-slate-900 border-white/5;
+  }
+  
+  .card-base:not(.dark .card-base) {
+    @apply bg-white border-slate-200 shadow-sm;
+  }
+}
