@@ -82,10 +82,17 @@ async function startServer() {
       const token = authHeader.substring(7);
       try {
         const { verifyAccessToken } = await import('./src/lib/auth.ts');
-        const decoded = verifyAccessToken(token) as { sub: string, email: string };
-        Object.assign(req, { user: { id: decoded.sub, email: decoded.email } });
+        const decoded = verifyAccessToken(token) as { sub: string; email: string };
+        const { prisma } = await import('./server/lib/prisma.ts');
+        const user = await prisma.user.findUnique({
+          where: { id: decoded.sub },
+          select: { id: true, email: true, isDeleted: true },
+        });
+        if (user && !user.isDeleted) {
+          Object.assign(req, { user: { id: user.id, email: user.email ?? decoded.email } });
+        }
       } catch {
-        // Invalid token: do not attach user; protected routes will return 401
+        // Invalid token or deleted user: do not attach user; protected routes will return 401/403
       }
     }
     next();
@@ -160,6 +167,23 @@ async function startServer() {
     console.log(`🚀 EGX Pro Server running on http://localhost:${PORT}`);
     setupWebSocket(server);
   });
+
+  // Soft-delete cleanup job: permanently remove users after 30 days
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  setInterval(async () => {
+    try {
+      const { prisma } = await import('./server/lib/prisma.ts');
+      const now = new Date();
+      await prisma.user.deleteMany({
+        where: {
+          isDeleted: true,
+          deletionScheduledFor: { lt: now },
+        },
+      });
+    } catch (err) {
+      console.error('Soft delete cleanup error:', err);
+    }
+  }, ONE_DAY_MS);
 }
 
 startServer().catch(err => {

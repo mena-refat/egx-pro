@@ -2,7 +2,25 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useProfileCompletion } from '../hooks/useProfileCompletion';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, Copy, Lock, User, CreditCard, Gift, Award, Settings, Check, TrendingUp, Wallet, BarChart2, Target } from 'lucide-react';
+import {
+  ChevronLeft,
+  Copy,
+  Lock,
+  User,
+  CreditCard,
+  Gift,
+  Award,
+  Settings,
+  Check,
+  TrendingUp,
+  Wallet,
+  BarChart2,
+  Target,
+  Shield,
+  RotateCcw,
+  Zap,
+} from 'lucide-react';
+import api from '../lib/api';
 
 // --- Sub-components ---
 
@@ -35,17 +53,22 @@ const Counter = ({ value }: { value: number }) => {
 
 interface Achievement {
   id: string;
+  level: 'beginner' | 'growth' | 'pro' | 'legend' | string;
   title: string;
   icon: string;
+  description: string;
+  conditionDescription: string;
   completed: boolean;
   date?: string | null;
   progress?: number;
+  target?: number;
 }
 
 function AchievementsSection({ accessToken }: { accessToken: string | null }) {
   const [items, setItems] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Achievement | null>(null);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -63,14 +86,15 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
         const normalized: Achievement[] = Array.isArray(data)
           ? data.map((a) => ({
               id: a.id,
+              level: a.level,
               title: a.title,
               icon: a.icon,
+              description: a.description,
+              conditionDescription: a.conditionDescription,
               completed: Boolean(a.completed),
               date: a.date ? String(a.date) : null,
-              progress:
-                typeof a.progress === 'number'
-                  ? Math.max(0, Math.min(100, a.progress))
-                  : undefined,
+              progress: typeof a.progress === 'number' ? a.progress : undefined,
+              target: typeof a.target === 'number' ? a.target : undefined,
             }))
           : [];
         setItems(normalized);
@@ -116,49 +140,476 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
     );
   }
 
+  const getProgressPercent = (badge: Achievement) => {
+    if (badge.completed) return 100;
+    if (typeof badge.progress === 'number' && typeof badge.target === 'number' && badge.target > 0) {
+      return Math.max(0, Math.min(100, Math.round((badge.progress / badge.target) * 100)));
+    }
+    return 0;
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-4">
-      {items.map((badge) => {
-        const completed = badge.completed;
-        const progress =
-          typeof badge.progress === 'number' ? badge.progress : completed ? 100 : 0;
-        return (
-          <motion.div
-            key={badge.id}
-            whileHover={{ scale: 1.05 }}
-            className={`p-4 rounded-2xl border border-[#1f2937] bg-[#111827] text-center shadow-md ${
-              completed
-                ? 'border-[#7c3aed] shadow-[0_0_15px_rgba(124,58,237,0.3)]'
-                : 'opacity-60 grayscale blur-[0.5px]'
-            }`}
-          >
-            <div className="text-4xl mb-2">{badge.icon}</div>
-            <p className="text-sm font-bold">{badge.title}</p>
-            {completed && badge.date ? (
-              <p className="text-xs text-[#9ca3af] mt-1">
-                {new Date(badge.date).toLocaleDateString('ar-EG')}
-              </p>
-            ) : !completed ? (
-              <div className="mt-2">
-                <p className="text-xs text-[#9ca3af] mb-1">
-                  {progress} من 100 - باقي {100 - progress}
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {items.map((badge) => {
+          const completed = badge.completed;
+          const percent = getProgressPercent(badge);
+          return (
+            <motion.button
+              type="button"
+              key={badge.id}
+              whileHover={{ scale: 1.03 }}
+              onClick={() => setSelected(badge)}
+              className={`p-4 rounded-2xl border text-center shadow-md transition-all ${
+                completed
+                  ? 'border-[#7c3aed] bg-gradient-to-br from-[#111827] to-[#1f2937] shadow-[0_0_15px_rgba(124,58,237,0.3)]'
+                  : 'border-[#111827] bg-[#020617] opacity-70'
+              }`}
+            >
+              <div className="text-3xl mb-2">{badge.icon}</div>
+              <p className="text-sm font-bold mb-1">{badge.title}</p>
+              {completed && badge.date ? (
+                <p className="text-xs text-[#9ca3af]">
+                  تم في {new Date(badge.date).toLocaleDateString('ar-EG')}
                 </p>
-                <div className="w-full h-1 bg-[#1f2937] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#9ca3af]"
-                    style={{ width: `${progress}%` }}
-                  />
+              ) : badge.target && (
+                <div className="mt-2">
+                  <p className="text-[11px] text-[#9ca3af] mb-1">
+                    {badge.progress ?? 0} من {badge.target}
+                  </p>
+                  <div className="w-full h-1.5 bg-[#111827] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#7c3aed]"
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
                 </div>
-                <Lock size={16} className="mx-auto mt-2 text-[#9ca3af]" />
+              )}
+              {!completed && !badge.target && (
+                <Lock size={14} className="mx-auto mt-2 text-[#6b7280]" />
+              )}
+            </motion.button>
+          );
+        })}
+      </div>
+
+      <AnimatePresence>
+        {selected && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="w-full max-w-md rounded-3xl bg-[#020617] border border-[#1f2937] p-6 text-right"
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl">{selected.icon}</div>
+                  <div>
+                    <h3 className="font-bold text-lg">{selected.title}</h3>
+                    <p className="text-xs text-[#9ca3af]">
+                      مستوى: {selected.level === 'beginner' ? 'البداية' : selected.level === 'growth' ? 'النمو' : selected.level === 'pro' ? 'الاحتراف' : 'الأسطورة'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  className="text-[#9ca3af] hover:text-white"
+                >
+                  <ChevronLeft size={18} />
+                </button>
               </div>
-            ) : null}
+
+              <p className="text-sm text-[#e5e7eb] mb-3">{selected.description}</p>
+              <p className="text-xs text-[#9ca3af] mb-4">
+                عشان تحقق الإنجاز ده: {selected.conditionDescription}
+              </p>
+
+              {selected.target && (
+                <div className="mb-4">
+                  <div className="flex justify-between text-[11px] text-[#9ca3af] mb-1">
+                    <span>التقدم</span>
+                    <span>
+                      {selected.progress ?? 0} / {selected.target}
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-[#111827] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#7c3aed]"
+                      style={{ width: `${getProgressPercent(selected)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {selected.completed && selected.date && (
+                <p className="text-xs text-emerald-400">
+                  تم تحقيق الإنجاز في{' '}
+                  {new Date(selected.date).toLocaleDateString('ar-EG', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </p>
+              )}
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  className="px-4 py-2 rounded-xl text-sm bg-[#111827] border border-[#1f2937] hover:bg-[#1f2937]"
+                >
+                  فهمت
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
-        );
-      })}
-    </div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
+function SecuritySection({ accessToken }: { accessToken: string | null }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [lastPasswordChangeAt, setLastPasswordChangeAt] = useState<string | null>(null);
+  const [createdAt, setCreatedAt] = useState<string | null>(null);
+  const [lastLoginAt, setLastLoginAt] = useState<string | null>(null);
+  const [lastLoginIp, setLastLoginIp] = useState<string | null>(null);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+
+  const [twoFaSecret, setTwoFaSecret] = useState<string | null>(null);
+  const [twoFaQr, setTwoFaQr] = useState<string | null>(null);
+  const [twoFaToken, setTwoFaToken] = useState('');
+  const [twoFaLoading, setTwoFaLoading] = useState(false);
+  const [twoFaMessage, setTwoFaMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSecurity = async () => {
+      if (!accessToken) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch('/api/user/security', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || 'Failed to load security info');
+        }
+        setTwoFactorEnabled(Boolean(data.twoFactorEnabled));
+        setLastPasswordChangeAt(data.lastPasswordChangeAt ?? null);
+        setCreatedAt(data.createdAt ?? null);
+        setLastLoginAt(data.lastLoginAt ?? null);
+        setLastLoginIp(data.lastLoginIp ?? null);
+      } catch (err) {
+        console.error('Security info load error', err);
+        setError('فشل تحميل معلومات الأمان');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSecurity();
+  }, [accessToken]);
+
+  const handleChangePassword = async () => {
+    if (!accessToken) return;
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordMessage('من فضلك املأ كل الحقول');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage('كلمتا المرور الجديدتان غير متطابقتين');
+      return;
+    }
+    setChangingPassword(true);
+    setPasswordMessage(null);
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'فشل تغيير كلمة المرور');
+      }
+      setPasswordMessage('تم تغيير كلمة المرور بنجاح');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      console.error('Change password error', err);
+      setPasswordMessage('فشل تغيير كلمة المرور. تأكد من صحة الكلمة الحالية.');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleTwoFaSetup = async () => {
+    if (!accessToken) return;
+    setTwoFaLoading(true);
+    setTwoFaMessage(null);
+    try {
+      const res = await fetch('/api/user/2fa/setup', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'فشل تهيئة 2FA');
+      }
+      setTwoFaSecret(data.secret);
+      setTwoFaQr(data.qrCode);
+    } catch (err) {
+      console.error('2FA setup error', err);
+      setTwoFaMessage('فشل تهيئة المصادقة الثنائية');
+    } finally {
+      setTwoFaLoading(false);
+    }
+  };
+
+  const handleTwoFaVerify = async () => {
+    if (!accessToken || !twoFaSecret || !twoFaToken) return;
+    setTwoFaLoading(true);
+    setTwoFaMessage(null);
+    try {
+      const res = await fetch('/api/user/2fa/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ token: twoFaToken, secret: twoFaSecret }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'فشل تفعيل 2FA');
+      }
+      setTwoFactorEnabled(true);
+      setTwoFaMessage('تم تفعيل المصادقة الثنائية بنجاح');
+      setTwoFaToken('');
+    } catch (err) {
+      console.error('2FA verify error', err);
+      setTwoFaMessage('الكود غير صحيح، حاول مرة أخرى');
+    } finally {
+      setTwoFaLoading(false);
+    }
+  };
+
+  const handleTwoFaDisable = async () => {
+    if (!accessToken) return;
+    const confirmDisable = window.confirm(
+      'هل أنت متأكد من إيقاف المصادقة الثنائية؟ يفضل تركها مفعّلة لحماية حسابك.',
+    );
+    if (!confirmDisable) return;
+    setTwoFaLoading(true);
+    setTwoFaMessage(null);
+    try {
+      const res = await fetch('/api/user/2fa/disable', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'فشل إيقاف 2FA');
+      }
+      setTwoFactorEnabled(false);
+      setTwoFaSecret(null);
+      setTwoFaQr(null);
+      setTwoFaMessage('تم إيقاف المصادقة الثنائية بنجاح');
+    } catch (err) {
+      console.error('2FA disable error', err);
+      setTwoFaMessage('تعذر إيقاف المصادقة الثنائية الآن');
+    } finally {
+      setTwoFaLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md space-y-6">
+      <h3 className="font-bold text-[#9ca3af] mb-2 uppercase text-xs">
+        الأمان والخصوصية
+      </h3>
+      {loading ? (
+        <p className="text-xs text-[#9ca3af]">جاري تحميل معلومات الأمان...</p>
+      ) : error ? (
+        <p className="text-xs text-red-400">{error}</p>
+      ) : (
+        <>
+          {/* Password change */}
+          <div className="space-y-3 border-b border-[#1f2937] pb-4">
+            <p className="text-sm font-semibold text-[#e5e7eb] mb-1">
+              تغيير كلمة المرور
+            </p>
+            <div className="grid md:grid-cols-3 gap-3">
+              <input
+                type="password"
+                placeholder="كلمة المرور الحالية"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+              />
+              <input
+                type="password"
+                placeholder="كلمة المرور الجديدة"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+              />
+              <input
+                type="password"
+                placeholder="تأكيد كلمة المرور الجديدة"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleChangePassword}
+              disabled={changingPassword}
+              className="mt-1 px-4 py-2 rounded-xl text-xs font-bold bg-[#7c3aed] hover:bg-[#6d28d9] text-white disabled:opacity-60"
+            >
+              {changingPassword ? 'جارٍ التغيير...' : 'تحديث كلمة المرور'}
+            </button>
+            {passwordMessage && (
+              <p className="text-[11px] text-[#e5e7eb] mt-1">{passwordMessage}</p>
+            )}
+            {lastPasswordChangeAt && (
+              <p className="text-[11px] text-[#9ca3af] mt-1">
+                آخر تغيير لكلمة المرور:{' '}
+                {new Date(lastPasswordChangeAt).toLocaleDateString('ar-EG')}
+              </p>
+            )}
+          </div>
+
+          {/* 2FA */}
+          <div className="space-y-3 border-b border-[#1f2937] pb-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-[#e5e7eb]">
+                المصادقة الثنائية (2FA)
+              </p>
+              <span className="text-[11px] text-[#9ca3af]">
+                {twoFactorEnabled ? 'مفعّلة' : 'غير مفعّلة'}
+              </span>
+            </div>
+
+            {!twoFactorEnabled ? (
+              <div className="space-y-3">
+                <p className="text-[11px] text-[#9ca3af]">
+                  ننصحك بتفعيل 2FA لزيادة حماية حسابك. ستحتاج لتطبيق مثل Google
+                  Authenticator أو Authy.
+                </p>
+                {!twoFaSecret ? (
+                  <button
+                    type="button"
+                    onClick={handleTwoFaSetup}
+                    disabled={twoFaLoading}
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-[#7c3aed] hover:bg-[#6d28d9] text-white disabled:opacity-60"
+                  >
+                    {twoFaLoading ? 'جارٍ التهيئة...' : 'بدء تفعيل 2FA'}
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    {twoFaQr && (
+                      <div className="inline-block bg-white p-2 rounded-xl">
+                        <img
+                          src={twoFaQr}
+                          alt="2FA QR"
+                          className="w-32 h-32 object-contain"
+                        />
+                      </div>
+                    )}
+                    <p className="text-[11px] text-[#9ca3af]">
+                      امسح الكود باستخدام تطبيق المصادقة ثم أدخل الكود المكون من 6 أرقام.
+                    </p>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={twoFaToken}
+                      onChange={(e) =>
+                        setTwoFaToken(e.target.value.replace(/\D/g, ''))
+                      }
+                      className="bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-sm tracking-[0.5em] text-center focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+                      placeholder="000000"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTwoFaVerify}
+                      disabled={twoFaLoading || twoFaToken.length !== 6}
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-[#10b981] hover:bg-[#059669] text-white disabled:opacity-60"
+                    >
+                      {twoFaLoading ? 'جارٍ التفعيل...' : 'تأكيد التفعيل'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-[11px] text-[#9ca3af]">
+                  المصادقة الثنائية مفعّلة لحسابك. سيُطلب منك كود من تطبيق المصادقة عند تسجيل
+                  الدخول.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleTwoFaDisable}
+                  disabled={twoFaLoading}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/40 hover:bg-[#ef4444]/20 disabled:opacity-60"
+                >
+                  {twoFaLoading ? 'جارٍ الإيقاف...' : 'إيقاف المصادقة الثنائية'}
+                </button>
+              </div>
+            )}
+
+            {twoFaMessage && (
+              <p className="text-[11px] text-[#e5e7eb] mt-1">{twoFaMessage}</p>
+            )}
+          </div>
+
+          {/* Login info */}
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-[#e5e7eb] mb-1">
+              نشاط الحساب
+            </p>
+            <p className="text-[11px] text-[#9ca3af]">
+              إنشاء الحساب:{' '}
+              {createdAt
+                ? new Date(createdAt).toLocaleDateString('ar-EG')
+                : 'غير متوفر'}
+            </p>
+            <p className="text-[11px] text-[#9ca3af]">
+              آخر تسجيل دخول:{' '}
+              {lastLoginAt
+                ? new Date(lastLoginAt).toLocaleString('ar-EG')
+                : 'غير متوفر'}
+            </p>
+            <p className="text-[11px] text-[#9ca3af]">
+              آخر عنوان IP معروف:{' '}
+              {lastLoginIp || 'غير متوفر'}
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 type Plan = 'free' | 'pro' | 'annual';
 
 interface PlanInfo {
@@ -176,20 +627,30 @@ function SubscriptionSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [upgrading, setUpgrading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>('pro');
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountMessage, setDiscountMessage] = useState<string | null>(null);
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  const [discountedPrices, setDiscountedPrices] = useState<{
+    pro?: number;
+    annual?: number;
+  }>({});
+  const [validatingCode, setValidatingCode] = useState(false);
+
+  const isRTL = typeof document !== 'undefined' ? document.documentElement.dir === 'rtl' : true;
+  // نستخدم أرقام إنجلش في كل الأحوال
+  const locale = 'en-US';
 
   useEffect(() => {
     const fetchPlan = async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('/api/billing/plan');
-        if (!res.ok) {
-          throw new Error('Failed to load plan');
-        }
-        const data = await res.json();
-        setInfo(data);
+        const res = await api.get('/billing/plan');
+        setInfo(res.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load plan');
+        console.error('Billing /plan load error', err);
+        setError('تعذر تحميل خطة الاشتراك حالياً. حاول مرة أخرى بعد قليل.');
       } finally {
         setLoading(false);
       }
@@ -197,19 +658,21 @@ function SubscriptionSection() {
     fetchPlan();
   }, []);
 
+  const basePrices: Record<Plan, number> = {
+    free: 0,
+    pro: 149,
+    annual: 1399,
+  };
+
   const handleUpgrade = async (plan: Plan) => {
     setUpgrading(true);
     setError(null);
     try {
-      const res = await fetch('/api/billing/upgrade', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+      const res = await api.post('/billing/upgrade', {
+        plan,
+        discountCode: discountCode || undefined,
       });
-      if (!res.ok) {
-        throw new Error('Failed to upgrade plan');
-      }
-      const updated = await res.json();
+      const updated = res.data;
       setInfo((prev) =>
         prev
           ? {
@@ -219,10 +682,50 @@ function SubscriptionSection() {
             }
           : prev,
       );
+      setDiscountMessage('تم ترقية الاشتراك بنجاح.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upgrade plan');
+      console.error('Billing /upgrade error', err);
+      setError('تعذر تنفيذ الترقية الآن. حاول مرة أخرى لاحقاً.');
     } finally {
       setUpgrading(false);
+    }
+  };
+
+  const handleValidateDiscount = async () => {
+    if (!selectedPlan || selectedPlan === 'free' || !discountCode.trim()) {
+      setDiscountError('من فضلك اختر خطة مدفوعة واكتب كود الخصم');
+      setDiscountMessage(null);
+      return;
+    }
+    setValidatingCode(true);
+    setDiscountError(null);
+    setDiscountMessage(null);
+    try {
+      const res = await api.post('/billing/discount/validate', {
+        code: discountCode.trim(),
+        plan: selectedPlan,
+      });
+      const data = res.data;
+      if (!data.valid) {
+        throw new Error(data?.error || 'الكود غير صحيح أو منتهي');
+      }
+      const basePrice = data.basePrice as number;
+      const finalPrice = data.finalPrice as number;
+      const discountAmount = data.discountAmount as number;
+      setDiscountedPrices((prev) => ({
+        ...prev,
+        [selectedPlan]: finalPrice,
+      }));
+      const percent = Math.round((discountAmount / basePrice) * 100);
+      setDiscountMessage(
+        `تم تطبيق خصم ${percent}% — وفرت ${discountAmount.toLocaleString(locale)} جنيه`,
+      );
+    } catch (err) {
+      console.error('Discount validate error', err);
+      setDiscountError('الكود غير صحيح أو منتهي');
+      setDiscountedPrices({});
+    } finally {
+      setValidatingCode(false);
     }
   };
 
@@ -248,24 +751,36 @@ function SubscriptionSection() {
   const isFree = plan === 'free';
   const quota = Number.isFinite(analysis.quota) ? analysis.quota : null;
 
+  const proPrice = discountedPrices.pro ?? basePrices.pro;
+  const annualPrice = discountedPrices.annual ?? basePrices.annual;
+
+  const monthlyCostAnnualEquivalent = Math.round(annualPrice / 12);
+  const savingAgainstMonthly = basePrices.pro * 12 - annualPrice;
+  const savingPercent =
+    basePrices.pro * 12 > 0
+      ? Math.round((savingAgainstMonthly / (basePrices.pro * 12)) * 100)
+      : 0;
+
   return (
-    <div className="space-y-4">
-      <div className="p-6 rounded-2xl border border-[#7c3aed] bg-gradient-to-br from-[#111827] to-[#1f2937] shadow-md">
+    <div className="space-y-6">
+      <div className="p-6 rounded-2xl border border-[#1f2937] bg-gradient-to-br from-[#020617] to-[#111827] shadow-md">
         <h3 className="font-bold mb-2 text-lg">
           الخطة الحالية:{' '}
           <span className="text-[#fbbf24]">
-            {plan === 'free' ? 'مجاني' : plan === 'pro' ? 'Pro شهري' : 'Pro سنوي'}
+            {plan === 'free' ? 'مجانية' : plan === 'pro' ? 'Pro شهرية' : 'Pro سنوية'}
           </span>
         </h3>
         {subscriptionEndsAt && !isFree && (
           <p className="text-xs text-[#9ca3af] mb-2">
-            ينتهي في:{' '}
+            يتجدد في{' '}
             {new Date(subscriptionEndsAt).toLocaleDateString('ar-EG')}
           </p>
         )}
         <div className="mt-4">
           <p className="text-sm text-[#9ca3af] mb-2">
-            استخدام تحليلات الذكاء الاصطناعي هذا الشهر:
+            {quota && isFree
+              ? `أنت استخدمت ${analysis.used} من أصل ${quota} تحليلات هذا الشهر.`
+              : 'استخدام تحليلات الذكاء الاصطناعي هذا الشهر:'}
           </p>
           <div className="w-full h-2 bg-[#1f2937] rounded-full overflow-hidden mb-2">
             <div
@@ -277,11 +792,11 @@ function SubscriptionSection() {
               }}
             />
           </div>
-          <p className="text-xs text-[#9ca3af]">
-            {quota
-              ? `${analysis.used} من ${quota} تحليلات شهرياً`
-              : `${analysis.used} تحليل هذا الشهر (غير محدود)`}
-          </p>
+          {!quota && (
+            <p className="text-xs text-[#9ca3af]">
+              {`${analysis.used} تحليل هذا الشهر (غير محدود)`}
+            </p>
+          )}
         </div>
         {error && (
           <p className="mt-3 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-2">
@@ -290,35 +805,231 @@ function SubscriptionSection() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button
-          disabled={!isFree || upgrading}
-          onClick={() => handleUpgrade('pro')}
-          className={`p-4 rounded-2xl border ${
-            isFree
-              ? 'border-[#7c3aed] bg-[#111827] hover:bg-[#1f2937]'
-              : 'border-[#1f2937] bg-[#111827]/60 opacity-60 cursor-not-allowed'
-          } text-sm text-left space-y-1 transition-colors`}
-        >
-          <p className="font-bold text-white">Pro شهري — 149 جنيه</p>
-          <p className="text-[#9ca3af] text-xs">
-            تحليلات غير محدودة + كل المميزات
-          </p>
-        </button>
-        <button
-          disabled={!isFree || upgrading}
-          onClick={() => handleUpgrade('annual')}
-          className={`p-4 rounded-2xl border ${
-            isFree
-              ? 'border-[#f59e0b] bg-gradient-to-r from-[#7c3aed] to-[#f59e0b]'
-              : 'border-[#1f2937] bg-[#111827]/60 opacity-60 cursor-not-allowed'
-          } text-sm text-left space-y-1 text-white transition-colors`}
-        >
-          <p className="font-bold">الخطة السنوية — 999 جنيه</p>
-          <p className="text-xs">
-            توفير كبير مقابل الشهري + كل مميزات Pro
-          </p>
-        </button>
+      {/* Plans: دائماً بالترتيب Free → Pro → Annual */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
+        {(['free', 'pro', 'annual'] as Plan[]).map((p) => {
+          if (p === 'free') {
+            return (
+              <div
+                key="free"
+                className="p-5 rounded-2xl border border-[#1f2937] bg-[#020617] text-right space-y-3 opacity-90"
+              >
+                <h4 className="font-bold text-sm text-[#e5e7eb]">ابدأ مجاناً</h4>
+                <p className="text-2xl font-extrabold text-white">
+                  0 <span className="text-xs text-[#9ca3af]">جنيه</span>
+                </p>
+                <ul className="space-y-1 mt-1 text-[11px] text-[#9ca3af]">
+                  {[
+                    '3 تحليلات ذكاء اصطناعي شهرياً',
+                    'أسعار حية للأسهم',
+                    'محفظة أساسية',
+                    'قائمة مراقبة (5 أسهم)',
+                  ].map((feature) => (
+                    <li key={feature} className="flex items-center gap-2">
+                      <Check className="w-3 h-3 text-[#6b7280]" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  disabled
+                  className="mt-3 w-full text-xs font-bold rounded-xl py-2 border border-[#374151] text-[#9ca3af] cursor-default bg-[#020617]"
+                >
+                  {plan === 'free' ? 'خطتك الحالية' : 'الخطة المجانية'}
+                </button>
+              </div>
+            );
+          }
+
+          if (p === 'pro') {
+            const isCurrent = plan === 'pro';
+            return (
+              <button
+                type="button"
+                key="pro"
+                onClick={() => setSelectedPlan('pro')}
+                className={`relative p-6 rounded-2xl border text-right space-y-3 transition-all transform lg:scale-105 ${
+                  selectedPlan === 'pro'
+                    ? 'border-[#7c3aed] bg-gradient-to-br from-[#020617] to-[#111827] shadow-xl shadow-[#7c3aed]/40'
+                    : 'border-[#1f2937] bg-[#020617] hover:border-[#4b5563]'
+                }`}
+              >
+                <span className="absolute -top-3 left-3 text-[10px] px-2 py-0.5 rounded-full bg-[#7c3aed] text-white font-bold shadow">
+                  الأكثر شعبية
+                </span>
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="font-bold text-sm text-[#e5e7eb]">EGX Pro</h4>
+                  {isCurrent && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                      الخطة الحالية
+                    </span>
+                  )}
+                </div>
+                <p className="text-2xl font-extrabold text-white">
+                  {proPrice.toLocaleString(locale)}{' '}
+                  <span className="text-xs text-[#9ca3af]">جنيه / شهر</span>
+                </p>
+                <p className="text-[11px] text-[#9ca3af]">
+                  أو وفّر {savingPercent.toLocaleString(locale)}% مع الخطة السنوية
+                </p>
+                <ul className="space-y-1 mt-1 text-[11px] text-[#e5e7eb]">
+                  {[
+                    'تحليلات ذكاء اصطناعي غير محدودة',
+                    'تقارير مفصلة بالعربي (شراء / بيع / انتظار)',
+                    'كل مميزات التطبيق',
+                    'قائمة مراقبة غير محدودة',
+                    'تنبيهات فورية للأسهم',
+                    'أولوية في الدعم',
+                  ].map((feature) => (
+                    <li key={feature} className="flex items-center gap-2">
+                      <Check className="w-3 h-3 text-[#a855f7]" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  disabled={isCurrent || plan === 'annual' || upgrading}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUpgrade('pro');
+                  }}
+                  className={`mt-3 w-full text-xs font-bold rounded-xl py-2 ${
+                    isCurrent || plan === 'annual'
+                      ? 'bg-[#111827] text-[#9ca3af] border border-[#374151] cursor-not-allowed'
+                      : 'bg-[#7c3aed] hover:bg-[#6d28d9] text-white shadow shadow-[#7c3aed]/40'
+                  } disabled:opacity-60`}
+                >
+                  {isCurrent
+                    ? 'مشترك بالفعل في Pro'
+                    : plan === 'annual'
+                    ? 'مغطى بالخطة السنوية'
+                    : upgrading
+                    ? 'جارٍ الترقية...'
+                    : 'اشترك في Pro'}
+                </button>
+              </button>
+            );
+          }
+
+          // annual
+          const isCurrentAnnual = plan === 'annual';
+          return (
+            <button
+              type="button"
+              key="annual"
+              onClick={() => setSelectedPlan('annual')}
+              className={`relative p-5 rounded-2xl border text-right space-y-3 transition-all ${
+                selectedPlan === 'annual'
+                  ? 'border-amber-400 bg-gradient-to-br from-[#111827] via-[#020617] to-[#1f2937] shadow-xl shadow-amber-400/30'
+                  : 'border-[#4b5563] bg-gradient-to-br from-[#111827] to-[#020617]'
+              }`}
+            >
+              <span className="absolute -top-3 left-3 text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-black font-bold shadow">
+                الأوفر
+              </span>
+              <div className="flex items-center justify-between mb-1">
+                <h4 className="font-bold text-sm text-white">EGX Pro سنوي</h4>
+                {isCurrentAnnual && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    الخطة الحالية
+                  </span>
+                )}
+              </div>
+              <p className="text-2xl font-extrabold text-white">
+                {annualPrice.toLocaleString(locale)}{' '}
+                <span className="text-xs text-[#e5e7eb]">جنيه / سنة</span>
+              </p>
+              <p className="text-[11px] text-[#e5e7eb]">
+                يعادل {monthlyCostAnnualEquivalent.toLocaleString(locale)} جنيه / شهر فقط
+              </p>
+              <p className="text-[11px] text-emerald-400">
+                وفّر {savingAgainstMonthly.toLocaleString(locale)} جنيه مقارنة بالشهري
+              </p>
+              <ul className="space-y-1 mt-1 text-[11px] text-[#e5e7eb]">
+                {[
+                  'تحليلات ذكاء اصطناعي غير محدودة',
+                  'تقارير مفصلة بالعربي (شراء / بيع / انتظار)',
+                  'كل مميزات التطبيق',
+                  'قائمة مراقبة غير محدودة',
+                  'تنبيهات فورية للأسهم',
+                  'أولوية في الدعم',
+                  'أفضل قيمة على المدى الطويل',
+                ].map((feature) => (
+                  <li key={feature} className="flex items-center gap-2">
+                    <Check className="w-3 h-3 text-[#facc15]" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                disabled={isCurrentAnnual || upgrading}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleUpgrade('annual');
+                }}
+                className={`mt-3 w-full text-xs font-bold rounded-xl py-2 ${
+                  isCurrentAnnual
+                    ? 'bg-[#111827] text-[#e5e7eb] border border-amber-400/50 cursor-not-allowed'
+                    : 'bg-amber-400 hover:bg-amber-300 text-black shadow shadow-amber-400/50'
+                } disabled:opacity-60`}
+              >
+                {isCurrentAnnual
+                  ? 'مشترك بالفعل في السنوي'
+                  : upgrading
+                  ? 'جارٍ الترقية...'
+                  : 'اشترك في السنوي'}
+              </button>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Trust row */}
+      <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-[11px] text-[#9ca3af] mt-1">
+        <div className="flex items-center gap-2">
+          <Shield className="w-3 h-3 text-[#6b7280]" />
+          <span>دفع آمن ومشفر</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <RotateCcw className="w-3 h-3 text-[#6b7280]" />
+          <span>إلغاء في أي وقت</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Zap className="w-3 h-3 text-[#6b7280]" />
+          <span>تفعيل فوري</span>
+        </div>
+      </div>
+
+      {/* Discount code */}
+      <div className="mt-4 p-4 rounded-2xl border border-dashed border-[#374151] bg-[#020617] space-y-3">
+        <p className="text-sm font-medium text-[#e5e7eb]">
+          عندك كود خصم؟ ادخله وشوف كم هتوفر
+        </p>
+        <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+          <input
+            type="text"
+            value={discountCode}
+            onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+            placeholder="مثال: EGX-SAVE20"
+            className="flex-1 bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7c3aed] tracking-[0.15em] text-center md:text-right"
+          />
+          <button
+            type="button"
+            onClick={handleValidateDiscount}
+            disabled={validatingCode}
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-[#7c3aed] hover:bg-[#6d28d9] text-white disabled:opacity-60"
+          >
+            {validatingCode ? 'جاري التحقق...' : 'تطبيق الكود'}
+          </button>
+        </div>
+        {discountMessage && (
+          <p className="text-[11px] text-emerald-400">{discountMessage}</p>
+        )}
+        {discountError && (
+          <p className="text-[11px] text-red-400">{discountError}</p>
+        )}
       </div>
     </div>
   );
@@ -335,6 +1046,7 @@ interface UserProfile {
   investmentHorizon: number;
   monthlyBudget: number;
   shariaMode: boolean;
+  islamicMode?: boolean;
   onboardingCompleted: boolean;
   interestedSectors: string[];
   twoFactorEnabled: boolean;
@@ -342,6 +1054,10 @@ interface UserProfile {
   theme: string;
   subscriptionPlan?: 'free' | 'pro' | 'annual';
   subscriptionEndsAt?: string | null;
+  avatarUrl?: string | null;
+  notifySignals?: boolean;
+  notifyPortfolio?: boolean;
+  notifyNews?: boolean;
 }
 
 interface ProfileStats {
@@ -353,7 +1069,7 @@ interface ProfileStats {
 }
 
 export default function ProfilePage() {
-  const { user: authUser, accessToken, updateUser } = useAuthStore();
+  const { user: authUser, accessToken, updateUser, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState('overview');
   const [user, setUser] = useState<UserProfile | null>(authUser as UserProfile | null);
   const [loading, setLoading] = useState(!authUser);
@@ -547,7 +1263,7 @@ export default function ProfilePage() {
     { id: 'overview', label: 'نظرة عامة', icon: User },
     { id: 'subscription', label: 'الاشتراك', icon: CreditCard },
     { id: 'referral', label: 'الدعوات', icon: Gift },
-    { id: 'achievements', label: 'الإنجازات', icon: Award, notification: true },
+  { id: 'achievements', label: 'الإنجازات', icon: Award, notification: true },
     { id: 'settings', label: 'الإعدادات', icon: Settings },
   ];
 
@@ -596,11 +1312,7 @@ export default function ProfilePage() {
               {/* Profile Header */}
               <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md hover:scale-[1.01] transition-transform">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#ec4899] p-1">
-                    <div className="w-full h-full rounded-full bg-[#111827] flex items-center justify-center text-2xl font-bold">
-                      {user.fullName?.[0] || user.username?.[0] || 'U'}
-                    </div>
-                  </div>
+                  <AvatarWithUpload user={user} onUserUpdate={updateUser} />
                   <div>
                     <h2 className="text-xl font-bold">{user.fullName || '—'}</h2>
                     {user.username ? (
@@ -659,28 +1371,7 @@ export default function ProfilePage() {
           )}
 
           {activeTab === 'referral' && (
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] shadow-md text-white relative overflow-hidden">
-              <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-              <h3 className="font-bold text-lg mb-2">🎁 ادعُ أصدقاءك واكسب شهر مجاني!</h3>
-              <p className="text-sm mb-4 opacity-90">شارك كودك مع أصدقاءك، لما 5 منهم يسجلوا بكودك هتاخد شهر Pro مجاناً 🎉</p>
-              <div className="flex items-center justify-between bg-white/20 p-3 rounded-xl mb-4 border border-dashed border-white/30">
-                <span className="font-mono font-bold">EGX-AHMED47</span>
-                <button onClick={handleCopy} className="flex items-center gap-1 text-xs font-bold bg-white text-[#7c3aed] px-2 py-1 rounded-lg">
-                  {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'تم النسخ' : 'نسخ'}
-                </button>
-              </div>
-              <p className="text-sm mb-2 font-bold">باقيلك شخصين بس! 🎯</p>
-              <div className="flex gap-2 mb-4">
-                {[1, 1, 1, 0, 0].map((filled, i) => (
-                  <div key={i} className={`w-8 h-8 rounded-full flex items-center justify-center ${filled ? 'bg-white text-[#7c3aed]' : 'border-2 border-white/50'}`}>
-                    {filled ? <Check size={16} /> : <User size={16} />}
-                  </div>
-                ))}
-              </div>
-              <button className="w-full bg-white text-[#7c3aed] py-3 rounded-xl font-bold hover:bg-slate-100 transition-all">
-                شارك الكود 📤
-              </button>
-            </div>
+            <ReferralSection copied={copied} onCopy={handleCopy} />
           )}
 
           {activeTab === 'achievements' && (
@@ -701,6 +1392,10 @@ export default function ProfilePage() {
                 </div>
               )}
 
+              {/* Security & privacy */}
+              <SecuritySection accessToken={accessToken} />
+
+              {/* Account info */}
               <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
                 <h3 className="font-bold text-[#9ca3af] mb-4 uppercase text-xs">
                   الحساب
@@ -804,6 +1499,47 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* Delete account */}
+              <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
+                <h3 className="font-bold text-[#fca5a5] mb-3 uppercase text-xs">
+                  حذف الحساب
+                </h3>
+                <p className="text-[11px] text-[#fca5a5] mb-3">
+                  سيتم جدولة حذف حسابك وجميع بياناتك بعد 30 يوم من طلب الحذف. يمكنك إلغاء
+                  الحذف خلال هذه المدة بتسجيل الدخول مرة أخرى.
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const first = window.confirm(
+                      'هل أنت متأكد أنك تريد حذف حسابك؟ لن تتمكن من الوصول لبياناتك بعد الحذف النهائي.',
+                    );
+                    if (!first) return;
+                    const second = window.prompt(
+                      'من فضلك اكتب كلمة "حذف" للتأكيد النهائي على حذف الحساب.',
+                    );
+                    if (second !== 'حذف') return;
+                    try {
+                      const res = await fetch('/api/user/account', {
+                        method: 'DELETE',
+                      });
+                      const data = await res.json();
+                      if (!res.ok) {
+                        throw new Error(data?.error || 'فشل حذف الحساب');
+                      }
+                      alert('تم جدولة حذف حسابك خلال 30 يوم. سيتم تسجيل خروجك الآن.');
+                      logout();
+                    } catch (err) {
+                      console.error('Delete account error', err);
+                      alert('تعذر حذف الحساب الآن، حاول مرة أخرى لاحقاً.');
+                    }
+                  }}
+                  className="w-full bg-[#ef4444]/10 text-[#ef4444] py-3 rounded-2xl font-bold hover:bg-[#ef4444]/20 transition-all text-sm"
+                >
+                  حذف الحساب نهائياً
+                </button>
+              </div>
+
               <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
                 <h3 className="font-bold text-[#9ca3af] mb-4 uppercase text-xs">
                   التفضيلات
@@ -823,9 +1559,40 @@ export default function ProfilePage() {
                   </div>
                   <div className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0">
                     <span>اللغة</span>
-                    <span className="text-[#9ca3af]">
-                      {user.language || 'العربية'}
-                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateProfile(
+                            { language: 'ar' as unknown as string },
+                            { success: 'تم تغيير اللغة إلى العربية' }
+                          )
+                        }
+                        className={`px-3 py-1 rounded-full text-xs border ${
+                          user.language === 'ar' || !user.language
+                            ? 'bg-[#7c3aed] text-white border-transparent'
+                            : 'bg-[#020617] text-[#9ca3af] border-[#374151]'
+                        }`}
+                      >
+                        العربية
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateProfile(
+                            { language: 'en' as unknown as string },
+                            { success: 'Language changed to English' }
+                          )
+                        }
+                        className={`px-3 py-1 rounded-full text-xs border ${
+                          user.language === 'en'
+                            ? 'bg-[#7c3aed] text-white border-transparent'
+                            : 'bg-[#020617] text-[#9ca3af] border-[#374151]'
+                        }`}
+                      >
+                        English
+                      </button>
+                    </div>
                   </div>
                   <div className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0">
                     <span>وضع الشريعة</span>
@@ -847,27 +1614,379 @@ export default function ProfilePage() {
                   الإشعارات
                 </h3>
                 <div className="space-y-3">
-                  {['إشارات الشراء والبيع', 'تحديثات المحفظة', 'أخبار الأسهم'].map(
-                    (label) => (
-                      <div
-                        key={label}
-                        className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0"
-                      >
-                        <span>{label}</span>
-                        <Toggle checked={true} onChange={() => {}} />
-                      </div>
-                    )
-                  )}
+                  <div className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0">
+                    <span>إشارات الشراء والبيع</span>
+                    <Toggle
+                      checked={user.notifySignals ?? true}
+                      onChange={() =>
+                        updateProfile(
+                          { notifySignals: !(user.notifySignals ?? true) },
+                          { success: 'تم تحديث إعدادات الإشعارات' }
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0">
+                    <span>تحديثات المحفظة</span>
+                    <Toggle
+                      checked={user.notifyPortfolio ?? true}
+                      onChange={() =>
+                        updateProfile(
+                          { notifyPortfolio: !(user.notifyPortfolio ?? true) },
+                          { success: 'تم تحديث إعدادات الإشعارات' }
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0">
+                    <span>أخبار الأسهم</span>
+                    <Toggle
+                      checked={user.notifyNews ?? true}
+                      onChange={() =>
+                        updateProfile(
+                          { notifyNews: !(user.notifyNews ?? true) },
+                          { success: 'تم تحديث إعدادات الإشعارات' }
+                        )
+                      }
+                    />
+                  </div>
                 </div>
               </div>
 
-              <button className="w-full bg-[#ef4444]/10 text-[#ef4444] py-4 rounded-2xl font-bold hover:bg-[#ef4444]/20 transition-all shadow-md">
+              <button
+                className="w-full bg-[#ef4444]/10 text-[#ef4444] py-4 rounded-2xl font-bold hover:bg-[#ef4444]/20 transition-all shadow-md"
+                onClick={logout}
+              >
                 تسجيل الخروج
               </button>
             </div>
           )}
         </motion.div>
       </AnimatePresence>
+    </div>
+  );
+}
+
+function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(null);
+  const [completedCount, setCompletedCount] = useState(0);
+  const [goal, setGoal] = useState(5);
+  const [rewardClaimed, setRewardClaimed] = useState(false);
+  const [redeeming, setRedeeming] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchReferral = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await api.get('/user/referral');
+        const data = res.data;
+        setCode(data.code);
+        setCompletedCount(data.completedCount ?? 0);
+        setGoal(data.goal ?? 5);
+        setRewardClaimed(Boolean(data.rewardClaimed));
+      } catch (err) {
+        console.error('Referral load error', err);
+        setError('فشل تحميل بيانات الدعوات');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReferral();
+  }, []);
+
+  const handleCopyCode = () => {
+    if (!code) return;
+    navigator.clipboard
+      .writeText(code)
+      .then(() => onCopy())
+      .catch((err) => console.error('Clipboard error', err));
+  };
+
+  const handleShare = async () => {
+    if (!code) return;
+    const url = `${window.location.origin}?ref=${encodeURIComponent(code)}`;
+    const text = `جرّب EGX Pro لمتابعة البورصة المصرية. كود الدعوة الخاص بي: ${code}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'EGX Pro', text, url });
+      } catch (err) {
+        console.error('Share failed', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        setMessage('تم نسخ رابط الدعوة');
+      } catch (err) {
+        console.error('Copy link failed', err);
+        setMessage('تعذر نسخ رابط الدعوة');
+      }
+    }
+  };
+
+  const handleRedeem = async () => {
+    setRedeeming(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await api.post('/user/referral/redeem');
+      const data = res.data;
+      setRewardClaimed(true);
+      setMessage('مبروك! تم إضافة شهر Pro مجاني إلى حسابك');
+    } catch (err) {
+      console.error('Redeem referral error', err);
+      setError('تعذر تفعيل المكافأة الآن');
+    } finally {
+      setRedeeming(false);
+    }
+  };
+
+  const progressPercent = goal > 0 ? Math.min(100, Math.round((completedCount / goal) * 100)) : 0;
+
+  if (loading) {
+    return (
+      <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] text-center text-sm text-[#9ca3af]">
+        جاري تحميل بيانات الدعوات...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] text-center text-sm text-red-400">
+        {error}
+      </div>
+    );
+  }
+
+  if (!code) {
+    return (
+      <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] text-center text-sm text-[#9ca3af]">
+        لا يوجد كود دعوة متاح حالياً.
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 rounded-2xl bg-gradient-to-br from-[#020617] via-[#111827] to-[#1f2937] shadow-md text-white relative overflow-hidden">
+      <div
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+        }}
+      />
+      <div className="relative space-y-4">
+        <div>
+          <h3 className="font-bold text-lg mb-1">ادعُ أصدقاءك واكسب شهر Pro مجاناً</h3>
+          <p className="text-sm text-slate-200">
+            شارك كودك مع أصدقاءك، لما {goal} منهم يسجلوا بكودك هتاخد شهر Pro مجاناً.
+          </p>
+        </div>
+
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between bg-white/10 p-3 rounded-xl border border-dashed border-white/20 gap-3">
+          <span className="font-mono font-bold tracking-[0.2em] text-sm text-center md:text-right">
+            {code}
+          </span>
+          <div className="flex gap-2 justify-center md:justify-end">
+            <button
+              type="button"
+              onClick={handleCopyCode}
+              className="flex items-center gap-1 text-xs font-bold bg-white text-[#7c3aed] px-3 py-1.5 rounded-lg"
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}{' '}
+              {copied ? 'تم النسخ' : 'نسخ الكود'}
+            </button>
+            <button
+              type="button"
+              onClick={handleShare}
+              className="flex items-center gap-1 text-xs font-bold bg-transparent border border-white/40 px-3 py-1.5 rounded-lg"
+            >
+              مشاركة
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-sm font-medium mb-1">
+            دعوت {completedCount} من أصل {goal} أصدقاء
+          </p>
+          <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-2">
+            <div
+              className="h-full bg-gradient-to-r from-[#7c3aed] to-[#22c55e]"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <div className="flex gap-2 mt-1">
+            {Array.from({ length: goal }).map((_, idx) => {
+              const filled = idx < completedCount;
+              return (
+                <div
+                  key={idx}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${
+                    filled ? 'bg-white text-[#7c3aed]' : 'border-2 border-white/40 text-white/60'
+                  }`}
+                >
+                  {filled ? <Check size={16} /> : <User size={16} />}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {completedCount >= goal && !rewardClaimed && (
+          <div className="mt-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-200">
+            مبروك! وصلت لـ {goal} دعوات ناجحة — يمكنك الآن تفعيل شهر Pro مجاني.
+          </div>
+        )}
+
+        {rewardClaimed && (
+          <div className="mt-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-200">
+            تم تفعيل شهر Pro المجاني على حسابك. شكرًا لمشاركتك EGX Pro مع أصدقاءك.
+          </div>
+        )}
+
+        {message && (
+          <p className="text-xs text-emerald-300">
+            {message}
+          </p>
+        )}
+
+        {error && (
+          <p className="text-xs text-red-300">
+            {error}
+          </p>
+        )}
+
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={handleRedeem}
+            disabled={rewardClaimed || completedCount < goal || redeeming}
+            className="w-full bg-white text-[#7c3aed] py-3 rounded-xl font-bold hover:bg-slate-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed text-sm"
+          >
+            {rewardClaimed
+              ? 'تم الحصول على الشهر المجاني'
+              : completedCount < goal
+              ? `باقي ${Math.max(0, goal - completedCount)} دعوات للحصول على شهر مجاني`
+              : redeeming
+              ? 'جارٍ تفعيل المكافأة...'
+              : 'احصل على شهر Pro مجاناً'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AvatarWithUpload({
+  user,
+  onUserUpdate,
+}: {
+  user: UserProfile;
+  onUserUpdate: (u: Partial<UserProfile>) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const fileInputId = 'avatar-upload-input';
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setMessage(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const base64 = reader.result as string;
+          const res = await fetch('/api/user/avatar', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ image: base64 }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data?.error || 'فشل رفع الصورة');
+          }
+          onUserUpdate({ avatarUrl: data.avatarUrl });
+          setMessage('تم تحديث صورة البروفايل بنجاح');
+        } catch (err) {
+          console.error('Avatar upload failed', err);
+          setMessage('حدث خطأ أثناء رفع الصورة');
+        } finally {
+          setUploading(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Avatar upload error', err);
+      setUploading(false);
+      setMessage('حدث خطأ أثناء قراءة الملف');
+    }
+  };
+
+  const isPro = user.subscriptionPlan === 'pro' || user.subscriptionPlan === 'annual';
+
+  const frameClass = isPro
+    ? 'p-[2px] rounded-full bg-gradient-to-br from-amber-300 via-orange-400 to-yellow-500'
+    : 'p-[2px] rounded-full bg-[#1f2937]';
+
+  const initials =
+    (user.fullName || user.username || 'U').trim()[0]?.toUpperCase() || 'U';
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <button
+        type="button"
+        onClick={() => document.getElementById(fileInputId)?.click()}
+        className="relative group"
+      >
+        <div className={frameClass}>
+          <div className="w-16 h-16 rounded-full bg-[#020617] overflow-hidden flex items-center justify-center">
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.fullName || 'avatar'}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] flex items-center justify-center text-2xl font-bold">
+                {initials}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] transition-opacity">
+          {uploading ? 'جارٍ الرفع...' : 'تغيير الصورة'}
+        </div>
+        {isPro && (
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-black shadow">
+            PRO
+          </div>
+        )}
+      </button>
+      <input
+        id={fileInputId}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      {message && (
+        <p className="text-[11px] text-[#9ca3af]">
+          {message}
+        </p>
+      )}
     </div>
   );
 }

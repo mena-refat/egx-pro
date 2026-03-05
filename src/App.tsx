@@ -265,8 +265,8 @@ export default function App() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  if (isAuthenticated && !user?.onboardingCompleted) {
-    return <OnboardingWizard onComplete={() => updateUser({ onboardingCompleted: true })} />;
+  if (isAuthenticated && user?.isFirstLogin) {
+    return <OnboardingWizard onComplete={() => updateUser({ isFirstLogin: false, onboardingCompleted: true })} />;
   }
 
   if (isAuthenticated) {

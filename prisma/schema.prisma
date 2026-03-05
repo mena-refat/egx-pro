@@ -23,16 +23,18 @@ model User {
   investmentHorizon Int?      @default(5)
   monthlyBudget     Float?    @default(0)
   shariaMode        Boolean   @default(false)
+  islamicMode       Boolean   @default(false)
   onboardingCompleted Boolean @default(false)
   interestedSectors   String?   @default("[]")
-  language          String    @default("ar")
-  theme             String    @default("dark")
+  language          String    @default("system")
+  theme             String    @default("system")
   subscriptionPlan  String    @default("free") // free, pro, annual
   subscriptionEndsAt DateTime?
   analysisUsageMonth String?   // e.g. "2026-03"
   analysisUsageCount Int       @default(0)
   referralCode      String?   @unique
   referredBy        String?
+  referralUsed      String?
   notifySignals     Boolean   @default(true)
   notifyPortfolio   Boolean   @default(true)
   notifyNews        Boolean   @default(true)
@@ -43,6 +45,12 @@ model User {
   lastPasswordChangeAt DateTime?
   lastUsernameChangeAt DateTime?
   usernameChangeCount Int       @default(0)
+  isDeleted         Boolean   @default(false)
+  deletedAt         DateTime?
+  deletionScheduledFor DateTime?
+  isFirstLogin      Boolean   @default(true)
+  hearAboutUs       String?
+  investorProfile   Json?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

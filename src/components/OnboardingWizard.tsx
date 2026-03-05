@@ -1,277 +1,723 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { 
-  ChevronRight, 
-  ChevronLeft, 
-  Target, 
-  TrendingUp, 
-  Clock, 
-  AlertTriangle, 
-  Wallet, 
+import {
+  ChevronRight,
+  ChevronLeft,
+  Target,
+  TrendingUp,
+  Clock,
+  AlertTriangle,
+  Wallet,
   Settings,
-  CheckCircle2
+  Users,
+  Gift,
+  Home,
+  Umbrella,
+  Compass,
+  Zap,
+  Plus,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
 const steps = [
-  { id: 'level', icon: TrendingUp },
-  { id: 'goal', icon: Target },
+  { id: 'goal', icon: Wallet },
   { id: 'timeline', icon: Clock },
   { id: 'risk', icon: AlertTriangle },
   { id: 'budget', icon: Wallet },
-  { id: 'prefs', icon: Settings },
+  { id: 'islamic', icon: Settings },
+  { id: 'sectors', icon: Target },
+  { id: 'level', icon: TrendingUp },
+  { id: 'hear', icon: Users },
+  { id: 'referral', icon: Gift },
 ];
 
 const SECTORS = [
-  { id: 'financial', en: 'Financial Services', ar: 'الخدمات المالية (غير المصرفية)' },
-  { id: 'real_estate', en: 'Real Estate', ar: 'العقارات' },
-  { id: 'basic_resources', en: 'Basic Resources', ar: 'الموارد الأساسية' },
-  { id: 'industrial', en: 'Industrial Goods & Services', ar: 'السلع والخدمات الصناعية والسيارات' },
-  { id: 'travel', en: 'Travel & Leisure', ar: 'السياحة والترفيه' },
-  { id: 'food', en: 'Food & Beverages', ar: 'الأغذية والمشروبات والتبغ' },
-  { id: 'healthcare', en: 'Health Care & Pharma', ar: 'الرعاية الصحية والأدوية' },
-  { id: 'construction', en: 'Construction & Materials', ar: 'المقاولات والإنشاءات الهندسية' },
-  { id: 'household', en: 'Personal & Household Products', ar: 'المنسوجات والسلع المعمرة' },
-  { id: 'it', en: 'IT, Media & Communication', ar: 'الاتصالات والتكنولوجيا والإعلام' },
-  { id: 'utilities', en: 'Utilities', ar: 'المرافق' },
-  { id: 'diversified', en: 'Diversified', ar: 'متنوع' },
-  { id: 'unknown', en: "I don't know yet", ar: 'لا أعرف بعد' },
+  { id: 'banks_financial', label: 'البنوك والخدمات المالية (غير مصرفية)' },
+  { id: 'real_estate_construction', label: 'العقارات والإنشاءات' },
+  { id: 'food_beverages', label: 'الأغذية والمشروبات والتبغ' },
+  { id: 'healthcare_pharma', label: 'الرعاية الصحية والأدوية' },
+  { id: 'it_media_telecom', label: 'الاتصالات والتكنولوجيا والإعلام' },
+  { id: 'industrial_auto', label: 'السلع والخدمات الصناعية والسيارات' },
+  { id: 'tourism_entertainment', label: 'السياحة والترفيه' },
+  { id: 'basic_resources', label: 'الموارد الأساسية' },
+  { id: 'utilities', label: 'المرافق' },
+  { id: 'textiles_durables', label: 'المنسوجات والسلع المعمرة' },
+  { id: 'diversified', label: 'متنوع' },
+  { id: 'unknown', label: 'لا أعرف بعد' },
 ];
+
+type TimelineChoice = 'lt1' | '1_3' | '3_7' | 'gt7';
+type BudgetBand = 'lt_1000' | '1_5k' | '5_20k' | 'gt_20k';
 
 export default function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const { i18n } = useTranslation('common');
   const [currentStep, setCurrentStep] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [referralState, setReferralState] = useState<{
+    checking: boolean;
+    successName?: string;
+    error?: string;
+  }>({ checking: false });
+
   const [formData, setFormData] = useState({
-    level: '',
-    goals: [] as string[],
-    timeline: 5,
-    risk: '',
-    budget: 5000,
-    sharia: false,
+    // step 1
+    goal: '',
+    // step 2
+    timeline: '' as TimelineChoice | '',
+    // step 3
+    reaction30: '',
+    // step 4
+    budgetBand: '' as BudgetBand | '',
+    // step 5
+    islamicMode: false,
+    // step 6
     sectors: [] as string[],
+    // step 7
+    level: '',
+    // step 8
+    hearAboutUs: '',
+    // step 9
+    referralCode: '',
   });
 
   const isRTL = i18n.language === 'ar';
 
-  const isStepValid = (dataToCheck = formData) => {
-    switch (currentStep) {
-      case 0: return dataToCheck.level !== '';
-      case 1: return dataToCheck.goals.length > 0;
-      case 2: return true;
-      case 3: return dataToCheck.risk !== '';
-      case 4: return true;
-      case 5: return dataToCheck.sectors.length > 0;
-      default: return true;
+  const goToStep = (nextStep: number) => {
+    setDirection(nextStep > currentStep ? 1 : -1);
+    setCurrentStep(nextStep);
+  };
+
+  const isStepValid = (stepIndex: number, data = formData) => {
+    switch (stepIndex) {
+      case 0:
+        return data.goal !== '';
+      case 1:
+        return data.timeline !== '';
+      case 2:
+        return data.reaction30 !== '';
+      case 3:
+        return data.budgetBand !== '';
+      case 4:
+        return true; // islamic mode has explicit Next button but not strictly required
+      case 5:
+        return data.sectors.length > 0;
+      case 6:
+        return data.level !== '';
+      case 7:
+        // hearAboutUs is optional (there is a Skip button)
+        return true;
+      case 8:
+        // referralCode optional; we handle via button
+        return true;
+      default:
+        return true;
     }
   };
 
-  const next = (updatedData?: Partial<typeof formData>) => {
-    const dataToCheck = updatedData ? { ...formData, ...updatedData } : formData;
-    
-    if (!isStepValid(dataToCheck)) {
-      setValidationError(isRTL ? 'يرجى اختيار إجابة للمتابعة' : 'Please select an answer to continue');
+  const handleNext = () => {
+    if (!isStepValid(currentStep)) {
+      setValidationError('يرجى اختيار إجابة للمتابعة');
       return;
     }
     setValidationError(null);
-    if (currentStep < steps.length - 1) setCurrentStep(s => s + 1);
-    else handleFinish();
+    if (currentStep < steps.length - 1) {
+      goToStep(currentStep + 1);
+    } else {
+      handleFinish();
+    }
   };
 
-  const back = () => {
-    if (currentStep > 0) setCurrentStep(s => s - 1);
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setValidationError(null);
+      goToStep(currentStep - 1);
+    }
   };
 
-  const handleFinish = async (isSkipped = false) => {
+  const mapTimelineToYears = (choice: TimelineChoice | ''): number => {
+    switch (choice) {
+      case 'lt1':
+        return 1;
+      case '1_3':
+        return 3;
+      case '3_7':
+        return 5;
+      case 'gt7':
+        return 10;
+      default:
+        return 5;
+    }
+  };
+
+  const mapBudgetToNumber = (band: BudgetBand | ''): number => {
+    switch (band) {
+      case 'lt_1000':
+        return 500;
+      case '1_5k':
+        return 3000;
+      case '5_20k':
+        return 10000;
+      case 'gt_20k':
+        return 25000;
+      default:
+        return 0;
+    }
+  };
+
+  const mapRiskTolerance = (reaction: string): string => {
+    switch (reaction) {
+      case 'sell_immediately':
+        return 'very_conservative';
+      case 'wait_and_see':
+        return 'moderate';
+      case 'buy_more':
+        return 'aggressive';
+      case 'long_term_calm':
+        return 'long_term';
+      default:
+        return 'moderate';
+    }
+  };
+
+  const buildInvestorProfile = () => ({
+    goal: formData.goal,
+    timeline: formData.timeline,
+    reaction30: formData.reaction30,
+    budgetBand: formData.budgetBand,
+    islamicMode: formData.islamicMode,
+    sectors: formData.sectors,
+    level: formData.level,
+    hearAboutUs: formData.hearAboutUs || null,
+  });
+
+  const handleFinish = async () => {
     try {
+      setSaving(true);
+      const accessToken = useAuthStore.getState().accessToken;
       const res = await fetch('/api/user/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${useAuthStore.getState().accessToken}`
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          riskTolerance: isSkipped ? 'moderate' : formData.risk,
-          investmentHorizon: isSkipped ? 5 : formData.timeline,
-          monthlyBudget: isSkipped ? 0 : formData.budget,
-          shariaMode: isSkipped ? false : formData.sharia,
-          interestedSectors: isSkipped ? [] : formData.sectors,
+          riskTolerance: mapRiskTolerance(formData.reaction30),
+          investmentHorizon: mapTimelineToYears(formData.timeline || '3_7'),
+          monthlyBudget: mapBudgetToNumber(formData.budgetBand || '1_5k'),
+          shariaMode: formData.islamicMode,
+          islamicMode: formData.islamicMode,
+          interestedSectors: formData.sectors,
+          hearAboutUs: formData.hearAboutUs || null,
+          investorProfile: buildInvestorProfile(),
           onboardingCompleted: true,
+          isFirstLogin: false,
         }),
       });
-      if (res.ok) onComplete();
+      if (res.ok) {
+        onComplete();
+      } else {
+        console.error('Failed to save onboarding', await res.text());
+      }
     } catch (err) {
       console.error('Failed to save onboarding', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReferralApply = async () => {
+    if (!formData.referralCode.trim()) {
+      setReferralState({ checking: false, error: 'من فضلك اكتب كود الدعوة أو اضغط تخطي' });
+      return;
+    }
+    try {
+      setReferralState({ checking: true });
+      const accessToken = useAuthStore.getState().accessToken;
+      const res = await fetch('/api/user/referral/use', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ code: formData.referralCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setReferralState({ checking: false, error: data.error || 'كود غير صحيح' });
+        return;
+      }
+      setReferralState({ checking: false, successName: data.referrerName, error: undefined });
+      // بعد نجاح الكود نكمل وإنهاء الـ Onboarding بعد لحظات بسيطة
+      setTimeout(() => {
+        handleFinish();
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to apply referral code', err);
+      setReferralState({ checking: false, error: 'حدث خطأ أثناء التحقق من الكود' });
     }
   };
 
   const renderStep = () => {
     switch (currentStep) {
+      // الخطوة 1 — هدفك
       case 0:
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-center">{isRTL ? 'ما مستواك في الاستثمار؟' : 'What is your investment level?'}</h2>
-            <div className="grid grid-cols-1 gap-4">
-              {[
-                { id: 'beginner', label: isRTL ? '🐣 مبتدئ تماماً' : '🐣 Total Beginner' },
-                { id: 'basics', label: isRTL ? '📚 بعرف الأساسيات' : '📚 Know the Basics' },
-                { id: 'intermediate', label: isRTL ? '📈 متوسط' : '📈 Intermediate' },
-                { id: 'advanced', label: isRTL ? '🎯 متقدم' : '🎯 Advanced' },
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => { 
-                    const newLevel = opt.id;
-                    setFormData({ ...formData, level: newLevel }); 
-                    next({ level: newLevel }); 
-                  }}
-                  className={`p-4 rounded-2xl border-2 transition-all text-right ${formData.level === opt.id ? 'border-violet-500 bg-violet-500/10' : 'border-white/5 bg-slate-800/50 hover:border-white/20'}`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">إيه اللي بتستثمر عشانه؟</h2>
+              <p className="text-slate-400 text-sm">اختر الهدف الأقرب لحلمك</p>
             </div>
-          </div>
-        );
-      case 1:
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-center">{isRTL ? 'إيه هدفك من الاستثمار؟' : 'What is your investment goal?'}</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { id: 'home', label: isRTL ? '🏠 شراء شقة' : '🏠 Buy a Home' },
-                { id: 'car', label: isRTL ? '🚗 شراء سيارة' : '🚗 Buy a Car' },
-                { id: 'retirement', label: isRTL ? '👴 تقاعد' : '👴 Retirement' },
-                { id: 'education', label: isRTL ? '🎓 تعليم أولاد' : '🎓 Education' },
-                { id: 'growth', label: isRTL ? '💰 تنمية مدخرات' : '💰 Wealth Growth' },
-                { id: 'travel', label: isRTL ? '✈️ سفر' : '✈️ Travel' },
-              ].map(opt => (
+                {
+                  id: 'property_or_car',
+                  title: 'شراء عقار أو سيارة',
+                  desc: 'هدف ملموس وقابل للتحقيق',
+                  icon: Home,
+                },
+                {
+                  id: 'wealth',
+                  title: 'تنمية ثروتي',
+                  desc: 'خلّي فلوسك تشتغل نيابة عنك',
+                  icon: TrendingUp,
+                },
+                {
+                  id: 'retirement',
+                  title: 'التقاعد المريح',
+                  desc: 'ضمان مستقبلك بكره',
+                  icon: Umbrella,
+                },
+                {
+                  id: 'travel',
+                  title: 'سفر ومغامرات',
+                  desc: 'عيش الحياة اللي تستحقها',
+                  icon: Compass,
+                },
+                {
+                  id: 'trading',
+                  title: 'أرباح سريعة',
+                  desc: 'مضاربة وتداول نشط',
+                  icon: Zap,
+                },
+                {
+                  id: 'other',
+                  title: 'أخرى',
+                  desc: 'هدف خاص بيك',
+                  icon: Plus,
+                },
+              ].map((opt) => (
                 <button
                   key={opt.id}
                   onClick={() => {
-                    const goals = formData.goals.includes(opt.id) 
-                      ? formData.goals.filter(g => g !== opt.id)
-                      : [...formData.goals, opt.id];
-                    setFormData({ ...formData, goals });
+                    const updated = { ...formData, goal: opt.id };
+                    setFormData(updated);
+                    setValidationError(null);
+                    // single-select → انتقال أوتوماتيك
+                    if (isStepValid(0, updated)) {
+                      goToStep(1);
+                    }
                   }}
-                  className={`p-4 rounded-2xl border-2 transition-all text-center ${formData.goals.includes(opt.id) ? 'border-violet-500 bg-violet-500/10' : 'border-white/5 bg-slate-800/50 hover:border-white/20'}`}
+                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                    formData.goal === opt.id
+                      ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                      : 'border-white/5'
+                  }`}
                 >
-                  {opt.label}
+                  <div className="flex items-center gap-3 mb-1">
+                    {opt.icon && <opt.icon className="w-5 h-5 text-violet-400" />}
+                    <div className="font-semibold">{opt.title}</div>
+                  </div>
+                  <p className="text-xs text-slate-400">{opt.desc}</p>
                 </button>
               ))}
             </div>
           </div>
         );
-      case 2:
+
+      // الخطوة 2 — الأفق الزمني
+      case 1:
         return (
-          <div className="space-y-8">
-            <h2 className="text-2xl font-bold text-center">{isRTL ? 'خلال كام سنة عايز تحقق هدفك؟' : 'In how many years do you want to reach your goal?'}</h2>
-            <div className="px-4">
-              <input 
-                type="range" min="1" max="30" 
-                value={formData.timeline}
-                onChange={(e) => setFormData({ ...formData, timeline: parseInt(e.target.value) })}
-                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
-              />
-              <div className="flex justify-between mt-4 text-slate-400 text-sm">
-                <span>1 {isRTL ? 'سنة' : 'Year'}</span>
-                <span className="text-violet-400 font-bold text-xl">{formData.timeline} {isRTL ? 'سنة' : 'Years'}</span>
-                <span>30 {isRTL ? 'سنة' : 'Years'}</span>
-              </div>
-              <p className="text-center mt-6 text-slate-400 italic">
-                {formData.timeline <= 2 ? (isRTL ? 'قصير الأجل — مخاطرة منخفضة مناسبة' : 'Short term — Low risk suitable') :
-                 formData.timeline <= 5 ? (isRTL ? 'متوسط الأجل — توازن نمو وأمان' : 'Medium term — Balance of growth and safety') :
-                 (isRTL ? 'طويل الأجل — مناسب لأسهم النمو 🚀' : 'Long term — Suitable for growth stocks 🚀')}
-              </p>
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">إمتى عايز تحقق هدفك؟</h2>
+              <p className="text-slate-400 text-sm">الأفق الزمني بيحدد استراتيجيتك</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                {
+                  id: 'lt1' as TimelineChoice,
+                  title: '⚡ أقل من سنة',
+                  desc: 'هدف قريب — استراتيجية محافظة',
+                },
+                {
+                  id: '1_3' as TimelineChoice,
+                  title: '📅 من 1 إلى 3 سنوات',
+                  desc: 'أفق قصير — توازن بين الأمان والنمو',
+                },
+                {
+                  id: '3_7' as TimelineChoice,
+                  title: '📆 من 3 إلى 7 سنوات',
+                  desc: 'متوسط الأجل — نمو تدريجي ومستقر',
+                },
+                {
+                  id: 'gt7' as TimelineChoice,
+                  title: '🏆 أكثر من 7 سنوات',
+                  desc: 'طويل الأجل — أعلى عائد على المدى البعيد',
+                },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => {
+                    const updated = { ...formData, timeline: opt.id };
+                    setFormData(updated);
+                    setValidationError(null);
+                    if (isStepValid(1, updated)) {
+                      goToStep(2);
+                    }
+                  }}
+                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                    formData.timeline === opt.id
+                      ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                      : 'border-white/5'
+                  }`}
+                >
+                  <div className="font-semibold mb-1">{opt.title}</div>
+                  <p className="text-xs text-slate-400">{opt.desc}</p>
+                </button>
+              ))}
             </div>
           </div>
         );
+
+      // الخطوة 3 — رد فعلك عند -30%
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">لو السهم اللي اشتريته نزل 30%...</h2>
+              <p className="text-slate-400 text-sm">جاوب بصدق — ده بيحدد مستوى مخاطرتك الحقيقي</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              {[
+                {
+                  id: 'sell_immediately',
+                  title: '😰 هبيع فوراً وأوقف الخسارة',
+                  desc: 'سلامتي أهم من أي ربح',
+                },
+                {
+                  id: 'wait_and_see',
+                  title: '🤔 هستنى وأشوف السوق',
+                  desc: 'مش هتصرف إلا لو الوضع اتضح',
+                },
+                {
+                  id: 'buy_more',
+                  title: '😎 فرصة ذهبية — هشتري أكتر',
+                  desc: 'انخفاض السعر يعني صفقة أفضل',
+                },
+                {
+                  id: 'long_term_calm',
+                  title: '🧘 مش هتأثر — استثماري طويل المدى',
+                  desc: 'التقلبات طبيعية ومش بتقلقني',
+                },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => {
+                    const updated = { ...formData, reaction30: opt.id };
+                    setFormData(updated);
+                    setValidationError(null);
+                    if (isStepValid(2, updated)) {
+                      goToStep(3);
+                    }
+                  }}
+                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                    formData.reaction30 === opt.id
+                      ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                      : 'border-white/5'
+                  }`}
+                >
+                  <div className="font-semibold mb-1">{opt.title}</div>
+                  <p className="text-xs text-slate-400">{opt.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      // الخطوة 4 — الميزانية الشهرية
       case 3:
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-center">{isRTL ? 'لو السهم نزل 30%، إيه اللي هتعمله؟' : 'If a stock drops 30%, what would you do?'}</h2>
-            <div className="grid grid-cols-1 gap-4">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">قدر تخصص كام جنيه للاستثمار شهرياً؟</h2>
+              <p className="text-slate-400 text-sm">مش لازم يبقى كتير — المهم الانتظام</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { id: 'conservative', label: isRTL ? '😰 هبيع فوراً' : '😰 Sell immediately' },
-                { id: 'moderate', label: isRTL ? '😐 هستنى وأشوف' : '😐 Wait and see' },
-                { id: 'aggressive', label: isRTL ? '😎 فرصة أشتري أكتر' : '😎 Opportunity to buy more' },
-              ].map(opt => (
+                {
+                  id: 'lt_1000' as BudgetBand,
+                  title: '🌱 أقل من 1,000 جنيه',
+                  desc: 'البداية المهمة هي البداية',
+                },
+                {
+                  id: '1_5k' as BudgetBand,
+                  title: '📊 من 1,000 إلى 5,000 جنيه',
+                  desc: 'مبلغ ممتاز للبناء التدريجي',
+                },
+                {
+                  id: '5_20k' as BudgetBand,
+                  title: '💼 من 5,000 إلى 20,000 جنيه',
+                  desc: 'محفظة متنوعة في متناول يدك',
+                },
+                {
+                  id: 'gt_20k' as BudgetBand,
+                  title: '🚀 أكثر من 20,000 جنيه',
+                  desc: 'مستثمر جاد بإمكانيات عالية',
+                },
+              ].map((opt) => (
                 <button
                   key={opt.id}
-                  onClick={() => { 
-                    const newRisk = opt.id;
-                    setFormData({ ...formData, risk: newRisk }); 
-                    next({ risk: newRisk }); 
+                  onClick={() => {
+                    const updated = { ...formData, budgetBand: opt.id };
+                    setFormData(updated);
+                    setValidationError(null);
+                    if (isStepValid(3, updated)) {
+                      goToStep(4);
+                    }
                   }}
-                  className={`p-4 rounded-2xl border-2 transition-all text-right ${formData.risk === opt.id ? 'border-violet-500 bg-violet-500/10' : 'border-white/5 bg-slate-800/50 hover:border-white/20'}`}
+                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                    formData.budgetBand === opt.id
+                      ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                      : 'border-white/5'
+                  }`}
                 >
-                  {opt.label}
+                  <div className="font-semibold mb-1">{opt.title}</div>
+                  <p className="text-xs text-slate-400">{opt.desc}</p>
                 </button>
               ))}
             </div>
           </div>
         );
+
+      // الخطوة 5 — وضع الشريعة الإسلامية
       case 4:
         return (
-          <div className="space-y-8">
-            <h2 className="text-2xl font-bold text-center">{isRTL ? 'قدر تستثمر كل شهر؟' : 'How much can you invest monthly?'}</h2>
-            <div className="px-4">
-              <div className="text-center mb-8">
-                <span className="text-4xl font-bold text-violet-400">{formData.budget.toLocaleString()}</span>
-                <span className="text-xl ml-2 text-slate-400">{isRTL ? 'جنيه' : 'EGP'}</span>
-              </div>
-              <input 
-                type="range" min="500" max="100000" step="500"
-                value={formData.budget}
-                onChange={(e) => setFormData({ ...formData, budget: parseInt(e.target.value) })}
-                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
-              />
-              <div className="grid grid-cols-3 gap-2 mt-8">
-                {[1000, 5000, 10000, 20000, 50000].map(val => (
-                  <button 
-                    key={val}
-                    onClick={() => setFormData({ ...formData, budget: val })}
-                    className="py-2 bg-slate-800 rounded-xl text-sm hover:bg-slate-700 transition-colors"
-                  >
-                    {val >= 1000 ? `${val/1000}k` : val}
-                  </button>
-                ))}
-              </div>
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">هل تفضل استثماراً متوافقاً مع الشريعة؟</h2>
+              <p className="text-slate-400 text-sm">
+                لو فعّلت هذا الوضع، سنُنبّهك تلقائياً عند اختيار أي سهم قد لا يكون متوافقاً مع أحكام الشريعة
+                الإسلامية
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <button
+                onClick={() => {
+                  setFormData({ ...formData, islamicMode: true });
+                  setValidationError(null);
+                }}
+                className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                  formData.islamicMode
+                    ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                    : 'border-white/5'
+                }`}
+              >
+                <div className="font-semibold mb-1">☑️ نعم، أفضل الاستثمار الحلال</div>
+                <p className="text-xs text-slate-400">سنُنبّهك قبل أي قرار غير متوافق</p>
+              </button>
+              <button
+                onClick={() => {
+                  setFormData({ ...formData, islamicMode: false });
+                  setValidationError(null);
+                }}
+                className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                  !formData.islamicMode
+                    ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                    : 'border-white/5'
+                }`}
+              >
+                <div className="font-semibold mb-1">⬜ لا، سأختار بنفسي</div>
+                <p className="text-xs text-slate-400">ستظهر لك جميع الأسهم بدون قيود</p>
+              </button>
             </div>
           </div>
         );
+
+      // الخطوة 6 — القطاعات
       case 5:
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-center">{isRTL ? 'التفضيلات' : 'Preferences'}</h2>
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">إيه القطاعات اللي تهمك؟</h2>
+              <p className="text-slate-400 text-sm">اختر واحد أو أكتر — هنخصص تجربتك</p>
+            </div>
+            <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto p-3 bg-slate-900/60 rounded-2xl">
+              {SECTORS.map((sector) => {
+                const selected = formData.sectors.includes(sector.id);
+                return (
+                  <button
+                    key={sector.id}
+                    onClick={() => {
+                      const exists = formData.sectors.includes(sector.id);
+                      const sectors = exists
+                        ? formData.sectors.filter((s) => s !== sector.id)
+                        : [...formData.sectors, sector.id];
+                      setFormData({ ...formData, sectors });
+                      setValidationError(null);
+                    }}
+                    className={`px-4 py-2 rounded-full text-xs border transition-all ${
+                      selected
+                        ? 'bg-violet-500 border-violet-500 text-white'
+                        : 'bg-slate-800 border-white/10 text-slate-300 hover:border-white/30'
+                    }`}
+                  >
+                    {sector.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+
+      // الخطوة 7 — مستوى الاستثمار
+      case 6:
+        return (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">بعد كل اللي قلته... إيه مستواك الحقيقي؟</h2>
+              <p className="text-slate-400 text-sm">خلّيك صريح مع نفسك</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              {[
+                {
+                  id: 'beginner',
+                  title: '🐣 مبتدئ تماماً',
+                  desc: 'لسه بتعلم وعندي أسئلة كتير',
+                },
+                {
+                  id: 'basics',
+                  title: '📚 بعرف الأساسيات',
+                  desc: 'فاهم المفاهيم الأساسية وبدأت أجرب',
+                },
+                {
+                  id: 'intermediate',
+                  title: '📈 متوسط',
+                  desc: 'عندي تجربة وبستثمر بانتظام',
+                },
+                {
+                  id: 'advanced',
+                  title: '🎯 متقدم',
+                  desc: 'خبرة واسعة وبتداول بثقة',
+                },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => {
+                    const updated = { ...formData, level: opt.id };
+                    setFormData(updated);
+                    setValidationError(null);
+                    if (isStepValid(6, updated)) {
+                      goToStep(7);
+                    }
+                  }}
+                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                    formData.level === opt.id
+                      ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                      : 'border-white/5'
+                  }`}
+                >
+                  <div className="font-semibold mb-1">{opt.title}</div>
+                  <p className="text-xs text-slate-400">{opt.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      // الخطوة 8 — كيف سمعت عنا؟
+      case 7:
+        return (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">كيف سمعت عن EGX Pro؟</h2>
+              <p className="text-slate-400 text-sm">اختر المصدر الأقرب (اختياري)</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                'من صديق أو معارف',
+                'فيسبوك أو إنستجرام',
+                'إعلان ممول',
+                'بحث على جوجل',
+                'يوتيوب أو محتوى',
+                'أخرى',
+              ].map((option) => (
+                <button
+                  key={option}
+                  onClick={() => {
+                    setFormData({ ...formData, hearAboutUs: option });
+                    setValidationError(null);
+                  }}
+                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                    formData.hearAboutUs === option
+                      ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                      : 'border-white/5'
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      // الخطوة 9 — كود الدعوة
+      case 8:
+        return (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">هل دعاك أحد للانضمام؟</h2>
+              <p className="text-slate-400 text-sm">
+                اكتب كود الدعوة إن وجد — اختياري
+              </p>
+            </div>
             <div className="space-y-4">
-              <button
-                onClick={() => setFormData({ ...formData, sharia: !formData.sharia })}
-                className={`w-full p-4 rounded-2xl border-2 flex justify-between items-center transition-all ${formData.sharia ? 'border-emerald-500 bg-emerald-500/10' : 'border-white/5 bg-slate-800/50'}`}
-              >
-                <span>{isRTL ? 'تفضل استثمار متوافق مع الشريعة؟' : 'Prefer Sharia-compliant investments?'}</span>
-                {formData.sharia && <CheckCircle2 className="text-emerald-500" />}
-              </button>
-              
-              <div className="pt-4">
-                <p className="text-sm text-slate-400 mb-3">{isRTL ? 'إيه القطاعات اللي تهمك؟' : 'Which sectors interest you?'}</p>
-                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-slate-800/30 rounded-xl">
-                  {SECTORS.map(sector => (
-                    <button
-                      key={sector.id}
-                      onClick={() => {
-                        const sectors = formData.sectors.includes(sector.id)
-                          ? formData.sectors.filter(s => s !== sector.id)
-                          : [...formData.sectors, sector.id];
-                        setFormData({ ...formData, sectors });
-                      }}
-                      className={`px-4 py-2 rounded-full text-xs border transition-all ${formData.sectors.includes(sector.id) ? 'bg-violet-500 border-violet-500 text-white' : 'bg-slate-800 border-white/10 text-slate-400 hover:border-white/20'}`}
-                    >
-                      {isRTL ? sector.ar : sector.en}
-                    </button>
-                  ))}
-                </div>
+              <input
+                type="text"
+                value={formData.referralCode}
+                onChange={(e) => {
+                  setFormData({ ...formData, referralCode: e.target.value.toUpperCase() });
+                  setReferralState({ checking: false });
+                }}
+                placeholder="مثال: EGX-A7K2M"
+                className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-center text-lg tracking-[0.2em] focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+              {referralState.successName && (
+                <p className="text-sm text-emerald-400 text-center">
+                  تم! انضممت عن طريق دعوة {referralState.successName}
+                </p>
+              )}
+              {referralState.error && (
+                <p className="text-sm text-red-400 text-center">{referralState.error}</p>
+              )}
+              <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={handleReferralApply}
+                  disabled={referralState.checking}
+                  className="flex-1 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-2xl shadow-lg shadow-violet-600/20 transition-all active:scale-95"
+                >
+                  {referralState.checking ? 'جاري التحقق...' : 'تأكيد وابدأ'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFinish}
+                  className="flex-1 border border-white/10 text-slate-300 hover:bg-white/5 rounded-2xl py-3 text-sm"
+                >
+                  تخطي وابدأ
+                </button>
               </div>
             </div>
           </div>
@@ -289,33 +735,29 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
             <TrendingUp className="text-violet-500 w-6 h-6" />
             <span className="font-bold text-lg">EGX Pro</span>
           </div>
-          <button 
-            onClick={() => handleFinish(true)}
-            className="text-sm text-slate-500 hover:text-white transition-colors"
-          >
-            {isRTL ? 'تخطي' : 'Skip'}
-          </button>
         </div>
 
         {/* Progress Bar */}
-        <div className="flex gap-2 mb-12">
-          {steps.map((step, i) => (
-            <div 
-              key={step.id} 
-              className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${i <= currentStep ? 'bg-violet-500' : 'bg-slate-800'}`}
+        <div className="flex gap-2 mb-10">
+          {steps.map((step, index) => (
+            <div
+              key={step.id}
+              className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
+                index <= currentStep ? 'bg-violet-500' : 'bg-slate-800'
+              }`}
             />
           ))}
         </div>
 
         <motion.div
           key={currentStep}
-          initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
+          initial={{ opacity: 0, x: direction === 1 ? (isRTL ? -40 : 40) : (isRTL ? 40 : -40) }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
-          className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl min-h-[450px] flex flex-col"
+          exit={{ opacity: 0, x: direction === 1 ? (isRTL ? 40 : -40) : (isRTL ? -40 : 40) }}
+          className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl min-h-[460px] flex flex-col"
         >
           <div className="flex-1">
-            <div className="flex justify-center mb-8">
+            <div className="flex justify-center mb-6">
               <div className="p-4 bg-violet-500/10 rounded-2xl">
                 {(() => {
                   const Icon = steps[currentStep].icon;
@@ -326,24 +768,44 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
             {renderStep()}
           </div>
 
-          <div className="flex justify-between mt-12 pt-8 border-t border-white/5">
+          <div className="flex justify-between mt-10 pt-6 border-t border-white/5">
             <button
-              onClick={back}
+              onClick={handleBack}
               disabled={currentStep === 0}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all ${currentStep === 0 ? 'opacity-0 pointer-events-none' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all ${
+                currentStep === 0
+                  ? 'opacity-0 pointer-events-none'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
             >
               {isRTL ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-              {isRTL ? 'السابق' : 'Back'}
+              <span>{isRTL ? 'السابق' : 'Back'}</span>
             </button>
+
             <div className="flex flex-col items-end gap-2">
-              {validationError && <p className="text-red-500 text-sm">{validationError}</p>}
-              <button
-                onClick={next}
-                className="flex items-center gap-2 px-8 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl font-bold shadow-lg shadow-violet-600/20 transition-all active:scale-95"
-              >
-                {currentStep === steps.length - 1 ? (isRTL ? 'إنهاء' : 'Finish') : (isRTL ? 'التالي' : 'Next')}
-                {currentStep !== steps.length - 1 && (isRTL ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />)}
-              </button>
+              {validationError && <p className="text-red-500 text-xs">{validationError}</p>}
+              {currentStep < steps.length - 1 && (
+                <button
+                  onClick={handleNext}
+                  className="flex items-center gap-2 px-7 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl font-bold shadow-lg shadow-violet-600/20 transition-all active:scale-95 text-sm"
+                >
+                  <span>{isRTL ? 'التالي' : 'Next'}</span>
+                  {isRTL ? (
+                    <ChevronLeft className="w-5 h-5" />
+                  ) : (
+                    <ChevronRight className="w-5 h-5" />
+                  )}
+                </button>
+              )}
+              {currentStep === steps.length - 1 && (
+                <button
+                  disabled={saving}
+                  onClick={handleFinish}
+                  className="flex items-center gap-2 px-7 py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold shadow-lg shadow-violet-600/20 transition-all active:scale-95 text-sm"
+                >
+                  {saving ? 'جارٍ الحفظ...' : 'تخطي وابدأ'}
+                </button>
+              )}
             </div>
           </div>
         </motion.div>

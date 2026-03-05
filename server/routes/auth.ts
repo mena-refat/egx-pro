@@ -69,11 +69,27 @@ router.post('/register', async (req: Request, res: Response) => {
       }
     });
 
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        lastLoginAt: new Date(),
+        lastLoginIp: req.ip || null,
+      },
+    });
+
     res.cookie('refreshToken', refreshToken, getCookieOptions());
 
     res.status(201).json({
       accessToken,
-      user: { id: user.id, email: user.email ?? undefined, phone: user.phone ?? undefined, fullName: user.fullName, username: user.username ?? undefined }
+      user: {
+        id: user.id,
+        email: user.email ?? undefined,
+        phone: user.phone ?? undefined,
+        fullName: user.fullName,
+        username: user.username ?? undefined,
+        onboardingCompleted: user.onboardingCompleted,
+        isFirstLogin: user.isFirstLogin,
+      },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -92,7 +108,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const email = isEmail ? raw.toLowerCase().trim() : null;
     const phone = isEmail ? null : normalizePhone(raw);
 
-    const user = email
+    let user = email
       ? await prisma.user.findUnique({ where: { email } })
       : await prisma.user.findUnique({ where: { phone } });
     if (!user) {
@@ -105,6 +121,22 @@ router.post('/login', async (req: Request, res: Response) => {
     const isValid = await verifyPassword(password, user.passwordHash, user.salt);
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Handle soft-deleted accounts (reactivation within 30 days)
+    if (user.isDeleted) {
+      const now = new Date();
+      if (user.deletionScheduledFor && user.deletionScheduledFor < now) {
+        return res.status(401).json({ error: 'الحساب تم حذفه نهائياً' });
+      }
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          isDeleted: false,
+          deletedAt: null,
+          deletionScheduledFor: null,
+        },
+      });
     }
 
     if (user.twoFactorEnabled && user.twoFactorSecret) {
@@ -141,8 +173,9 @@ router.post('/login', async (req: Request, res: Response) => {
         phone: user.phone ?? undefined,
         fullName: user.fullName,
         username: user.username ?? undefined,
-        onboardingCompleted: user.onboardingCompleted
-      }
+        onboardingCompleted: user.onboardingCompleted,
+        isFirstLogin: user.isFirstLogin,
+      },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -163,7 +196,7 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, phone: true, fullName: true, username: true, twoFactorSecret: true, onboardingCompleted: true },
+      select: { id: true, email: true, phone: true, fullName: true, username: true, twoFactorSecret: true, onboardingCompleted: true, isFirstLogin: true },
     });
 
     if (!user?.twoFactorSecret) {
@@ -196,6 +229,14 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
       },
     });
 
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        lastLoginAt: new Date(),
+        lastLoginIp: req.ip || null,
+      },
+    });
+
     res.cookie('refreshToken', refreshToken, getCookieOptions());
     await auditLog({ userId: user.id, action: 'login_2fa', req, result: 'success' });
     res.json({
@@ -207,6 +248,7 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
         fullName: user.fullName,
         username: user.username ?? undefined,
         onboardingCompleted: user.onboardingCompleted,
+        isFirstLogin: user.isFirstLogin,
       },
     });
   } catch (error) {
@@ -340,8 +382,9 @@ router.get('/me', async (req: Request, res: Response) => {
         phone: session.user.phone ?? undefined,
         fullName: session.user.fullName,
         username: session.user.username ?? undefined,
-        onboardingCompleted: session.user.onboardingCompleted
-      }
+        onboardingCompleted: session.user.onboardingCompleted,
+        isFirstLogin: session.user.isFirstLogin,
+      },
     });
   } catch (error) {
     console.error('Auth check error:', error);

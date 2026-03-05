@@ -42,13 +42,17 @@ router.get('/profile', authenticate, async (req: AuthRequest, res: Response) => 
         investmentHorizon: true,
         monthlyBudget: true,
         shariaMode: true,
+        islamicMode: true,
         onboardingCompleted: true,
+        isFirstLogin: true,
         interestedSectors: true,
         twoFactorEnabled: true,
         language: true,
         theme: true,
         subscriptionPlan: true,
         subscriptionEndsAt: true,
+        hearAboutUs: true,
+        investorProfile: true,
       }
     });
     
@@ -82,6 +86,7 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
       investmentHorizon,
       monthlyBudget,
       shariaMode,
+      islamicMode,
       onboardingCompleted,
       interestedSectors,
       twoFactorEnabled,
@@ -90,6 +95,9 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
       notifySignals,
       notifyPortfolio,
       notifyNews,
+      hearAboutUs,
+      investorProfile,
+      isFirstLogin,
     } = req.body;
 
     const data: Record<string, unknown> = {
@@ -98,7 +106,9 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
       investmentHorizon,
       monthlyBudget,
       shariaMode,
+      islamicMode,
       onboardingCompleted,
+      isFirstLogin,
       interestedSectors: Array.isArray(interestedSectors) ? JSON.stringify(interestedSectors) : interestedSectors,
       twoFactorEnabled,
       language,
@@ -106,6 +116,8 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
       notifySignals,
       notifyPortfolio,
       notifyNews,
+      hearAboutUs,
+      investorProfile,
     };
 
     if (rawPhone !== undefined) {
@@ -665,6 +677,69 @@ router.post('/referral/redeem', authenticate, async (req: AuthRequest, res: Resp
   }
 });
 
+// Apply referral code during onboarding
+router.post('/referral/use', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { code } = req.body as { code?: string };
+    const trimmed = (code || '').trim().toUpperCase();
+
+    if (!trimmed) {
+      return res.status(400).json({ error: 'Referral code is required' });
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { id: true, referralUsed: true },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (currentUser.referralUsed) {
+      return res.status(400).json({ error: 'Referral code already used' });
+    }
+
+    const referrer = await prisma.user.findFirst({
+      where: { referralCode: trimmed },
+      select: { id: true, fullName: true },
+    });
+
+    if (!referrer) {
+      return res.status(400).json({ error: 'Invalid referral code' });
+    }
+
+    if (referrer.id === currentUser.id) {
+      return res.status(400).json({ error: 'You cannot use your own referral code' });
+    }
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: currentUser.id },
+        data: {
+          referredBy: referrer.id,
+          referralUsed: trimmed,
+        },
+      }),
+      prisma.referral.create({
+        data: {
+          referrerId: referrer.id,
+          referredUserId: currentUser.id,
+          status: 'completed',
+        },
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      referrerName: referrer.fullName || 'صاحب الدعوة',
+    });
+  } catch (err) {
+    console.error('Referral use error:', err);
+    res.status(500).json({ error: 'Failed to apply referral code' });
+  }
+});
+
 // 2FA Setup
 router.post('/2fa/setup', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -739,6 +814,8 @@ router.get('/security', authenticate, async (req: AuthRequest, res: Response) =>
         lastPasswordChangeAt: true,
         twoFactorEnabled: true,
         createdAt: true,
+        lastLoginAt: true,
+        lastLoginIp: true,
       },
     });
 
@@ -750,6 +827,8 @@ router.get('/security', authenticate, async (req: AuthRequest, res: Response) =>
       lastPasswordChangeAt: user.lastPasswordChangeAt,
       twoFactorEnabled: user.twoFactorEnabled,
       createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt,
+      lastLoginIp: user.lastLoginIp,
     });
   } catch (err) {
     console.error('Security info error:', err);
@@ -845,10 +924,28 @@ router.post('/avatar', authenticate, async (req: AuthRequest, res: Response) => 
 // Delete account
 router.delete('/account', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    await prisma.user.delete({
+    const now = new Date();
+    const deletionDate = new Date(now);
+    deletionDate.setDate(deletionDate.getDate() + 30);
+
+    await prisma.user.update({
       where: { id: req.userId },
+      data: {
+        isDeleted: true,
+        deletedAt: now,
+        deletionScheduledFor: deletionDate,
+      },
     });
-    res.status(204).send();
+
+    await prisma.session.deleteMany({
+      where: { userId: req.userId! },
+    });
+
+    res.status(200).json({
+      success: true,
+      deletedAt: now,
+      deletionScheduledFor: deletionDate,
+    });
   } catch (err) {
     console.error('Delete account error:', err);
     res.status(500).json({ error: 'Failed to delete account' });
