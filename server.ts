@@ -59,6 +59,9 @@ async function startServer() {
   app.use(cookieParser());
   app.use(morgan('combined'));
 
+  // Static uploads (avatars, etc.)
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
   // Rate Limiting
   const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes

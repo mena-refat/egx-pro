@@ -50,16 +50,89 @@ router.get('/plan', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to load plan' });
   }
 });
+//@ Validate discount code for a given plan
+router.post('/discount/validate', async (req: Request, res: Response) => {
+  try {
+    const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-// Simple upgrade endpoint (no real payment integration, just switches plan)
+    const { code, plan } = req.body as { code?: string; plan?: Plan };
+    if (!code || !plan || !['pro', 'annual'].includes(plan)) {
+      return res.status(400).json({ error: 'Invalid request' });
+    }
+
+    const discount = await prisma.discountCode.findUnique({
+      where: { code },
+    });
+
+    if (
+      !discount ||
+      !discount.active ||
+      (discount.expiresAt && discount.expiresAt < new Date()) ||
+      (discount.maxUses !== null && discount.maxUses !== undefined && discount.usedCount >= discount.maxUses)
+    ) {
+      return res.status(400).json({ error: 'الكود غير صحيح أو منتهي' });
+    }
+
+    const basePrice = plan === 'pro' ? 149 : 999;
+    let finalPrice = basePrice;
+
+    if (discount.type === 'percentage') {
+      finalPrice = Math.round(basePrice * (1 - discount.value / 100));
+    } else if (discount.type === 'amount') {
+      finalPrice = Math.max(0, basePrice - discount.value);
+    }
+
+    const discountAmount = basePrice - finalPrice;
+
+    res.json({
+      valid: true,
+      code: discount.code,
+      type: discount.type,
+      value: discount.value,
+      basePrice,
+      finalPrice,
+      discountAmount,
+    });
+  } catch (error) {
+    console.error('Billing /discount/validate error:', error);
+    res.status(500).json({ error: 'Failed to validate discount' });
+  }
+});
+
+// Upgrade endpoint with optional discount code (no real payment integration)
 router.post('/upgrade', async (req: Request, res: Response) => {
   try {
     const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id);
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { plan } = req.body as { plan: Plan };
+    const { plan, discountCode } = req.body as { plan: Plan; discountCode?: string };
     if (!['pro', 'annual'].includes(plan)) {
       return res.status(400).json({ error: 'Invalid plan' });
+    }
+
+    let appliedDiscount: { id: string } | null = null;
+
+    if (discountCode) {
+      const discount = await prisma.discountCode.findUnique({
+        where: { code: discountCode },
+      });
+
+      if (
+        !discount ||
+        !discount.active ||
+        (discount.expiresAt && discount.expiresAt < new Date()) ||
+        (discount.maxUses !== null && discount.maxUses !== undefined && discount.usedCount >= discount.maxUses)
+      ) {
+        return res.status(400).json({ error: 'الكود غير صحيح أو منتهي' });
+      }
+
+      appliedDiscount = { id: discount.id };
+
+      await prisma.discountCode.update({
+        where: { id: discount.id },
+        data: { usedCount: discount.usedCount + 1 },
+      });
     }
 
     const now = new Date();
@@ -82,7 +155,10 @@ router.post('/upgrade', async (req: Request, res: Response) => {
       },
     });
 
-    res.json(updated);
+    res.json({
+      ...updated,
+      discountApplied: Boolean(appliedDiscount),
+    });
   } catch (error) {
     console.error('Billing /upgrade error:', error);
     res.status(500).json({ error: 'Failed to upgrade plan' });

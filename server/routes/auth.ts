@@ -38,13 +38,17 @@ router.post('/register', async (req: Request, res: Response) => {
     const { hash, salt } = await hashPassword(password);
 
     // Create user (at least one of email or phone)
+    const referralCode = `EGX-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+
     const user = await prisma.user.create({
       data: {
         fullName,
         email: email ?? undefined,
         phone: phone || undefined,
         passwordHash: hash,
-        salt
+        salt,
+        referralCode,
+        lastPasswordChangeAt: new Date(),
       }
     });
 
@@ -59,6 +63,8 @@ router.post('/register', async (req: Request, res: Response) => {
         refreshTokenHash: refreshHash,
         ipHash: req.ip || 'unknown',
         userAgentHash: req.headers['user-agent'] || 'unknown',
+        ip: req.ip || null,
+        userAgent: req.headers['user-agent'] || null,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       }
     });
@@ -118,6 +124,8 @@ router.post('/login', async (req: Request, res: Response) => {
         refreshTokenHash: refreshHash,
         ipHash: req.ip || 'unknown',
         userAgentHash: req.headers['user-agent'] || 'unknown',
+        ip: req.ip || null,
+        userAgent: req.headers['user-agent'] || null,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       }
     });
@@ -182,6 +190,8 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
         refreshTokenHash: refreshHash,
         ipHash: req.ip || 'unknown',
         userAgentHash: req.headers['user-agent'] || 'unknown',
+        ip: req.ip || null,
+        userAgent: req.headers['user-agent'] || null,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
@@ -247,6 +257,59 @@ router.post('/logout', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Logout error:', error);
     res.status(500).json({ error: 'Logout failed' });
+  }
+});
+
+// Change password for authenticated user
+router.post('/change-password', async (req: Request, res: Response) => {
+  try {
+    const accessHeader = req.headers.authorization;
+    if (!accessHeader || !accessHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = accessHeader.substring(7);
+    const { verifyAccessToken } = await import('../../src/lib/auth.ts');
+    const decoded = verifyAccessToken(token) as { sub: string };
+    const userId = decoded.sub;
+
+    const { currentPassword, newPassword } = req.body as {
+      currentPassword?: string;
+      newPassword?: string;
+    };
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current and new password are required' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user || !user.passwordHash || !user.salt) {
+      return res.status(400).json({ error: 'Password change not available for this account' });
+    }
+
+    const valid = await verifyPassword(currentPassword, user.passwordHash, user.salt);
+    if (!valid) {
+      return res.status(400).json({ error: 'كلمة المرور الحالية غير صحيحة' });
+    }
+
+    const { hash, salt } = await hashPassword(newPassword);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: hash,
+        salt,
+        lastPasswordChangeAt: new Date(),
+      },
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
   }
 });
 

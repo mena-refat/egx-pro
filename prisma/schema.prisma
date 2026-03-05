@@ -18,6 +18,7 @@ model User {
   isEmailVerified   Boolean   @default(false)
   twoFactorEnabled  Boolean   @default(false)
   twoFactorSecret   String?
+  avatarUrl         String?
   riskTolerance     String?   @default("moderate")
   investmentHorizon Int?      @default(5)
   monthlyBudget     Float?    @default(0)
@@ -30,6 +31,18 @@ model User {
   subscriptionEndsAt DateTime?
   analysisUsageMonth String?   // e.g. "2026-03"
   analysisUsageCount Int       @default(0)
+  referralCode      String?   @unique
+  referredBy        String?
+  notifySignals     Boolean   @default(true)
+  notifyPortfolio   Boolean   @default(true)
+  notifyNews        Boolean   @default(true)
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  loginStreak       Int       @default(0)
+  freeReferralRewarded Boolean @default(false)
+  lastPasswordChangeAt DateTime?
+  lastUsernameChangeAt DateTime?
+  usernameChangeCount Int       @default(0)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -39,6 +52,8 @@ model User {
   goals             Goal[]
   watchlists        Watchlist[]
   analyses          Analysis[]
+  referralsSent     Referral[] @relation("ReferralsSent")
+  referralsReceived Referral[] @relation("ReferralsReceived")
 }
 
 model Session {
@@ -48,6 +63,8 @@ model Session {
   ipHash             String
   userAgentHash      String
   deviceFingerprint  String?
+  ip                 String?
+  userAgent          String?
   expiresAt          DateTime
   createdAt          DateTime @default(now())
   lastUsedAt         DateTime @default(now())
@@ -110,4 +127,28 @@ model Analysis {
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Referral {
+  id              String   @id @default(uuid())
+  referrerId      String
+  referredUserId  String
+  status          String   @default("pending") // pending, completed
+  createdAt       DateTime @default(now())
+
+  referrer        User     @relation("ReferralsSent", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUser    User     @relation("ReferralsReceived", fields: [referredUserId], references: [id], onDelete: Cascade)
+}
+
+model DiscountCode {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  type       String   // percentage or amount
+  value      Float
+  active     Boolean  @default(true)
+  expiresAt  DateTime?
+  maxUses    Int?
+  usedCount  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
