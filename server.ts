@@ -12,6 +12,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { rateLimit } from 'express-rate-limit';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 
@@ -57,7 +58,12 @@ async function startServer() {
   app.use(hpp());
   app.use(express.json({ limit: '10kb' }));
   app.use(cookieParser());
-  app.use(morgan('combined'));
+  if (process.env.NODE_ENV !== 'production') {
+    app.use(morgan('dev'));
+  } else {
+    // في الـ production نحافظ على لوج مبسط بدون تفاصيل داخلية
+    app.use(morgan('combined'));
+  }
 
   // Static uploads (avatars, etc.)
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -138,15 +144,32 @@ async function startServer() {
 
   // 404 for unknown API routes (before static so /api/foo returns JSON not HTML)
   app.use('/api', (_req, res) => {
-    res.status(404).json({ error: 'Not Found' });
+    res.status(404).json({ error: 'not_found' });
   });
 
   // Global Error Handler
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const reqId = (req as express.Request & { id?: string }).id;
-    console.error('Unhandled Error:', reqId, err instanceof Error ? err.message : err);
-    res.status(500).json({ error: 'Internal Server Error' });
+
+    const message = err instanceof Error ? err.message : String(err);
+    const logLine = `[${new Date().toISOString()}] [${reqId ?? 'no-id'}] ${message}\n`;
+
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        const logsDir = path.join(__dirname, 'logs');
+        if (!fs.existsSync(logsDir)) {
+          fs.mkdirSync(logsDir, { recursive: true });
+        }
+        fs.appendFileSync(path.join(logsDir, 'error.log'), logLine);
+      } catch {
+        // لو حصل خطأ في اللوج، منظهرش أي تفاصيل للـ client
+      }
+    } else {
+      console.error('Unhandled Error:', reqId, err);
+    }
+
+    res.status(500).json({ error: 'server_error' });
   });
 
   // Vite Integration

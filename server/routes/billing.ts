@@ -13,7 +13,7 @@ function getCurrentMonthKey() {
 router.get('/plan', async (req: Request, res: Response) => {
   try {
     const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!userId) return res.status(401).json({ error: 'unauthorized' });
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -27,7 +27,7 @@ router.get('/plan', async (req: Request, res: Response) => {
       },
     });
 
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ error: 'not_found' });
 
     const monthKey = getCurrentMonthKey();
     const usedThisMonth =
@@ -71,7 +71,7 @@ router.get('/plan', async (req: Request, res: Response) => {
 router.post('/discount/validate', async (req: Request, res: Response) => {
   try {
     const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!userId) return res.status(401).json({ error: 'unauthorized' });
 
     const { code, plan } = req.body as { code?: string; plan?: Plan };
     if (!code || !plan || !['pro', 'annual'].includes(plan)) {
@@ -121,7 +121,7 @@ router.post('/discount/validate', async (req: Request, res: Response) => {
 router.post('/upgrade', async (req: Request, res: Response) => {
   try {
     const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!userId) return res.status(401).json({ error: 'unauthorized' });
 
     const { plan, discountCode } = req.body as { plan: Plan; discountCode?: string };
     if (!['pro', 'annual'].includes(plan)) {

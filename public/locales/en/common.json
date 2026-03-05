@@ -4,6 +4,30 @@
     "loading": "Loading...",
     "error": "Something went wrong"
   },
+  "error": {
+    "label": "An error occurred",
+    "codeLabel": "Error code: {{code}}",
+    "404": {
+      "title": "Page not found",
+      "description": "The page you are looking for does not exist or has been moved.",
+      "action": "Back to home"
+    },
+    "403": {
+      "title": "Access denied",
+      "description": "You do not have permission to access this page.",
+      "action": "Back to home"
+    },
+    "500": {
+      "title": "Server error",
+      "description": "We’re experiencing a temporary issue and are working on a fix.",
+      "action": "Try again"
+    },
+    "401": {
+      "title": "Login required",
+      "description": "Please sign in to continue.",
+      "action": "Login"
+    }
+  },
   "auth": {
     "login": "Login",
     "register": "Register",

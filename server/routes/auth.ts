@@ -4,7 +4,7 @@ import { hashPassword, verifyPassword, generateAccessToken, generateRefreshToken
 import { z } from 'zod';
 import axios from 'axios';
 import speakeasy from 'speakeasy';
-import { registerSchema, loginSchema, normalizePhone, isEmailInput } from '../../src/lib/validations.ts';
+import { registerSchema, loginSchema, normalizePhone, isEmailInput, isValidEgyptianPhone } from '../../src/lib/validations.ts';
 import { auditLog } from '../lib/audit.ts';
 
 const router = Router();
@@ -24,7 +24,18 @@ router.post('/register', async (req: Request, res: Response) => {
     const { fullName, emailOrPhone: raw, password } = registerSchema.parse(body);
     const isEmail = isEmailInput(raw);
     const email = isEmail ? raw.toLowerCase().trim() : null;
-    const phone = isEmail ? null : normalizePhone(raw);
+
+    let phone: string | null = null;
+    if (!isEmail) {
+      const digitsOnly = raw.replace(/\D/g, '');
+      if (!isValidEgyptianPhone(digitsOnly)) {
+        return res.status(400).json({
+          error: 'invalid_phone',
+          message: 'رقم الموبايل غير صحيح',
+        });
+      }
+      phone = normalizePhone(digitsOnly);
+    }
 
     // Check if user exists (by email or phone)
     const existingUser = email
@@ -112,22 +123,22 @@ router.post('/login', async (req: Request, res: Response) => {
       ? await prisma.user.findUnique({ where: { email } })
       : await prisma.user.findUnique({ where: { phone } });
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email/phone or password' });
+      return res.status(401).json({ error: 'unauthorized' });
     }
     if (!user.passwordHash || !user.salt) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'unauthorized' });
     }
 
     const isValid = await verifyPassword(password, user.passwordHash, user.salt);
     if (!isValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'unauthorized' });
     }
 
     // Handle soft-deleted accounts (reactivation within 30 days)
     if (user.isDeleted) {
       const now = new Date();
       if (user.deletionScheduledFor && user.deletionScheduledFor < now) {
-        return res.status(401).json({ error: 'الحساب تم حذفه نهائياً' });
+        return res.status(401).json({ error: 'unauthorized' });
       }
       user = await prisma.user.update({
         where: { id: user.id },
@@ -200,7 +211,7 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
     });
 
     if (!user?.twoFactorSecret) {
-      return res.status(401).json({ error: 'Invalid or expired' });
+      return res.status(401).json({ error: 'unauthorized' });
     }
 
     const valid = speakeasy.totp.verify({
@@ -210,7 +221,7 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
     });
 
     if (!valid) {
-      return res.status(401).json({ error: 'Invalid code' });
+      return res.status(401).json({ error: 'unauthorized' });
     }
 
     const loginId = user.email ?? user.phone ?? '';
@@ -261,7 +272,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) {
-      return res.status(401).json({ error: 'No refresh token' });
+      return res.status(401).json({ error: 'unauthorized' });
     }
 
     const refreshHash = hashRefreshToken(refreshToken);
@@ -271,7 +282,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
     });
 
     if (!session || session.expiresAt < new Date()) {
-      return res.status(401).json({ error: 'Invalid or expired refresh token' });
+      return res.status(401).json({ error: 'unauthorized' });
     }
 
     const loginId = session.user.email ?? session.user.phone ?? '';
@@ -307,7 +318,7 @@ router.post('/change-password', async (req: Request, res: Response) => {
   try {
     const accessHeader = req.headers.authorization;
     if (!accessHeader || !accessHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'unauthorized' });
     }
 
     const token = accessHeader.substring(7);

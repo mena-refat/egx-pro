@@ -1,10 +1,24 @@
 import { z } from 'zod';
 
-/** Normalize phone to digits only; Egyptian 01xxxxxxxxx -> 201xxxxxxxxx */
+/** Normalize Egyptian mobile phone:
+ * - Accepts formats like 010xxxxxxxx, 2010xxxxxxxx, +2010xxxxxxxx
+ * - Always returns 11-digit local format: 01xxxxxxxxx
+ */
 export function normalizePhone(input: string): string {
   const digits = input.replace(/\D/g, '');
-  if (digits.length === 11 && digits.startsWith('0')) return '2' + digits;
+  // 01xxxxxxxxx
+  if (digits.length === 11 && digits.startsWith('01')) {
+    return digits;
+  }
+  // 2010xxxxxxxx (with country code) -> 010xxxxxxxx
+  if (digits.length === 12 && digits.startsWith('201')) {
+    return '0' + digits.slice(2);
+  }
   return digits;
+}
+
+export function isValidEgyptianPhone(phone: string): boolean {
+  return /^01[0125][0-9]{8}$/.test(phone);
 }
 
 /** Check if input looks like email */

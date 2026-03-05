@@ -12,6 +12,7 @@ import StockAnalysis from './components/StockAnalysis';
 import FinancialGoalsSidebar from './components/FinancialGoalsSidebar';
 import ProfilePage from './components/ProfilePage';
 import DashboardPage from './pages/DashboardPage';
+import { ErrorPage } from './components/ErrorPage';
 import { loginSchema, registerSchema } from './lib/validations';
 import { Stock, PortfolioHolding } from './types';
 
@@ -32,14 +33,19 @@ export default function App() {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light' | 'system'>(() => {
     if (typeof window === 'undefined') return 'system';
+
+    // أولوية 1: اختيار اليوزر المحفوظ في الداتابيز
+    if (user?.theme === 'light' || user?.theme === 'dark' || user?.theme === 'system') {
+      return user.theme as 'light' | 'dark' | 'system';
+    }
+
+    // أولوية 2: اختيار سابق محفوظ في المتصفح
     const stored = localStorage.getItem('theme');
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
       return stored;
     }
-    // لو اليوزر عنده theme محفوظ في البروفايل نستخدمه كنقطة بداية
-    if (user?.theme === 'light' || user?.theme === 'dark' || user?.theme === 'system') {
-      return user.theme as 'light' | 'dark' | 'system';
-    }
+
+    // أولوية 3: النظام (system) ← يتم ترجمته لـ dark/light في useEffect بالأسفل
     return 'system';
   });
 
@@ -77,6 +83,40 @@ export default function App() {
       mql.removeEventListener('change', listener);
     };
   }, [theme]);
+
+  // لو اليوزر غيّر اللغة من الإعدادات (user.language) نخليها تسبق اكتشاف البراوزر
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (user?.language === 'ar' || user?.language === 'en') {
+      if (i18n.language !== user.language) {
+        i18n.changeLanguage(user.language);
+      }
+      return;
+    }
+
+    // لو مفيش لغة محفوظة من قبل، نستخدم navigator.language كإعداد افتراضي
+    const stored = localStorage.getItem('i18nextLng');
+    if (stored === 'ar' || stored === 'en') {
+      return;
+    }
+
+    const navLang =
+      (navigator.language || (Array.isArray(navigator.languages) && navigator.languages[0])) ??
+      'en';
+    const nextLang = navLang.toLowerCase().startsWith('ar') ? 'ar' : 'en';
+    if (i18n.language !== nextLang) {
+      i18n.changeLanguage(nextLang);
+    }
+  }, [user?.language, i18n]);
+
+  // لو اليوزر عنده theme محفوظ في البروفايل يطغى على السيستم والمتصفح
+  useEffect(() => {
+    if (!user?.theme) return;
+    if (user.theme === 'light' || user.theme === 'dark' || user.theme === 'system') {
+      setTheme(user.theme);
+    }
+  }, [user?.theme]);
   const [stats, setStats] = useState({ totalValue: 0, topPerformer: '--', topPerformerChange: 0 });
 
   useEffect(() => {
@@ -86,6 +126,9 @@ export default function App() {
     }
   }, [authMessage]);
   // Removed unused watchlist state
+
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
+  const knownPaths = ['/', '/portfolio', '/stocks', '/calculator', '/goals', '/profile'];
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -188,6 +231,20 @@ export default function App() {
         if (!result.success) {
           const firstError = result.error.issues?.[0]?.message || 'Invalid input';
           throw new Error(firstError);
+        }
+
+        // لو المستخدم بيسجل برقم موبايل، نطبّق قواعد رقم الموبايل المصري
+        if (!emailOrPhone.includes('@')) {
+          const digitsOnly = emailOrPhone.replace(/\D/g, '');
+          if (!digitsOnly) {
+            throw new Error(i18n.language === 'ar' ? 'رقم الموبايل مطلوب' : 'Phone number is required');
+          }
+          if (digitsOnly.length !== 11) {
+            throw new Error(i18n.language === 'ar' ? 'رقم الموبايل لازم يكون 11 رقم' : 'Phone number must be 11 digits');
+          }
+          if (!/^01[0125][0-9]{8}$/.test(digitsOnly)) {
+            throw new Error(i18n.language === 'ar' ? 'رقم الموبايل غير صحيح' : 'Invalid Egyptian phone number');
+          }
         }
       }
 
@@ -294,6 +351,11 @@ export default function App() {
 
   if (isAuthenticated && user?.isFirstLogin) {
     return <OnboardingWizard onComplete={() => updateUser({ isFirstLogin: false, onboardingCompleted: true })} />;
+  }
+
+  // لو مش مسجل دخول وحاول يدخل مسار غير الجذر → صفحة 401
+  if (!isAuthenticated && pathname !== '/') {
+    return <ErrorPage code={401} />;
   }
 
   if (isAuthenticated) {
@@ -496,6 +558,8 @@ export default function App() {
       </div>
     );
   }
+
+  // مستخدم غير مسجل دخول وعلى الجذر → شاشة auth العادية
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-sans text-white">

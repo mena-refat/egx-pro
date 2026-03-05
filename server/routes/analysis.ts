@@ -36,7 +36,7 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
     const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id); // Ensure auth middleware sets this
 
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'unauthorized' });
     }
 
     // 0. Enforce subscription-based quota
@@ -47,7 +47,7 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
     }) as any;
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'not_found' });
     }
 
     const plan = (user.subscriptionPlan as Plan) || 'free';
@@ -105,7 +105,7 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
     ];
 
     if (!priceData || !financials) {
-      return res.status(404).json({ error: 'Insufficient data for analysis' });
+      return res.status(404).json({ error: 'not_found' });
     }
 
     // 2. Prepare prompt for Claude

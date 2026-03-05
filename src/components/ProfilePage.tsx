@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { useProfileCompletion } from '../hooks/useProfileCompletion';
 import { motion, AnimatePresence } from 'motion/react';
@@ -634,7 +635,8 @@ function SubscriptionSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [upgrading, setUpgrading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>('pro');
+  // السنوي يبقى selected افتراضياً
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>('annual');
   const [discountCode, setDiscountCode] = useState('');
   const [discountMessage, setDiscountMessage] = useState<string | null>(null);
   const [discountError, setDiscountError] = useState<string | null>(null);
@@ -1089,6 +1091,7 @@ interface ProfileStats {
 }
 
 export default function ProfilePage() {
+  const { t, i18n } = useTranslation('common');
   const { user: authUser, accessToken, updateUser, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState('overview');
   const [user, setUser] = useState<UserProfile | null>(authUser as UserProfile | null);
@@ -1100,6 +1103,7 @@ export default function ProfilePage() {
   const [requestStatus, setRequestStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [fullNameInput, setFullNameInput] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'error'>('idle');
   const [usernameMessage, setUsernameMessage] = useState<string | null>(null);
@@ -1254,8 +1258,26 @@ export default function ProfilePage() {
         );
       } else if (field === 'phone') {
         if (phoneInput === (user.phone || '')) return;
+
+        const digitsOnly = phoneInput.replace(/\D/g, '');
+        let validationError: string | null = null;
+        if (!digitsOnly) {
+          validationError = i18n.language === 'ar' ? 'رقم الموبايل مطلوب' : 'Phone number is required';
+        } else if (digitsOnly.length !== 11) {
+          validationError = i18n.language === 'ar' ? 'رقم الموبايل لازم يكون 11 رقم' : 'Phone number must be 11 digits';
+        } else if (!/^01[0125][0-9]{8}$/.test(digitsOnly)) {
+          validationError = i18n.language === 'ar' ? 'رقم الموبايل غير صحيح' : 'Invalid Egyptian phone number';
+        }
+
+        if (validationError) {
+          setPhoneError(validationError);
+          setSavingField(null);
+          return;
+        }
+
+        setPhoneError(null);
         await updateProfile(
-          { phone: phoneInput },
+          { phone: digitsOnly },
           { success: 'تم تحديث رقم الموبايل بنجاح' }
         );
       } else if (field === 'username') {
@@ -1448,12 +1470,41 @@ export default function ProfilePage() {
                     <label className="block text-xs text-[#9ca3af] mb-1">
                       رقم الموبايل
                     </label>
-                    <div className="flex gap-2">
-                      <input
-                        value={phoneInput}
-                        onChange={(e) => setPhoneInput(e.target.value)}
-                        className="flex-1 bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
-                      />
+                <div className="flex gap-2 items-center">
+                  <div className="flex items-center flex-1 bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-1 focus-within:ring-2 focus-within:ring-[#7c3aed]">
+                    <span className="text-xs text-[#9ca3af] select-none">+20</span>
+                    <input
+                      value={phoneInput}
+                      onChange={(e) => {
+                        const digitsOnly = e.target.value.replace(/\D/g, '');
+                        setPhoneInput(digitsOnly);
+                      }}
+                      onBlur={() => {
+                        const digitsOnly = phoneInput.replace(/\D/g, '');
+                        if (!digitsOnly) {
+                          setPhoneError(i18n.language === 'ar' ? 'رقم الموبايل مطلوب' : 'Phone number is required');
+                        } else if (digitsOnly.length !== 11) {
+                          setPhoneError(
+                            i18n.language === 'ar'
+                              ? 'رقم الموبايل لازم يكون 11 رقم'
+                              : 'Phone number must be 11 digits'
+                          );
+                        } else if (!/^01[0125][0-9]{8}$/.test(digitsOnly)) {
+                          setPhoneError(
+                            i18n.language === 'ar'
+                              ? 'رقم الموبايل غير صحيح'
+                              : 'Invalid Egyptian phone number'
+                          );
+                        } else {
+                          setPhoneError(null);
+                        }
+                      }}
+                      maxLength={11}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className="flex-1 bg-transparent border-0 outline-none px-2 py-2 text-sm"
+                    />
+                  </div>
                       <button
                         onClick={() => saveField('phone')}
                         disabled={
@@ -1465,6 +1516,11 @@ export default function ProfilePage() {
                         {savingField === 'phone' ? 'جارٍ الحفظ...' : 'حفظ'}
                       </button>
                     </div>
+                {phoneError && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {phoneError}
+                  </p>
+                )}
                   </div>
 
                   <div>

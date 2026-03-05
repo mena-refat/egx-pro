@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma.ts';
 import { verifyAccessToken } from '../../src/lib/auth.ts';
-import { normalizePhone, usernameSchema } from '../../src/lib/validations.ts';
+import { normalizePhone, usernameSchema, isValidEgyptianPhone } from '../../src/lib/validations.ts';
 import { AuthRequest } from './types';
 import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
@@ -126,7 +126,15 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
       if (!trimmed) {
         data.phone = null;
       } else {
-        const normalized = normalizePhone(trimmed);
+        const digitsOnly = trimmed.replace(/\D/g, '');
+        if (!isValidEgyptianPhone(digitsOnly)) {
+          return res.status(400).json({
+            error: 'invalid_phone',
+            message: 'رقم الموبايل غير صحيح',
+          });
+        }
+
+        const normalized = normalizePhone(digitsOnly);
         const existingPhoneUser = await prisma.user.findFirst({
           where: {
             phone: normalized,
