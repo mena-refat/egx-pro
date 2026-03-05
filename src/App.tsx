@@ -128,7 +128,24 @@ export default function App() {
   // Removed unused watchlist state
 
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
-  const knownPaths = ['/', '/portfolio', '/stocks', '/calculator', '/goals', '/profile'];
+  const knownPaths = ['/', '/portfolio', '/stocks', '/calculator', '/goals', '/profile', '/account'];
+
+  // مزامنة الـ URL مع التبويب عند التحميل (عشان زر "اذهب وحقق التحدي" يودّي للصفحة الصحيحة)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const p = typeof window !== 'undefined' ? window.location.pathname : '/';
+    const tabFromPath: Record<string, string> = {
+      '/': 'dashboard',
+      '/portfolio': 'portfolio',
+      '/stocks': 'stocks',
+      '/calculator': 'calculator',
+      '/goals': 'goals',
+      '/profile': 'profile',
+      '/account': 'profile',
+    };
+    const tab = tabFromPath[p];
+    if (tab) setActiveTab(tab);
+  }, [isAuthenticated, pathname]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -370,16 +387,20 @@ export default function App() {
 
           <nav className="flex-1 space-y-2">
             {[
-              { id: 'dashboard', label: i18n.language === 'ar' ? 'الرئيسية' : 'Dashboard', icon: LayoutDashboard },
-              { id: 'portfolio', label: i18n.language === 'ar' ? 'محفظتي' : 'Portfolio', icon: PieChart },
-              { id: 'stocks', label: i18n.language === 'ar' ? 'الأسهم' : 'Stocks', icon: Search },
-              { id: 'calculator', label: i18n.language === 'ar' ? 'الحاسبة' : 'Calculator', icon: Calculator },
-              { id: 'goals', label: i18n.language === 'ar' ? 'أهدافي المالية' : 'Financial Goals', icon: Target },
-              { id: 'profile', label: i18n.language === 'ar' ? 'حسابي' : 'Profile', icon: UserIcon },
+              { id: 'dashboard', label: i18n.language === 'ar' ? 'الرئيسية' : 'Dashboard', icon: LayoutDashboard, path: '/' },
+              { id: 'portfolio', label: i18n.language === 'ar' ? 'محفظتي' : 'Portfolio', icon: PieChart, path: '/portfolio' },
+              { id: 'stocks', label: i18n.language === 'ar' ? 'الأسهم' : 'Stocks', icon: Search, path: '/stocks' },
+              { id: 'calculator', label: i18n.language === 'ar' ? 'الحاسبة' : 'Calculator', icon: Calculator, path: '/calculator' },
+              { id: 'goals', label: i18n.language === 'ar' ? 'أهدافي المالية' : 'Financial Goals', icon: Target, path: '/goals' },
+              { id: 'profile', label: i18n.language === 'ar' ? 'حسابي' : 'Profile', icon: UserIcon, path: '/profile' },
             ].map(item => (
               <button
                 key={item.id}
-                onClick={() => { setActiveTab(item.id); setSelectedStock(null); }}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setSelectedStock(null);
+                  if (typeof window !== 'undefined') window.history.pushState(null, '', item.path);
+                }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === item.id ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
               >
                 <item.icon className="w-5 h-5" />

@@ -276,7 +276,7 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
               )}
 
               <div className="mt-4 flex justify-end gap-2 flex-wrap">
-                {selected.route && (
+                {selected.route && !selected.completed && (
                   <a
                     href={selected.route}
                     className="px-4 py-2 rounded-xl text-sm font-medium bg-[#7c3aed] hover:bg-[#6d28d9] text-white"
@@ -1104,6 +1104,13 @@ export default function ProfilePage() {
   const { user: authUser, accessToken, updateUser, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState('overview');
   const [user, setUser] = useState<UserProfile | null>(authUser as UserProfile | null);
+
+  useEffect(() => {
+    const tab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+    if (tab && ['overview', 'subscription', 'referral', 'achievements', 'settings'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, []);
   const [loading, setLoading] = useState(!authUser);
   const [copied, setCopied] = useState(false);
   const [stats, setStats] = useState<ProfileStats | null>(null);
