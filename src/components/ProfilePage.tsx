@@ -23,6 +23,8 @@ import {
   Sun,
   Moon,
   Monitor,
+  Bell,
+  LogOut,
 } from 'lucide-react';
 import api from '../lib/api';
 
@@ -59,14 +61,21 @@ interface Achievement {
   id: string;
   level: 'beginner' | 'growth' | 'pro' | 'legend' | string;
   title: string;
-  icon: string;
-  description: string;
-  conditionDescription: string;
+  shortDescription: string;
+  longDescription: string;
   completed: boolean;
   date?: string | null;
   progress?: number;
   target?: number;
+  route?: string | null;
 }
+
+const LEVEL_META: { key: 'beginner' | 'growth' | 'pro' | 'legend'; label: string; title: string; color: string }[] = [
+  { key: 'beginner', label: 'الناشئ', title: 'المستوى الأول', color: 'text-[#a78bfa]' },
+  { key: 'growth', label: 'المستثمر', title: 'المستوى الثاني', color: 'text-[#60a5fa]' },
+  { key: 'pro', label: 'المحترف', title: 'المستوى الثالث', color: 'text-[#fbbf24]' },
+  { key: 'legend', label: 'الأسطورة', title: 'المستوى الرابع', color: 'text-[#fb7185]' },
+];
 
 function AchievementsSection({ accessToken }: { accessToken: string | null }) {
   const [items, setItems] = useState<Achievement[]>([]);
@@ -92,13 +101,13 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
               id: a.id,
               level: a.level,
               title: a.title,
-              icon: a.icon,
-              description: a.description,
-              conditionDescription: a.conditionDescription,
+              shortDescription: a.shortDescription ?? '',
+              longDescription: a.longDescription ?? '',
               completed: Boolean(a.completed),
               date: a.date ? String(a.date) : null,
               progress: typeof a.progress === 'number' ? a.progress : undefined,
               target: typeof a.target === 'number' ? a.target : undefined,
+              route: typeof a.route === 'string' ? a.route : null,
             }))
           : [];
         setItems(normalized);
@@ -152,47 +161,56 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
     return 0;
   };
 
+  const groups: Record<string, Achievement[]> = { beginner: [], growth: [], pro: [], legend: [] };
+  items.forEach((a) => {
+    if (groups[a.level]) groups[a.level].push(a);
+  });
+
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {items.map((badge) => {
-          const completed = badge.completed;
-          const percent = getProgressPercent(badge);
+      <div className="space-y-6">
+        {LEVEL_META.map((lvl) => {
+          const list = groups[lvl.key] || [];
+          const completedCount = list.filter((a) => a.completed).length;
           return (
-            <motion.button
-              type="button"
-              key={badge.id}
-              whileHover={{ scale: 1.03 }}
-              onClick={() => setSelected(badge)}
-              className={`p-4 rounded-2xl border text-center shadow-md transition-all ${
-                completed
-                  ? 'border-[#7c3aed] bg-gradient-to-br from-[#111827] to-[#1f2937] shadow-[0_0_15px_rgba(124,58,237,0.3)]'
-                  : 'border-[#111827] bg-[#020617] opacity-70'
-              }`}
-            >
-              <div className="text-3xl mb-2">{badge.icon}</div>
-              <p className="text-sm font-bold mb-1">{badge.title}</p>
-              {completed && badge.date ? (
-                <p className="text-xs text-[#9ca3af]">
-                  تم في {new Date(badge.date).toLocaleDateString('ar-EG')}
-                </p>
-              ) : badge.target && (
-                <div className="mt-2">
-                  <p className="text-[11px] text-[#9ca3af] mb-1">
-                    {badge.progress ?? 0} من {badge.target}
-                  </p>
-                  <div className="w-full h-1.5 bg-[#111827] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[#7c3aed]"
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-              {!completed && !badge.target && (
-                <Lock size={14} className="mx-auto mt-2 text-[#6b7280]" />
-              )}
-            </motion.button>
+            <div key={lvl.key} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className={`text-sm font-bold ${lvl.color}`}>
+                  {lvl.title} — {lvl.label}
+                </h3>
+                <span className="text-[11px] text-[#9ca3af]">{completedCount} من 10 مكتمل</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {list.map((badge) => {
+                  const completed = badge.completed;
+                  const percent = getProgressPercent(badge);
+                  return (
+                    <motion.button
+                      type="button"
+                      key={badge.id}
+                      whileHover={{ scale: 1.02 }}
+                      onClick={() => setSelected(badge)}
+                      className={`p-4 rounded-2xl border text-right shadow-md transition-all ${
+                        completed ? 'border-[#7c3aed] bg-[#7c3aed]/10' : 'border-[#374151] bg-[#020617] opacity-80'
+                      }`}
+                    >
+                      <p className="text-base font-bold mb-1 text-[#e5e7eb]">{badge.title}</p>
+                      <p className="text-xs text-[#9ca3af] mb-3">{badge.shortDescription}</p>
+                      {badge.target != null && (
+                        <div>
+                          <p className="text-[11px] text-[#9ca3af] mb-1">
+                            {badge.progress ?? 0} من {badge.target}
+                          </p>
+                          <div className="w-full h-1.5 bg-[#111827] rounded-full overflow-hidden">
+                            <div className="h-full bg-[#7c3aed]" style={{ width: `${percent}%` }} />
+                          </div>
+                        </div>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </div>
@@ -212,49 +230,43 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
               exit={{ scale: 0.9, y: 20 }}
             >
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="text-3xl">{selected.icon}</div>
-                  <div>
-                    <h3 className="font-bold text-lg">{selected.title}</h3>
-                    <p className="text-xs text-[#9ca3af]">
-                      مستوى: {selected.level === 'beginner' ? 'البداية' : selected.level === 'growth' ? 'النمو' : selected.level === 'pro' ? 'الاحتراف' : 'الأسطورة'}
-                    </p>
-                  </div>
+                <div>
+                  <h3 className="font-bold text-lg text-white">{selected.title}</h3>
+                  <p className="text-xs text-[#9ca3af]">
+                    المستوى:{' '}
+                    {selected.level === 'beginner'
+                      ? 'الناشئ'
+                      : selected.level === 'growth'
+                        ? 'المستثمر'
+                        : selected.level === 'pro'
+                          ? 'المحترف'
+                          : 'الأسطورة'}
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelected(null)}
-                  className="text-[#9ca3af] hover:text-white"
-                >
+                <button type="button" onClick={() => setSelected(null)} className="text-[#9ca3af] hover:text-white">
                   <ChevronLeft size={18} />
                 </button>
               </div>
 
-              <p className="text-sm text-[#e5e7eb] mb-3">{selected.description}</p>
-              <p className="text-xs text-[#9ca3af] mb-4">
-                عشان تحقق الإنجاز ده: {selected.conditionDescription}
-              </p>
+              <p className="text-sm text-[#e5e7eb] mb-4 whitespace-pre-line">{selected.longDescription}</p>
 
-              {selected.target && (
+              {selected.target != null && (
                 <div className="mb-4">
                   <div className="flex justify-between text-[11px] text-[#9ca3af] mb-1">
                     <span>التقدم</span>
                     <span>
-                      {selected.progress ?? 0} / {selected.target}
+                      {selected.progress ?? 0} من {selected.target} مكتمل
                     </span>
                   </div>
                   <div className="w-full h-1.5 bg-[#111827] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[#7c3aed]"
-                      style={{ width: `${getProgressPercent(selected)}%` }}
-                    />
+                    <div className="h-full bg-[#7c3aed]" style={{ width: `${getProgressPercent(selected)}%` }} />
                   </div>
                 </div>
               )}
 
               {selected.completed && selected.date && (
-                <p className="text-xs text-emerald-400">
-                  تم تحقيق الإنجاز في{' '}
+                <p className="text-xs text-emerald-400 mb-4">
+                  ✓ تم في{' '}
                   {new Date(selected.date).toLocaleDateString('ar-EG', {
                     year: 'numeric',
                     month: 'short',
@@ -263,7 +275,15 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
                 </p>
               )}
 
-              <div className="mt-6 flex justify-end">
+              <div className="mt-4 flex justify-end gap-2 flex-wrap">
+                {selected.route && (
+                  <a
+                    href={selected.route}
+                    className="px-4 py-2 rounded-xl text-sm font-medium bg-[#7c3aed] hover:bg-[#6d28d9] text-white"
+                  >
+                    اذهب وحقق التحدي
+                  </a>
+                )}
                 <button
                   type="button"
                   onClick={() => setSelected(null)}
@@ -285,9 +305,7 @@ function SecuritySection({ accessToken }: { accessToken: string | null }) {
   const [error, setError] = useState<string | null>(null);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [lastPasswordChangeAt, setLastPasswordChangeAt] = useState<string | null>(null);
-  const [createdAt, setCreatedAt] = useState<string | null>(null);
-  const [lastLoginAt, setLastLoginAt] = useState<string | null>(null);
-  const [lastLoginIp, setLastLoginIp] = useState<string | null>(null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -316,9 +334,6 @@ function SecuritySection({ accessToken }: { accessToken: string | null }) {
         }
         setTwoFactorEnabled(Boolean(data.twoFactorEnabled));
         setLastPasswordChangeAt(data.lastPasswordChangeAt ?? null);
-        setCreatedAt(data.createdAt ?? null);
-        setLastLoginAt(data.lastLoginAt ?? null);
-        setLastLoginIp(data.lastLoginIp ?? null);
       } catch (err) {
         console.error('Security info load error', err);
         setError('فشل تحميل معلومات الأمان');
@@ -358,6 +373,7 @@ function SecuritySection({ accessToken }: { accessToken: string | null }) {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setShowPasswordForm(false);
     } catch (err) {
       console.error('Change password error', err);
       setPasswordMessage('فشل تغيير كلمة المرور. تأكد من صحة الكلمة الحالية.');
@@ -448,8 +464,9 @@ function SecuritySection({ accessToken }: { accessToken: string | null }) {
 
   return (
     <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md space-y-6">
-      <h3 className="font-bold text-[#9ca3af] mb-2 uppercase text-xs">
-        الأمان والخصوصية
+      <h3 className="font-bold text-[#9ca3af] mb-2 text-xs flex items-center gap-2">
+        <Shield className="w-4 h-4" />
+        <span className="uppercase">الأمان والخصوصية</span>
       </h3>
       {loading ? (
         <p className="text-xs text-[#9ca3af]">جاري تحميل معلومات الأمان...</p>
@@ -457,50 +474,63 @@ function SecuritySection({ accessToken }: { accessToken: string | null }) {
         <p className="text-xs text-red-400">{error}</p>
       ) : (
         <>
-          {/* Password change */}
+          {/* كلمة المرور — ملخص + نموذج عند الضغط على "تغيير" */}
           <div className="space-y-3 border-b border-[#1f2937] pb-4">
-            <p className="text-sm font-semibold text-[#e5e7eb] mb-1">
-              تغيير كلمة المرور
-            </p>
-            <div className="grid md:grid-cols-3 gap-3">
-              <input
-                type="password"
-                placeholder="كلمة المرور الحالية"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
-              />
-              <input
-                type="password"
-                placeholder="كلمة المرور الجديدة"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
-              />
-              <input
-                type="password"
-                placeholder="تأكيد كلمة المرور الجديدة"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
-              />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-[#e5e7eb]">كلمة المرور</p>
+                <p className="text-[11px] text-[#9ca3af]">
+                  آخر تغيير:{' '}
+                  {lastPasswordChangeAt
+                    ? new Date(lastPasswordChangeAt).toLocaleDateString('ar-EG')
+                    : 'لم تتغير بعد'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPasswordForm((v) => !v)}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold border border-[#374151] text-[#e5e7eb] hover:bg-[#1f2937]"
+              >
+                {showPasswordForm ? 'إلغاء' : 'تغيير'}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleChangePassword}
-              disabled={changingPassword}
-              className="mt-1 px-4 py-2 rounded-xl text-xs font-bold bg-[#7c3aed] hover:bg-[#6d28d9] text-white disabled:opacity-60"
-            >
-              {changingPassword ? 'جارٍ التغيير...' : 'تحديث كلمة المرور'}
-            </button>
-            {passwordMessage && (
-              <p className="text-[11px] text-[#e5e7eb] mt-1">{passwordMessage}</p>
-            )}
-            {lastPasswordChangeAt && (
-              <p className="text-[11px] text-[#9ca3af] mt-1">
-                آخر تغيير لكلمة المرور:{' '}
-                {new Date(lastPasswordChangeAt).toLocaleDateString('ar-EG')}
-              </p>
+            {showPasswordForm && (
+              <div className="space-y-3 mt-3">
+                <div className="grid md:grid-cols-3 gap-3">
+                  <input
+                    type="password"
+                    placeholder="كلمة المرور الحالية"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+                  />
+                  <input
+                    type="password"
+                    placeholder="كلمة المرور الجديدة"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+                  />
+                  <input
+                    type="password"
+                    placeholder="تأكيد كلمة المرور الجديدة"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleChangePassword}
+                  disabled={changingPassword}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#7c3aed] hover:bg-[#6d28d9] text-white disabled:opacity-60"
+                >
+                  {changingPassword ? 'جارٍ التغيير...' : 'تحديث كلمة المرور'}
+                </button>
+                {passwordMessage && (
+                  <p className="text-[11px] text-[#e5e7eb] mt-1">{passwordMessage}</p>
+                )}
+              </div>
             )}
           </div>
 
@@ -587,28 +617,6 @@ function SecuritySection({ accessToken }: { accessToken: string | null }) {
             )}
           </div>
 
-          {/* Login info */}
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-[#e5e7eb] mb-1">
-              نشاط الحساب
-            </p>
-            <p className="text-[11px] text-[#9ca3af]">
-              إنشاء الحساب:{' '}
-              {createdAt
-                ? new Date(createdAt).toLocaleDateString('ar-EG')
-                : 'غير متوفر'}
-            </p>
-            <p className="text-[11px] text-[#9ca3af]">
-              آخر تسجيل دخول:{' '}
-              {lastLoginAt
-                ? new Date(lastLoginAt).toLocaleString('ar-EG')
-                : 'غير متوفر'}
-            </p>
-            <p className="text-[11px] text-[#9ca3af]">
-              آخر عنوان IP معروف:{' '}
-              {lastLoginIp || 'غير متوفر'}
-            </p>
-          </div>
         </>
       )}
     </div>
@@ -1080,6 +1088,7 @@ interface UserProfile {
   notifySignals?: boolean;
   notifyPortfolio?: boolean;
   notifyNews?: boolean;
+  userTitle?: string;
 }
 
 interface ProfileStats {
@@ -1362,6 +1371,21 @@ export default function ProfilePage() {
                     ) : (
                       <p className="text-[#9ca3af] text-sm">{user.email || user.phone || '—'}</p>
                     )}
+                    {user.userTitle && (
+                      <p
+                        className={`text-sm font-medium mt-0.5 ${
+                          user.userTitle === 'أسطورة'
+                            ? 'text-[#fb7185]'
+                            : user.userTitle === 'محترف'
+                              ? 'text-[#fbbf24]'
+                              : user.userTitle === 'مستثمر'
+                                ? 'text-[#60a5fa]'
+                                : 'text-[#a78bfa]'
+                        }`}
+                      >
+                        {user.userTitle}
+                      </p>
+                    )}
                   </div>
                   <div className="mr-auto bg-gradient-to-r from-[#7c3aed] to-[#3b82f6] px-3 py-1 rounded-full text-sm font-bold text-white flex items-center gap-1">
                     <TrendingUp size={14} /> {user.riskTolerance || 'متوسط'}
@@ -1439,8 +1463,9 @@ export default function ProfilePage() {
 
               {/* Account info */}
               <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
-                <h3 className="font-bold text-[#9ca3af] mb-4 uppercase text-xs">
-                  الحساب
+                <h3 className="font-bold text-[#9ca3af] mb-4 text-xs flex items-center gap-2 uppercase">
+                  <User className="w-4 h-4" />
+                  بيانات الحساب
                 </h3>
                 <div className="space-y-4">
                   <div>
@@ -1575,49 +1600,9 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Delete account */}
               <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
-                <h3 className="font-bold text-[#fca5a5] mb-3 uppercase text-xs">
-                  حذف الحساب
-                </h3>
-                <p className="text-[11px] text-[#fca5a5] mb-3">
-                  سيتم جدولة حذف حسابك وجميع بياناتك بعد 30 يوم من طلب الحذف. يمكنك إلغاء
-                  الحذف خلال هذه المدة بتسجيل الدخول مرة أخرى.
-                </p>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const first = window.confirm(
-                      'هل أنت متأكد أنك تريد حذف حسابك؟ لن تتمكن من الوصول لبياناتك بعد الحذف النهائي.',
-                    );
-                    if (!first) return;
-                    const second = window.prompt(
-                      'من فضلك اكتب كلمة "حذف" للتأكيد النهائي على حذف الحساب.',
-                    );
-                    if (second !== 'حذف') return;
-                    try {
-                      const res = await fetch('/api/user/account', {
-                        method: 'DELETE',
-                      });
-                      const data = await res.json();
-                      if (!res.ok) {
-                        throw new Error(data?.error || 'فشل حذف الحساب');
-                      }
-                      alert('تم جدولة حذف حسابك خلال 30 يوم. سيتم تسجيل خروجك الآن.');
-                      logout();
-                    } catch (err) {
-                      console.error('Delete account error', err);
-                      alert('تعذر حذف الحساب الآن، حاول مرة أخرى لاحقاً.');
-                    }
-                  }}
-                  className="w-full bg-[#ef4444]/10 text-[#ef4444] py-3 rounded-2xl font-bold hover:bg-[#ef4444]/20 transition-all text-sm"
-                >
-                  حذف الحساب نهائياً
-                </button>
-              </div>
-
-              <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
-                <h3 className="font-bold text-[#9ca3af] mb-4 uppercase text-xs">
+                <h3 className="font-bold text-[#9ca3af] mb-4 text-xs flex items-center gap-2 uppercase">
+                  <Settings className="w-4 h-4" />
                   التفضيلات
                 </h3>
                 <div className="space-y-4">
@@ -1713,7 +1698,8 @@ export default function ProfilePage() {
               </div>
 
               <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
-                <h3 className="font-bold text-[#9ca3af] mb-4 uppercase text-xs">
+                <h3 className="font-bold text-[#9ca3af] mb-4 text-xs flex items-center gap-2 uppercase">
+                  <Bell className="w-4 h-4" />
                   الإشعارات
                 </h3>
                 <div className="space-y-3">
@@ -1756,12 +1742,50 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <button
-                className="w-full bg-[#ef4444]/10 text-[#ef4444] py-4 rounded-2xl font-bold hover:bg-[#ef4444]/20 transition-all shadow-md"
-                onClick={logout}
-              >
-                تسجيل الخروج
-              </button>
+              {/* تريد حذف حسابك؟ + تسجيل الخروج */}
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-[#1f2937]">
+                <p className="text-xs text-[#9ca3af]">
+                  تريد حذف حسابك؟{' '}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const first = window.confirm(
+                        'هل أنت متأكد أنك تريد حذف حسابك؟ لن تتمكن من الوصول لبياناتك بعد الحذف النهائي.',
+                      );
+                      if (!first) return;
+                      const second = window.prompt(
+                        'من فضلك اكتب كلمة "حذف" للتأكيد النهائي على حذف الحساب.',
+                      );
+                      if (second !== 'حذف') return;
+                      try {
+                        const res = await fetch('/api/user/account', {
+                          method: 'DELETE',
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                          throw new Error(data?.error || 'فشل حذف الحساب');
+                        }
+                        alert('تم جدولة حذف حسابك خلال 30 يوم. سيتم تسجيل خروجك الآن.');
+                        logout();
+                      } catch (err) {
+                        console.error('Delete account error', err);
+                        alert('تعذر حذف الحساب الآن، حاول مرة أخرى لاحقاً.');
+                      }
+                    }}
+                    className="text-[#9ca3af] underline hover:text-[#e5e7eb]"
+                  >
+                    اضغط هنا
+                  </button>
+                </p>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-[#374151] text-[#9ca3af] hover:bg-[#1f2937] hover:text-[#e5e7eb] transition-all"
+                >
+                  <LogOut className="w-4 h-4" />
+                  تسجيل الخروج
+                </button>
+              </div>
             </div>
           )}
         </motion.div>

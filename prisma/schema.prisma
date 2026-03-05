@@ -54,6 +54,7 @@ model User {
   isFirstLogin      Boolean   @default(true)
   hearAboutUs       String?
   investorProfile   Json?
+  userTitle         String    @default("ناشئ") // ناشئ | مستثمر | محترف | أسطورة
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -110,15 +111,16 @@ model Portfolio {
 }
 
 model Goal {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   userId       String
   name         String
   targetAmount Float
   targetDate   DateTime
-  type         String   // apartment, car, retirement, etc.
-  createdAt    DateTime @default(now())
+  type         String    // apartment, car, retirement, etc.
+  achievedAt   DateTime? // عند تحقق الهدف
+  createdAt    DateTime  @default(now())
 
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Watchlist {
