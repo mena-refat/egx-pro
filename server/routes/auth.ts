@@ -1,9 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
-import { hashPassword, verifyPassword, generateAccessToken, generateRefreshToken } from '../../src/lib/auth.ts';
+import { hashPassword, verifyPassword, generateAccessToken, generateRefreshToken, hashRefreshToken } from '../../src/lib/auth.ts';
 import { z } from 'zod';
 import axios from 'axios';
-import { registerSchema, loginSchema } from '../../src/lib/validations.ts';
+import speakeasy from 'speakeasy';
+import { registerSchema, loginSchema, normalizePhone, isEmailInput } from '../../src/lib/validations.ts';
+import { auditLog } from '../lib/audit.ts';
 
 const router = Router();
 
@@ -18,46 +20,55 @@ const getCookieOptions = () => ({
 
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { fullName, email: rawEmail, password } = registerSchema.parse(req.body);
-    const email = rawEmail.toLowerCase().trim();
+    const body = { ...req.body, emailOrPhone: req.body.emailOrPhone ?? req.body.email };
+    const { fullName, emailOrPhone: raw, password } = registerSchema.parse(body);
+    const isEmail = isEmailInput(raw);
+    const email = isEmail ? raw.toLowerCase().trim() : null;
+    const phone = isEmail ? null : normalizePhone(raw);
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    // Check if user exists (by email or phone)
+    const existingUser = email
+      ? await prisma.user.findUnique({ where: { email } })
+      : await prisma.user.findUnique({ where: { phone } });
     if (existingUser) {
-      return res.status(400).json({ error: 'Email already registered' });
+      return res.status(400).json({ error: isEmail ? 'Email already registered' : 'Phone number already registered' });
     }
 
     // Hash password
     const { hash, salt } = await hashPassword(password);
 
-    // Create user
+    // Create user (at least one of email or phone)
     const user = await prisma.user.create({
       data: {
         fullName,
-        email,
+        email: email ?? undefined,
+        phone: phone || undefined,
         passwordHash: hash,
         salt
       }
     });
 
-    // Generate tokens
-    const accessToken = generateAccessToken({ id: user.id, email: user.email });
+    const loginId = user.email ?? user.phone ?? '';
+    const accessToken = generateAccessToken({ id: user.id, email: loginId });
     const refreshToken = generateRefreshToken();
 
-    // Create session
+    const refreshHash = hashRefreshToken(refreshToken);
     await prisma.session.create({
       data: {
         userId: user.id,
-        refreshTokenHash: refreshToken, // Should hash this in production
+        refreshTokenHash: refreshHash,
         ipHash: req.ip || 'unknown',
         userAgentHash: req.headers['user-agent'] || 'unknown',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       }
     });
 
     res.cookie('refreshToken', refreshToken, getCookieOptions());
 
-    res.status(201).json({ accessToken, user: { id: user.id, email: user.email, fullName: user.fullName } });
+    res.status(201).json({
+      accessToken,
+      user: { id: user.id, email: user.email ?? undefined, phone: user.phone ?? undefined, fullName: user.fullName, username: user.username ?? undefined }
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.issues[0].message });
@@ -69,29 +80,42 @@ router.post('/register', async (req: Request, res: Response) => {
 
 router.post('/login', async (req: Request, res: Response) => {
   try {
-    const { email: rawEmail, password } = loginSchema.parse(req.body);
-    const email = rawEmail.toLowerCase().trim();
+    const body = { ...req.body, emailOrPhone: req.body.emailOrPhone ?? req.body.email };
+    const { emailOrPhone: raw, password } = loginSchema.parse(body);
+    const isEmail = isEmailInput(raw);
+    const email = isEmail ? raw.toLowerCase().trim() : null;
+    const phone = isEmail ? null : normalizePhone(raw);
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = email
+      ? await prisma.user.findUnique({ where: { email } })
+      : await prisma.user.findUnique({ where: { phone } });
     if (!user) {
-      return res.status(401).json({ error: 'User not found' });
+      return res.status(401).json({ error: 'Invalid email/phone or password' });
     }
     if (!user.passwordHash || !user.salt) {
-      return res.status(401).json({ error: 'User has no password set (try Google login)' });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     const isValid = await verifyPassword(password, user.passwordHash, user.salt);
     if (!isValid) {
-      return res.status(401).json({ error: 'Invalid password' });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const accessToken = generateAccessToken({ id: user.id, email: user.email });
-    const refreshToken = generateRefreshToken();
+    if (user.twoFactorEnabled && user.twoFactorSecret) {
+      return res.json({
+        twoFactorRequired: true,
+        userId: user.id,
+      });
+    }
 
+    const loginId = user.email ?? user.phone ?? '';
+    const accessToken = generateAccessToken({ id: user.id, email: loginId });
+    const refreshToken = generateRefreshToken();
+    const refreshHash = hashRefreshToken(refreshToken);
     await prisma.session.create({
       data: {
         userId: user.id,
-        refreshTokenHash: refreshToken,
+        refreshTokenHash: refreshHash,
         ipHash: req.ip || 'unknown',
         userAgentHash: req.headers['user-agent'] || 'unknown',
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -100,7 +124,18 @@ router.post('/login', async (req: Request, res: Response) => {
 
     res.cookie('refreshToken', refreshToken, getCookieOptions());
 
-    res.json({ accessToken, user: { id: user.id, email: user.email, fullName: user.fullName } });
+    await auditLog({ userId: user.id, action: 'login', req, result: 'success' });
+    res.json({
+      accessToken,
+      user: {
+        id: user.id,
+        email: user.email ?? undefined,
+        phone: user.phone ?? undefined,
+        fullName: user.fullName,
+        username: user.username ?? undefined,
+        onboardingCompleted: user.onboardingCompleted
+      }
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.issues[0].message });
@@ -110,15 +145,76 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
+// Login 2FA: verify TOTP then create session (no Bearer required)
+router.post('/2fa/verify', async (req: Request, res: Response) => {
+  try {
+    const { userId, token } = req.body as { userId?: string; token?: string };
+    if (!userId || !token || typeof token !== 'string' || token.length !== 6) {
+      return res.status(400).json({ error: 'Invalid request' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, phone: true, fullName: true, username: true, twoFactorSecret: true, onboardingCompleted: true },
+    });
+
+    if (!user?.twoFactorSecret) {
+      return res.status(401).json({ error: 'Invalid or expired' });
+    }
+
+    const valid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token,
+    });
+
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid code' });
+    }
+
+    const loginId = user.email ?? user.phone ?? '';
+    const accessToken = generateAccessToken({ id: user.id, email: loginId });
+    const refreshToken = generateRefreshToken();
+    const refreshHash = hashRefreshToken(refreshToken);
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshTokenHash: refreshHash,
+        ipHash: req.ip || 'unknown',
+        userAgentHash: req.headers['user-agent'] || 'unknown',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    res.cookie('refreshToken', refreshToken, getCookieOptions());
+    await auditLog({ userId: user.id, action: 'login_2fa', req, result: 'success' });
+    res.json({
+      accessToken,
+      user: {
+        id: user.id,
+        email: user.email ?? undefined,
+        phone: user.phone ?? undefined,
+        fullName: user.fullName,
+        username: user.username ?? undefined,
+        onboardingCompleted: user.onboardingCompleted,
+      },
+    });
+  } catch (error) {
+    console.error('2FA verify login error:', error);
+    res.status(500).json({ error: 'Verification failed' });
+  }
+});
+
 router.post('/refresh', async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.cookies;
+    const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) {
       return res.status(401).json({ error: 'No refresh token' });
     }
 
+    const refreshHash = hashRefreshToken(refreshToken);
     const session = await prisma.session.findUnique({
-      where: { refreshTokenHash: refreshToken },
+      where: { refreshTokenHash: refreshHash },
       include: { user: true }
     });
 
@@ -126,7 +222,8 @@ router.post('/refresh', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
 
-    const accessToken = generateAccessToken({ id: session.user.id, email: session.user.email });
+    const loginId = session.user.email ?? session.user.phone ?? '';
+    const accessToken = generateAccessToken({ id: session.user.id, email: loginId });
     res.json({ accessToken });
   } catch (error) {
     console.error('Refresh token error:', error);
@@ -136,10 +233,15 @@ router.post('/refresh', async (req: Request, res: Response) => {
 
 router.post('/logout', async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.cookies;
+    const refreshToken = req.cookies.refreshToken;
+    let userId: string | null = null;
     if (refreshToken) {
-      await prisma.session.delete({ where: { refreshTokenHash: refreshToken } });
+      const refreshHash = hashRefreshToken(refreshToken);
+      const session = await prisma.session.findUnique({ where: { refreshTokenHash: refreshHash }, select: { userId: true } });
+      if (session) userId = session.userId;
+      await prisma.session.deleteMany({ where: { refreshTokenHash: refreshHash } });
     }
+    if (userId) await auditLog({ userId, action: 'logout', req, result: 'success' });
     res.clearCookie('refreshToken', getCookieOptions());
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
@@ -150,13 +252,14 @@ router.post('/logout', async (req: Request, res: Response) => {
 
 router.get('/me', async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.cookies;
+    const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) {
       return res.status(401).json({ error: 'No refresh token' });
     }
 
+    const refreshHash = hashRefreshToken(refreshToken);
     const session = await prisma.session.findUnique({
-      where: { refreshTokenHash: refreshToken },
+      where: { refreshTokenHash: refreshHash },
       include: { user: true }
     });
 
@@ -164,15 +267,18 @@ router.get('/me', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
 
-    const accessToken = generateAccessToken({ id: session.user.id, email: session.user.email });
-    res.json({ 
-      accessToken, 
-      user: { 
-        id: session.user.id, 
-        email: session.user.email, 
+    const loginId = session.user.email ?? session.user.phone ?? '';
+    const accessToken = generateAccessToken({ id: session.user.id, email: loginId });
+    res.json({
+      accessToken,
+      user: {
+        id: session.user.id,
+        email: session.user.email ?? undefined,
+        phone: session.user.phone ?? undefined,
         fullName: session.user.fullName,
+        username: session.user.username ?? undefined,
         onboardingCompleted: session.user.onboardingCompleted
-      } 
+      }
     });
   } catch (error) {
     console.error('Auth check error:', error);
@@ -235,13 +341,12 @@ router.get('/google/callback', async (req: Request, res: Response) => {
       });
     }
 
-    // Create session
     const refreshToken = generateRefreshToken();
-    
+    const refreshHash = hashRefreshToken(refreshToken);
     await prisma.session.create({
       data: {
         userId: user.id,
-        refreshTokenHash: refreshToken,
+        refreshTokenHash: refreshHash,
         ipHash: req.ip || 'unknown',
         userAgentHash: req.headers['user-agent'] || 'unknown',
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),

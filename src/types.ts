@@ -12,8 +12,10 @@ export interface Stock {
 
 export interface User {
   id: string;
-  email: string;
+  email?: string;
+  phone?: string;
   fullName: string;
+  username?: string;
   riskTolerance?: string;
   investmentHorizon?: number;
   monthlyBudget?: number;

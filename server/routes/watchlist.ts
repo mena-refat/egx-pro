@@ -1,6 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma.ts';
 import { verifyAccessToken } from '../../src/lib/auth.ts';
+import { watchlistTickerSchema } from '../../src/lib/validations.ts';
 import { AuthRequest } from './types';
 
 const router = Router();
@@ -34,8 +35,13 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 // Add to watchlist
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { ticker } = req.body;
-    
+    const parsed = watchlistTickerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? 'Invalid ticker';
+      return res.status(400).json({ error: msg });
+    }
+    const { ticker } = parsed.data;
+
     // Check if already exists
     const existing = await prisma.watchlist.findFirst({
       where: { userId: req.userId!, ticker }

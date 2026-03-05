@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
 import { getStockPrice } from '../lib/yahoo.ts';
+import { addHoldingSchema } from '../../src/lib/validations.ts';
 
 const router = Router();
 
@@ -59,14 +60,20 @@ router.post('/add', async (req: Request, res: Response) => {
     const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id);
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { ticker, shares, purchasePrice, purchaseDate } = req.body;
+    const parsed = addHoldingSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? 'Invalid input';
+      return res.status(400).json({ error: msg });
+    }
+
+    const { ticker, shares, purchasePrice, purchaseDate } = parsed.data;
 
     const holding = await prisma.portfolio.create({
       data: {
         userId,
         ticker,
-        shares: parseFloat(shares),
-        avgPrice: parseFloat(purchasePrice),
+        shares,
+        avgPrice: purchasePrice,
         buyDate: new Date(purchaseDate)
       }
     });

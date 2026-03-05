@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { useProfileCompletion } from '../hooks/useProfileCompletion';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, Copy, Lock, User, CreditCard, Gift, Award, Settings, Check, TrendingUp, Wallet, BarChart2, Target } from 'lucide-react';
 
@@ -196,8 +197,10 @@ function SubscriptionSection() {
 
 interface UserProfile {
   id: string;
-  email: string;
+  email?: string;
+  phone?: string;
   fullName: string;
+  username?: string | null;
   riskTolerance: string;
   investmentHorizon: number;
   monthlyBudget: number;
@@ -217,6 +220,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState<UserProfile | null>(authUser as UserProfile | null);
   const [loading, setLoading] = useState(!authUser);
   const [copied, setCopied] = useState(false);
+  const { percentage: profileCompletion, isComplete: profileComplete } = useProfileCompletion(accessToken, user);
   
   useEffect(() => {
     if (authUser) {
@@ -318,26 +322,32 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#ec4899] p-1">
                     <div className="w-full h-full rounded-full bg-[#111827] flex items-center justify-center text-2xl font-bold">
-                      {user.fullName?.[0] || 'U'}
+                      {user.fullName?.[0] || user.username?.[0] || 'U'}
                     </div>
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold">{user.fullName}</h2>
-                    <p className="text-[#9ca3af] text-sm">{user.email}</p>
+                    <h2 className="text-xl font-bold">{user.fullName || '—'}</h2>
+                    {user.username ? (
+                      <p className="text-[#9ca3af] text-sm">@{user.username}</p>
+                    ) : (
+                      <p className="text-[#9ca3af] text-sm">{user.email || user.phone || '—'}</p>
+                    )}
                   </div>
                   <div className="mr-auto bg-gradient-to-r from-[#7c3aed] to-[#3b82f6] px-3 py-1 rounded-full text-sm font-bold text-white flex items-center gap-1">
                     <TrendingUp size={14} /> {user.riskTolerance || 'متوسط'}
                   </div>
                 </div>
-                <div className="mt-6">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>أكمل ملفك الشخصي</span>
-                    <span className="font-bold">{user.onboardingCompleted ? '100%' : '75%'}</span>
+                {!profileComplete && (
+                  <div className="mt-6">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span>أكمل ملفك الشخصي</span>
+                      <span className="font-bold">{profileCompletion}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-[#1f2937] rounded-full overflow-hidden">
+                      <motion.div className="h-full bg-gradient-to-r from-[#7c3aed] to-[#3b82f6]" initial={{ width: 0 }} animate={{ width: `${profileCompletion}%` }} transition={{ duration: 1 }} />
+                    </div>
                   </div>
-                  <div className="w-full h-2 bg-[#1f2937] rounded-full overflow-hidden">
-                    <motion.div className="h-full bg-gradient-to-r from-[#7c3aed] to-[#3b82f6]" initial={{ width: 0 }} animate={{ width: user.onboardingCompleted ? '100%' : '75%' }} transition={{ duration: 1 }} />
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Stats Bar */}

@@ -3,7 +3,12 @@ import jwt from 'jsonwebtoken';
 import { promisify } from 'util';
 
 const scrypt = promisify(crypto.scrypt);
-const PEPPER = process.env.AUTH_PEPPER || 'default-pepper-if-missing';
+const isDev = process.env.NODE_ENV === 'development';
+const rawPepper = process.env.AUTH_PEPPER;
+if (!rawPepper?.trim() && !isDev) {
+  throw new Error('AUTH_PEPPER must be set in non-development environments.');
+}
+const PEPPER = rawPepper?.trim() || 'default-pepper-if-missing';
 
 export async function hashPassword(password: string) {
   const salt = crypto.randomBytes(16).toString('hex');
@@ -73,4 +78,9 @@ export function verifyAccessToken(token: string) {
 
 export function generateRefreshToken() {
   return crypto.randomBytes(40).toString('hex');
+}
+
+/** Hash refresh token for storage (do not store raw token in DB). */
+export function hashRefreshToken(token: string): string {
+  return crypto.createHash('sha256').update(token, 'utf8').digest('hex');
 }

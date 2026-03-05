@@ -5,6 +5,7 @@ import StockCard from '../components/StockCard.tsx';
 import PortfolioPerformanceChart from '../components/PortfolioPerformanceChart';
 import { useLivePrices } from '../hooks/useLivePrices';
 import { usePortfolio } from '../hooks/usePortfolio';
+import { getStockName, getStockInfo } from '../lib/egxStocks';
 import { Stock } from '../types';
 
 export default function DashboardPage() {
@@ -235,8 +236,11 @@ export default function DashboardPage() {
                   return (
                     <div key={stock.ticker} className="flex justify-between items-center p-4 bg-slate-800/50 dark:bg-slate-800/50 bg-slate-50 rounded-2xl border border-white/5 dark:border-white/5 border-slate-200">
                       <div>
-                        <p className="font-bold">{stock.ticker}</p>
-                        <p className="text-xs text-slate-500">{stock.name || (i18n.language === 'ar' ? 'جاري التحميل...' : 'Loading...')}</p>
+                        <p className="font-bold">{getStockName(stock.ticker, i18n.language === 'ar' ? 'ar' : 'en')}</p>
+                        <p className="text-xs text-slate-500">{stock.ticker}</p>
+                        {getStockInfo(stock.ticker)?.nameEn && (
+                          <p className="text-xs text-slate-400 mt-0.5">{getStockInfo(stock.ticker)!.nameEn}</p>
+                        )}
                       </div>
                       <div className="text-right">
                         <p className="font-bold">{(stock.price || 0).toLocaleString()} EGP</p>

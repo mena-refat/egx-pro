@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getStockName, getStockInfo } from '../lib/egxStocks';
 
 interface StockCardProps {
   ticker: string;
@@ -10,19 +11,21 @@ interface StockCardProps {
   isConnected: boolean;
 }
 
-export default function StockCard({ 
-  ticker, 
-  price = 0, 
-  change = 0, 
-  changePercent = 0, 
+export default function StockCard({
+  ticker,
+  price = 0,
+  change = 0,
+  changePercent = 0,
   isConnected
 }: StockCardProps) {
   const { i18n } = useTranslation('common');
   const isPositive = change >= 0;
   const isRTL = i18n.language === 'ar';
+  const lang = isRTL ? 'ar' : 'en';
+  const info = getStockInfo(ticker);
 
   return (
-    <motion.div 
+    <motion.div
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -32,8 +35,12 @@ export default function StockCard({
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-xl font-bold dark:text-white text-slate-900 group-hover:text-violet-500 transition-colors">
-            {ticker}
+            {getStockName(ticker, lang)}
           </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{ticker}</p>
+          {info?.nameEn && (
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate max-w-[180px]" title={info.nameEn}>{info.nameEn}</p>
+          )}
           {!isConnected && (
             <span className="text-[10px] text-amber-500 animate-pulse font-medium">
               {isRTL ? 'جاري التحديث...' : 'Updating...'}

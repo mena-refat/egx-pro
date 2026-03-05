@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, UserPlus, TrendingUp, User as UserIcon, LayoutDashboard, PieChart, Calculator, Settings as SettingsIcon, Search, Eye, EyeOff, Sun, Moon, Target } from 'lucide-react';
 import OnboardingWizard from './components/OnboardingWizard';
+import { useProfileCompletion } from './hooks/useProfileCompletion';
 import PortfolioTracker from './components/PortfolioTracker';
 import StockScreener from './components/StockScreener';
 import InvestmentCalculator from './components/InvestmentCalculator';
@@ -17,8 +18,9 @@ import { Stock, PortfolioHolding } from './types';
 export default function App() {
   const { t, i18n } = useTranslation('common');
   const { isAuthenticated, user, logout, updateUser, accessToken } = useAuthStore();
+  const { percentage: profileCompletion, isComplete: profileComplete } = useProfileCompletion(accessToken, user);
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
+  const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -149,13 +151,13 @@ export default function App() {
     try {
       // Frontend Validation
       if (isLogin) {
-        const result = loginSchema.safeParse({ email, password });
+        const result = loginSchema.safeParse({ emailOrPhone, password });
         if (!result.success) {
           const firstError = result.error.issues?.[0]?.message || 'Invalid input';
           throw new Error(firstError);
         }
       } else {
-        const result = registerSchema.safeParse({ email, password, fullName });
+        const result = registerSchema.safeParse({ emailOrPhone, password, fullName });
         if (!result.success) {
           const firstError = result.error.issues?.[0]?.message || 'Invalid input';
           throw new Error(firstError);
@@ -163,7 +165,7 @@ export default function App() {
       }
 
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-      const body = isLogin ? { email, password } : { email, password, fullName };
+      const body = isLogin ? { emailOrPhone, password } : { emailOrPhone, password, fullName };
       
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -189,8 +191,13 @@ export default function App() {
         useAuthStore.getState().setAuth(profileData, data.accessToken);
         setAuthMessage({ text: i18n.language === 'ar' ? 'تم تسجيل الدخول بنجاح!' : 'Login successful!', type: 'success' });
       } else {
-        setIsLogin(true);
-        setAuthMessage({ text: i18n.language === 'ar' ? 'تم التسجيل بنجاح! يرجى تسجيل الدخول.' : 'Registration successful! Please login.', type: 'success' });
+        // Same as login: use returned token + user and optionally fetch full profile
+        const profileRes = await fetch('/api/user/profile', {
+          headers: { 'Authorization': `Bearer ${data.accessToken}` }
+        });
+        const profileData = profileRes.ok ? await profileRes.json() : data.user;
+        useAuthStore.getState().setAuth(profileData, data.accessToken);
+        setAuthMessage({ text: i18n.language === 'ar' ? 'تم إنشاء الحساب بنجاح!' : 'Account created successfully!', type: 'success' });
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Auth failed');
@@ -210,11 +217,10 @@ export default function App() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Verification failed');
 
-      const profileRes = await fetch('/api/user/profile', {
-        headers: { 'Authorization': `Bearer ${data.accessToken}` }
-      });
-      const profileData = await profileRes.json();
-      useAuthStore.getState().setAuth(profileData, data.accessToken);
+      useAuthStore.getState().setAuth(data.user, data.accessToken);
+      setShowTwoFactorInput(false);
+      setTwoFactorToken('');
+      setAuthMessage({ text: i18n.language === 'ar' ? 'تم تسجيل الدخول بنجاح!' : 'Login successful!', type: 'success' });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Verification failed');
     }
@@ -317,7 +323,11 @@ export default function App() {
               <h2 className="text-3xl font-bold">
                 {i18n.language === 'ar' ? `أهلاً، ${user?.fullName || 'مستثمرنا'}` : `Welcome, ${user?.fullName || 'Investor'}`}
               </h2>
-              <p className="text-slate-400">{i18n.language === 'ar' ? 'إليك نظرة سريعة على استثماراتك اليوم' : 'Here is a quick look at your investments today'}</p>
+              {user?.username ? (
+                <p className="text-slate-400 text-sm mt-0.5">@{user.username}</p>
+              ) : (
+                <p className="text-slate-400">{i18n.language === 'ar' ? 'إليك نظرة سريعة على استثماراتك اليوم' : 'Here is a quick look at your investments today'}</p>
+              )}
             </div>
             <div className="flex items-center gap-4">
               <button 
@@ -326,12 +336,14 @@ export default function App() {
               >
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
               </button>
-              <div className="text-right">
-                <p className="text-xs text-slate-500 uppercase tracking-wider">{i18n.language === 'ar' ? 'اكتمال الملف' : 'Profile Completion'}</p>
-                <div className="w-32 h-2 bg-slate-800 rounded-full mt-1 overflow-hidden">
-                  <div className="h-full bg-violet-500 w-[85%]" />
+              {!profileComplete && (
+                <div className="text-right">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">{i18n.language === 'ar' ? 'اكتمال الملف' : 'Profile Completion'}</p>
+                  <div className="w-32 h-2 bg-slate-800 rounded-full mt-1 overflow-hidden">
+                    <div className="h-full bg-violet-500 transition-all duration-500" style={{ width: `${profileCompletion}%` }} />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </header>
 
@@ -464,14 +476,15 @@ export default function App() {
             </AnimatePresence>
 
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">{t('auth.email')}</label>
+              <label className="block text-sm font-medium text-slate-400 mb-1">{t('auth.emailOrPhone')}</label>
               <input 
-                type="email" 
+                type="text" 
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="username"
+                value={emailOrPhone}
+                onChange={(e) => setEmailOrPhone(e.target.value)}
                 className="w-full bg-slate-800 border border-white/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
-                placeholder="name@example.com"
+                placeholder={i18n.language === 'ar' ? 'name@example.com أو 01xxxxxxxxx' : 'name@example.com or 01xxxxxxxxx'}
               />
             </div>
 

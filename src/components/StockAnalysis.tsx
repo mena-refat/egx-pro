@@ -16,6 +16,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import api from '../lib/api';
+import { getStockName, getStockInfo } from '../lib/egxStocks';
 import { Stock, AnalysisResult } from '../types';
 
 interface NewsItem {
@@ -107,8 +108,11 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           <section className="card-base p-8">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h2 className="text-4xl font-bold mb-2 dark:text-white text-slate-900">{stock.ticker}</h2>
-                <p className="text-slate-400">{stock.name}</p>
+                <h2 className="text-4xl font-bold mb-2 dark:text-white text-slate-900">{getStockName(stock.ticker, isRTL ? 'ar' : 'en')}</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{stock.ticker}</p>
+                {getStockInfo(stock.ticker)?.nameEn && (
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{getStockInfo(stock.ticker)!.nameEn}</p>
+                )}
               </div>
               <div className="text-right">
                 <div className={`text-2xl font-bold ${(stock.change || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -149,7 +153,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 </motion.div>
                 <div className="text-center">
                   <h3 className="text-xl font-bold mb-2">{isRTL ? 'جاري تحليل البيانات...' : 'Analyzing Market Data...'}</h3>
-                  <p className="text-slate-500 text-sm">{isRTL ? 'Claude يقوم بفحص المؤشرات الفنية والأساسية لـ ' : 'Claude is scanning fundamentals and technicals for '} {stock.ticker}</p>
+                  <p className="text-slate-500 text-sm">{isRTL ? 'Claude يقوم بفحص المؤشرات الفنية والأساسية لـ ' : 'Claude is scanning fundamentals and technicals for '} {getStockName(stock.ticker, isRTL ? 'ar' : 'en')}</p>
                 </div>
               </div>
             )}

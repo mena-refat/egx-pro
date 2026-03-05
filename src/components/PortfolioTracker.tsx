@@ -6,6 +6,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import api from '../lib/api';
 import { useLivePrices } from '../hooks/useLivePrices';
 import { usePortfolio } from '../hooks/usePortfolio';
+import { getStockName, getStockInfo, searchStocks } from '../lib/egxStocks';
 import { Stock } from '../types';
 
 export default function PortfolioTracker() {
@@ -201,13 +202,15 @@ export default function PortfolioTracker() {
                     const currentPrice = livePrices[h.ticker]?.price || h.avgPrice;
                     const profit = (currentPrice - h.avgPrice) * h.shares;
                     const profitPercent = h.avgPrice > 0 ? ((currentPrice - h.avgPrice) / h.avgPrice) * 100 : 0;
-                    const stockName = livePrices[h.ticker]?.name || allStocks.find(s => s.ticker === h.ticker)?.name || '--';
+                    const lang = isRTL ? 'ar' : 'en';
+                    const info = getStockInfo(h.ticker);
 
                     return (
                       <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
                         <td className="px-6 py-4">
-                          <div className="font-bold">{h.ticker}</div>
-                          <div className="text-xs text-slate-500">{stockName}</div>
+                          <div className="font-bold">{getStockName(h.ticker, lang)}</div>
+                          <div className="text-xs text-slate-500">{h.ticker}</div>
+                          {info?.nameEn && <div className="text-xs text-slate-400 mt-0.5">{info.nameEn}</div>}
                         </td>
                         <td className="px-6 py-4 font-mono">{h.shares.toLocaleString()}</td>
                         <td className="px-6 py-4 font-mono">{h.avgPrice.toLocaleString()}</td>
@@ -299,23 +302,12 @@ export default function PortfolioTracker() {
                     type="text" required
                     value={newHolding.ticker}
                     onFocus={() => setShowSuggestions(true)}
-                    onChange={async e => {
-                      const value = e.target.value.toUpperCase();
-                      setNewHolding({ ...newHolding, ticker: value });
+                    onChange={e => {
+                      setNewHolding({ ...newHolding, ticker: e.target.value });
                       setShowSuggestions(true);
-                      try {
-                        if (value.length >= 1) {
-                          const res = await api.get('/stocks/search', { params: { q: value } });
-                          if (Array.isArray(res.data)) {
-                            setAllStocks(res.data.sort((a, b) => a.ticker.localeCompare(b.ticker)));
-                          }
-                        }
-                      } catch (err) {
-                        console.error('Failed to search stocks for suggestions', err);
-                      }
                     }}
                     className="input-base"
-                    placeholder="e.g. FWRY"
+                    placeholder={isRTL ? 'ابحث بالرمز أو الاسم...' : 'Search by ticker or name...'}
                   />
                   
                   <AnimatePresence>
@@ -326,30 +318,37 @@ export default function PortfolioTracker() {
                         exit={{ opacity: 0, y: -10 }}
                         className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl shadow-xl"
                       >
-                        {allStocks
-                          .filter(s => 
-                            s.ticker.includes(newHolding.ticker) || 
-                            (s.name && s.name.toLowerCase().includes(newHolding.ticker.toLowerCase()))
-                          )
-                          .map(stock => (
-                            <button
-                              key={stock.ticker}
-                              type="button"
-                              onClick={() => {
-                                setNewHolding({ ...newHolding, ticker: stock.ticker, avgPrice: stock.price?.toString() || '' });
-                                setShowSuggestions(false);
-                              }}
-                              className="w-full text-right px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center justify-between border-b border-slate-100 dark:border-white/5 last:border-0"
-                            >
-                              <span className="text-xs text-slate-500 truncate max-w-[150px]">{stock.name}</span>
-                              <span className="font-bold">{stock.ticker}</span>
-                            </button>
-                          ))}
-                        {allStocks.filter(s => s.ticker.includes(newHolding.ticker) || (s.name && s.name.toLowerCase().includes(newHolding.ticker.toLowerCase()))).length === 0 && (
-                          <div className="px-4 py-3 text-sm text-slate-500 text-center">
-                            {isRTL ? 'لا توجد نتائج' : 'No results found'}
-                          </div>
-                        )}
+                        {(() => {
+                          const lang = isRTL ? 'ar' : 'en';
+                          const suggestions = searchStocks(newHolding.ticker.trim(), lang).slice(0, 20);
+                          return suggestions.length > 0 ? (
+                            suggestions.map(eg => {
+                              const priceStock = allStocks.find(s => s.ticker === eg.ticker);
+                              return (
+                                <button
+                                  key={eg.ticker}
+                                  type="button"
+                                  onClick={() => {
+                                    setNewHolding({
+                                      ...newHolding,
+                                      ticker: eg.ticker,
+                                      avgPrice: priceStock?.price?.toString() || ''
+                                    });
+                                    setShowSuggestions(false);
+                                  }}
+                                  className="w-full text-right px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center justify-between border-b border-slate-100 dark:border-white/5 last:border-0"
+                                >
+                                  <span className="text-xs text-slate-500 truncate max-w-[150px]">{getStockName(eg.ticker, lang)}</span>
+                                  <span className="font-bold text-sm">{eg.ticker}</span>
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <div className="px-4 py-3 text-sm text-slate-500 text-center">
+                              {newHolding.ticker.trim() ? (isRTL ? 'لا توجد نتائج' : 'No results found') : (isRTL ? 'اكتب للبحث بالعربي أو الإنجليزي أو الرمز' : 'Type to search by ticker or name')}
+                            </div>
+                          );
+                        })()}
                       </motion.div>
                     )}
                   </AnimatePresence>

@@ -8,6 +8,7 @@
     "login": "Login",
     "register": "Register",
     "email": "Email",
+    "emailOrPhone": "Email or phone number",
     "password": "Password",
     "fullName": "Full Name",
     "logout": "Logout"

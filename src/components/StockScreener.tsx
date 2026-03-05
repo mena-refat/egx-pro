@@ -4,6 +4,8 @@ import { Search, Filter, TrendingUp, TrendingDown, Star, StarOff } from 'lucide-
 import { motion } from 'motion/react';
 import api from '../lib/api';
 import { useLivePrices } from '../hooks/useLivePrices';
+import { searchStocks } from '../lib/egxStocks';
+import StockNameDisplay from './StockNameDisplay';
 import { Stock } from '../types';
 
 interface StockScreenerProps {
@@ -74,13 +76,19 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
   }, [stocks]);
 
   const filteredStocks = useMemo(() => {
-    return stocks.filter(s => {
-      const matchesSearch = s.ticker.toLowerCase().includes(search.toLowerCase()) || 
-                           (s.name && s.name.toLowerCase().includes(search.toLowerCase()));
-      const matchesSector = sectorFilter === 'All' || s.sector === sectorFilter;
-      return matchesSearch && matchesSector;
-    }).map(s => livePrices[s.ticker] || s);
-  }, [stocks, search, sectorFilter, livePrices]);
+    const lang = i18n.language === 'ar' ? 'ar' : 'en';
+    const searchTrim = search.trim();
+    const matchingTickers = searchTrim
+      ? new Set(searchStocks(searchTrim, lang).map((eg) => eg.ticker.toUpperCase()))
+      : null;
+    return stocks
+      .filter((s) => {
+        const matchesSearch = !matchingTickers || matchingTickers.has(s.ticker.toUpperCase());
+        const matchesSector = sectorFilter === 'All' || s.sector === sectorFilter;
+        return matchesSearch && matchesSector;
+      })
+      .map((s) => livePrices[s.ticker] || s);
+  }, [stocks, search, sectorFilter, livePrices, i18n.language]);
 
   if (loading) {
     return (
@@ -144,8 +152,7 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
           >
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h4 className="text-xl font-bold group-hover:text-violet-500 transition-colors">{stock.ticker}</h4>
-                <p className="text-xs text-slate-500 truncate w-32">{stock.name}</p>
+                <StockNameDisplay ticker={stock.ticker} lang={isRTL ? 'ar' : 'en'} className="group-hover:text-violet-500 transition-colors" />
               </div>
               <button 
                 onClick={(e) => { e.stopPropagation(); toggleWatchlist(stock.ticker); }}

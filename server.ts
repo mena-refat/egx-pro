@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 // Load base .env first, then override with .env.local if it exists
 config();
 config({ path: '.env.local', override: true });
+
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import helmet from 'helmet';
@@ -12,21 +13,29 @@ import cookieParser from 'cookie-parser';
 import { rateLimit } from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
 
 import { createServer } from 'http';
 import { setupWebSocket } from './server/websocket.ts';
+import { validateEnv } from './server/lib/env.ts';
 
 async function startServer() {
+  validateEnv();
+
   const app = express();
   app.set('trust proxy', 1);
   const server = createServer(app);
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // ESM-safe equivalent of __dirname
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 
-  console.log('DATABASE_URL from process.env:', process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@'));
+  // Request ID for tracing
+  app.use((req, _res, next) => {
+    (req as express.Request & { id?: string }).id = randomUUID();
+    next();
+  });
 
   // Security Middlewares
   app.use(helmet({
@@ -63,7 +72,7 @@ async function startServer() {
   const authRoutes = (await import('./server/routes/auth.ts')).default;
   app.use('/api/auth', authRoutes);
 
-  // Real auth middleware to inject user id for other routes
+  // Real auth middleware to inject user id for other routes (no 401 here; routes that require auth check req.user)
   app.use('/api', async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -72,8 +81,8 @@ async function startServer() {
         const { verifyAccessToken } = await import('./src/lib/auth.ts');
         const decoded = verifyAccessToken(token) as { sub: string, email: string };
         Object.assign(req, { user: { id: decoded.sub, email: decoded.email } });
-      } catch (err) {
-        console.error('JWT Verification Error:', err);
+      } catch {
+        // Invalid token: do not attach user; protected routes will return 401
       }
     }
     next();
@@ -100,15 +109,33 @@ async function startServer() {
   const billingRoutes = (await import('./server/routes/billing.ts')).default;
   app.use('/api/billing', billingRoutes);
 
-  // API Routes (Placeholder for Auth)
-  app.get('/api/health', (req, res) => {
+  const newsRoutes = (await import('./server/routes/news.ts')).default;
+  app.use('/api/news', newsRoutes);
+
+  app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  app.get('/api/health/ready', async (_req, res) => {
+    try {
+      const { prisma } = await import('./server/lib/prisma.ts');
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ status: 'ok', db: 'connected' });
+    } catch (e) {
+      res.status(503).json({ status: 'error', db: 'disconnected' });
+    }
+  });
+
+  // 404 for unknown API routes (before static so /api/foo returns JSON not HTML)
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ error: 'Not Found' });
   });
 
   // Global Error Handler
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error('Unhandled Error:', err);
+    const reqId = (req as express.Request & { id?: string }).id;
+    console.error('Unhandled Error:', reqId, err instanceof Error ? err.message : err);
     res.status(500).json({ error: 'Internal Server Error' });
   });
 

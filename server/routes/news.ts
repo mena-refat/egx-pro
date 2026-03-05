@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import axios from 'axios';
-import { getCache, setCache } from '../lib/redis';
+import { getCache, setCache } from '../lib/redis.ts';
 
 const router = Router();
 const NEWS_API_KEY = process.env.NEWS_API_KEY;

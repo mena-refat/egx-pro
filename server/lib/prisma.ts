@@ -6,9 +6,10 @@ export const prisma =
   globalForPrisma.prisma ||
   (() => {
     let url = process.env.DATABASE_URL;
-    if (!url) {
-      console.error('DATABASE_URL is not defined in environment variables!');
-    } else {
+    if (!url || !url.trim()) {
+      throw new Error('DATABASE_URL is not defined in environment variables.');
+    }
+    {
       // Force port 6543 and pgbouncer for Supabase if not already set
       if (url.includes('supabase.co') && !url.includes(':6543')) {
         url = url.replace(':5432', ':6543');

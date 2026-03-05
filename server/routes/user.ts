@@ -1,6 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma.ts';
 import { verifyAccessToken } from '../../src/lib/auth.ts';
+import { usernameSchema } from '../../src/lib/validations.ts';
 import { AuthRequest } from './types';
 import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
@@ -30,7 +31,9 @@ router.get('/profile', authenticate, async (req: AuthRequest, res: Response) => 
       select: {
         id: true,
         email: true,
+        phone: true,
         fullName: true,
+        username: true,
         riskTolerance: true,
         investmentHorizon: true,
         monthlyBudget: true,
@@ -65,33 +68,50 @@ router.get('/profile', authenticate, async (req: AuthRequest, res: Response) => 
 // Update profile
 router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { 
-      fullName, 
-      riskTolerance, 
-      investmentHorizon, 
-      monthlyBudget, 
-      shariaMode, 
+    const {
+      fullName,
+      username: rawUsername,
+      riskTolerance,
+      investmentHorizon,
+      monthlyBudget,
+      shariaMode,
       onboardingCompleted,
       interestedSectors,
       twoFactorEnabled,
       language,
-      theme 
+      theme
     } = req.body;
+
+    const data: Record<string, unknown> = {
+      fullName,
+      riskTolerance,
+      investmentHorizon,
+      monthlyBudget,
+      shariaMode,
+      onboardingCompleted,
+      interestedSectors: Array.isArray(interestedSectors) ? JSON.stringify(interestedSectors) : interestedSectors,
+      twoFactorEnabled,
+      language,
+      theme,
+    };
+
+    if (rawUsername !== undefined) {
+      const trimmed = typeof rawUsername === 'string' ? rawUsername.trim() : '';
+      if (!trimmed) {
+        data.username = null;
+      } else {
+        const username = usernameSchema.parse(trimmed);
+        const existing = await prisma.user.findFirst({
+          where: { username, id: { not: req.userId } },
+        });
+        if (existing) return res.status(400).json({ error: 'Username already taken' });
+        data.username = username;
+      }
+    }
 
     const user = await prisma.user.update({
       where: { id: req.userId },
-      data: {
-        fullName,
-        riskTolerance,
-        investmentHorizon,
-        monthlyBudget,
-        shariaMode,
-        onboardingCompleted,
-        interestedSectors: Array.isArray(interestedSectors) ? JSON.stringify(interestedSectors) : interestedSectors,
-        twoFactorEnabled,
-        language,
-        theme,
-      }
+      data,
     });
 
     const responseUser = {
