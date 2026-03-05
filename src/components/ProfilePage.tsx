@@ -27,6 +27,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import api from '../lib/api';
+import { validateChangePassword } from '../lib/validations';
 
 // --- Sub-components ---
 
@@ -301,6 +302,7 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
 }
 
 function SecuritySection({ accessToken }: { accessToken: string | null }) {
+  const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
@@ -352,6 +354,14 @@ function SecuritySection({ accessToken }: { accessToken: string | null }) {
     }
     if (newPassword !== confirmPassword) {
       setPasswordMessage('كلمتا المرور الجديدتان غير متطابقتين');
+      return;
+    }
+    const pwCheck = validateChangePassword(newPassword, {
+      email: user?.email ?? undefined,
+      username: user?.username ?? undefined,
+    });
+    if (!pwCheck.ok) {
+      setPasswordMessage(pwCheck.message);
       return;
     }
     setChangingPassword(true);

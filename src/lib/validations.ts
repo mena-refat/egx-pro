@@ -26,6 +26,50 @@ export function isEmailInput(s: string): boolean {
   return s.trim().includes('@');
 }
 
+/** كلمة المرور: 8+ أحرف، حرف كبير واحد على الأقل، رقم واحد على الأقل */
+export const passwordSchema = z
+  .string()
+  .min(8, 'كلمة المرور 8 أحرف على الأقل')
+  .regex(/[A-Z]/, 'يجب أن تحتوي على حرف كبير واحد على الأقل')
+  .regex(/[0-9]/, 'يجب أن تحتوي على رقم واحد على الأقل');
+
+/** التحقق من كلمة المرور عند التسجيل (لا تكون مثل البريد أو الموبايل) */
+export function validateRegisterPassword(
+  password: string,
+  emailOrPhone: string
+): { ok: true } | { ok: false; message: string } {
+  const parsed = passwordSchema.safeParse(password);
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? 'كلمة المرور غير صالحة';
+    return { ok: false, message: msg };
+  }
+  const normalized = emailOrPhone.trim().toLowerCase();
+  if (password.trim().toLowerCase() === normalized) {
+    return { ok: false, message: 'كلمة المرور لا يجوز أن تكون مثل البريد أو رقم الموبايل' };
+  }
+  return { ok: true };
+}
+
+/** التحقق من كلمة المرور عند التغيير (لا تكون مثل البريد أو اسم المستخدم) */
+export function validateChangePassword(
+  newPassword: string,
+  opts: { email?: string | null; username?: string | null }
+): { ok: true } | { ok: false; message: string } {
+  const parsed = passwordSchema.safeParse(newPassword);
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? 'كلمة المرور غير صالحة';
+    return { ok: false, message: msg };
+  }
+  const p = newPassword.trim().toLowerCase();
+  if (opts.email && p === opts.email.trim().toLowerCase()) {
+    return { ok: false, message: 'كلمة المرور لا يجوز أن تكون مثل البريد الإلكتروني' };
+  }
+  if (opts.username && p === opts.username.trim().toLowerCase()) {
+    return { ok: false, message: 'كلمة المرور لا يجوز أن تكون مثل اسم المستخدم' };
+  }
+  return { ok: true };
+}
+
 const emailOrPhoneSchema = z.preprocess(
   (v) => (v === undefined || v === null ? '' : v),
   z.string()
@@ -53,12 +97,7 @@ export const registerSchema = z.object({
   emailOrPhone: emailOrPhoneSchema,
   password: z.preprocess(
     (v) => (v === undefined || v === null ? '' : v),
-    z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number')
-    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character')
+    z.string().min(1, 'كلمة المرور مطلوبة')
   ),
 });
 

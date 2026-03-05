@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 const api = axios.create({
   baseURL: '/api',
   timeout: 10000,
+  withCredentials: true, // إرسال httpOnly cookie مع كل طلب (للـ refresh)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -61,7 +62,9 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await axios.post('/api/auth/refresh');
+        const response = await axios.post('/api/auth/refresh', null, {
+          withCredentials: true,
+        });
         const { accessToken } = response.data;
 
         useAuthStore.getState().setAuth(useAuthStore.getState().user, accessToken);

@@ -13,7 +13,7 @@ import FinancialGoalsSidebar from './components/FinancialGoalsSidebar';
 import ProfilePage from './components/ProfilePage';
 import DashboardPage from './pages/DashboardPage';
 import { ErrorPage } from './components/ErrorPage';
-import { loginSchema, registerSchema } from './lib/validations';
+import { loginSchema, registerSchema, validateRegisterPassword } from './lib/validations';
 import { Stock, PortfolioHolding } from './types';
 
 export default function App() {
@@ -150,7 +150,7 @@ export default function App() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch('/api/auth/me');
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
           useAuthStore.getState().setAuth(data.user, data.accessToken);
@@ -249,6 +249,10 @@ export default function App() {
           const firstError = result.error.issues?.[0]?.message || 'Invalid input';
           throw new Error(firstError);
         }
+        const pwCheck = validateRegisterPassword(password, emailOrPhone);
+        if (!pwCheck.ok) {
+          throw new Error(pwCheck.message);
+        }
 
         // لو المستخدم بيسجل برقم موبايل، نطبّق قواعد رقم الموبايل المصري
         if (!emailOrPhone.includes('@')) {
@@ -270,12 +274,13 @@ export default function App() {
       
       const res = await fetch(endpoint, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Auth failed');
+      if (!res.ok) throw new Error(data.message || data.error || 'Auth failed');
 
       if (isLogin) {
         if (data.twoFactorRequired) {
@@ -311,6 +316,7 @@ export default function App() {
     try {
       const res = await fetch('/api/auth/2fa/verify', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: tempUserId, token: twoFactorToken }),
       });
@@ -352,7 +358,7 @@ export default function App() {
         // The popup should have set a session or we might need to fetch the token
         // In this implementation, we'll assume the popup sends the token or we fetch profile
         try {
-          const res = await fetch('/api/auth/me'); // Endpoint to get current session user
+          const res = await fetch('/api/auth/me', { credentials: 'include' }); // Endpoint to get current session user
           if (res.ok) {
             const data = await res.json();
             useAuthStore.getState().setAuth(data.user, data.accessToken);

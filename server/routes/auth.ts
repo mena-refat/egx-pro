@@ -4,24 +4,37 @@ import { hashPassword, verifyPassword, generateAccessToken, generateRefreshToken
 import { z } from 'zod';
 import axios from 'axios';
 import speakeasy from 'speakeasy';
-import { registerSchema, loginSchema, normalizePhone, isEmailInput, isValidEgyptianPhone } from '../../src/lib/validations.ts';
+import { registerSchema, loginSchema, normalizePhone, isEmailInput, isValidEgyptianPhone, validateRegisterPassword } from '../../src/lib/validations.ts';
 import { auditLog } from '../lib/audit.ts';
+import { sanitizeUser } from '../lib/userSanitize.ts';
 
 const router = Router();
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+const REFRESH_TOKEN_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 const getCookieOptions = () => ({
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? 'none' as const : 'lax' as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+  sameSite: 'strict' as const,
+  maxAge: REFRESH_TOKEN_AGE_MS,
 });
+
+function getDeviceInfo(req: Request): string {
+  const ua = req.headers['user-agent'] || 'Unknown';
+  const short = ua.length > 200 ? ua.slice(0, 200) + '…' : ua;
+  return short;
+}
 
 router.post('/register', async (req: Request, res: Response) => {
   try {
     const body = { ...req.body, emailOrPhone: req.body.emailOrPhone ?? req.body.email };
     const { fullName, emailOrPhone: raw, password } = registerSchema.parse(body);
+    const pwCheck = validateRegisterPassword(password, raw);
+    if (!pwCheck.ok) {
+      return res.status(400).json({ error: pwCheck.message });
+    }
     const isEmail = isEmailInput(raw);
     const email = isEmail ? raw.toLowerCase().trim() : null;
 
@@ -66,18 +79,17 @@ router.post('/register', async (req: Request, res: Response) => {
     const loginId = user.email ?? user.phone ?? '';
     const accessToken = generateAccessToken({ id: user.id, email: loginId });
     const refreshToken = generateRefreshToken();
-
     const refreshHash = hashRefreshToken(refreshToken);
-    await prisma.session.create({
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
+
+    await prisma.refreshToken.create({
       data: {
+        token: refreshHash,
         userId: user.id,
-        refreshTokenHash: refreshHash,
-        ipHash: req.ip || 'unknown',
-        userAgentHash: req.headers['user-agent'] || 'unknown',
-        ip: req.ip || null,
-        userAgent: req.headers['user-agent'] || null,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      }
+        expiresAt,
+        deviceInfo: getDeviceInfo(req),
+        ipAddress: req.ip || null,
+      },
     });
 
     await prisma.user.update({
@@ -90,9 +102,10 @@ router.post('/register', async (req: Request, res: Response) => {
 
     res.cookie('refreshToken', refreshToken, getCookieOptions());
 
+    const safe = sanitizeUser(user as Record<string, unknown>);
     res.status(201).json({
       accessToken,
-      user: {
+      user: safe ?? {
         id: user.id,
         email: user.email ?? undefined,
         phone: user.phone ?? undefined,
@@ -111,6 +124,9 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 });
 
+const LOCKOUT_MINUTES = 30;
+const MAX_FAILED_ATTEMPTS = 5;
+
 router.post('/login', async (req: Request, res: Response) => {
   try {
     const body = { ...req.body, emailOrPhone: req.body.emailOrPhone ?? req.body.email };
@@ -123,20 +139,60 @@ router.post('/login', async (req: Request, res: Response) => {
       ? await prisma.user.findUnique({ where: { email } })
       : await prisma.user.findUnique({ where: { phone } });
     if (!user) {
+      await auditLog({ action: 'LOGIN_FAILED', req, result: 'failure', details: 'user_not_found' });
       return res.status(401).json({ error: 'unauthorized' });
     }
     if (!user.passwordHash || !user.salt) {
+      await auditLog({ userId: user.id, action: 'LOGIN_FAILED', req, result: 'failure', details: 'no_credentials' });
       return res.status(401).json({ error: 'unauthorized' });
+    }
+
+    const now = new Date();
+    if (user.lockedUntil && user.lockedUntil > now) {
+      const until = user.lockedUntil.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
+      await auditLog({ userId: user.id, action: 'LOGIN_FAILED', req, result: 'failure', details: 'account_locked' });
+      return res.status(423).json({
+        error: 'account_locked',
+        message: `الحساب مقفل حتى ${until}`,
+      });
     }
 
     const isValid = await verifyPassword(password, user.passwordHash, user.salt);
     if (!isValid) {
+      const attempts = (user.failedLoginAttempts ?? 0) + 1;
+      const updates: { failedLoginAttempts: number; lockedUntil?: Date } = { failedLoginAttempts: attempts };
+      if (attempts >= MAX_FAILED_ATTEMPTS) {
+        const lockedUntil = new Date(now.getTime() + LOCKOUT_MINUTES * 60 * 1000);
+        updates.lockedUntil = lockedUntil;
+        await prisma.user.update({
+          where: { id: user.id },
+          data: updates,
+        });
+        await auditLog({
+          userId: user.id,
+          action: 'ACCOUNT_LOCKED',
+          req,
+          result: 'failure',
+          details: `locked_until_${lockedUntil.toISOString()}`,
+        });
+        // TODO: إشعار بالإيميل أو الموبايل
+      } else {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: updates,
+        });
+      }
+      await auditLog({ userId: user.id, action: 'LOGIN_FAILED', req, result: 'failure', details: 'wrong_password' });
       return res.status(401).json({ error: 'unauthorized' });
     }
 
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
+    });
+
     // Handle soft-deleted accounts (reactivation within 30 days)
     if (user.isDeleted) {
-      const now = new Date();
       if (user.deletionScheduledFor && user.deletionScheduledFor < now) {
         return res.status(401).json({ error: 'unauthorized' });
       }
@@ -161,24 +217,25 @@ router.post('/login', async (req: Request, res: Response) => {
     const accessToken = generateAccessToken({ id: user.id, email: loginId });
     const refreshToken = generateRefreshToken();
     const refreshHash = hashRefreshToken(refreshToken);
-    await prisma.session.create({
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
+
+    await prisma.refreshToken.create({
       data: {
+        token: refreshHash,
         userId: user.id,
-        refreshTokenHash: refreshHash,
-        ipHash: req.ip || 'unknown',
-        userAgentHash: req.headers['user-agent'] || 'unknown',
-        ip: req.ip || null,
-        userAgent: req.headers['user-agent'] || null,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      }
+        expiresAt,
+        deviceInfo: getDeviceInfo(req),
+        ipAddress: req.ip || null,
+      },
     });
 
     res.cookie('refreshToken', refreshToken, getCookieOptions());
 
-    await auditLog({ userId: user.id, action: 'login', req, result: 'success' });
+    await auditLog({ userId: user.id, action: 'LOGIN_SUCCESS', req, result: 'success' });
+    const safe = sanitizeUser(user as Record<string, unknown>);
     res.json({
       accessToken,
-      user: {
+      user: safe ?? {
         id: user.id,
         email: user.email ?? undefined,
         phone: user.phone ?? undefined,
@@ -228,15 +285,15 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
     const accessToken = generateAccessToken({ id: user.id, email: loginId });
     const refreshToken = generateRefreshToken();
     const refreshHash = hashRefreshToken(refreshToken);
-    await prisma.session.create({
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
+
+    await prisma.refreshToken.create({
       data: {
+        token: refreshHash,
         userId: user.id,
-        refreshTokenHash: refreshHash,
-        ipHash: req.ip || 'unknown',
-        userAgentHash: req.headers['user-agent'] || 'unknown',
-        ip: req.ip || null,
-        userAgent: req.headers['user-agent'] || null,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt,
+        deviceInfo: getDeviceInfo(req),
+        ipAddress: req.ip || null,
       },
     });
 
@@ -249,10 +306,11 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
     });
 
     res.cookie('refreshToken', refreshToken, getCookieOptions());
-    await auditLog({ userId: user.id, action: 'login_2fa', req, result: 'success' });
+    await auditLog({ userId: user.id, action: 'LOGIN_SUCCESS', req, result: 'success', details: '2fa_verified' });
+    const safe = sanitizeUser(user as Record<string, unknown>);
     res.json({
       accessToken,
-      user: {
+      user: safe ?? {
         id: user.id,
         email: user.email ?? undefined,
         phone: user.phone ?? undefined,
@@ -269,28 +327,36 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
 });
 
 router.post('/refresh', async (req: Request, res: Response) => {
+  const clearCookie = () => {
+    res.clearCookie('refreshToken', getCookieOptions());
+  };
   try {
     const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) {
+      clearCookie();
       return res.status(401).json({ error: 'unauthorized' });
     }
 
     const refreshHash = hashRefreshToken(refreshToken);
-    const session = await prisma.session.findUnique({
-      where: { refreshTokenHash: refreshHash },
-      include: { user: true }
+    const rt = await prisma.refreshToken.findUnique({
+      where: { token: refreshHash },
+      include: { user: true },
     });
 
-    if (!session || session.expiresAt < new Date()) {
+    const now = new Date();
+    if (!rt || rt.isRevoked || rt.expiresAt < now) {
+      if (rt?.id) await prisma.refreshToken.updateMany({ where: { id: rt.id }, data: { isRevoked: true } });
+      clearCookie();
       return res.status(401).json({ error: 'unauthorized' });
     }
 
-    const loginId = session.user.email ?? session.user.phone ?? '';
-    const accessToken = generateAccessToken({ id: session.user.id, email: loginId });
+    const loginId = rt.user.email ?? rt.user.phone ?? '';
+    const accessToken = generateAccessToken({ id: rt.user.id, email: loginId });
     res.json({ accessToken });
   } catch (error) {
     console.error('Refresh token error:', error);
-    res.status(500).json({ error: 'Failed to refresh token' });
+    clearCookie();
+    res.status(401).json({ error: 'unauthorized' });
   }
 });
 
@@ -300,16 +366,110 @@ router.post('/logout', async (req: Request, res: Response) => {
     let userId: string | null = null;
     if (refreshToken) {
       const refreshHash = hashRefreshToken(refreshToken);
-      const session = await prisma.session.findUnique({ where: { refreshTokenHash: refreshHash }, select: { userId: true } });
-      if (session) userId = session.userId;
-      await prisma.session.deleteMany({ where: { refreshTokenHash: refreshHash } });
+      const rt = await prisma.refreshToken.findUnique({ where: { token: refreshHash }, select: { userId: true } });
+      if (rt) userId = rt.userId;
+      await prisma.refreshToken.updateMany({ where: { token: refreshHash }, data: { isRevoked: true } });
     }
-    if (userId) await auditLog({ userId, action: 'logout', req, result: 'success' });
+    if (userId) await auditLog({ userId, action: 'LOGOUT', req, result: 'success' });
     res.clearCookie('refreshToken', getCookieOptions());
-    res.json({ message: 'Logged out successfully' });
+    res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
+    res.clearCookie('refreshToken', getCookieOptions());
     res.status(500).json({ error: 'Logout failed' });
+  }
+});
+
+// إنهاء كل الجلسات (من الإعدادات)
+router.post('/logout-all', async (req: Request, res: Response) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      res.clearCookie('refreshToken', getCookieOptions());
+      return res.status(200).json({ message: 'Logged out' });
+    }
+    const refreshHash = hashRefreshToken(refreshToken);
+    const rt = await prisma.refreshToken.findUnique({ where: { token: refreshHash }, select: { userId: true } });
+    if (rt) {
+      await prisma.refreshToken.updateMany({ where: { userId: rt.userId }, data: { isRevoked: true } });
+      await auditLog({ userId: rt.userId, action: 'SESSION_REVOKED', req, result: 'success', details: 'all_sessions' });
+    }
+    res.clearCookie('refreshToken', getCookieOptions());
+    res.status(200).json({ message: 'All sessions ended' });
+  } catch (error) {
+    console.error('Logout all error:', error);
+    res.clearCookie('refreshToken', getCookieOptions());
+    res.status(500).json({ error: 'Failed to end all sessions' });
+  }
+});
+
+// الجلسات النشطة (نقرأ الـ cookie لمعرفة المستخدم)
+router.get('/sessions', async (req: Request, res: Response) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
+    const refreshHash = hashRefreshToken(refreshToken);
+    const current = await prisma.refreshToken.findUnique({
+      where: { token: refreshHash },
+      select: { id: true, userId: true },
+    });
+    if (!current) {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
+
+    const list = await prisma.refreshToken.findMany({
+      where: {
+        userId: current.userId,
+        isRevoked: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const currentId = current.id;
+    res.json(
+      list.map((s) => ({
+        id: s.id,
+        deviceInfo: s.deviceInfo,
+        ipAddress: s.ipAddress,
+        createdAt: s.createdAt,
+        expiresAt: s.expiresAt,
+        isCurrentSession: s.id === currentId,
+      }))
+    );
+  } catch (error) {
+    console.error('Sessions list error:', error);
+    res.status(500).json({ error: 'Failed to load sessions' });
+  }
+});
+
+router.delete('/sessions/:tokenId', async (req: Request, res: Response) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
+    const refreshHash = hashRefreshToken(refreshToken);
+    const current = await prisma.refreshToken.findUnique({
+      where: { token: refreshHash },
+      select: { userId: true },
+    });
+    if (!current) {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
+
+    const { tokenId } = req.params;
+    await prisma.refreshToken.updateMany({
+      where: { id: tokenId, userId: current.userId },
+      data: { isRevoked: true },
+    });
+    await auditLog({ userId: current.userId, action: 'SESSION_REVOKED', req, result: 'success', details: tokenId });
+    res.status(204).send();
+  } catch (error) {
+    console.error('Revoke session error:', error);
+    res.status(500).json({ error: 'Failed to revoke session' });
   }
 });
 
@@ -348,6 +508,11 @@ router.post('/change-password', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'كلمة المرور الحالية غير صحيحة' });
     }
 
+    const pwCheck = validateChangePassword(newPassword, { email: user.email, username: user.username });
+    if (!pwCheck.ok) {
+      return res.status(400).json({ error: pwCheck.message });
+    }
+
     const { hash, salt } = await hashPassword(newPassword);
 
     await prisma.user.update({
@@ -359,6 +524,7 @@ router.post('/change-password', async (req: Request, res: Response) => {
       },
     });
 
+    await auditLog({ userId: user.id, action: 'PASSWORD_CHANGED', req, result: 'success' });
     res.json({ success: true });
   } catch (error) {
     console.error('Change password error:', error);
@@ -374,27 +540,29 @@ router.get('/me', async (req: Request, res: Response) => {
     }
 
     const refreshHash = hashRefreshToken(refreshToken);
-    const session = await prisma.session.findUnique({
-      where: { refreshTokenHash: refreshHash },
-      include: { user: true }
+    const rt = await prisma.refreshToken.findUnique({
+      where: { token: refreshHash },
+      include: { user: true },
     });
 
-    if (!session || session.expiresAt < new Date()) {
+    const now = new Date();
+    if (!rt || rt.isRevoked || rt.expiresAt < now) {
       return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
 
-    const loginId = session.user.email ?? session.user.phone ?? '';
-    const accessToken = generateAccessToken({ id: session.user.id, email: loginId });
+    const loginId = rt.user.email ?? rt.user.phone ?? '';
+    const accessToken = generateAccessToken({ id: rt.user.id, email: loginId });
+    const safe = sanitizeUser(rt.user as Record<string, unknown>);
     res.json({
       accessToken,
-      user: {
-        id: session.user.id,
-        email: session.user.email ?? undefined,
-        phone: session.user.phone ?? undefined,
-        fullName: session.user.fullName,
-        username: session.user.username ?? undefined,
-        onboardingCompleted: session.user.onboardingCompleted,
-        isFirstLogin: session.user.isFirstLogin,
+      user: safe ?? {
+        id: rt.user.id,
+        email: rt.user.email ?? undefined,
+        phone: rt.user.phone ?? undefined,
+        fullName: rt.user.fullName,
+        username: rt.user.username ?? undefined,
+        onboardingCompleted: rt.user.onboardingCompleted,
+        isFirstLogin: rt.user.isFirstLogin,
       },
     });
   } catch (error) {
@@ -468,13 +636,14 @@ router.get('/google/callback', async (req: Request, res: Response) => {
 
     const refreshToken = generateRefreshToken();
     const refreshHash = hashRefreshToken(refreshToken);
-    await prisma.session.create({
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
+    await prisma.refreshToken.create({
       data: {
+        token: refreshHash,
         userId: user.id,
-        refreshTokenHash: refreshHash,
-        ipHash: req.ip || 'unknown',
-        userAgentHash: req.headers['user-agent'] || 'unknown',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt,
+        deviceInfo: getDeviceInfo(req),
+        ipAddress: req.ip || null,
       },
     });
 

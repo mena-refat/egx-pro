@@ -38,26 +38,37 @@ async function startServer() {
     next();
   });
 
-  // Security Middlewares
+  // Body parser (before sanitization)
+  app.use(express.json({ limit: '1mb' }));
+  app.use(cookieParser());
+
+  const { sanitizeInput } = await import('./server/lib/sanitize.ts');
+  app.use('/api', sanitizeInput);
+
+  // في التطوير نعطّل CSP بالكامل عشان Vite و HMR يشتغلوا بسرعة من غير أخطاء
+  const isDev = process.env.NODE_ENV !== 'production';
   app.use(helmet({
-    contentSecurityPolicy: {
+    contentSecurityPolicy: isDev ? false : {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
         connectSrc: ["'self'", "https://api.anthropic.com", "https://api.gemini.com", "https://*.run.app", "wss://*.run.app", "ws://localhost:3000", "ws://localhost:8080"],
-        imgSrc: ["'self'", "data:", "https://picsum.photos", "https://*.run.app"],
         frameAncestors: ["'self'", "https://*.google.com", "https://*.aistudio.google", "https://*.run.app"],
       },
     },
     crossOriginEmbedderPolicy: false,
   }));
+
+  const frontendOrigin = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
   app.use(cors({
-    origin: process.env.APP_URL || 'http://localhost:3000',
+    origin: frontendOrigin,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   }));
   app.use(hpp());
-  app.use(express.json({ limit: '10kb' }));
-  app.use(cookieParser());
   if (process.env.NODE_ENV !== 'production') {
     app.use(morgan('dev'));
   } else {
@@ -69,12 +80,35 @@ async function startServer() {
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
   // Rate Limiting
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { error: 'محاولات كثيرة، انتظر 15 دقيقة' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 3,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  const refreshLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
   const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 60 * 1000,
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
   });
+
+  app.use('/api/auth/login', loginLimiter);
+  app.use('/api/auth/register', registerLimiter);
+  app.use('/api/auth/refresh', refreshLimiter);
   app.use('/api/', apiLimiter);
 
   // API Routes
@@ -191,7 +225,7 @@ async function startServer() {
     setupWebSocket(server);
   });
 
-  // Soft-delete cleanup job: permanently remove users after 30 days
+  // Soft-delete cleanup + expired refresh tokens (daily)
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   setInterval(async () => {
     try {
@@ -203,8 +237,15 @@ async function startServer() {
           deletionScheduledFor: { lt: now },
         },
       });
+      // RefreshToken model في الـ schema — بعد تشغيل prisma generate يتوفر على الـ client
+      const prismaAny = prisma as typeof prisma & { refreshToken?: { deleteMany: (arg: { where: { expiresAt: { lt: Date } } }) => Promise<{ count: number }> } };
+      if (prismaAny.refreshToken) {
+        await prismaAny.refreshToken.deleteMany({
+          where: { expiresAt: { lt: now } },
+        });
+      }
     } catch (err) {
-      console.error('Soft delete cleanup error:', err);
+      console.error('Cleanup job error:', err);
     }
   }, ONE_DAY_MS);
 }

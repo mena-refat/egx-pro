@@ -76,8 +76,9 @@ export function verifyAccessToken(token: string) {
   });
 }
 
+/** Refresh token: 64 bytes, not JWT — not decodable. */
 export function generateRefreshToken() {
-  return crypto.randomBytes(40).toString('hex');
+  return crypto.randomBytes(64).toString('hex');
 }
 
 /** Hash refresh token for storage (do not store raw token in DB). */

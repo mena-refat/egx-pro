@@ -5,23 +5,28 @@ function hash(value: string): string {
   return crypto.createHash('sha256').update(value, 'utf8').digest('hex').slice(0, 32);
 }
 
+export type AuditReq = { ip?: string; headers?: { 'user-agent'?: string } };
+
 export async function auditLog(params: {
-  userId: string | null;
+  userId?: string | null;
   action: string;
-  req: { ip?: string; headers?: { 'user-agent'?: string } };
-  result: 'success' | 'failure';
+  req?: AuditReq;
+  result?: 'success' | 'failure';
   metadata?: Record<string, unknown>;
+  details?: string | null;
 }): Promise<void> {
   try {
-    const ip = params.req.ip ?? 'unknown';
-    const ua = params.req.headers?.['user-agent'] ?? 'unknown';
+    const ip = params.req?.ip ?? 'unknown';
+    const ua = params.req?.headers?.['user-agent'] ?? 'unknown';
     await prisma.auditLog.create({
       data: {
-        userId: params.userId,
+        userId: params.userId ?? null,
         action: params.action,
+        details: params.details ?? null,
+        ipAddress: params.req ? (ip === 'unknown' ? null : ip) : null,
         ipHash: hash(ip),
         userAgent: ua.length > 500 ? ua.slice(0, 500) : ua,
-        result: params.result,
+        result: params.result ?? null,
         metadata: params.metadata ? JSON.stringify(params.metadata) : null,
       },
     });

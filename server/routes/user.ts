@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.ts';
 import { verifyAccessToken } from '../../src/lib/auth.ts';
 import { normalizePhone, usernameSchema, isValidEgyptianPhone } from '../../src/lib/validations.ts';
 import { AuthRequest } from './types';
+import { auditLog } from '../lib/audit.ts';
 import { ACHIEVEMENT_DEFS, type AchievementLevel } from '../lib/achievements.ts';
 import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
@@ -199,10 +200,22 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
       }
     }
 
+    const before = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { phone: true, email: true },
+    });
+
     const user = await prisma.user.update({
       where: { id: req.userId },
       data,
     });
+
+    if (before && data.phone !== undefined && String(before.phone ?? '') !== String(data.phone ?? '')) {
+      await auditLog({ userId: req.userId ?? undefined, action: 'PHONE_CHANGED', req, result: 'success' });
+    }
+    if (before && data.email !== undefined && String(before.email ?? '') !== String(data.email ?? '')) {
+      await auditLog({ userId: req.userId ?? undefined, action: 'EMAIL_CHANGED', req, result: 'success' });
+    }
 
     const responseUser = {
       ...user,
@@ -921,6 +934,7 @@ router.post('/2fa/verify', authenticate, async (req: AuthRequest, res: Response)
           twoFactorSecret: secret,
         },
       });
+      await auditLog({ userId: req.userId ?? undefined, action: 'TWO_FA_ENABLED', req, result: 'success' });
       res.json({ success: true });
     } else {
       res.status(400).json({ error: 'Invalid token' });
@@ -979,22 +993,21 @@ router.get('/security', authenticate, async (req: AuthRequest, res: Response) =>
   }
 });
 
-// Active sessions list
+// Active sessions list (delegates to refresh tokens; use GET /api/auth/sessions for cookie-based list)
 router.get('/sessions', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const sessions = await prisma.session.findMany({
-      where: { userId: req.userId! },
-      orderBy: { lastUsedAt: 'desc' },
+    const list = await prisma.refreshToken.findMany({
+      where: { userId: req.userId!, isRevoked: false, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
     });
-
     res.json(
-      sessions.map((s) => ({
+      list.map((s) => ({
         id: s.id,
+        deviceInfo: s.deviceInfo,
+        ipAddress: s.ipAddress,
         createdAt: s.createdAt,
-        lastUsedAt: s.lastUsedAt,
         expiresAt: s.expiresAt,
-        ip: s.ip,
-        userAgent: s.userAgent,
+        isCurrentSession: false, // لا يُعرف بدون مقارنة الـ cookie
       }))
     );
   } catch (err) {
@@ -1003,12 +1016,13 @@ router.get('/sessions', authenticate, async (req: AuthRequest, res: Response) =>
   }
 });
 
-// End a specific session
+// End a specific session (revoke refresh token)
 router.delete('/sessions/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    await prisma.session.deleteMany({
+    await prisma.refreshToken.updateMany({
       where: { id, userId: req.userId! },
+      data: { isRevoked: true },
     });
     res.status(204).send();
   } catch (err) {
@@ -1078,6 +1092,14 @@ router.delete('/account', authenticate, async (req: AuthRequest, res: Response) 
         deletedAt: now,
         deletionScheduledFor: deletionDate,
       },
+    });
+
+    await auditLog({
+      userId: req.userId ?? undefined,
+      action: 'ACCOUNT_DELETED',
+      req,
+      result: 'success',
+      details: `scheduled_${deletionDate.toISOString()}`,
     });
 
     await prisma.session.deleteMany({

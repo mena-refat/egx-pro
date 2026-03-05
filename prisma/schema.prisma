@@ -55,44 +55,45 @@ model User {
   hearAboutUs       String?
   investorProfile   Json?
   userTitle         String    @default("ناشئ") // ناشئ | مستثمر | محترف | أسطورة
+  failedLoginAttempts Int     @default(0)
+  lockedUntil       DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  sessions          Session[]
-  auditLogs         AuditLog[]
-  portfolios        Portfolio[]
-  goals             Goal[]
-  watchlists        Watchlist[]
-  analyses          Analysis[]
-  referralsSent     Referral[] @relation("ReferralsSent")
-  referralsReceived Referral[] @relation("ReferralsReceived")
+  refreshTokens      RefreshToken[]
+  auditLogs          AuditLog[]
+  portfolios         Portfolio[]
+  goals              Goal[]
+  watchlists         Watchlist[]
+  analyses           Analysis[]
+  referralsSent      Referral[] @relation("ReferralsSent")
+  referralsReceived  Referral[] @relation("ReferralsReceived")
 }
 
-model Session {
-  id                 String   @id @default(uuid())
-  userId             String
-  refreshTokenHash   String   @unique
-  ipHash             String
-  userAgentHash      String
-  deviceFingerprint  String?
-  ip                 String?
-  userAgent          String?
-  expiresAt          DateTime
-  createdAt          DateTime @default(now())
-  lastUsedAt         DateTime @default(now())
-
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model RefreshToken {
+  id         String    @id @default(cuid())
+  token      String    @unique // hash of the refresh token (for lookup)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  deviceInfo String?
+  ipAddress  String?
+  isRevoked  Boolean   @default(false)
 }
 
 model AuditLog {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   userId    String?
   action    String
-  ipHash    String
-  userAgent String
-  result    String
+  details   String?
+  ipAddress String?
+  userAgent String?
+  ipHash    String?  // للتوافق مع الكود القديم
+  result    String?  // success | failure
   metadata  String?  // JSON string
-  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  timestamp DateTime @default(now()) // للتوافق
 
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
