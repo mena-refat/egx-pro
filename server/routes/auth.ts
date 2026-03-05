@@ -438,12 +438,20 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     // Find or create user
     let user = await prisma.user.findUnique({ where: { email: googleUser.email } });
     if (!user) {
+      const referralCode = `EGX-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
       user = await prisma.user.create({
         data: {
           email: googleUser.email,
           fullName: googleUser.name,
           onboardingCompleted: false,
+          referralCode,
         },
+      });
+    } else if (!user.referralCode) {
+      const referralCode = `EGX-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { referralCode },
       });
     }
 

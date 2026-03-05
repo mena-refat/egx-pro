@@ -51,12 +51,23 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
     }
 
     const plan = (user.subscriptionPlan as Plan) || 'free';
+    const now = new Date();
     const isExpired =
       (plan === 'pro' || plan === 'annual') &&
       user.subscriptionEndsAt !== null &&
-      user.subscriptionEndsAt < new Date();
+      user.subscriptionEndsAt < now;
 
-    const effectivePlan: Plan = isExpired ? 'free' : plan;
+    const hasReferralPro =
+      user.referralProExpiresAt && user.referralProExpiresAt > now;
+
+    const effectivePlan: Plan =
+      isExpired && !hasReferralPro
+        ? 'free'
+        : (plan === 'pro' || plan === 'annual')
+        ? plan
+        : hasReferralPro
+        ? 'pro'
+        : 'free';
 
     const usedThisMonth =
       user.analysisUsageMonth === monthKey ? user.analysisUsageCount : 0;

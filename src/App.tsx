@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from './store/authStore';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, UserPlus, TrendingUp, User as UserIcon, LayoutDashboard, PieChart, Calculator, Settings as SettingsIcon, Search, Eye, EyeOff, Sun, Moon, Target } from 'lucide-react';
+import { LogIn, UserPlus, TrendingUp, User as UserIcon, LayoutDashboard, PieChart, Calculator, Settings as SettingsIcon, Search, Eye, EyeOff, Sun, Moon, Monitor, Target } from 'lucide-react';
 import OnboardingWizard from './components/OnboardingWizard';
 import { useProfileCompletion } from './hooks/useProfileCompletion';
 import PortfolioTracker from './components/PortfolioTracker';
@@ -30,26 +30,53 @@ export default function App() {
   const [tempUserId, setTempUserId] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') as 'dark' | 'light' || 'dark';
+  const [theme, setTheme] = useState<'dark' | 'light' | 'system'>(() => {
+    if (typeof window === 'undefined') return 'system';
+    const stored = localStorage.getItem('theme');
+    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+      return stored;
     }
-    return 'dark';
+    // لو اليوزر عنده theme محفوظ في البروفايل نستخدمه كنقطة بداية
+    if (user?.theme === 'light' || user?.theme === 'dark' || user?.theme === 'system') {
+      return user.theme as 'light' | 'dark' | 'system';
+    }
+    return 'system';
   });
 
   const [authMessage, setAuthMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    const applyTheme = (nextTheme: 'dark' | 'light' | 'system') => {
+      const root = window.document.documentElement;
+      const prefersDark =
+        window.matchMedia &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+      const effective = nextTheme === 'system' ? (prefersDark ? 'dark' : 'light') : nextTheme;
+
+      if (effective === 'dark') {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    };
+
+    applyTheme(theme);
+
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const listener = () => {
+      if (theme === 'system') {
+        applyTheme('system');
+      }
+    };
+    mql.addEventListener('change', listener);
+
+    localStorage.setItem('theme', theme);
+
+    return () => {
+      mql.removeEventListener('change', listener);
+    };
+  }, [theme]);
   const [stats, setStats] = useState({ totalValue: 0, topPerformer: '--', topPerformerChange: 0 });
 
   useEffect(() => {
@@ -330,12 +357,105 @@ export default function App() {
               )}
             </div>
             <div className="flex items-center gap-4">
-              <button 
-                onClick={toggleTheme}
-                className="p-3 rounded-xl transition-colors dark:bg-slate-900 dark:border-white/5 dark:hover:bg-slate-800 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 dark:text-slate-400"
-              >
-                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-              </button>
+              {/* Theme toggle - compact header version */}
+              <div className="flex items-center gap-1 rounded-full bg-slate-900/60 border border-slate-700/80 px-1 py-1 text-slate-400 text-xs">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setTheme('light');
+                    if (accessToken) {
+                      try {
+                        const res = await fetch('/api/user/profile', {
+                          method: 'PUT',
+                          headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ theme: 'light' }),
+                        });
+                        const body = await res.json().catch(() => null);
+                        if (res.ok && body) {
+                          updateUser(body);
+                        }
+                      } catch (err) {
+                        console.error('Failed to update theme from header', err);
+                      }
+                    }
+                  }}
+                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                    theme === 'light'
+                      ? 'bg-white text-slate-900'
+                      : 'bg-transparent hover:bg-slate-800'
+                  }`}
+                  aria-label="Light mode"
+                >
+                  <Sun className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setTheme('system');
+                    if (accessToken) {
+                      try {
+                        const res = await fetch('/api/user/profile', {
+                          method: 'PUT',
+                          headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ theme: 'system' }),
+                        });
+                        const body = await res.json().catch(() => null);
+                        if (res.ok && body) {
+                          updateUser(body);
+                        }
+                      } catch (err) {
+                        console.error('Failed to update theme from header', err);
+                      }
+                    }
+                  }}
+                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                    theme === 'system'
+                      ? 'bg-white text-slate-900'
+                      : 'bg-transparent hover:bg-slate-800'
+                  }`}
+                  aria-label="System theme"
+                >
+                  <Monitor className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setTheme('dark');
+                    if (accessToken) {
+                      try {
+                        const res = await fetch('/api/user/profile', {
+                          method: 'PUT',
+                          headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ theme: 'dark' }),
+                        });
+                        const body = await res.json().catch(() => null);
+                        if (res.ok && body) {
+                          updateUser(body);
+                        }
+                      } catch (err) {
+                        console.error('Failed to update theme from header', err);
+                      }
+                    }
+                  }}
+                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-white text-slate-900'
+                      : 'bg-transparent hover:bg-slate-800'
+                  }`}
+                  aria-label="Dark mode"
+                >
+                  <Moon className="w-4 h-4" />
+                </button>
+              </div>
               {!profileComplete && (
                 <div className="text-right">
                   <p className="text-xs text-slate-500 uppercase tracking-wider">{i18n.language === 'ar' ? 'اكتمال الملف' : 'Profile Completion'}</p>

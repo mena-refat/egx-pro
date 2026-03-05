@@ -22,6 +22,8 @@ router.get('/plan', async (req: Request, res: Response) => {
         subscriptionEndsAt: true,
         analysisUsageMonth: true,
         analysisUsageCount: true,
+        referralProDaysRemaining: true,
+        referralProExpiresAt: true,
       },
     });
 
@@ -31,18 +33,33 @@ router.get('/plan', async (req: Request, res: Response) => {
     const usedThisMonth =
       user.analysisUsageMonth === monthKey ? user.analysisUsageCount : 0;
 
+    const now = new Date();
+    const hasReferralPro =
+      !!user.referralProExpiresAt && user.referralProExpiresAt > now;
+
+    const effectivePlan: Plan =
+      (user.subscriptionPlan as Plan) === 'pro' || (user.subscriptionPlan as Plan) === 'annual'
+        ? (user.subscriptionPlan as Plan)
+        : hasReferralPro
+        ? 'pro'
+        : 'free';
+
     const quota =
-      (user.subscriptionPlan as Plan) === 'free'
+      effectivePlan === 'free'
         ? 3
         : Infinity;
 
     res.json({
-      plan: user.subscriptionPlan as Plan,
+      plan: effectivePlan,
       subscriptionEndsAt: user.subscriptionEndsAt,
       analysis: {
         month: monthKey,
         used: usedThisMonth,
         quota,
+      },
+      referralPro: {
+        daysRemaining: user.referralProDaysRemaining ?? 0,
+        expiresAt: user.referralProExpiresAt,
       },
     });
   } catch (error) {

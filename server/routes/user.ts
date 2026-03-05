@@ -7,6 +7,7 @@ import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -591,11 +592,14 @@ router.get('/achievements', authenticate, async (req: AuthRequest, res: Response
 // Referral summary for profile
 router.get('/referral', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.userId },
+    const userId = req.userId!;
+
+    let user = await prisma.user.findUnique({
+      where: { id: userId },
       select: {
         referralCode: true,
         freeReferralRewarded: true,
+        totalReferrals: true,
       },
     });
 
@@ -603,15 +607,66 @@ router.get('/referral', authenticate, async (req: AuthRequest, res: Response) =>
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const completedCount = await prisma.referral.count({
-      where: { referrerId: req.userId!, status: 'completed' },
-    });
+    if (!user.referralCode) {
+      const referralCode = `EGX-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      user = await prisma.user.update({
+        where: { id: userId },
+        data: { referralCode },
+        select: {
+          referralCode: true,
+          freeReferralRewarded: true,
+        },
+      });
+    }
+
+    const [completedCount, completedReferrals, weeklyJoinedCount] = await Promise.all([
+      prisma.referral.count({
+        where: { referrerId: userId, status: 'completed' },
+      }),
+      prisma.referral.findMany({
+        where: { referrerId: userId, status: 'completed' },
+        orderBy: { createdAt: 'asc' },
+        take: 5,
+        include: {
+          referredUser: {
+            select: {
+              fullName: true,
+              createdAt: true,
+            },
+          },
+        },
+      }),
+      (async () => {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return prisma.referral.count({
+          where: {
+            referrerId: userId,
+            status: 'completed',
+            referredUser: {
+              createdAt: {
+                gte: weekAgo,
+              },
+            },
+          },
+        });
+      })(),
+    ]);
+
+    const friends = completedReferrals.map((ref, index) => ({
+      id: ref.referredUserId,
+      name: ref.referredUser?.fullName ?? null,
+      order: index + 1,
+    }));
 
     res.json({
       code: user.referralCode,
       completedCount,
       goal: 5,
       rewardClaimed: user.freeReferralRewarded,
+      totalReferrals: user.totalReferrals ?? completedCount,
+      friends,
+      weeklyJoinedCount,
     });
   } catch (err) {
     console.error('Referral summary error:', err);
@@ -689,7 +744,10 @@ router.post('/referral/use', authenticate, async (req: AuthRequest, res: Respons
 
     const currentUser = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { id: true, referralUsed: true },
+      select: {
+        id: true,
+        referralUsed: true,
+      },
     });
 
     if (!currentUser) {
@@ -713,22 +771,61 @@ router.post('/referral/use', authenticate, async (req: AuthRequest, res: Respons
       return res.status(400).json({ error: 'You cannot use your own referral code' });
     }
 
-    await prisma.$transaction([
-      prisma.user.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
         where: { id: currentUser.id },
         data: {
           referredBy: referrer.id,
           referralUsed: trimmed,
         },
-      }),
-      prisma.referral.create({
+      });
+
+      await tx.referral.create({
         data: {
           referrerId: referrer.id,
           referredUserId: currentUser.id,
           status: 'completed',
         },
-      }),
-    ]);
+      });
+
+      const referrerUser = await tx.user.findUnique({
+        where: { id: referrer.id },
+        select: {
+          totalReferrals: true,
+          referralProDaysRemaining: true,
+          referralProExpiresAt: true,
+        },
+      });
+
+      if (!referrerUser) return;
+
+      const now = new Date();
+      const previousTotal = referrerUser.totalReferrals ?? 0;
+      const totalReferrals = previousTotal + 1;
+
+      let referralProDaysRemaining = referrerUser.referralProDaysRemaining ?? 0;
+      let referralProExpiresAt = referrerUser.referralProExpiresAt ?? null;
+
+      // Every 5 completed referrals = +30 days Pro
+      if (totalReferrals % 5 === 0) {
+        referralProDaysRemaining += 30;
+
+        const baseDate =
+          referralProExpiresAt && referralProExpiresAt > now ? referralProExpiresAt : now;
+        const extended = new Date(baseDate);
+        extended.setDate(extended.getDate() + 30);
+        referralProExpiresAt = extended;
+      }
+
+      await tx.user.update({
+        where: { id: referrer.id },
+        data: {
+          totalReferrals,
+          referralProDaysRemaining,
+          referralProExpiresAt,
+        },
+      });
+    });
 
     res.json({
       success: true,

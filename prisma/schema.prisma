@@ -35,6 +35,9 @@ model User {
   referralCode      String?   @unique
   referredBy        String?
   referralUsed      String?
+  totalReferrals    Int       @default(0)
+  referralProDaysRemaining Int @default(0)
+  referralProExpiresAt DateTime?
   notifySignals     Boolean   @default(true)
   notifyPortfolio   Boolean   @default(true)
   notifyNews        Boolean   @default(true)

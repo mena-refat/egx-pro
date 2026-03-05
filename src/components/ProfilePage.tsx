@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useProfileCompletion } from '../hooks/useProfileCompletion';
 import { motion, AnimatePresence } from 'motion/react';
@@ -19,6 +19,9 @@ import {
   Shield,
   RotateCcw,
   Zap,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react';
 import api from '../lib/api';
 
@@ -620,6 +623,10 @@ interface PlanInfo {
     used: number;
     quota: number;
   };
+  referralPro?: {
+    daysRemaining: number;
+    expiresAt: string | null;
+  };
 }
 
 function SubscriptionSection() {
@@ -750,6 +757,7 @@ function SubscriptionSection() {
   const { plan, analysis, subscriptionEndsAt } = info;
   const isFree = plan === 'free';
   const quota = Number.isFinite(analysis.quota) ? analysis.quota : null;
+  const referralPro = info.referralPro;
 
   const proPrice = discountedPrices.pro ?? basePrices.pro;
   const annualPrice = discountedPrices.annual ?? basePrices.annual;
@@ -804,6 +812,18 @@ function SubscriptionSection() {
           </p>
         )}
       </div>
+
+      {referralPro && referralPro.daysRemaining > 0 && referralPro.expiresAt && (
+        <div className="p-4 rounded-2xl border border-[#1f2937] bg-[#020617] flex items-center gap-3">
+          <Gift className="w-5 h-5 text-[#fbbf24]" />
+          <div>
+            <p className="text-sm font-semibold text-white">شهر Pro مجاني من الدعوات</p>
+            <p className="text-xs text-[#9ca3af]">
+              ينتهي بعد {referralPro.daysRemaining} يوم
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Plans: دائماً بالترتيب Free → Pro → Annual */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
@@ -1544,18 +1564,45 @@ export default function ProfilePage() {
                 <h3 className="font-bold text-[#9ca3af] mb-4 uppercase text-xs">
                   التفضيلات
                 </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0">
-                    <span>المظهر</span>
-                    <Toggle
-                      checked={user.theme === 'dark'}
-                      onChange={() =>
-                        updateProfile(
-                          { theme: user.theme === 'dark' ? 'light' : 'dark' },
-                          { success: 'تم تحديث المظهر بنجاح' }
-                        )
-                      }
-                    />
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm">المظهر</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {[
+                        { key: 'light', label: 'فاتح', icon: Sun },
+                        { key: 'system', label: 'تلقائي', icon: Monitor },
+                        { key: 'dark', label: 'داكن', icon: Moon },
+                      ].map((option) => {
+                        const isActive =
+                          (user.theme ?? 'system') === option.key;
+                        const Icon = option.icon;
+                        return (
+                          <button
+                            key={option.key}
+                            type="button"
+                            onClick={() =>
+                              updateProfile(
+                                { theme: option.key as unknown as string },
+                                { success: 'تم تحديث المظهر بنجاح' }
+                              )
+                            }
+                            className={`flex flex-col items-center justify-center px-4 py-3 rounded-2xl border text-xs sm:text-sm transition-all ${
+                              isActive
+                                ? 'border-[#7c3aed] bg-[#1f2937]'
+                                : 'border-[#1f2937] bg-[#020617] hover:border-[#4b5563]'
+                            }`}
+                          >
+                            <Icon className="w-5 h-5 mb-1" />
+                            <span>{option.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-[11px] text-[#9ca3af]">
+                      الوضع التلقائي يتبع إعدادات جهازك تلقائياً.
+                    </p>
                   </div>
                   <div className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0">
                     <span>اللغة</span>
@@ -1676,6 +1723,12 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
   const [rewardClaimed, setRewardClaimed] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [friends, setFriends] = useState<{ id: string; name: string | null; order: number }[]>([]);
+  const [weeklyJoinedCount, setWeeklyJoinedCount] = useState(0);
+  const [totalReferrals, setTotalReferrals] = useState(0);
+  const [stepsCompleted, setStepsCompleted] = useState(0);
+  const [isCelebrating, setIsCelebrating] = useState(false);
+  const previousTotalReferralsRef = useRef<number | null>(null);
 
   useEffect(() => {
     const fetchReferral = async () => {
@@ -1688,6 +1741,16 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
         setCompletedCount(data.completedCount ?? 0);
         setGoal(data.goal ?? 5);
         setRewardClaimed(Boolean(data.rewardClaimed));
+        setFriends(Array.isArray(data.friends) ? data.friends : []);
+        setWeeklyJoinedCount(data.weeklyJoinedCount ?? 0);
+        const total = data.totalReferrals ?? (data.completedCount ?? 0);
+        setTotalReferrals(total);
+
+        // Initial load: just set steps from modulo, لا نعمل احتفال هنا
+        const goalValue = typeof data.goal === 'number' && data.goal > 0 ? data.goal : 5;
+        const completedSteps = goalValue > 0 ? total % goalValue : 0;
+        setStepsCompleted(completedSteps);
+        previousTotalReferralsRef.current = total;
       } catch (err) {
         console.error('Referral load error', err);
         setError('فشل تحميل بيانات الدعوات');
@@ -1697,6 +1760,31 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
     };
     fetchReferral();
   }, []);
+
+  // When totalReferrals changes (e.g. via live updates in future), handle celebration logic
+  useEffect(() => {
+    const prev = previousTotalReferralsRef.current;
+    if (prev === null) return;
+
+    if (totalReferrals > prev && totalReferrals % goal === 0 && goal > 0) {
+      // Completed a full cycle: temporarily show all 5 steps + celebration
+      setIsCelebrating(true);
+      setStepsCompleted(goal);
+      setMessage('مبروك! ربحت 30 يوم Pro مجاناً');
+
+      const timeout = setTimeout(() => {
+        setIsCelebrating(false);
+        setStepsCompleted(totalReferrals % goal);
+      }, 2000);
+
+      return () => clearTimeout(timeout);
+    }
+
+    // Normal update: just reflect modulo without celebration
+    if (!isCelebrating && goal > 0) {
+      setStepsCompleted(totalReferrals % goal);
+    }
+  }, [totalReferrals, goal, isCelebrating]);
 
   const handleCopyCode = () => {
     if (!code) return;
@@ -1781,74 +1869,147 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
         }}
       />
       <div className="relative space-y-4">
+        {/* Hero */}
         <div>
-          <h3 className="font-bold text-lg mb-1">ادعُ أصدقاءك واكسب شهر Pro مجاناً</h3>
+          <h3 className="font-bold text-xl mb-1">شارك EGX Pro واكسب 149 جنيه مجاناً</h3>
           <p className="text-sm text-slate-200">
-            شارك كودك مع أصدقاءك، لما {goal} منهم يسجلوا بكودك هتاخد شهر Pro مجاناً.
+            كل ما دعوت صديق وسجّل بكودك، اقتربت خطوة من شهر Pro مجاني كامل — بدون أي تكلفة.
           </p>
         </div>
 
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between bg-white/10 p-3 rounded-xl border border-dashed border-white/20 gap-3">
-          <span className="font-mono font-bold tracking-[0.2em] text-sm text-center md:text-right">
-            {code}
-          </span>
-          <div className="flex gap-2 justify-center md:justify-end">
-            <button
-              type="button"
-              onClick={handleCopyCode}
-              className="flex items-center gap-1 text-xs font-bold bg-white text-[#7c3aed] px-3 py-1.5 rounded-lg"
-            >
-              {copied ? <Check size={14} /> : <Copy size={14} />}{' '}
-              {copied ? 'تم النسخ' : 'نسخ الكود'}
-            </button>
-            <button
-              type="button"
-              onClick={handleShare}
-              className="flex items-center gap-1 text-xs font-bold bg-transparent border border-white/40 px-3 py-1.5 rounded-lg"
-            >
-              مشاركة
-            </button>
+        {/* Code card */}
+        <div className="space-y-2">
+          <p className="text-[11px] text-slate-300">كودك الشخصي الخاص بك</p>
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between bg-white/10 p-4 rounded-xl border border-dashed border-white/20 gap-4">
+            <span className="font-mono font-bold tracking-[0.3em] text-lg text-center md:text-right bg-black/30 px-4 py-3 rounded-xl">
+              {code}
+            </span>
+            <div className="flex gap-2 justify-center md:justify-end">
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex items-center gap-1 text-xs font-bold bg-white text-[#7c3aed] px-4 py-2 rounded-lg shadow"
+              >
+                مشاركة
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyCode}
+                className="flex items-center gap-1 text-xs font-bold bg-transparent border border-white/40 px-3 py-2 rounded-lg"
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'تم النسخ' : 'نسخ الكود'}
+              </button>
+            </div>
           </div>
         </div>
 
-        <div>
-          <p className="text-sm font-medium mb-1">
-            دعوت {completedCount} من أصل {goal} أصدقاء
+        {/* Progress steps */}
+        <div className="space-y-3">
+          <p className="text-xs text-slate-300">
+            إجمالي دعواتك: {totalReferrals} دعوة ناجحة
           </p>
-          <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-2">
-            <div
-              className="h-full bg-gradient-to-r from-[#7c3aed] to-[#22c55e]"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <div className="flex gap-2 mt-1">
+          <p className="text-sm font-medium">
+            باقيلك {Math.max(0, goal - (stepsCompleted || 0))} دعوات وهتاخد شهر Pro مجاناً
+          </p>
+          <div className="flex items-center justify-between gap-2 mt-1">
             {Array.from({ length: goal }).map((_, idx) => {
-              const filled = idx < completedCount;
+              const stepNumber = idx + 1;
+              const isCompleted = stepNumber <= stepsCompleted;
+              const isNext = !isCompleted && stepNumber === stepsCompleted + 1;
+              const friendName =
+                friends.find((f) => f.order === stepNumber)?.name || `صديق ${stepNumber}`;
+
               return (
-                <div
-                  key={idx}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${
-                    filled ? 'bg-white text-[#7c3aed]' : 'border-2 border-white/40 text-white/60'
-                  }`}
-                >
-                  {filled ? <Check size={16} /> : <User size={16} />}
+                <div key={stepNumber} className="flex-1 flex flex-col items-center">
+                  <div className="flex items-center w-full">
+                    {/* Circle */}
+                    <div
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border ${
+                        isCompleted
+                          ? 'bg-[#7c3aed] border-[#7c3aed] text-white'
+                          : isNext
+                          ? 'bg-[#1f2937] border-[#7c3aed] text-[#e5e7eb] animate-pulse'
+                          : 'bg-[#020617] border-[#4b5563] text-[#6b7280]'
+                      }`}
+                    >
+                      {isCompleted ? <Check size={16} /> : stepNumber}
+                    </div>
+                    {/* Connector */}
+                    {idx < goal - 1 && (
+                      <div
+                        className={`flex-1 h-0.5 mx-1 ${
+                          stepNumber < stepsCompleted ? 'bg-[#7c3aed]' : 'bg-white/10'
+                        }`}
+                      />
+                    )}
+                  </div>
+                  {/* Label under completed steps */}
+                  {isCompleted && (
+                    <p className="mt-1 text-[10px] text-slate-200 truncate max-w-[5rem] text-center">
+                      {friendName.split(' ')[0] || friendName}
+                    </p>
+                  )}
                 </div>
               );
             })}
           </div>
         </div>
 
-        {completedCount >= goal && !rewardClaimed && (
-          <div className="mt-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-200">
-            مبروك! وصلت لـ {goal} دعوات ناجحة — يمكنك الآن تفعيل شهر Pro مجاني.
+        {/* Reward card */}
+        <div
+          className={`mt-2 p-4 rounded-2xl border text-sm ${
+            completedCount >= goal && rewardClaimed
+              ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-200'
+              : 'bg-black/40 border-[#1f2937] text-slate-100'
+          }`}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <Award className="w-5 h-5 text-[#fbbf24]" />
+            <div>
+              <p className="font-bold text-sm">مكافأتك عند اكتمال 5 دعوات</p>
+              <p className="text-[11px] text-slate-300">
+                شهر Pro مجاني — قيمته 149 جنيه
+              </p>
+            </div>
           </div>
-        )}
+          <p className="text-[11px] text-slate-300 mb-2">
+            {Math.min(completedCount, goal)} من {goal} مكتملة
+          </p>
+          {completedCount >= goal ? (
+            rewardClaimed ? (
+              <p className="text-[11px]">
+                مبروك! تم إضافة شهر Pro لحسابك. استمتع بكل مميزات الخطة.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[11px]">
+                  اكتملت 5 دعوات ناجحة — اضغط على الزر بالأسفل لتفعيل الشهر المجاني.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRedeem}
+                  disabled={redeeming}
+                  className="w-full bg-emerald-500 hover:bg-emerald-400 text-black py-2 rounded-xl font-bold text-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {redeeming ? 'جارٍ تفعيل المكافأة...' : 'فعّل شهر Pro المجاني الآن'}
+                </button>
+              </div>
+            )
+          ) : (
+            <p className="text-[11px] text-slate-300">
+              ادعو مزيداً من الأصدقاء لتحصل على شهر كامل من EGX Pro مجاناً.
+            </p>
+          )}
+        </div>
 
-        {rewardClaimed && (
-          <div className="mt-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-200">
-            تم تفعيل شهر Pro المجاني على حسابك. شكرًا لمشاركتك EGX Pro مع أصدقاءك.
-          </div>
-        )}
+        {/* Social proof */}
+        <div className="pt-2 text-[11px] text-slate-300">
+          {weeklyJoinedCount > 0 && (
+            <p>
+              انضم {weeklyJoinedCount} مستخدم هذا الأسبوع عن طريق الدعوات.
+            </p>
+          )}
+        </div>
 
         {message && (
           <p className="text-xs text-emerald-300">
@@ -1861,23 +2022,6 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
             {error}
           </p>
         )}
-
-        <div className="pt-2">
-          <button
-            type="button"
-            onClick={handleRedeem}
-            disabled={rewardClaimed || completedCount < goal || redeeming}
-            className="w-full bg-white text-[#7c3aed] py-3 rounded-xl font-bold hover:bg-slate-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed text-sm"
-          >
-            {rewardClaimed
-              ? 'تم الحصول على الشهر المجاني'
-              : completedCount < goal
-              ? `باقي ${Math.max(0, goal - completedCount)} دعوات للحصول على شهر مجاني`
-              : redeeming
-              ? 'جارٍ تفعيل المكافأة...'
-              : 'احصل على شهر Pro مجاناً'}
-          </button>
-        </div>
       </div>
     </div>
   );
