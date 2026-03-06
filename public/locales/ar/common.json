@@ -136,6 +136,27 @@
     "noNewNotifications": "لا توجد إشعارات جديدة",
     "settingsPage": "الإعدادات"
   },
+  "overview": {
+    "tabLabel": "نظرة عامة",
+    "completeProfile": "أكمل ملفك الشخصي",
+    "missingItems": "الحاجات الناقصة:",
+    "missingEmail": "الإيميل",
+    "missingPhone": "رقم الموبايل",
+    "missingUsername": "اسم المستخدم",
+    "missingGoal": "هدف مالي",
+    "missingWatchlist": "سهم في قائمة المتابعة",
+    "level": "مستوى:",
+    "levelBeginner": "ناشئ",
+    "levelInvestor": "مستثمر",
+    "levelPro": "محترف",
+    "levelLegend": "أسطورة",
+    "planFree": "مجاني",
+    "planPro": "Pro",
+    "statsAnalyses": "التحليلات",
+    "statsStocks": "الأسهم",
+    "statsDays": "أيام",
+    "statsPortfolio": "المحفظة"
+  },
   "market": {
     "overview": "نظرة على السوق",
     "livePrices": "الأسعار اللحظية",

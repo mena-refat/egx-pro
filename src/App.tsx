@@ -4,7 +4,6 @@ import { useAuthStore } from './store/authStore';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, UserPlus, TrendingUp, User as UserIcon, LayoutDashboard, PieChart, Calculator, Settings as SettingsIcon, Search, Eye, EyeOff, Sun, Moon, Monitor, Target, Bell, LogOut, ChevronLeft, ChevronRight, Trophy, Briefcase, UserPlus as UserPlusIcon } from 'lucide-react';
 import OnboardingWizard from './components/OnboardingWizard';
-import { useProfileCompletion } from './hooks/useProfileCompletion';
 import PortfolioTracker from './components/PortfolioTracker';
 import StockScreener from './components/StockScreener';
 import InvestmentCalculator from './components/InvestmentCalculator';
@@ -19,7 +18,6 @@ import { Stock, PortfolioHolding } from './types';
 export default function App() {
   const { t, i18n } = useTranslation('common');
   const { isAuthenticated, user, logout, updateUser, accessToken } = useAuthStore();
-  const { percentage: profileCompletion, isComplete: profileComplete } = useProfileCompletion(accessToken, user);
   const [isLogin, setIsLogin] = useState(true);
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -511,18 +509,119 @@ export default function App() {
 
         {/* Main Content */}
         <main className="flex-1 p-8 overflow-y-auto">
-          <header className="flex justify-between items-center mb-12">
-            <div>
+          <header className="flex justify-between items-center mb-12" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+            {/* Right in RTL: greeting */}
+            <div className="text-end">
               <h2 className="text-3xl font-bold">
                 {i18n.language === 'ar' ? `أهلاً، ${user?.fullName || 'مستثمرنا'}` : `Welcome, ${user?.fullName || 'Investor'}`}
               </h2>
               {user?.username ? (
                 <p className="text-slate-400 text-sm mt-0.5">@{user.username}</p>
               ) : (
-                <p className="text-slate-400">{i18n.language === 'ar' ? 'إليك نظرة سريعة على استثماراتك اليوم' : 'Here is a quick look at your investments today'}</p>
+                <p className="text-slate-400 text-sm mt-0.5">{i18n.language === 'ar' ? 'إليك نظرة سريعة على استثماراتك اليوم' : 'Here is a quick look at your investments today'}</p>
               )}
             </div>
+            {/* Left in RTL: theme, bell, avatar */}
             <div className="flex items-center gap-3">
+              {/* Theme toggle */}
+              <div className="flex items-center gap-1 rounded-full bg-slate-900/60 border border-slate-700/80 px-1 py-1 text-slate-400 text-xs">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setTheme('light');
+                    if (accessToken) {
+                      try {
+                        const res = await fetch('/api/user/profile', {
+                          method: 'PUT',
+                          headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ theme: 'light' }),
+                        });
+                        const body = await res.json().catch(() => null);
+                        if (res.ok && body) {
+                          updateUser(body);
+                        }
+                      } catch (err) {
+                        console.error('Failed to update theme from header', err);
+                      }
+                    }
+                  }}
+                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                    theme === 'light'
+                      ? 'bg-white text-slate-900'
+                      : 'bg-transparent hover:bg-slate-800'
+                  }`}
+                  aria-label="Light mode"
+                >
+                  <Sun className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setTheme('system');
+                    if (accessToken) {
+                      try {
+                        const res = await fetch('/api/user/profile', {
+                          method: 'PUT',
+                          headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ theme: 'system' }),
+                        });
+                        const body = await res.json().catch(() => null);
+                        if (res.ok && body) {
+                          updateUser(body);
+                        }
+                      } catch (err) {
+                        console.error('Failed to update theme from header', err);
+                      }
+                    }
+                  }}
+                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                    theme === 'system'
+                      ? 'bg-white text-slate-900'
+                      : 'bg-transparent hover:bg-slate-800'
+                  }`}
+                  aria-label="System theme"
+                >
+                  <Monitor className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setTheme('dark');
+                    if (accessToken) {
+                      try {
+                        const res = await fetch('/api/user/profile', {
+                          method: 'PUT',
+                          headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ theme: 'dark' }),
+                        });
+                        const body = await res.json().catch(() => null);
+                        if (res.ok && body) {
+                          updateUser(body);
+                        }
+                      } catch (err) {
+                        console.error('Failed to update theme from header', err);
+                      }
+                    }
+                  }}
+                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-white text-slate-900'
+                      : 'bg-transparent hover:bg-slate-800'
+                  }`}
+                  aria-label="Dark mode"
+                >
+                  <Moon className="w-4 h-4" />
+                </button>
+              </div>
               {/* Notifications */}
               <div className="relative" ref={notificationsRef}>
                 <button
@@ -631,114 +730,6 @@ export default function App() {
                   )}
                 </AnimatePresence>
               </div>
-
-              {/* Theme toggle - compact header version */}
-              <div className="flex items-center gap-1 rounded-full bg-slate-900/60 border border-slate-700/80 px-1 py-1 text-slate-400 text-xs">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setTheme('light');
-                    if (accessToken) {
-                      try {
-                        const res = await fetch('/api/user/profile', {
-                          method: 'PUT',
-                          headers: {
-                            'Authorization': `Bearer ${accessToken}`,
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({ theme: 'light' }),
-                        });
-                        const body = await res.json().catch(() => null);
-                        if (res.ok && body) {
-                          updateUser(body);
-                        }
-                      } catch (err) {
-                        console.error('Failed to update theme from header', err);
-                      }
-                    }
-                  }}
-                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
-                    theme === 'light'
-                      ? 'bg-white text-slate-900'
-                      : 'bg-transparent hover:bg-slate-800'
-                  }`}
-                  aria-label="Light mode"
-                >
-                  <Sun className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setTheme('system');
-                    if (accessToken) {
-                      try {
-                        const res = await fetch('/api/user/profile', {
-                          method: 'PUT',
-                          headers: {
-                            'Authorization': `Bearer ${accessToken}`,
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({ theme: 'system' }),
-                        });
-                        const body = await res.json().catch(() => null);
-                        if (res.ok && body) {
-                          updateUser(body);
-                        }
-                      } catch (err) {
-                        console.error('Failed to update theme from header', err);
-                      }
-                    }
-                  }}
-                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
-                    theme === 'system'
-                      ? 'bg-white text-slate-900'
-                      : 'bg-transparent hover:bg-slate-800'
-                  }`}
-                  aria-label="System theme"
-                >
-                  <Monitor className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setTheme('dark');
-                    if (accessToken) {
-                      try {
-                        const res = await fetch('/api/user/profile', {
-                          method: 'PUT',
-                          headers: {
-                            'Authorization': `Bearer ${accessToken}`,
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({ theme: 'dark' }),
-                        });
-                        const body = await res.json().catch(() => null);
-                        if (res.ok && body) {
-                          updateUser(body);
-                        }
-                      } catch (err) {
-                        console.error('Failed to update theme from header', err);
-                      }
-                    }
-                  }}
-                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
-                    theme === 'dark'
-                      ? 'bg-white text-slate-900'
-                      : 'bg-transparent hover:bg-slate-800'
-                  }`}
-                  aria-label="Dark mode"
-                >
-                  <Moon className="w-4 h-4" />
-                </button>
-              </div>
-              {!profileComplete && (
-                <div className="text-right">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">{i18n.language === 'ar' ? 'اكتمال الملف' : 'Profile Completion'}</p>
-                  <div className="w-32 h-2 bg-slate-800 rounded-full mt-1 overflow-hidden">
-                    <div className="h-full bg-violet-500 transition-all duration-500" style={{ width: `${profileCompletion}%` }} />
-                  </div>
-                </div>
-              )}
             </div>
           </header>
 

@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef, type ChangeEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
-import { useProfileCompletion } from '../hooks/useProfileCompletion';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ChevronLeft,
@@ -25,6 +24,7 @@ import {
   Monitor,
   Bell,
   LogOut,
+  CalendarCheck,
 } from 'lucide-react';
 import api from '../lib/api';
 import { validateChangePassword } from '../lib/validations';
@@ -1217,7 +1217,7 @@ export default function ProfilePage() {
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'error'>('idle');
   const [usernameMessage, setUsernameMessage] = useState<string | null>(null);
   const [savingField, setSavingField] = useState<string | null>(null);
-  const { percentage: profileCompletion, isComplete: profileComplete } = useProfileCompletion(accessToken, user);
+  const [completionData, setCompletionData] = useState<{ percentage: number; missing: { field: string; route: string }[] } | null>(null);
   
   useEffect(() => {
     if (authUser) {
@@ -1278,6 +1278,23 @@ export default function ProfilePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
+
+  const fetchCompletion = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      const res = await fetch('/api/profile/completion', { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setCompletionData({ percentage: data.percentage ?? 0, missing: data.missing ?? [] });
+      }
+    } catch {
+      setCompletionData(null);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (activeTab === 'overview') fetchCompletion();
+  }, [activeTab, fetchCompletion]);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -1402,16 +1419,15 @@ export default function ProfilePage() {
     }
   };
 
-  const getLevelFromAnalyses = (count: number): string => {
-    if (count >= 100) return 'محترف';
-    if (count >= 50) return 'خبير';
-    if (count >= 20) return 'محلل';
-    if (count >= 5) return 'متداول';
-    return 'مبتدئ';
+  const levelLabel = (userTitle?: string | null) => {
+    if (userTitle === 'الأسطورة' || userTitle === 'أسطورة') return t('overview.levelLegend');
+    if (userTitle === 'المحترف' || userTitle === 'محترف') return t('overview.levelPro');
+    if (userTitle === 'المستثمر' || userTitle === 'مستثمر') return t('overview.levelInvestor');
+    return t('overview.levelBeginner');
   };
 
   const tabs = [
-    { id: 'overview', label: 'نظرة عامة', icon: User },
+    { id: 'overview', label: t('overview.tabLabel'), icon: User },
     { id: 'subscription', label: 'الاشتراك', icon: CreditCard },
     { id: 'referral', label: 'الدعوات', icon: Gift },
   { id: 'achievements', label: t('achievements.tabLabel'), icon: Award, notification: unseenAchievementsCount > 0 },
@@ -1460,67 +1476,92 @@ export default function ProfilePage() {
         >
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {/* Profile Header */}
-              <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md hover:scale-[1.01] transition-transform">
-                <div className="flex items-center gap-4">
-                  <AvatarWithUpload user={user} onUserUpdate={updateUser} />
-                  <div>
-                    <h2 className="text-xl font-bold">{user.fullName || '—'}</h2>
-                    {user.username ? (
-                      <p className="text-[#9ca3af] text-sm">@{user.username}</p>
-                    ) : (
-                      <p className="text-[#9ca3af] text-sm">{user.email || user.phone || '—'}</p>
-                    )}
-                    {user.userTitle && (
-                      <p
-                        className={`text-sm font-medium mt-0.5 ${
-                          user.userTitle === 'أسطورة'
-                            ? 'text-[#fb7185]'
-                            : user.userTitle === 'محترف'
-                              ? 'text-[#fbbf24]'
-                              : user.userTitle === 'مستثمر'
-                                ? 'text-[#60a5fa]'
-                                : 'text-[#a78bfa]'
-                        }`}
-                      >
-                        {user.userTitle}
-                      </p>
-                    )}
+              {/* Section 1 — User info card */}
+              <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-violet-600 flex items-center justify-center text-2xl font-bold text-white shrink-0">
+                    {(user.fullName || user.email || '?').charAt(0).toUpperCase()}
                   </div>
-                  <div className="mr-auto bg-gradient-to-r from-[#7c3aed] to-[#3b82f6] px-3 py-1 rounded-full text-sm font-bold text-white flex items-center gap-1">
-                    <TrendingUp size={14} /> {user.riskTolerance || 'متوسط'}
-                  </div>
-                  {stats && (
-                    <div className="mr-2 bg-[#111827] border border-[#4b5563] px-3 py-1 rounded-full text-xs font-bold text-[#e5e7eb] flex items-center gap-1">
-                      <BarChart2 size={14} /> مستوى الحساب: {getLevelFromAnalyses(stats.analysesCount)}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-xl font-bold text-[#f9fafb]">{user.fullName || '—'}</h2>
+                      <span className="text-sm text-[#9ca3af]">
+                        {t('overview.level')} {levelLabel(user.userTitle)}
+                      </span>
                     </div>
-                  )}
+                    {user.username && <p className="text-[#9ca3af] text-sm mt-0.5">@{user.username}</p>}
+                    <div className="mt-2">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#1f2937] text-[#e5e7eb] border border-[#374151]">
+                        {user.subscriptionPlan === 'pro' || user.subscriptionPlan === 'annual' ? t('overview.planPro') : t('overview.planFree')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                {!profileComplete && (
-                  <div className="mt-6">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>أكمل ملفك الشخصي</span>
-                      <span className="font-bold">{profileCompletion}%</span>
-                    </div>
-                    <div className="w-full h-2 bg-[#1f2937] rounded-full overflow-hidden">
-                      <motion.div className="h-full bg-gradient-to-r from-[#7c3aed] to-[#3b82f6]" initial={{ width: 0 }} animate={{ width: `${profileCompletion}%` }} transition={{ duration: 1 }} />
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* Stats Bar */}
+              {/* Profile completion bar — only when < 100% */}
+              {completionData && completionData.percentage < 100 && (
+                <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-medium text-[#e5e7eb]">{t('overview.completeProfile')}</span>
+                    <span className="font-bold text-violet-400">{completionData.percentage}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-[#1f2937] rounded-full overflow-hidden mb-4">
+                    <motion.div
+                      className="h-full bg-violet-500"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${completionData.percentage}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                  <p className="text-xs text-[#9ca3af] mb-2">{t('overview.missingItems')}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {completionData.missing.map((m) => {
+                      const label =
+                        m.field === 'email' ? t('overview.missingEmail')
+                        : m.field === 'phone' ? t('overview.missingPhone')
+                        : m.field === 'username' ? t('overview.missingUsername')
+                        : m.field === 'goal' ? t('overview.missingGoal')
+                        : t('overview.missingWatchlist');
+                      return (
+                        <button
+                          key={m.field}
+                          type="button"
+                          onClick={() => {
+                            if (m.route === '/profile?tab=settings') {
+                              setActiveTab('settings');
+                              if (typeof window !== 'undefined') window.history.pushState(null, '', '/profile?tab=settings');
+                            } else {
+                              window.location.href = m.route;
+                            }
+                          }}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 border border-violet-500/30 transition-colors"
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Stats cards — 4 in a row */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: "التحليلات", value: stats?.analysesCount ?? 0, icon: BarChart2 },
-                  { label: "الأسهم في المحفظة", value: stats?.portfolioCount ?? 0, icon: TrendingUp },
-                  { label: "أيام الاستخدام", value: stats?.daysSinceJoined ?? 0, icon: Target },
-                  { label: "إجمالي المحفظة (تقريبي)", value: Math.round(stats?.portfolioValue ?? 0), icon: Wallet },
+                  { label: t('overview.statsAnalyses'), value: stats?.analysesCount ?? 0, icon: BarChart2 },
+                  { label: t('overview.statsStocks'), value: stats?.watchlistCount ?? 0, icon: TrendingUp },
+                  { label: t('overview.statsDays'), value: stats?.daysSinceJoined ?? 0, icon: CalendarCheck },
+                  { label: t('overview.statsPortfolio'), value: Math.round(stats?.portfolioValue ?? 0), icon: Wallet },
                 ].map((stat, i) => (
-                  <div key={i} className="p-4 rounded-2xl border border-[#1f2937] bg-[#111827] text-center shadow-md hover:scale-[1.02] transition-transform">
-                    <stat.icon className="mx-auto mb-2 text-[#7c3aed]" size={24} />
+                  <div key={i} className="p-4 rounded-2xl border border-[#1f2937] bg-[#111827] text-center shadow-md">
+                    <stat.icon
+                      className={`mx-auto mb-2 ${stat.value > 0 ? 'text-violet-500' : 'text-[#6b7280]'}`}
+                      size={24}
+                    />
                     <p className="text-[#9ca3af] text-xs mb-1">{stat.label}</p>
-                    <p className="text-lg font-bold"><Counter value={stat.value} /></p>
+                    <p className={`text-lg font-bold ${stat.value > 0 ? 'text-violet-400' : 'text-[#6b7280]'}`}>
+                      <Counter value={stat.value} />
+                    </p>
                   </div>
                 ))}
               </div>

@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const WEIGHTS = {
-  hasFullName: 20,
+  hasEmail: 20,
   hasUsername: 20,
   hasPhone: 20,
   hasGoal: 20,
   hasWatchlist: 20,
 } as const;
 
-export function useProfileCompletion(accessToken: string | null, user: { fullName?: string | null; username?: string | null; phone?: string | null } | null) {
+export function useProfileCompletion(accessToken: string | null, user: { email?: string | null; username?: string | null; phone?: string | null } | null) {
   const [goalsCount, setGoalsCount] = useState(0);
   const [watchlistCount, setWatchlistCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -41,14 +41,14 @@ export function useProfileCompletion(accessToken: string | null, user: { fullNam
     fetchCounts();
   }, [fetchCounts]);
 
-  const hasFullName = Boolean(user?.fullName?.trim());
+  const hasEmail = Boolean(user?.email?.trim());
   const hasUsername = Boolean(user?.username?.trim());
   const hasPhone = Boolean(user?.phone?.trim());
   const hasGoal = goalsCount >= 1;
   const hasWatchlist = watchlistCount >= 1;
 
   const percentage =
-    (hasFullName ? WEIGHTS.hasFullName : 0) +
+    (hasEmail ? WEIGHTS.hasEmail : 0) +
     (hasUsername ? WEIGHTS.hasUsername : 0) +
     (hasPhone ? WEIGHTS.hasPhone : 0) +
     (hasGoal ? WEIGHTS.hasGoal : 0) +

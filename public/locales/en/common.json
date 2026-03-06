@@ -136,6 +136,27 @@
     "noNewNotifications": "No new notifications",
     "settingsPage": "Settings"
   },
+  "overview": {
+    "tabLabel": "Overview",
+    "completeProfile": "Complete your profile",
+    "missingItems": "Missing:",
+    "missingEmail": "Email",
+    "missingPhone": "Phone number",
+    "missingUsername": "Username",
+    "missingGoal": "Financial goal",
+    "missingWatchlist": "Watchlist stock",
+    "level": "Level:",
+    "levelBeginner": "Beginner",
+    "levelInvestor": "Investor",
+    "levelPro": "Pro",
+    "levelLegend": "Legend",
+    "planFree": "Free",
+    "planPro": "Pro",
+    "statsAnalyses": "Analyses",
+    "statsStocks": "Stocks",
+    "statsDays": "Days",
+    "statsPortfolio": "Portfolio"
+  },
   "market": {
     "overview": "Market Overview",
     "livePrices": "Live Prices",

@@ -150,6 +150,9 @@ async function startServer() {
   const userRoutes = (await import('./server/routes/user.ts')).default;
   app.use('/api/user', userRoutes);
 
+  const profileRoutes = (await import('./server/routes/profile.ts')).default;
+  app.use('/api/profile', profileRoutes);
+
   const watchlistRoutes = (await import('./server/routes/watchlist.ts')).default;
   app.use('/api/watchlist', watchlistRoutes);
 
