@@ -6,30 +6,131 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+/* ─── Design Tokens (Light) ─── */
+:root {
+  /* Backgrounds */
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #f1f3f5;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f3f5;
+  --bg-input: #f1f3f5;
+  --bg-sidebar: #ffffff;
+  --bg-header: #ffffff;
+
+  /* Borders */
+  --border: #e9ecef;
+  --border-subtle: #f1f3f5;
+  --border-strong: #dee2e6;
+
+  /* Text */
+  --text-primary: #0d1117;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --text-disabled: #d1d5db;
+  --text-inverse: #ffffff;
+
+  /* Brand */
+  --brand: #7c3aed;
+  --brand-hover: #6d28d9;
+  --brand-subtle: #ede9fe;
+  --brand-text: #7c3aed;
+
+  /* Status */
+  --success: #16a34a;
+  --success-bg: #f0fdf4;
+  --success-text: #15803d;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --danger-text: #b91c1c;
+  --warning: #d97706;
+  --warning-bg: #fffbeb;
+  --warning-text: #b45309;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* ─── Design Tokens (Dark) ─── */
+.dark {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-card: #161b22;
+  --bg-card-hover: #1c2128;
+  --bg-input: #1c2128;
+  --bg-sidebar: #111318;
+  --bg-header: #0d1117;
+
+  --border: #30363d;
+  --border-subtle: #21262d;
+  --border-strong: #3d444d;
+
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #656d76;
+  --text-disabled: #3d444d;
+  --text-inverse: #0d1117;
+
+  --brand: #8b5cf6;
+  --brand-hover: #7c3aed;
+  --brand-subtle: #1e1333;
+  --brand-text: #a78bfa;
+
+  --success: #22c55e;
+  --success-bg: #0f2419;
+  --success-text: #4ade80;
+  --danger: #ef4444;
+  --danger-bg: #2d1515;
+  --danger-text: #f87171;
+  --warning: #f59e0b;
+  --warning-bg: #2d2006;
+  --warning-text: #fbbf24;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ─── Theme transition ─── */
+*,
+*::before,
+*::after {
+  transition: background-color 200ms ease, border-color 200ms ease, color 150ms ease;
+  outline-color: var(--brand);
+}
+
 @layer base {
   body {
-    @apply transition-colors duration-300;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
   }
-  
-  .dark body {
-    @apply bg-slate-950 text-slate-100;
+
+  /* Selection */
+  ::selection {
+    background-color: var(--brand-subtle);
+    color: var(--brand-text);
   }
-  
-  body:not(.dark) {
-    @apply bg-slate-50 text-slate-900;
+
+  /* Scrollbar */
+  :root {
+    scrollbar-color: var(--border) var(--bg-secondary);
+  }
+  .dark {
+    scrollbar-color: var(--border) var(--bg-primary);
   }
 }
 
 @layer components {
   .card-base {
-    @apply rounded-3xl border transition-all duration-300;
+    border-radius: 1.5rem;
+    border-width: 1px;
+    border-color: var(--border);
+    background-color: var(--bg-card);
+    box-shadow: var(--shadow-sm);
   }
-  
-  .dark .card-base {
-    @apply bg-slate-900 border-white/5;
-  }
-  
-  .card-base:not(.dark .card-base) {
-    @apply bg-white border-slate-200 shadow-sm;
+
+  .card-base:hover {
+    background-color: var(--bg-card-hover);
   }
 }

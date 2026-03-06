@@ -39,7 +39,7 @@ async function startServer() {
   });
 
   // Body parser (before sanitization)
-  app.use(express.json({ limit: '1mb' }));
+  app.use(express.json({ limit: '6mb' }));
   app.use(cookieParser());
 
   const { sanitizeInput } = await import('./server/lib/sanitize.ts');

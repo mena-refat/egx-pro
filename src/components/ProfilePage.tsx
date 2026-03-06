@@ -1392,11 +1392,11 @@ export default function ProfilePage() {
         const digitsOnly = phoneInput.replace(/\D/g, '');
         let validationError: string | null = null;
         if (!digitsOnly) {
-          validationError = i18n.language === 'ar' ? 'رقم الموبايل مطلوب' : 'Phone number is required';
+          validationError = t('error.phone_required');
         } else if (digitsOnly.length !== 11) {
-          validationError = i18n.language === 'ar' ? 'رقم الموبايل لازم يكون 11 رقم' : 'Phone number must be 11 digits';
+          validationError = t('error.phone_11_digits');
         } else if (!/^01[0125][0-9]{8}$/.test(digitsOnly)) {
-          validationError = i18n.language === 'ar' ? 'رقم الموبايل غير صحيح' : 'Invalid Egyptian phone number';
+          validationError = t('error.invalid_phone');
         }
 
         if (validationError) {
@@ -1443,11 +1443,11 @@ export default function ProfilePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (loading) return <div className="p-6 text-center">جاري التحميل...</div>;
-  if (!user) return <div className="p-6 text-center">فشل تحميل الملف الشخصي</div>;
+  if (loading) return <div className="p-6 text-center">{t('profile.loading')}</div>;
+  if (!user) return <div className="p-6 text-center">{t('profile.loadError')}</div>;
 
   return (
-    <div className="p-6 space-y-6 bg-[#0a0f1e] text-[#f9fafb] min-h-screen" dir="rtl">
+    <div className="p-6 space-y-6 bg-[#0a0f1e] text-[#f9fafb] min-h-screen" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Tab Navigation */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-6">
         {tabs.map((tab) => (
@@ -1483,9 +1483,14 @@ export default function ProfilePage() {
               {/* Section 1 — User info card */}
               <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
                 <div className="flex flex-wrap items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-violet-600 flex items-center justify-center text-2xl font-bold text-white shrink-0">
-                    {(user.fullName || user.email || '?').charAt(0).toUpperCase()}
-                  </div>
+                  <AvatarWithUpload
+                    user={user}
+                    accessToken={accessToken}
+                    onUserUpdate={(u) => {
+                      setUser((prev) => (prev ? { ...prev, ...u } : null));
+                      updateUser(u);
+                    }}
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-xl font-bold text-[#f9fafb]">{user.fullName || '—'}</h2>
@@ -1939,9 +1944,11 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
 
 function AvatarWithUpload({
   user,
+  accessToken,
   onUserUpdate,
 }: {
   user: UserProfile;
+  accessToken: string | null;
   onUserUpdate: (u: Partial<UserProfile>) => void;
 }) {
   const [uploading, setUploading] = useState(false);
@@ -1952,6 +1959,10 @@ function AvatarWithUpload({
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (!accessToken) {
+      setMessage('يجب تسجيل الدخول أولاً');
+      return;
+    }
 
     setUploading(true);
     setMessage(null);
@@ -1965,12 +1976,15 @@ function AvatarWithUpload({
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
             },
             body: JSON.stringify({ image: base64 }),
           });
-          const data = await res.json();
+          const data = await res.json().catch(() => ({}));
           if (!res.ok) {
-            throw new Error(data?.error || 'فشل رفع الصورة');
+            const msg = data?.error || 'فشل رفع الصورة';
+            setMessage(typeof msg === 'string' ? msg : 'حدث خطأ أثناء رفع الصورة');
+            return;
           }
           onUserUpdate({ avatarUrl: data.avatarUrl });
           setMessage('تم تحديث صورة البروفايل بنجاح');
@@ -1995,9 +2009,6 @@ function AvatarWithUpload({
     ? 'p-[2px] rounded-full bg-gradient-to-br from-amber-300 via-orange-400 to-yellow-500'
     : 'p-[2px] rounded-full bg-[#1f2937]';
 
-  const initials =
-    (user.fullName || user.username || 'U').trim()[0]?.toUpperCase() || 'U';
-
   return (
     <div className="flex flex-col items-center gap-1">
       <button
@@ -2014,14 +2025,14 @@ function AvatarWithUpload({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] flex items-center justify-center text-2xl font-bold">
-                {initials}
+              <div className="w-full h-full bg-[var(--bg-card)] flex items-center justify-center text-[var(--text-muted)]">
+                <User className="w-8 h-8" />
               </div>
             )}
           </div>
         </div>
         <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] transition-opacity">
-          {uploading ? 'جارٍ الرفع...' : 'تغيير الصورة'}
+          {uploading ? 'جارٍ الرفع...' : (user.avatarUrl ? 'تغيير الصورة' : 'اضغط لإضافة صورة')}
         </div>
         {isPro && (
           <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-black shadow">

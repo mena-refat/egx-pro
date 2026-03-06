@@ -173,7 +173,7 @@ export default function DashboardPage() {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="text-xl font-bold">
-            {watchlist.length > 0 ? (i18n.language === 'ar' ? 'قائمة المتابعة اللحظية' : 'Live Watchlist') : t('market.livePrices')}
+            {watchlist.length > 0 ? t('dashboard.liveWatchlist') : t('market.livePrices')}
           </h3>
           <div className={`flex items-center gap-2 text-[10px] ${isConnected ? 'text-emerald-500' : 'text-amber-500'}`}>
             <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
@@ -202,7 +202,7 @@ export default function DashboardPage() {
             ))}
             {liveWatchlistStocks.length === 0 && (
               <div className="col-span-full text-center p-8 text-slate-500 border border-dashed border-slate-700 rounded-xl">
-                {i18n.language === 'ar' ? 'لا توجد أسهم في قائمة المتابعة' : 'No stocks in watchlist'}
+                {t('dashboard.watchlistEmpty')}
               </div>
             )}
           </div>
@@ -223,7 +223,7 @@ export default function DashboardPage() {
               )}
             </div>
             <div className="card-base p-6">
-              <h4 className="text-sm text-slate-400 mb-2">{i18n.language === 'ar' ? 'أفضل سهم' : 'Top Performer'}</h4>
+              <h4 className="text-sm text-slate-400 mb-2">{t('dashboard.topPerformer')}</h4>
               {portfolioLoading ? (
                 <div className="h-10 w-32 bg-slate-800 animate-pulse rounded" />
               ) : (
@@ -238,13 +238,13 @@ export default function DashboardPage() {
           </div>
 
           <div className="card-base p-8">
-            <h3 className="text-xl font-bold mb-6">{i18n.language === 'ar' ? 'أداء المحفظة' : 'Portfolio Performance'}</h3>
+            <h3 className="text-xl font-bold mb-6">{t('dashboard.portfolioPerformance')}</h3>
             <PortfolioPerformanceChart />
           </div>
           
           <div className="card-base p-8">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold">{i18n.language === 'ar' ? 'قائمة المتابعة' : 'Watchlist'}</h3>
+              <h3 className="text-xl font-bold">{t('dashboard.watchlist')}</h3>
             </div>
             
             {watchlistLoading ? (
@@ -276,7 +276,7 @@ export default function DashboardPage() {
                   );
                 })}
                 {watchlist.length === 0 && (
-                  <p className="text-slate-500 text-sm italic col-span-2">{i18n.language === 'ar' ? 'لا توجد أسهم في قائمة المتابعة' : 'No stocks in watchlist'}</p>
+                  <p className="text-slate-500 text-sm italic col-span-2">{t('dashboard.watchlistEmpty')}</p>
                 )}
               </div>
             )}

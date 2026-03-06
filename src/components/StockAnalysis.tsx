@@ -207,7 +207,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
         const msg = err && typeof err === 'object' && 'response' in err
           ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
           : null;
-        setErrorAnalysis(msg || 'Failed to generate analysis');
+        setErrorAnalysis(msg || t('common.error'));
       }
     } finally {
       setLoadingAnalysis(false);

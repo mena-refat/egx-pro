@@ -2,7 +2,57 @@
   "common": {
     "appName": "EGX Pro",
     "loading": "جاري التحميل...",
-    "error": "حدث خطأ ما"
+    "error": "حدث خطأ ما",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "confirm": "تأكيد",
+    "success": "تمت العملية بنجاح",
+    "back": "رجوع",
+    "close": "إغلاق",
+    "search": "بحث",
+    "filter": "تصفية",
+    "view_all": "عرض الكل",
+    "more": "المزيد",
+    "yes": "نعم",
+    "no": "لا",
+    "ok": "موافق",
+    "skip": "تخطي",
+    "later": "لاحقاً"
+  },
+  "nav": {
+    "dashboard": "الرئيسية",
+    "portfolio": "محفظتي",
+    "stocks": "الأسهم",
+    "market": "السوق",
+    "calculator": "الحاسبة",
+    "goals": "أهدافي المالية",
+    "profile": "حسابي",
+    "expandSidebar": "توسيع القائمة",
+    "collapseSidebar": "طي القائمة"
+  },
+  "header": {
+    "welcome": "أهلاً",
+    "welcomeUser": "أهلاً، {{name}}",
+    "defaultUser": "مستثمرنا",
+    "complete_profile": "أكمل ملفك",
+    "market_open": "السوق مفتوح",
+    "market_closed": "السوق مغلق",
+    "market_pre": "جلسة استكشافية",
+    "market_auction": "مزاد الإغلاق",
+    "live_price": "سعر لحظي",
+    "delayed_price": "سعر متأخر",
+    "delayed_minutes": "متأخر {{m}} دقيقة"
+  },
+  "success": {
+    "saved": "تم الحفظ بنجاح",
+    "updated": "تم التحديث",
+    "deleted": "تم الحذف",
+    "copied": "تم النسخ",
+    "sent": "تم الإرسال",
+    "loginSuccess": "تم تسجيل الدخول بنجاح!",
+    "registerSuccess": "تم إنشاء الحساب بنجاح!"
   },
   "error": {
     "label": "حدث خطأ",
@@ -35,10 +85,22 @@
     "emailOrPhone": "البريد الإلكتروني أو رقم الهاتف",
     "password": "كلمة المرور",
     "fullName": "الاسم بالكامل",
-    "logout": "تسجيل الخروج"
+    "logout": "تسجيل الخروج",
+    "verify": "تحقق",
+    "backToLogin": "العودة لتسجيل الدخول",
+    "twoFactorTitle": "المصادقة الثنائية",
+    "twoFactorDesc": "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة",
+    "continueGoogle": "التسجيل بواسطة جوجل",
+    "or": "أو",
+    "placeholderEmailPhone": "name@example.com أو 01xxxxxxxxx",
+    "accountNotExist": "الحساب ده مش موجود. تقدر تسجّل حساب جديد.",
+    "authFailed": "فشل تسجيل الدخول",
+    "loginSuccess": "تم تسجيل الدخول بنجاح!",
+    "registerSuccess": "تم إنشاء الحساب بنجاح!"
   },
   "goals": {
     "title": "أهدافي المالية",
+    "noGoalsSet": "لا توجد أهداف",
     "targetAmount": "المبلغ المستهدف",
     "progress": "التقدم",
     "noGoals": "لم تضف أي أهداف بعد",
@@ -92,10 +154,35 @@
     "monthsLeft": "{{m}} أشهر",
     "daysLeft": "{{d}} أيام"
   },
+  "dashboard": {
+    "liveWatchlist": "قائمة المتابعة اللحظية",
+    "watchlistEmpty": "لا توجد أسهم في قائمة المتابعة",
+    "totalValue": "إجمالي القيمة",
+    "topPerformer": "أفضل سهم",
+    "portfolioPerformance": "أداء المحفظة",
+    "watchlist": "قائمة المتابعة"
+  },
   "achievements": {
     "congrats": "مبروك!",
     "newAchievement": "حققت إنجاز جديد",
-    "tabLabel": "الإنجازات"
+    "tabLabel": "الإنجازات",
+    "levels": { "beginner": "ناشئ", "growth": "مستثمر", "pro": "محترف", "legend": "أسطورة" },
+    "levelTitles": { "first": "المستوى 1", "second": "المستوى 2", "third": "المستوى 3", "fourth": "المستوى 4" },
+    "goToChallenge": "انطلق نحو التحدي",
+    "completedOn": "تم في",
+    "ofComplete": "من {{total}} مكتمل",
+    "titles": {
+      "first-step": "الخطوة الأولى", "know-yourself": "اعرف نفسك", "profile-complete": "ملف كامل", "first-look": "نظرة أولى",
+      "watcher": "مراقب", "investor": "مستثمر", "dreamer": "حالم", "first-referrer": "أول داعم", "subscriber": "مشترك",
+      "week-with-us": "أسبوع معنا", "active-analyst": "محلل نشط", "wealth-builder": "باني ثروة", "long-list": "قائمة طويلة",
+      "planner": "مخطط", "loyal": "وفي", "network": "شبكة", "diversified": "متنوع", "decision-maker": "صانع قرار",
+      "first-goal-achieved": "أول هدف محقق", "devoted": "مخلص", "expert-analyst": "محلل خبير", "diverse-portfolio": "محفظة متنوعة",
+      "strategist": "استراتيجي", "egx-ambassador": "سفير EGX Pro", "big-portfolio": "محفظة كبيرة", "patient": "صابر",
+      "daily-follower": "متابع يومي", "researcher": "باحث", "annual-subscriber": "مشترك سنوي", "leader": "قائد",
+      "legend-analyst": "محلل أسطوري", "kings-portfolio": "محفظة الملوك", "full-year": "سنة كاملة", "mega-referrer": "داعم ضخم",
+      "referral-legend": "أسطورة الدعوات", "community-leader": "قائد المجتمع", "the-1000": "الـ 1000", "overachiever": "فائز",
+      "sector-expert": "خبير قطاع", "legend": "أسطورة"
+    }
   },
   "settings": {
     "tabLabel": "الإعدادات",
@@ -175,7 +262,21 @@
     "markAllAsRead": "تحديد الكل مقروء",
     "confirmClearNotifications": "تأكيد المسح؟",
     "yes": "نعم",
-    "no": "لا"
+    "no": "لا",
+    "savedSuccess": "تم الحفظ بنجاح",
+    "sessionsEnded": "تم إنهاء الجلسات الأخرى",
+    "endSessionsFailed": "فشل إنهاء الجلسات",
+    "fillAllFields": "املأ كل الحقول",
+    "passwordsNoMatch": "كلمتا المرور غير متطابقتين",
+    "changePasswordFailed": "فشل تغيير كلمة المرور",
+    "twoFaSetupFailed": "فشل تهيئة 2FA",
+    "invalidCode": "الكود غير صحيح",
+    "wrongPassword": "كلمة المرور غير صحيحة",
+    "noOtherSessions": "لا توجد جلسات أخرى"
+  },
+  "profile": {
+    "loading": "جاري التحميل...",
+    "loadError": "فشل تحميل الملف الشخصي"
   },
   "overview": {
     "tabLabel": "نظرة عامة",
@@ -239,6 +340,8 @@
   "stocks": {
     "title": "الأسهم",
     "searchPlaceholder": "ابحث عن سهم بالاسم أو الرمز...",
+    "sortLabel": "ترتيب:",
+    "loadError": "فشل تحميل الأسهم",
     "filterAll": "الكل",
     "filterEGX30": "EGX30",
     "filterEGX70": "EGX70",
@@ -325,8 +428,15 @@
     "shariaBadge": "متوافق مع الشريعة"
   },
   "market": {
+    "title": "السوق",
     "overview": "نظرة على السوق",
     "livePrices": "الأسعار اللحظية",
+    "refresh": "تحديث",
+    "retry": "إعادة المحاولة",
+    "loadError": "فشل تحميل بيانات السوق",
+    "gainersLosers": "أكثر الأسهم ارتفاعاً وانخفاضاً",
+    "noData": "لا توجد بيانات",
+    "newsTitle": "أخبار السوق",
     "allPricesLive": "جميع الأسعار لحظية",
     "stocksDelayed10": "أسعار الأسهم متأخرة 10 دقائق",
     "upgradeToLivePrices": "ترقية للأسعار اللحظية",

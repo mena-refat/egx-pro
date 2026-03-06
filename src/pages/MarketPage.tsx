@@ -103,7 +103,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
       const res = await api.get<MarketOverview>('/stocks/market/overview');
       setOverview(res.data);
     } catch {
-      setError(isAr ? 'فشل تحميل بيانات السوق' : 'Failed to load market data');
+      setError(t('market.loadError'));
     } finally {
       setLoadingOverview(false);
     }
@@ -153,14 +153,14 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
     return [...stocks]
       .filter((s) => s.changePercent != null && Number.isFinite(s.changePercent))
       .sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0))
-      .slice(0, 6);
+      .slice(0, 10);
   }, [stocks]);
 
   const topLosers = useMemo(() => {
     return [...stocks]
       .filter((s) => s.changePercent != null && Number.isFinite(s.changePercent))
       .sort((a, b) => (a.changePercent ?? 0) - (b.changePercent ?? 0))
-      .slice(0, 6);
+      .slice(0, 10);
   }, [stocks]);
 
   const gold24 = overview?.gold?.valueEgxPerGram ?? 0;
@@ -225,7 +225,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {isAr ? 'السوق' : 'Market'}
+            {t('market.title')}
           </h1>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
             {isPro ? (
@@ -256,7 +256,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
           onClick={refreshAll}
           disabled={refreshing}
           className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 self-start sm:self-center"
-          aria-label={isAr ? 'تحديث' : 'Refresh'}
+          aria-label={t('market.refresh')}
         >
           <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
         </button>
@@ -270,64 +270,6 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
           </button>
         </div>
       )}
-
-      {/* Quick Stats Bar — 3 cards only */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {loadingOverview ? (
-          [...Array(3)].map((_, i) => (
-            <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 h-24 animate-pulse" />
-          ))
-        ) : (
-          <>
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-1 mb-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">USD/EGP</p>
-                <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  <Circle className="w-3 h-3 fill-emerald-500" aria-hidden /> {t('delay.liveBadge')}
-                </span>
-              </div>
-              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{formatValue(usdVal, 2)}</p>
-              <span className={`text-xs font-semibold ${(overview?.usdEgp?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.usdEgp?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                {formatChange(overview?.usdEgp?.changePercent ?? 0)}
-              </span>
-            </div>
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-1 mb-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('market.gold24k')}</p>
-                {overview?.goldMarketStatus?.isOpen === false ? (
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('delay.lastPrice')} · {t('delay.goldClosedUntil')}</span>
-                ) : overview?.gold?.isDelayed ? (
-                  <span className="inline-flex items-center gap-0.5 text-xs font-medium text-slate-500 dark:text-slate-400"><Timer className="w-3 h-3" aria-hidden /> {t('delay.delayedBadge')}</span>
-                ) : (
-                  <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"><Circle className="w-3 h-3 fill-emerald-500" aria-hidden /> {t('delay.liveBadge')}</span>
-                )}
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-300">{t('market.buy')}: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatValue(goldBuy24, 0)}</span> {t('market.perGram')}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-300">{t('market.sell')}: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatValue(goldSell24, 0)}</span> {t('market.perGram')}</p>
-              <span className={`text-xs font-semibold ${(overview?.gold?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.gold?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                {formatChange(overview?.gold?.changePercent ?? 0)}
-              </span>
-            </div>
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-1 mb-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('market.silver999')}</p>
-                {overview?.goldMarketStatus?.isOpen === false ? (
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('delay.lastPrice')} · {t('delay.goldClosedUntil')}</span>
-                ) : overview?.silver?.isDelayed ? (
-                  <span className="inline-flex items-center gap-0.5 text-xs font-medium text-slate-500 dark:text-slate-400"><Timer className="w-3 h-3" aria-hidden /> {t('delay.delayedBadge')}</span>
-                ) : (
-                  <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"><Circle className="w-3 h-3 fill-emerald-500" aria-hidden /> {t('delay.liveBadge')}</span>
-                )}
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-300">{t('market.buy')}: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatValue(silverBuy999, 2)}</span> {t('market.perGram')}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-300">{t('market.sell')}: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatValue(silverSell999, 2)}</span> {t('market.perGram')}</p>
-              <span className={`text-xs font-semibold ${(overview?.silver?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.silver?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                {formatChange(overview?.silver?.changePercent ?? 0)}
-              </span>
-            </div>
-          </>
-        )}
-      </section>
 
       {/* [1] المؤشرات المصرية */}
       <section>
@@ -392,10 +334,16 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Dollar — تفاصيل شراء/بيع فقط (القيمة في Quick Bar فقط) */}
+            {/* USD/EGP */}
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 shadow-sm">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">$ USD / EGP</p>
-              <p className={`text-sm font-semibold ${(overview?.usdEgp?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.usdEgp?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">$ USD / EGP</p>
+                <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  <Circle className="w-3 h-3 fill-emerald-500" aria-hidden /> {t('delay.liveBadge')}
+                </span>
+              </div>
+              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{formatValue(usdVal, 2)} ج.م</p>
+              <p className={`text-sm font-semibold mt-1 ${(overview?.usdEgp?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.usdEgp?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
                 {formatChange(overview?.usdEgp?.changePercent ?? 0)}
               </p>
               <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
@@ -411,11 +359,18 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
                 className="w-full flex items-center justify-between gap-2 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
               >
                 <span className="font-medium text-slate-700 dark:text-slate-300">{t('market.gold24k')} <ChevronDown className={`w-4 h-4 inline-block align-middle transition-transform ${goldExpanded ? 'rotate-180' : ''}`} /></span>
-                <span className="flex items-center gap-3">
+                <span className="flex items-center gap-3 flex-wrap justify-end">
+                  {overview?.goldMarketStatus?.isOpen === false ? (
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('delay.lastPrice')} · {t('delay.goldClosedUntil')}</span>
+                  ) : overview?.gold?.isDelayed ? (
+                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-slate-500 dark:text-slate-400"><Timer className="w-3 h-3" aria-hidden /> {t('delay.delayedBadge')}</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"><Circle className="w-3 h-3 fill-emerald-500" aria-hidden /> {t('delay.liveBadge')}</span>
+                  )}
                   <span className={`text-xs font-semibold ${(overview?.gold?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.gold?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
                     {formatChange(overview?.gold?.changePercent ?? 0)}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">{t('market.usdPerOz')}: {formatValue(overview?.gold?.value ?? 0, 2)}</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">{t('market.perGram')}: {formatValue(gold24, 0)} ج.م</span>
                 </span>
               </button>
               <AnimatePresence>
@@ -457,11 +412,18 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
                 className="w-full flex items-center justify-between gap-2 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
               >
                 <span className="font-medium text-slate-700 dark:text-slate-300">{t('market.silver999')} <ChevronDown className={`w-4 h-4 inline-block align-middle transition-transform ${silverExpanded ? 'rotate-180' : ''}`} /></span>
-                <span className="flex items-center gap-3">
+                <span className="flex items-center gap-3 flex-wrap justify-end">
+                  {overview?.goldMarketStatus?.isOpen === false ? (
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('delay.lastPrice')} · {t('delay.goldClosedUntil')}</span>
+                  ) : overview?.silver?.isDelayed ? (
+                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-slate-500 dark:text-slate-400"><Timer className="w-3 h-3" aria-hidden /> {t('delay.delayedBadge')}</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"><Circle className="w-3 h-3 fill-emerald-500" aria-hidden /> {t('delay.liveBadge')}</span>
+                  )}
                   <span className={`text-xs font-semibold ${(overview?.silver?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.silver?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
                     {formatChange(overview?.silver?.changePercent ?? 0)}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">{t('market.usdPerOz')}: {formatValue(overview?.silver?.value ?? 0, 2)}</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">{t('market.perGram')}: {formatValue(silver999, 2)} ج.م</span>
                 </span>
               </button>
               <AnimatePresence>
@@ -501,7 +463,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
       {/* [3] أكثر الأسهم ارتفاعاً وانخفاضاً */}
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">
-          {isAr ? 'أكثر الأسهم ارتفاعاً وانخفاضاً' : 'Top Gainers & Losers'}
+          {t('market.gainersLosers')}
         </h2>
         {loadingStocks ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -583,7 +545,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
       {/* [4] أخبار السوق */}
       <section>
         <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">
-          {isAr ? 'أخبار السوق' : 'Market News'}
+          {t('market.newsTitle')}
         </h2>
         {loadingNews ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

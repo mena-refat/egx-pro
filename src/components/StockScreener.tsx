@@ -74,7 +74,7 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
       const msg = err && typeof err === 'object' && 'response' in err
         ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
         : null;
-      setError(msg || (isAr ? 'فشل تحميل الأسهم' : 'Failed to load stocks'));
+      setError(msg || t('stocks.loadError'));
     } finally {
       setLoading(false);
     }
@@ -159,11 +159,11 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
   if (loading) {
     return (
       <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
-        <div className="h-12 w-full max-w-md bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
-        <div className="h-10 w-full overflow-hidden rounded-xl bg-slate-200 dark:bg-slate-700 animate-pulse" />
+        <div className="h-12 w-full max-w-md bg-[var(--bg-secondary)] rounded-xl animate-pulse" />
+        <div className="h-10 w-full overflow-hidden rounded-xl bg-[var(--bg-secondary)] animate-pulse" />
         <div className="space-y-4">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-24 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+            <div key={i} className="h-24 bg-[var(--bg-secondary)] rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -172,8 +172,8 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-6 text-center" dir={isAr ? 'rtl' : 'ltr'}>
-        <p className="text-red-600 dark:text-red-400">{error}</p>
+      <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-bg)] p-6 text-center" dir={isAr ? 'rtl' : 'ltr'}>
+        <p className="text-[var(--danger-text)]">{error}</p>
         <button type="button" onClick={fetchData} className="mt-4 px-4 py-2 bg-violet-600 text-white rounded-xl hover:bg-violet-500">
           {t('stocks.retry')}
         </button>
@@ -185,14 +185,14 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
     <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
       <header className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
         <div className="flex items-center gap-2 flex-wrap">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('stocks.title')}</h1>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">{t('stocks.title')}</h1>
           {isPro ? (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10">
               <Circle className="w-3 h-3 fill-emerald-500" aria-hidden />
               {t('delay.liveBadge')}
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full bg-slate-500/10">
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full bg-[var(--bg-secondary)]">
               <Timer className="w-3 h-3" aria-hidden />
               {t('delay.delayedBadge')}
             </span>
@@ -205,7 +205,7 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
             placeholder={t('stocks.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-2.5 ltr:pl-10 ltr:pr-4 rtl:pr-10 rtl:pl-4 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-[var(--bg-card)] py-2.5 ltr:pl-10 ltr:pr-4 rtl:pr-10 rtl:pl-4 text-[var(--text-primary)] placeholder:text-slate-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
           />
         </div>
       </header>
@@ -219,7 +219,7 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
             className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
               filter === f.id
                 ? 'bg-violet-600 text-white'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                : 'bg-slate-100 dark:bg-slate-800 text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
             }`}
           >
             {t(f.labelKey)}
@@ -228,11 +228,11 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
       </div>
 
       <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-        <span>{isAr ? 'ترتيب:' : 'Sort:'}</span>
+        <span>{t('stocks.sortLabel')}</span>
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortId)}
-          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-slate-900 dark:text-slate-100"
+          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-[var(--bg-card)] px-3 py-1.5 text-[var(--text-primary)]"
         >
           <option value="ticker">{t('stocks.sortByTicker')}</option>
           <option value="price">{t('stocks.sortByPrice')}</option>
@@ -253,18 +253,18 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
               tabIndex={0}
               onClick={() => onSelectStock(stock)}
               onKeyDown={(e) => e.key === 'Enter' && onSelectStock(stock)}
-              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 hover:border-violet-400 dark:hover:border-violet-500/50 hover:shadow-md transition-all cursor-pointer"
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-[var(--bg-card)]/50 p-4 hover:border-violet-400 dark:hover:border-violet-500/50 hover:shadow-md transition-all cursor-pointer"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">{stock.ticker}</p>
-                  <p className="font-medium text-slate-900 dark:text-slate-100 truncate">{getStockName(stock.ticker, lang)}</p>
+                  <p className="font-medium text-[var(--text-primary)] truncate">{getStockName(stock.ticker, lang)}</p>
                 </div>
                 <div className="text-left ltr:text-right shrink-0">
-                  <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                  <p className="text-lg font-bold text-[var(--text-primary)]">
                     {(stock.price ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {t('stocks.egp')}
                   </p>
-                  <p className={`text-sm font-semibold flex items-center justify-end gap-0.5 ${isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <p className={`text-sm font-semibold flex items-center justify-end gap-0.5 ${isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--danger-text)]'}`}>
                     {isUp ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                     {isUp ? '+' : ''}{(changeP).toFixed(2)}%
                   </p>
@@ -278,7 +278,7 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
                   type="button"
                   onClick={(e) => toggleWatchlist(e, stock.ticker)}
                   className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${
-                    inWatch ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    inWatch ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400 hover:bg-[var(--bg-card-hover)]'
                   }`}
                 >
                   {inWatch ? <Star className="w-3.5 h-3.5 fill-amber-500" /> : <Plus className="w-3.5 h-3.5" />}
@@ -291,18 +291,18 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
       </ul>
 
       {sorted.length === 0 && (
-        <div className="text-center py-12 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400">
+        <div className="text-center py-12 rounded-xl border border-dashed border-[var(--border)] text-slate-500 dark:text-slate-400">
           {t('stocks.noResults')}
         </div>
       )}
 
       {showWatchlistLimitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowWatchlistLimitModal(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
             <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">{t('plan.watchlistLimitMessage')}</p>
             <div className="flex gap-2 justify-center">
               <button type="button" onClick={() => { setShowWatchlistLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm">{t('plan.subscribeNow')}</button>
-              <button type="button" onClick={() => setShowWatchlistLimitModal(false)} className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl font-medium text-sm">{t('plan.cancel')}</button>
+              <button type="button" onClick={() => setShowWatchlistLimitModal(false)} className="px-4 py-2.5 border border-[var(--border)] rounded-xl font-medium text-sm">{t('plan.cancel')}</button>
             </div>
           </div>
         </div>

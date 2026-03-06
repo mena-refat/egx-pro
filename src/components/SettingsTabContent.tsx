@@ -19,6 +19,7 @@ import {
   Tablet,
   Key,
   Pencil,
+  ChevronDown,
 } from 'lucide-react';
 import { validateChangePassword } from '../lib/validations';
 
@@ -143,6 +144,14 @@ export function SettingsTabContent({
   const [goodbyeOpen, setGoodbyeOpen] = useState(false);
   const [goodbyeName, setGoodbyeName] = useState('');
 
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    account: false,
+    security: false,
+    preferences: false,
+    notifications: false,
+  });
+  const toggleSection = (id: string) => setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
+
   useEffect(() => {
     setFullNameVal(user.fullName ?? '');
     setUsernameVal(user.username ?? '');
@@ -229,17 +238,17 @@ export function SettingsTabContent({
         } else if (field === 'phone') {
           const digits = phoneVal.replace(/\D/g, '');
           if (!digits) {
-            setPhoneError(i18n.language === 'ar' ? 'رقم الموبايل مطلوب' : 'Phone number is required');
+            setPhoneError(t('error.phone_required'));
             setSavingField(null);
             return;
           }
           if (digits.length !== 11) {
-            setPhoneError(i18n.language === 'ar' ? 'رقم الموبايل لازم يكون 11 رقم' : 'Phone number must be 11 digits');
+            setPhoneError(t('error.phone_11_digits'));
             setSavingField(null);
             return;
           }
           if (!/^01[0125][0-9]{8}$/.test(digits)) {
-            setPhoneError(i18n.language === 'ar' ? 'رقم الموبايل غير صحيح' : 'Invalid Egyptian phone number');
+            setPhoneError(t('error.invalid_phone'));
             setSavingField(null);
             return;
           }
@@ -248,7 +257,7 @@ export function SettingsTabContent({
           setSuccessField('phone');
           setEditingField(null);
         }
-        setRequestStatus({ type: 'success', message: i18n.language === 'ar' ? 'تم الحفظ بنجاح' : 'Saved successfully' });
+        setRequestStatus({ type: 'success', message: t('settings.savedSuccess') });
         setTimeout(() => setSuccessField(null), 2000);
       } catch (e) {
         setRequestStatus({ type: 'error', message: (e as Error).message || 'Failed to save' });
@@ -256,7 +265,7 @@ export function SettingsTabContent({
         setSavingField(null);
       }
     },
-    [accessToken, fullNameVal, usernameVal, emailVal, phoneVal, usernameStatus, user.username, onUpdateProfile, setRequestStatus, i18n.language]
+    [accessToken, fullNameVal, usernameVal, emailVal, phoneVal, usernameStatus, user.username, onUpdateProfile, setRequestStatus, t]
   );
 
   const fetchSessions = useCallback(async () => {
@@ -317,7 +326,7 @@ export function SettingsTabContent({
     try {
       await fetch('/api/user/sessions/revoke-all-other', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
       await fetchSessions();
-      setRequestStatus({ type: 'success', message: i18n.language === 'ar' ? 'تم إنهاء الجلسات الأخرى' : 'Other sessions ended' });
+      setRequestStatus({ type: 'success', message: t('settings.sessionsEnded') });
     } catch {
       setRequestStatus({ type: 'error', message: i18n.language === 'ar' ? 'فشل إنهاء الجلسات' : 'Failed to end sessions' });
     } finally {
@@ -328,11 +337,11 @@ export function SettingsTabContent({
   const handleChangePassword = async () => {
     if (!accessToken) return;
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordMessage(i18n.language === 'ar' ? 'املأ كل الحقول' : 'Fill all fields');
+      setPasswordMessage(t('settings.fillAllFields'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordMessage(i18n.language === 'ar' ? 'كلمتا المرور غير متطابقتين' : 'Passwords do not match');
+      setPasswordMessage(t('settings.passwordsNoMatch'));
       return;
     }
     const pwCheck = validateChangePassword(newPassword, { email: user.email ?? undefined, username: user.username ?? undefined });
@@ -357,7 +366,7 @@ export function SettingsTabContent({
       setShowPasswordForm(false);
       setLastPasswordChangeAt(new Date().toISOString());
     } catch (err) {
-      setPasswordMessage((err as Error).message || (i18n.language === 'ar' ? 'فشل تغيير كلمة المرور' : 'Failed to change password'));
+      setPasswordMessage((err as Error).message || t('settings.changePasswordFailed'));
     } finally {
       setChangingPassword(false);
     }
@@ -398,7 +407,7 @@ export function SettingsTabContent({
       setTwoFaSecret(null);
       setTwoFaQr(null);
     } catch {
-      setTwoFaMessage(i18n.language === 'ar' ? 'الكود غير صحيح' : 'Invalid code');
+      setTwoFaMessage(t('settings.invalidCode'));
     } finally {
       setTwoFaLoading(false);
     }
@@ -419,7 +428,7 @@ export function SettingsTabContent({
       const data = await res.json();
       if (!res.ok) {
         if (data?.error === 'wrong_password' || data?.message) {
-          setDeleteError(data?.message || (i18n.language === 'ar' ? 'كلمة المرور غير صحيحة' : 'Wrong password'));
+          setDeleteError(data?.message || t('settings.wrongPassword'));
         } else {
           setDeleteError(data?.error || data?.message || 'Failed');
         }
@@ -453,11 +462,20 @@ export function SettingsTabContent({
   return (
     <div className="space-y-4">
       {/* 1. بيانات الحساب */}
-      <div className={`${cardClass} ${cardPadding}`}>
-        <h3 className={`${sectionTitleClass} mb-4`}>
-          <User className="w-5 h-5 text-slate-400" />
-          {t('settings.accountData')}
-        </h3>
+      <div className={cardClass}>
+        <button
+          type="button"
+          onClick={() => toggleSection('account')}
+          className={`w-full flex items-center justify-between gap-2 ${cardPadding} hover:bg-slate-800/50 active:bg-slate-800/70 transition-colors text-left rounded-2xl`}
+        >
+          <h3 className={`${sectionTitleClass} mb-0`}>
+            <User className="w-5 h-5 text-slate-400" />
+            {t('settings.accountData')}
+          </h3>
+          <ChevronDown className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${openSections.account ? 'rotate-180' : ''}`} />
+        </button>
+        {openSections.account && (
+          <div className={`${cardPadding} pt-0 border-t border-slate-700`}>
         <div className="space-y-0 divide-y divide-slate-700">
           {(['fullName', 'username', 'email', 'phone'] as const).map((field) => {
             const label = t(`settings.${field === 'fullName' ? 'fullName' : field === 'username' ? 'username' : field === 'email' ? 'email' : 'phone'}`);
@@ -561,21 +579,32 @@ export function SettingsTabContent({
                 {successField === field && (
                   <p className="text-xs text-emerald-500 mt-1 flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" />
-                    {i18n.language === 'ar' ? 'تم الحفظ بنجاح' : 'Saved successfully'}
+                    {t('settings.savedSuccess')}
                   </p>
                 )}
               </div>
             );
           })}
         </div>
+          </div>
+        )}
       </div>
 
       {/* 2. الأمان والخصوصية */}
-      <div className={`${cardClass} ${cardPadding}`}>
-        <h3 className={`${sectionTitleClass} mb-4`}>
-          <Lock className="w-5 h-5 text-slate-400" />
-          {t('settings.securityPrivacy')}
-        </h3>
+      <div className={cardClass}>
+        <button
+          type="button"
+          onClick={() => toggleSection('security')}
+          className={`w-full flex items-center justify-between gap-2 ${cardPadding} hover:bg-slate-800/50 active:bg-slate-800/70 transition-colors text-left rounded-2xl`}
+        >
+          <h3 className={`${sectionTitleClass} mb-0`}>
+            <Lock className="w-5 h-5 text-slate-400" />
+            {t('settings.securityPrivacy')}
+          </h3>
+          <ChevronDown className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${openSections.security ? 'rotate-180' : ''}`} />
+        </button>
+        {openSections.security && (
+          <div className={`${cardPadding} pt-0 border-t border-slate-700`}>
         <div className="space-y-0 divide-y divide-slate-700">
           <div className="py-4 first:pt-0">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -686,9 +715,9 @@ export function SettingsTabContent({
           <div className="pt-4">
             <p className="text-sm font-medium text-slate-200 mb-3">{t('settings.sessions')}</p>
             {sessionsLoading ? (
-              <p className="text-xs text-slate-500">{i18n.language === 'ar' ? 'جاري التحميل...' : 'Loading...'}</p>
+              <p className="text-xs text-slate-500">{t('common.loading')}</p>
             ) : sessions.length === 0 ? (
-              <p className="text-xs text-slate-500">{i18n.language === 'ar' ? 'لا توجد جلسات أخرى' : 'No other sessions'}</p>
+              <p className="text-xs text-slate-500">{t('settings.noOtherSessions')}</p>
             ) : (
               <ul className="space-y-0 rounded-xl border border-slate-700 overflow-hidden">
                 {sessions.map((s) => {
@@ -738,14 +767,25 @@ export function SettingsTabContent({
             )}
           </div>
         </div>
+          </div>
+        )}
       </div>
 
       {/* 3. التفضيلات */}
-      <div className={`${cardClass} ${cardPadding}`}>
-        <h3 className={`${sectionTitleClass} mb-4`}>
-          <Settings className="w-5 h-5 text-slate-400" />
-          {t('settings.preferences')}
-        </h3>
+      <div className={cardClass}>
+        <button
+          type="button"
+          onClick={() => toggleSection('preferences')}
+          className={`w-full flex items-center justify-between gap-2 ${cardPadding} hover:bg-slate-800/50 active:bg-slate-800/70 transition-colors text-left rounded-2xl`}
+        >
+          <h3 className={`${sectionTitleClass} mb-0`}>
+            <Settings className="w-5 h-5 text-slate-400" />
+            {t('settings.preferences')}
+          </h3>
+          <ChevronDown className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${openSections.preferences ? 'rotate-180' : ''}`} />
+        </button>
+        {openSections.preferences && (
+          <div className={`${cardPadding} pt-0 border-t border-slate-700`}>
         <div className="space-y-0 divide-y divide-slate-700">
           <div className="py-4 first:pt-0">
             <p className="text-sm font-medium text-slate-200 mb-3">{t('settings.theme')}</p>
@@ -804,14 +844,25 @@ export function SettingsTabContent({
             </button>
           </div>
         </div>
+          </div>
+        )}
       </div>
 
       {/* 4. الإشعارات */}
-      <div className={`${cardClass} ${cardPadding}`}>
-        <h3 className={`${sectionTitleClass} mb-4`}>
-          <Bell className="w-5 h-5 text-slate-400" />
-          {t('settings.notifications')}
-        </h3>
+      <div className={cardClass}>
+        <button
+          type="button"
+          onClick={() => toggleSection('notifications')}
+          className={`w-full flex items-center justify-between gap-2 ${cardPadding} hover:bg-slate-800/50 active:bg-slate-800/70 transition-colors text-left rounded-2xl`}
+        >
+          <h3 className={`${sectionTitleClass} mb-0`}>
+            <Bell className="w-5 h-5 text-slate-400" />
+            {t('settings.notifications')}
+          </h3>
+          <ChevronDown className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${openSections.notifications ? 'rotate-180' : ''}`} />
+        </button>
+        {openSections.notifications && (
+          <div className={`${cardPadding} pt-0 border-t border-slate-700`}>
         <div className="space-y-0 divide-y divide-slate-700">
           {[
             { key: 'notifySignals', label: t('settings.notifySignals'), desc: t('settings.notifySignalsDesc') },
@@ -838,6 +889,8 @@ export function SettingsTabContent({
             );
           })}
         </div>
+          </div>
+        )}
       </div>
 
       {/* أسفل الصفحة: حذف الحساب فقط (تسجيل الخروج من الـ dropdown في الهيدر) */}

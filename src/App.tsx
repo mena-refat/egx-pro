@@ -416,10 +416,10 @@ export default function App() {
             throw new Error(i18n.language === 'ar' ? 'رقم الموبايل مطلوب' : 'Phone number is required');
           }
           if (digitsOnly.length !== 11) {
-            throw new Error(i18n.language === 'ar' ? 'رقم الموبايل لازم يكون 11 رقم' : 'Phone number must be 11 digits');
+            throw new Error(t('error.phone_11_digits'));
           }
           if (!/^01[0125][0-9]{8}$/.test(digitsOnly)) {
-            throw new Error(i18n.language === 'ar' ? 'رقم الموبايل غير صحيح' : 'Invalid Egyptian phone number');
+            throw new Error(t('error.invalid_phone'));
           }
         }
       }
@@ -437,8 +437,8 @@ export default function App() {
       const data = await res.json();
       if (!res.ok) {
         const msg = data.error === 'account_not_found'
-          ? (data.message || (i18n.language === 'ar' ? 'الحساب ده مش موجود. تقدر تسجّل حساب جديد.' : 'This account does not exist. You can register as new.'))
-          : (data.message || data.error || (i18n.language === 'ar' ? 'فشل تسجيل الدخول' : 'Auth failed'));
+          ? (data.message || t('auth.accountNotExist'))
+          : (data.message || data.error || t('auth.authFailed'));
         setError(msg);
         return;
       }
@@ -467,7 +467,7 @@ export default function App() {
         });
         const profileData = profileRes.ok ? await profileRes.json() : data.user;
         useAuthStore.getState().setAuth(profileData, data.accessToken);
-        setAuthMessage({ text: i18n.language === 'ar' ? 'تم إنشاء الحساب بنجاح!' : 'Account created successfully!', type: 'success' });
+        setAuthMessage({ text: t('auth.registerSuccess'), type: 'success' });
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Auth failed');
@@ -491,7 +491,7 @@ export default function App() {
       useAuthStore.getState().setAuth(data.user, data.accessToken);
       setShowTwoFactorInput(false);
       setTwoFactorToken('');
-      setAuthMessage({ text: i18n.language === 'ar' ? 'تم تسجيل الدخول بنجاح!' : 'Login successful!', type: 'success' });
+      setAuthMessage({ text: t('auth.loginSuccess'), type: 'success' });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Verification failed');
     }
@@ -547,10 +547,10 @@ export default function App() {
 
   if (isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col md:flex-row">
+      <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row">
         {/* Sidebar - collapsible */}
         <aside
-          className={`w-full md:flex-shrink-0 bg-slate-900 border-r border-white/5 flex flex-col gap-6 transition-[width] duration-200 ease-in-out overflow-hidden ${sidebarCollapsed ? 'md:w-16' : 'md:w-60'}`}
+          className={`w-full md:flex-shrink-0 bg-[var(--bg-sidebar)] border-r border-[var(--border)] flex flex-col gap-6 transition-[width] duration-200 ease-in-out overflow-hidden ${sidebarCollapsed ? 'md:w-16' : 'md:w-60'}`}
         >
           <div className="p-4 flex items-center justify-between gap-2 min-w-0">
             <div className="flex items-center gap-2 min-w-0 overflow-hidden">
@@ -560,8 +560,8 @@ export default function App() {
             <button
               type="button"
               onClick={() => setSidebarCollapsed((c) => !c)}
-              className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5"
-              aria-label={sidebarCollapsed ? (i18n.language === 'ar' ? 'توسيع القائمة' : 'Expand sidebar') : (i18n.language === 'ar' ? 'طي القائمة' : 'Collapse sidebar')}
+              className="shrink-0 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
+              aria-label={sidebarCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
             >
               {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
             </button>
@@ -569,13 +569,13 @@ export default function App() {
 
           <nav className="flex-1 px-3 space-y-1">
             {[
-              { id: 'dashboard', label: i18n.language === 'ar' ? 'الرئيسية' : 'Dashboard', icon: LayoutDashboard, path: '/' },
-              { id: 'portfolio', label: i18n.language === 'ar' ? 'محفظتي' : 'Portfolio', icon: PieChart, path: '/portfolio' },
-              { id: 'stocks', label: i18n.language === 'ar' ? 'الأسهم' : 'Stocks', icon: Search, path: '/stocks' },
-              { id: 'market', label: i18n.language === 'ar' ? 'السوق' : 'Market', icon: BarChart3, path: '/market' },
-              { id: 'calculator', label: i18n.language === 'ar' ? 'الحاسبة' : 'Calculator', icon: Calculator, path: '/calculator' },
-              { id: 'goals', label: i18n.language === 'ar' ? 'أهدافي المالية' : 'Financial Goals', icon: Target, path: '/goals' },
-              { id: 'profile', label: i18n.language === 'ar' ? 'حسابي' : 'Profile', icon: UserIcon, path: '/profile' },
+              { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutDashboard, path: '/' },
+              { id: 'portfolio', label: t('nav.portfolio'), icon: PieChart, path: '/portfolio' },
+              { id: 'stocks', label: t('nav.stocks'), icon: Search, path: '/stocks' },
+              { id: 'market', label: t('nav.market'), icon: BarChart3, path: '/market' },
+              { id: 'calculator', label: t('nav.calculator'), icon: Calculator, path: '/calculator' },
+              { id: 'goals', label: t('nav.goals'), icon: Target, path: '/goals' },
+              { id: 'profile', label: t('nav.profile'), icon: UserIcon, path: '/profile' },
             ].map(item => (
               <button
                 key={item.id}
@@ -585,7 +585,7 @@ export default function App() {
                   setSelectedStock(null);
                   if (typeof window !== 'undefined') window.history.pushState(null, '', item.path);
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${sidebarCollapsed ? 'justify-center' : ''} ${activeTab === item.id ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${sidebarCollapsed ? 'justify-center' : ''} ${activeTab === item.id ? 'bg-[var(--brand)] text-white shadow-lg shadow-violet-600/20' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'}`}
               >
                 <item.icon className="w-5 h-5 shrink-0" />
                 <span className={`font-medium truncate transition-opacity duration-200 ${sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>{item.label}</span>
@@ -593,17 +593,6 @@ export default function App() {
             ))}
           </nav>
 
-          <div className="p-3 pt-4 border-t border-white/5">
-            <button
-              type="button"
-              title={sidebarCollapsed ? (i18n.language === 'ar' ? 'English' : 'العربية') : undefined}
-              onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors rounded-xl ${sidebarCollapsed ? 'justify-center' : ''}`}
-            >
-              <SettingsIcon className="w-4 h-4 shrink-0" />
-              <span className={`truncate transition-opacity duration-200 ${sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>{i18n.language === 'ar' ? 'English' : 'العربية'}</span>
-            </button>
-          </div>
         </aside>
 
         {/* Main Content */}
@@ -611,8 +600,8 @@ export default function App() {
           <header className="flex justify-between items-center mb-6 flex-wrap gap-3" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
             {/* Right: greeting — name only, no username */}
             <div className="text-end">
-              <h2 className="text-2xl font-bold text-slate-100">
-                {i18n.language === 'ar' ? `أهلاً، ${user?.fullName || 'مستثمرنا'}` : `Welcome, ${user?.fullName || 'Investor'}`}
+              <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+                {t('header.welcomeUser', { name: user?.fullName || t('header.defaultUser') })}
               </h2>
             </div>
             {/* Left: profile completion (when <100%) + theme + bell + avatar */}
@@ -623,13 +612,13 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setProfileCompletionOpen((o) => !o)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--brand-subtle)] hover:opacity-90 transition-colors"
                   >
-                    <div className="w-12 h-1.5 bg-slate-700 rounded-full overflow-hidden shrink-0">
+                    <div className="w-12 h-1.5 bg-[var(--border)] rounded-full overflow-hidden shrink-0">
                       <div className="h-full bg-violet-500 rounded-full" style={{ width: `${profileCompletion.percentage}%` }} />
                     </div>
-                    <span className="text-xs font-bold text-violet-400 whitespace-nowrap">{profileCompletion.percentage}%</span>
-                    <span className="text-xs font-medium text-slate-200 whitespace-nowrap hidden sm:inline">{t('overview.completeProfile')}</span>
+                    <span className="text-xs font-bold text-[var(--brand-text)] whitespace-nowrap">{profileCompletion.percentage}%</span>
+                    <span className="text-xs font-medium text-[var(--text-secondary)] whitespace-nowrap hidden sm:inline">{t('overview.completeProfile')}</span>
                     <ChevronRight className={`w-4 h-4 text-violet-400 shrink-0 ${profileCompletionOpen ? 'rotate-90' : ''} ${i18n.language === 'ar' ? 'rotate-180' : ''}`} />
                   </button>
                   <AnimatePresence>
@@ -638,22 +627,22 @@ export default function App() {
                         initial={{ opacity: 0, y: -8 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -8 }}
-                        className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-slate-700 bg-slate-900 shadow-xl z-50 overflow-hidden rtl:right-auto rtl:left-0"
+                        className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-50 overflow-hidden rtl:right-auto rtl:left-0"
                       >
-                        <div className="p-3 border-b border-slate-700">
-                          <p className="text-sm font-medium text-slate-200">{t('overview.profileCompletePercent', { p: profileCompletion.percentage })}</p>
-                          <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden mt-2">
+                        <div className="p-3 border-b border-[var(--border-subtle)]">
+                          <p className="text-sm font-medium text-[var(--text-secondary)]">{t('overview.profileCompletePercent', { p: profileCompletion.percentage })}</p>
+                          <div className="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden mt-2">
                             <div className="h-full bg-violet-500 rounded-full transition-[width]" style={{ width: `${profileCompletion.percentage}%` }} />
                           </div>
                         </div>
                         <div className="p-3">
-                          <p className="text-xs text-slate-500 mb-2">{t('overview.missingLabel')}</p>
+                          <p className="text-xs text-[var(--text-muted)] mb-2">{t('overview.missingLabel')}</p>
                           <ul className="space-y-1.5">
                             {profileCompletion.missing.map((m) => {
                               const label = m.field === 'email' ? t('overview.missingEmail') : m.field === 'phone' ? t('overview.missingPhone') : m.field === 'username' ? t('overview.missingUsername') : m.field === 'goal' ? t('overview.missingGoal') : t('overview.missingWatchlist');
                               return (
                                 <li key={m.field} className="flex items-center justify-between gap-2 text-sm">
-                                  <span className="text-slate-300">{label}</span>
+                                  <span className="text-[var(--text-secondary)]">{label}</span>
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -684,7 +673,7 @@ export default function App() {
               )}
 
               {/* Theme toggle */}
-              <div className="flex items-center gap-1 rounded-full bg-slate-900/60 border border-slate-700/80 px-1 py-1 text-slate-400 text-xs">
+              <div className="flex items-center gap-1 rounded-full bg-[var(--bg-card)] border border-[var(--border)] px-1 py-1 text-[var(--text-muted)] text-xs">
                 <button
                   type="button"
                   onClick={async () => {
@@ -710,8 +699,8 @@ export default function App() {
                   }}
                   className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
                     theme === 'light'
-                      ? 'bg-white text-slate-900'
-                      : 'bg-transparent hover:bg-slate-800'
+                      ? 'bg-[var(--brand)] text-white'
+                      : 'bg-transparent hover:bg-[var(--bg-card-hover)]'
                   }`}
                   aria-label="Light mode"
                 >
@@ -742,8 +731,8 @@ export default function App() {
                   }}
                   className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
                     theme === 'system'
-                      ? 'bg-white text-slate-900'
-                      : 'bg-transparent hover:bg-slate-800'
+                      ? 'bg-[var(--text-inverse)] text-[var(--text-primary)]'
+                      : 'bg-transparent hover:bg-[var(--bg-card-hover)]'
                   }`}
                   aria-label="System theme"
                 >
@@ -774,8 +763,8 @@ export default function App() {
                   }}
                   className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
                     theme === 'dark'
-                      ? 'bg-white text-slate-900'
-                      : 'bg-transparent hover:bg-slate-800'
+                      ? 'bg-[var(--brand)] text-white'
+                      : 'bg-transparent hover:bg-[var(--bg-card-hover)]'
                   }`}
                   aria-label="Dark mode"
                 >
@@ -787,7 +776,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => { setNotificationsOpen((o) => !o); if (!notificationsOpen) fetchNotifications(); }}
-                  className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5"
+                  className="relative p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
                   aria-label={t('settings.notifications')}
                 >
                   <Bell className="w-5 h-5" />
@@ -801,15 +790,15 @@ export default function App() {
                       initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
-                      className="absolute left-0 top-full mt-2 w-80 max-h-96 overflow-auto rounded-xl border border-slate-700 bg-slate-900 shadow-xl z-[100] flex flex-col"
+                      className="absolute left-0 top-full mt-2 w-80 max-h-96 overflow-auto rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] flex flex-col"
                     >
-                      <div className="shrink-0 border-b border-slate-700 px-4 py-3">
+                      <div className="shrink-0 border-b border-[var(--border-subtle)] px-4 py-3">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-slate-200">{t('settings.notifications')}</span>
+                          <span className="font-medium text-[var(--text-secondary)]">{t('settings.notifications')}</span>
                           <button
                             type="button"
                             onClick={() => setConfirmClearNotifications(true)}
-                            className="text-xs text-violet-400 hover:text-violet-300"
+                            className="text-xs text-[var(--brand-text)] hover:opacity-80"
                           >
                             {t('settings.clearAllNotifications')}
                           </button>
@@ -818,18 +807,18 @@ export default function App() {
                           <button
                             type="button"
                             onClick={markNotificationsRead}
-                            className="text-xs text-slate-400 hover:text-slate-300"
+                            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                           >
                             {t('settings.markAllAsRead')}
                           </button>
                         </div>
                         {confirmClearNotifications && (
-                          <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs">
-                            <span className="text-slate-300">{t('settings.confirmClearNotifications')}</span>
-                            <button type="button" onClick={() => { clearAllNotifications(); setConfirmClearNotifications(false); }} className="text-violet-400 hover:text-violet-300 font-medium">
+                          <div className="mt-3 flex items-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-xs">
+                            <span className="text-[var(--text-secondary)]">{t('settings.confirmClearNotifications')}</span>
+                            <button type="button" onClick={() => { clearAllNotifications(); setConfirmClearNotifications(false); }} className="text-[var(--brand-text)] hover:opacity-80 font-medium">
                               {t('settings.yes')}
                             </button>
-                            <button type="button" onClick={() => setConfirmClearNotifications(false)} className="text-slate-400 hover:text-slate-300">
+                            <button type="button" onClick={() => setConfirmClearNotifications(false)} className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
                               {t('settings.no')}
                             </button>
                           </div>
@@ -837,7 +826,7 @@ export default function App() {
                       </div>
                       <div className="p-2 overflow-auto min-h-0">
                         {notifications.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+                          <div className="flex flex-col items-center justify-center py-8 text-[var(--text-muted)]">
                             <Bell className="w-10 h-10 mb-2 opacity-60" />
                             <p className="text-sm">{t('settings.noNewNotifications')}</p>
                           </div>
@@ -860,16 +849,16 @@ export default function App() {
                                   if (!n.isRead) markOneNotificationRead(n.id);
                                   goToNotificationTarget(n.type);
                                 }}
-                                className={`w-full flex gap-2 px-3 py-2.5 rounded-lg text-left transition-colors ${!n.isRead ? 'bg-violet-500/10 hover:bg-violet-500/15' : 'hover:bg-white/5'}`}
+                                className={`w-full flex gap-2 px-3 py-2.5 rounded-lg text-left transition-colors ${!n.isRead ? 'bg-[var(--brand-subtle)] hover:opacity-90' : 'hover:bg-[var(--bg-card-hover)]'}`}
                               >
                                 <span className="w-2 shrink-0 flex items-start justify-center pt-2">
                                   {!n.isRead && <Circle className="w-2 h-2 text-violet-400 fill-violet-400" aria-hidden />}
                                 </span>
                                 <Icon className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
                                 <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium text-slate-200">{n.title}</p>
-                                  {n.body && <p className="text-xs text-slate-500 mt-0.5">{n.body}</p>}
-                                  <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
+                                  <p className="text-sm font-medium text-[var(--text-secondary)]">{n.title}</p>
+                                  {n.body && <p className="text-xs text-[var(--text-muted)] mt-0.5">{n.body}</p>}
+                                  <p className="text-xs text-[var(--text-muted)] mt-1">{timeAgo}</p>
                                 </div>
                               </button>
                             );
@@ -886,11 +875,15 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setUserDropdownOpen((o) => !o)}
-                  className="flex items-center gap-2 p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5"
+                  className="flex items-center gap-2 p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
                   aria-label={t('settings.settingsPage')}
                 >
-                  <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center shrink-0">
-                    <UserIcon className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-violet-600 flex items-center justify-center shrink-0">
+                    {user?.avatarUrl ? (
+                      <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <UserIcon className="w-4 h-4 text-white" />
+                    )}
                   </div>
                 </button>
                 <AnimatePresence>
@@ -899,16 +892,16 @@ export default function App() {
                       initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
-                      className="absolute left-0 top-full mt-2 w-[200px] rounded-xl border border-slate-700 bg-slate-900 shadow-xl z-[100] overflow-hidden"
+                      className="absolute left-0 top-full mt-2 w-[200px] rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] overflow-hidden"
                     >
-                      <div className="px-4 py-3 border-b border-slate-700">
-                        <p className="font-medium text-slate-200 truncate">{user?.fullName || '—'}</p>
-                        <p className="text-sm text-slate-500 truncate">{user?.username ? `@${user.username}` : '—'}</p>
+                      <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
+                        <p className="font-medium text-[var(--text-secondary)] truncate">{user?.fullName || '—'}</p>
+                        <p className="text-sm text-[var(--text-muted)] truncate">{user?.username ? `@${user.username}` : '—'}</p>
                       </div>
                       <a
                         href="#"
                         onClick={(e) => { e.preventDefault(); goToSettings(); }}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
                       >
                         <SettingsIcon className="w-4 h-4" />
                         {t('settings.settingsPage')}
@@ -916,7 +909,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => { logout(); setUserDropdownOpen(false); }}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white border-t border-slate-700"
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] border-t border-[var(--border-subtle)]"
                       >
                         <LogOut className="w-4 h-4" />
                         {t('settings.logout')}
@@ -962,28 +955,28 @@ export default function App() {
   // مستخدم غير مسجل دخول وعلى الجذر → شاشة auth العادية
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-sans text-white">
+    <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-4 font-sans text-[var(--text-primary)]">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <TrendingUp className="w-12 h-12 text-violet-500 mx-auto mb-4" />
+          <TrendingUp className="w-12 h-12 text-[var(--brand)] mx-auto mb-4" />
           <h1 className="text-4xl font-bold tracking-tight mb-2">EGX Pro</h1>
-          <p className="text-slate-400">Egyptian Stock Market Intelligence</p>
+          <p className="text-[var(--text-muted)]">Egyptian Stock Market Intelligence</p>
         </div>
 
         <motion.div 
           layout
-          className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl"
+          className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-8 shadow-[var(--shadow-lg)]"
         >
-          <div className="flex gap-4 mb-8 p-1 bg-slate-800 rounded-2xl">
+          <div className="flex gap-4 mb-8 p-1 bg-[var(--bg-secondary)] rounded-2xl">
             <button 
               onClick={() => { setIsLogin(true); setShowTwoFactorInput(false); setError(''); }}
-              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${isLogin ? 'bg-violet-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${isLogin ? 'bg-[var(--brand)] text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
             >
               {t('auth.login')}
             </button>
             <button 
               onClick={() => { setIsLogin(false); setShowTwoFactorInput(false); setError(''); }}
-              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${!isLogin ? 'bg-violet-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${!isLogin ? 'bg-[var(--brand)] text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
             >
               {t('auth.register')}
             </button>
@@ -996,10 +989,8 @@ export default function App() {
                   <SettingsIcon className="w-8 h-8 text-violet-500" />
                 </div>
                 <h3 className="text-xl font-bold mb-2">{i18n.language === 'ar' ? 'المصادقة الثنائية' : 'Two-Factor Authentication'}</h3>
-                <p className="text-slate-400 text-sm">
-                  {i18n.language === 'ar' 
-                    ? 'أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة الخاص بك' 
-                    : 'Enter the 6-digit code from your authenticator app'}
+                <p className="text-[var(--text-muted)] text-sm">
+                  {t('auth.twoFactorDesc')}
                 </p>
               </div>
 
@@ -1009,7 +1000,7 @@ export default function App() {
                   maxLength={6}
                   value={twoFactorToken}
                   onChange={(e) => setTwoFactorToken(e.target.value.replace(/\D/g, ''))}
-                  className="w-full bg-slate-800 border border-white/5 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all placeholder-slate-600"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all placeholder-[var(--text-muted)] text-[var(--text-primary)]"
                   placeholder="000000"
                   autoFocus
                 />
@@ -1026,15 +1017,15 @@ export default function App() {
                 disabled={twoFactorToken.length !== 6}
                 className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-violet-600/20 transition-all active:scale-95"
               >
-                {i18n.language === 'ar' ? 'تحقق' : 'Verify'}
+                {t('auth.verify')}
               </button>
               
               <button 
                 type="button"
                 onClick={() => setShowTwoFactorInput(false)}
-                className="w-full text-slate-400 hover:text-white text-sm py-2"
+                className="w-full text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm py-2"
               >
-                {i18n.language === 'ar' ? 'العودة لتسجيل الدخول' : 'Back to Login'}
+                {t('auth.backToLogin')}
               </button>
             </form>
           ) : (
@@ -1047,12 +1038,12 @@ export default function App() {
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
                 >
-                  <label className="block text-sm font-medium text-slate-400 mb-1">{t('auth.fullName')}</label>
+                  <label className="block text-sm font-medium text-[var(--text-muted)] mb-1">{t('auth.fullName')}</label>
                   <input 
                     type="text" 
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full bg-slate-800 border border-white/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
+                    className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all"
                     placeholder="Ahmed Mohamed"
                   />
                 </motion.div>
@@ -1060,33 +1051,33 @@ export default function App() {
             </AnimatePresence>
 
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">{t('auth.emailOrPhone')}</label>
+              <label className="block text-sm font-medium text-[var(--text-muted)] mb-1">{t('auth.emailOrPhone')}</label>
               <input 
                 type="text" 
                 required
                 autoComplete="username"
                 value={emailOrPhone}
                 onChange={(e) => setEmailOrPhone(e.target.value)}
-                className="w-full bg-slate-800 border border-white/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
-                placeholder={i18n.language === 'ar' ? 'name@example.com أو 01xxxxxxxxx' : 'name@example.com or 01xxxxxxxxx'}
+                className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all"
+                placeholder={t('auth.placeholderEmailPhone')}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">{t('auth.password')}</label>
+              <label className="block text-sm font-medium text-[var(--text-muted)] mb-1">{t('auth.password')}</label>
               <div className="relative">
                 <input 
                   type={showPassword ? "text" : "password"} 
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-800 border border-white/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -1107,7 +1098,7 @@ export default function App() {
 
             <button 
               type="submit"
-              className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-violet-600/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+              className="w-full bg-[var(--brand)] hover:opacity-90 text-white font-bold py-4 rounded-xl shadow-lg shadow-violet-600/20 transition-all active:scale-95 flex items-center justify-center gap-2"
             >
               {isLogin ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
               {isLogin ? t('auth.login') : t('auth.register')}
@@ -1115,17 +1106,17 @@ export default function App() {
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/5"></div>
+                <div className="w-full border-t border-[var(--border)]"></div>
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-slate-900 px-2 text-slate-500">{i18n.language === 'ar' ? 'أو' : 'Or'}</span>
+                <span className="bg-[var(--bg-primary)] px-2 text-[var(--text-muted)]">{t('auth.or')}</span>
               </div>
             </div>
 
             <button 
               type="button"
               onClick={handleGoogleLogin}
-              className="w-full bg-white text-slate-900 font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 hover:bg-slate-100"
+              className="w-full bg-[var(--bg-card)] text-[var(--text-primary)] font-bold py-4 rounded-xl shadow-lg border border-[var(--border)] transition-all active:scale-95 flex items-center justify-center gap-3 hover:bg-[var(--bg-card-hover)]"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -1145,7 +1136,7 @@ export default function App() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              {i18n.language === 'ar' ? 'التسجيل بواسطة جوجل' : 'Continue with Google'}
+              {t('auth.continueGoogle')}
             </button>
           </form>
           </>
@@ -1154,13 +1145,13 @@ export default function App() {
           <div className="mt-8 pt-8 border-t border-white/5 flex justify-center gap-4">
             <button 
               onClick={() => i18n.changeLanguage('ar')}
-              className={`text-sm ${i18n.language === 'ar' ? 'text-violet-400 font-bold' : 'text-slate-500'}`}
+              className={`text-sm ${i18n.language === 'ar' ? 'text-[var(--brand-text)] font-bold' : 'text-[var(--text-muted)]'}`}
             >
               العربية
             </button>
             <button 
               onClick={() => i18n.changeLanguage('en')}
-              className={`text-sm ${i18n.language === 'en' ? 'text-violet-400 font-bold' : 'text-slate-500'}`}
+              className={`text-sm ${i18n.language === 'en' ? 'text-[var(--brand-text)] font-bold' : 'text-[var(--text-muted)]'}`}
             >
               English
             </button>

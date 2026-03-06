@@ -10,7 +10,7 @@ interface Goal {
 }
 
 export default function FinancialGoalsSidebar({ currentWealth }: { currentWealth: number }) {
-  const { i18n } = useTranslation('common');
+  const { t } = useTranslation('common');
   const { accessToken } = useAuthStore();
   const [goals, setGoals] = useState<Goal[]>([]);
 
@@ -36,7 +36,7 @@ export default function FinancialGoalsSidebar({ currentWealth }: { currentWealth
 
   return (
     <div className="card-base p-6 h-full">
-      <h3 className="text-lg font-bold mb-6">{i18n.language === 'ar' ? 'أهدافي المالية' : 'Financial Goals'}</h3>
+      <h3 className="text-lg font-bold mb-6">{t('goals.title')}</h3>
       <div className="space-y-6">
         {goals.map(goal => {
           const progress = Math.min((currentWealth / goal.targetAmount) * 100, 100);
@@ -56,7 +56,7 @@ export default function FinancialGoalsSidebar({ currentWealth }: { currentWealth
           );
         })}
         {goals.length === 0 && (
-          <p className="text-slate-500 text-sm italic">{i18n.language === 'ar' ? 'لا توجد أهداف' : 'No goals set'}</p>
+          <p className="text-slate-500 text-sm italic">{t('goals.noGoalsSet')}</p>
         )}
       </div>
     </div>

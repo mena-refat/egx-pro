@@ -2,7 +2,57 @@
   "common": {
     "appName": "EGX Pro",
     "loading": "Loading...",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "success": "Success",
+    "back": "Back",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "view_all": "View all",
+    "more": "More",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "skip": "Skip",
+    "later": "Later"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "portfolio": "Portfolio",
+    "stocks": "Stocks",
+    "market": "Market",
+    "calculator": "Calculator",
+    "goals": "Financial Goals",
+    "profile": "Profile",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar"
+  },
+  "header": {
+    "welcome": "Welcome",
+    "welcomeUser": "Welcome, {{name}}",
+    "defaultUser": "Investor",
+    "complete_profile": "Complete profile",
+    "market_open": "Market open",
+    "market_closed": "Market closed",
+    "market_pre": "Pre-market",
+    "market_auction": "Closing auction",
+    "live_price": "Live price",
+    "delayed_price": "Delayed price",
+    "delayed_minutes": "Delayed {{m}} min"
+  },
+  "success": {
+    "saved": "Saved successfully",
+    "updated": "Updated",
+    "deleted": "Deleted",
+    "copied": "Copied",
+    "sent": "Sent",
+    "loginSuccess": "Login successful!",
+    "registerSuccess": "Account created successfully!"
   },
   "error": {
     "label": "An error occurred",
@@ -26,7 +76,18 @@
       "title": "Login required",
       "description": "Please sign in to continue.",
       "action": "Login"
-    }
+    },
+    "generic": "Something went wrong",
+    "network": "Network error",
+    "unauthorized": "Unauthorized",
+    "invalid_phone": "Invalid phone number",
+    "invalid_email": "Invalid email",
+    "password_too_short": "Password too short",
+    "passwords_no_match": "Passwords do not match",
+    "username_taken": "Username already taken",
+    "required_field": "This field is required",
+    "phone_required": "Phone number is required",
+    "phone_11_digits": "Phone number must be 11 digits"
   },
   "auth": {
     "login": "Login",
@@ -35,7 +96,18 @@
     "emailOrPhone": "Email or phone number",
     "password": "Password",
     "fullName": "Full Name",
-    "logout": "Logout"
+    "logout": "Logout",
+    "verify": "Verify",
+    "backToLogin": "Back to Login",
+    "twoFactorTitle": "Two-Factor Authentication",
+    "twoFactorDesc": "Enter the 6-digit code from your authenticator app",
+    "continueGoogle": "Continue with Google",
+    "or": "Or",
+    "placeholderEmailPhone": "name@example.com or 01xxxxxxxxx",
+    "accountNotExist": "This account does not exist. You can register as new.",
+    "authFailed": "Auth failed",
+    "loginSuccess": "Login successful!",
+    "registerSuccess": "Account created successfully!"
   },
   "goals": {
     "title": "Financial Goals",
@@ -90,7 +162,16 @@
     "currency": "EGP",
     "yearsMonths": "1 year and {{m}} months",
     "monthsLeft": "{{m}} months",
-    "daysLeft": "{{d}} days"
+    "daysLeft": "{{d}} days",
+    "noGoalsSet": "No goals set"
+  },
+  "dashboard": {
+    "liveWatchlist": "Live Watchlist",
+    "watchlistEmpty": "No stocks in watchlist",
+    "totalValue": "Total Value",
+    "topPerformer": "Top Performer",
+    "portfolioPerformance": "Portfolio Performance",
+    "watchlist": "Watchlist"
   },
   "achievements": {
     "congrats": "Congratulations!",
@@ -175,7 +256,21 @@
     "markAllAsRead": "Mark all as read",
     "confirmClearNotifications": "Confirm clear?",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "savedSuccess": "Saved successfully",
+    "sessionsEnded": "Other sessions ended",
+    "endSessionsFailed": "Failed to end sessions",
+    "fillAllFields": "Fill all fields",
+    "passwordsNoMatch": "Passwords do not match",
+    "changePasswordFailed": "Failed to change password",
+    "twoFaSetupFailed": "Failed to setup 2FA",
+    "invalidCode": "Invalid code",
+    "wrongPassword": "Wrong password",
+    "noOtherSessions": "No other sessions"
+  },
+  "profile": {
+    "loading": "Loading...",
+    "loadError": "Failed to load profile"
   },
   "overview": {
     "tabLabel": "Overview",
@@ -239,6 +334,8 @@
   "stocks": {
     "title": "Stocks",
     "searchPlaceholder": "Search by name or symbol...",
+    "sortLabel": "Sort:",
+    "loadError": "Failed to load stocks",
     "filterAll": "All",
     "filterEGX30": "EGX30",
     "filterEGX70": "EGX70",
@@ -325,8 +422,15 @@
     "shariaBadge": "Sharia compliant"
   },
   "market": {
+    "title": "Market",
     "overview": "Market Overview",
     "livePrices": "Live Prices",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "loadError": "Failed to load market data",
+    "gainersLosers": "Top Gainers & Losers",
+    "noData": "No data",
+    "newsTitle": "Market News",
     "allPricesLive": "All prices are real-time",
     "stocksDelayed10": "Stock prices delayed by 10 minutes",
     "upgradeToLivePrices": "Upgrade for real-time prices",
