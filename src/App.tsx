@@ -60,6 +60,8 @@ export default function App() {
   const [notificationsUnread, setNotificationsUnread] = useState(0);
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
+  const completionDropdownRef = useRef<HTMLDivElement>(null);
+  const [profileCompletionOpen, setProfileCompletionOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed));
@@ -69,6 +71,7 @@ export default function App() {
     const handleClickOutside = (e: MouseEvent) => {
       if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) setUserDropdownOpen(false);
       if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node)) setNotificationsOpen(false);
+      if (completionDropdownRef.current && !completionDropdownRef.current.contains(e.target as Node)) setProfileCompletionOpen(false);
     };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
@@ -539,47 +542,81 @@ export default function App() {
 
         {/* Main Content */}
         <main className="flex-1 p-8 overflow-y-auto">
-          {/* Profile completion bar — visible when profile not 100%, click goes to Profile */}
-          {profileCompletion != null && profileCompletion.percentage < 100 && (
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('profile');
-                if (typeof window !== 'undefined') window.history.pushState(null, '', '/profile');
-              }}
-              className="w-full mb-4 flex items-center gap-3 p-3 rounded-xl border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 transition-colors text-left"
-              dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-center gap-2 mb-1.5">
-                  <span className="text-sm font-medium text-slate-200">{t('overview.completeProfile')}</span>
-                  <span className="text-sm font-bold text-violet-400 shrink-0">{profileCompletion.percentage}%</span>
-                </div>
-                <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-violet-500 rounded-full transition-[width] duration-300"
-                    style={{ width: `${profileCompletion.percentage}%` }}
-                  />
-                </div>
-              </div>
-              <ChevronRight className={`w-5 h-5 text-violet-400 shrink-0 ${i18n.language === 'ar' ? 'rotate-180' : ''}`} />
-            </button>
-          )}
-
-          <header className="flex justify-between items-center mb-12" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
-            {/* Right in RTL: greeting */}
+          <header className="flex justify-between items-center mb-6 flex-wrap gap-3" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+            {/* Right: greeting — name only, no username */}
             <div className="text-end">
-              <h2 className="text-3xl font-bold">
+              <h2 className="text-2xl font-bold text-slate-100">
                 {i18n.language === 'ar' ? `أهلاً، ${user?.fullName || 'مستثمرنا'}` : `Welcome, ${user?.fullName || 'Investor'}`}
               </h2>
-              {user?.username ? (
-                <p className="text-slate-400 text-sm mt-0.5">@{user.username}</p>
-              ) : (
-                <p className="text-slate-400 text-sm mt-0.5">{i18n.language === 'ar' ? 'إليك نظرة سريعة على استثماراتك اليوم' : 'Here is a quick look at your investments today'}</p>
-              )}
             </div>
-            {/* Left in RTL: theme, bell, avatar */}
-            <div className="flex items-center gap-3">
+            {/* Left: profile completion (when <100%) + theme + bell + avatar */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Profile completion — small button + dropdown when < 100% */}
+              {profileCompletion != null && profileCompletion.percentage < 100 && (
+                <div className="relative" ref={completionDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setProfileCompletionOpen((o) => !o)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 transition-colors"
+                  >
+                    <div className="w-12 h-1.5 bg-slate-700 rounded-full overflow-hidden shrink-0">
+                      <div className="h-full bg-violet-500 rounded-full" style={{ width: `${profileCompletion.percentage}%` }} />
+                    </div>
+                    <span className="text-xs font-bold text-violet-400 whitespace-nowrap">{profileCompletion.percentage}%</span>
+                    <span className="text-xs font-medium text-slate-200 whitespace-nowrap hidden sm:inline">{t('overview.completeProfile')}</span>
+                    <ChevronRight className={`w-4 h-4 text-violet-400 shrink-0 ${profileCompletionOpen ? 'rotate-90' : ''} ${i18n.language === 'ar' ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {profileCompletionOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-slate-700 bg-slate-900 shadow-xl z-50 overflow-hidden rtl:right-auto rtl:left-0"
+                      >
+                        <div className="p-3 border-b border-slate-700">
+                          <p className="text-sm font-medium text-slate-200">{t('overview.profileCompletePercent', { p: profileCompletion.percentage })}</p>
+                          <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden mt-2">
+                            <div className="h-full bg-violet-500 rounded-full transition-[width]" style={{ width: `${profileCompletion.percentage}%` }} />
+                          </div>
+                        </div>
+                        <div className="p-3">
+                          <p className="text-xs text-slate-500 mb-2">{t('overview.missingLabel')}</p>
+                          <ul className="space-y-1.5">
+                            {profileCompletion.missing.map((m) => {
+                              const label = m.field === 'email' ? t('overview.missingEmail') : m.field === 'phone' ? t('overview.missingPhone') : m.field === 'username' ? t('overview.missingUsername') : m.field === 'goal' ? t('overview.missingGoal') : t('overview.missingWatchlist');
+                              return (
+                                <li key={m.field} className="flex items-center justify-between gap-2 text-sm">
+                                  <span className="text-slate-300">{label}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setProfileCompletionOpen(false);
+                                      if (m.route.startsWith('/profile')) {
+                                        setActiveTab('profile');
+                                        if (typeof window !== 'undefined') window.history.pushState(null, '', m.route);
+                                      } else {
+                                        const tab = m.route === '/goals' ? 'goals' : 'stocks';
+                                        setActiveTab(tab);
+                                        if (typeof window !== 'undefined') window.history.pushState(null, '', m.route);
+                                      }
+                                    }}
+                                    className="text-xs font-medium text-violet-400 hover:text-violet-300 flex items-center gap-0.5"
+                                  >
+                                    {t('overview.add')}
+                                    <ChevronRight className={`w-3 h-3 ${i18n.language === 'ar' ? 'rotate-180' : ''}`} />
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               {/* Theme toggle */}
               <div className="flex items-center gap-1 rounded-full bg-slate-900/60 border border-slate-700/80 px-1 py-1 text-slate-400 text-xs">
                 <button
@@ -740,19 +777,16 @@ export default function App() {
                 </AnimatePresence>
               </div>
 
-              {/* User dropdown */}
+              {/* User dropdown — avatar only in header */}
               <div className="relative" ref={userDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setUserDropdownOpen((o) => !o)}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5"
+                  className="flex items-center gap-2 p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5"
+                  aria-label={t('settings.settingsPage')}
                 >
                   <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center shrink-0">
                     <UserIcon className="w-4 h-4" />
-                  </div>
-                  <div className="text-left hidden sm:block">
-                    <p className="text-sm font-medium truncate max-w-[120px]">{user?.fullName || t('auth.login')}</p>
-                    {user?.username && <p className="text-xs text-slate-500 truncate max-w-[120px]">@{user.username}</p>}
                   </div>
                 </button>
                 <AnimatePresence>

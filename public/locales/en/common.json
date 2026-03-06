@@ -174,8 +174,11 @@
   },
   "overview": {
     "tabLabel": "Overview",
-    "completeProfile": "Complete your profile",
+    "completeProfile": "Complete profile",
+    "profileCompletePercent": "Profile {{p}}% complete",
     "missingItems": "Missing:",
+    "missingLabel": "Missing:",
+    "add": "Add",
     "missingEmail": "Email",
     "missingPhone": "Phone number",
     "missingUsername": "Username",

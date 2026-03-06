@@ -97,58 +97,66 @@ export default function DashboardPage() {
     return { ticker: best.ticker, change: bestChange === -Infinity ? 0 : bestChange };
   }, [holdings, livePrices]);
 
+  const isRTL = i18n.language === 'ar';
+
   return (
-    <div className="space-y-8">
-      {/* Market Status Bar */}
-      <div className="card-base p-3 flex justify-between items-center text-sm">
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* سطر حالة السوق: اليمين = السوق مفتوح، اليسار = إخفاء المؤشرات */}
+      <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`} />
-          <span className="font-bold">{isConnected ? (i18n.language === 'ar' ? 'السوق مفتوح' : 'Market Open') : (i18n.language === 'ar' ? 'جاري الاتصال...' : 'Connecting...')}</span>
+          <span className="font-medium text-slate-200">
+            {isConnected ? (isRTL ? 'السوق مفتوح' : 'Market Open') : (isRTL ? 'جاري الاتصال...' : 'Connecting...')}
+          </span>
         </div>
-        <button onClick={() => setShowMarketOverview(!showMarketOverview)} className="text-violet-500 hover:text-violet-400">
-          {showMarketOverview ? (i18n.language === 'ar' ? 'إخفاء المؤشرات' : 'Hide Indicators') : (i18n.language === 'ar' ? 'إظهار المؤشرات' : 'Show Indicators')}
+        <button
+          type="button"
+          onClick={() => setShowMarketOverview(!showMarketOverview)}
+          className="text-sm text-slate-500 hover:text-slate-400 transition-colors"
+        >
+          {showMarketOverview ? (isRTL ? 'إخفاء المؤشرات' : 'Hide Indicators') : (isRTL ? 'إظهار المؤشرات' : 'Show Indicators')}
         </button>
       </div>
 
-      {/* Market Overview Bar */}
+      {/* المؤشرات — شريط أفقي scrollable */}
       {showMarketOverview && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-[10px] text-emerald-500">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>{i18n.language === 'ar' ? 'مؤشرات السوق اللحظية' : 'Live Market Indicators'}</span>
-          </div>
-          
+        <div className="overflow-x-auto pb-2 -mx-1 scrollbar-thin">
           {marketLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-              {[...Array(7)].map((_, i) => (
-                <div key={i} className="card-base p-4 h-20 animate-pulse bg-slate-800/50" />
+            <div className="flex gap-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-14 w-32 shrink-0 rounded-xl bg-slate-800/50 animate-pulse" />
               ))}
             </div>
           ) : marketError ? (
-            <div className="card-base p-4 text-center text-red-500">
+            <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center text-red-400 text-sm">
               <p>{marketError}</p>
-              <button onClick={fetchMarketOverview} className="mt-2 text-sm text-violet-500 hover:underline">
-                {i18n.language === 'ar' ? 'إعادة المحاولة' : 'Retry'}
+              <button type="button" onClick={fetchMarketOverview} className="mt-2 text-violet-400 hover:underline">
+                {isRTL ? 'إعادة المحاولة' : 'Retry'}
               </button>
             </div>
           ) : marketOverview ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            <div className="flex gap-3 min-w-0">
               {[
-                { label: 'USD/EGP', value: marketOverview.usdEgp?.value?.toFixed(2), change: marketOverview.usdEgp?.changePercent },
-                { label: 'EGX30', value: marketOverview.egx30?.value?.toLocaleString(), change: marketOverview.egx30?.changePercent },
-                { label: 'EGX70', value: marketOverview.egx70?.value?.toLocaleString(), change: marketOverview.egx70?.changePercent },
-                { label: 'EGX100', value: marketOverview.egx100?.value?.toLocaleString(), change: marketOverview.egx100?.changePercent },
-                { label: 'EGX33', value: marketOverview.egx33?.value?.toLocaleString(), change: marketOverview.egx33?.changePercent },
-                { label: 'EGX35', value: marketOverview.egx35?.value?.toLocaleString(), change: marketOverview.egx35?.changePercent },
-                { label: 'Gold', value: marketOverview.gold?.value?.toLocaleString(), change: marketOverview.gold?.changePercent },
+                { label: 'EGX30', value: marketOverview.egx30?.value, change: marketOverview.egx30?.changePercent },
+                { label: 'EGX70', value: marketOverview.egx70?.value, change: marketOverview.egx70?.changePercent },
+                { label: 'EGX100', value: marketOverview.egx100?.value, change: marketOverview.egx100?.changePercent },
+                { label: 'USD/EGP', value: marketOverview.usdEgp?.value, change: marketOverview.usdEgp?.changePercent },
+                { label: 'EGX33', value: marketOverview.egx33?.value, change: marketOverview.egx33?.changePercent },
+                { label: 'EGX35', value: marketOverview.egx35?.value, change: marketOverview.egx35?.changePercent },
+                { label: 'Gold', value: marketOverview.gold?.value, change: marketOverview.gold?.changePercent },
               ].map((item, idx) => (
-                <div key={idx} className="card-base p-4 flex flex-col justify-center">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{item.label}</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-bold">{item.value || '--'}</span>
-                    {item.change !== undefined && (
-                      <span className={`text-[10px] font-bold flex items-center ${item.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {item.change >= 0 ? '▲' : '▼'} {Math.abs(item.change).toFixed(2)}%
+                <div
+                  key={idx}
+                  className="shrink-0 rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3 min-w-[120px]"
+                >
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">{item.label}</p>
+                  <div className="flex items-baseline gap-1.5 flex-wrap">
+                    <span className="text-sm font-bold text-slate-100">
+                      {item.value != null ? Number(item.value).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
+                    </span>
+                    {item.change != null && (
+                      <span className={`text-[10px] font-semibold ${item.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {item.change >= 0 ? '+' : ''}{Number(item.change).toFixed(2)}%
                       </span>
                     )}
                   </div>

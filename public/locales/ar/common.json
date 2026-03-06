@@ -174,8 +174,11 @@
   },
   "overview": {
     "tabLabel": "نظرة عامة",
-    "completeProfile": "أكمل ملفك الشخصي",
+    "completeProfile": "أكمل ملفك",
+    "profileCompletePercent": "ملفك مكتمل {{p}}%",
     "missingItems": "الحاجات الناقصة:",
+    "missingLabel": "الناقص:",
+    "add": "أضف",
     "missingEmail": "الإيميل",
     "missingPhone": "رقم الموبايل",
     "missingUsername": "اسم المستخدم",
