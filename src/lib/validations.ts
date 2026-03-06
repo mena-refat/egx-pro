@@ -136,12 +136,25 @@ export const watchlistCheckTargetsSchema = z.object({
   })),
 });
 
-/** Username: 3–30 chars, letters/numbers/underscore only; stored without @ */
+/** Username: 3–20 chars, English letters (upper/lower), numbers, _ and - only; stored lowercase for uniqueness */
+export const USERNAME_MAX_LENGTH = 20;
+const USERNAME_REGEX = /^[a-zA-Z0-9_-]+$/;
+
 export const usernameSchema = z.string()
   .min(3, 'Username must be at least 3 characters')
-  .max(30, 'Username must be at most 30 characters')
-  .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers and underscore')
+  .max(USERNAME_MAX_LENGTH, `Username must be at most ${USERNAME_MAX_LENGTH} characters`)
+  .regex(USERNAME_REGEX, 'Username: English letters, numbers, _ and - only')
   .transform((s) => s.trim().toLowerCase());
+
+/** Validate username format on frontend (max 20, a-zA-Z0-9_-). Returns i18n key for error or null if valid. */
+export function validateUsernameFormat(value: string): string | null {
+  const s = value.trim();
+  if (s.length === 0) return null;
+  if (s.length > USERNAME_MAX_LENGTH) return 'settings.usernameMax20';
+  if (s.length < 3) return 'settings.usernameMin3';
+  if (!USERNAME_REGEX.test(s)) return 'settings.usernameInvalidChars';
+  return null;
+}
 
 const goalCategoryEnum = z.enum(['home', 'car', 'retirement', 'wealth', 'travel', 'other']);
 

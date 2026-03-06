@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   User,
   Lock,
@@ -21,7 +22,7 @@ import {
   Pencil,
   ChevronDown,
 } from 'lucide-react';
-import { validateChangePassword } from '../lib/validations';
+import { validateChangePassword, validateUsernameFormat, USERNAME_MAX_LENGTH } from '../lib/validations';
 
 export interface SettingsUserProfile {
   id: string;
@@ -176,9 +177,12 @@ export function SettingsTabContent({
     run();
   }, [accessToken]);
 
-  // Username availability debounce 500ms
+  // Username format error (don't call API if invalid format)
+  const usernameFormatError = validateUsernameFormat(usernameVal);
+
+  // Username availability debounce 500ms (only when format is valid)
   useEffect(() => {
-    if (!accessToken || !usernameVal || usernameVal === (user.username ?? '')) {
+    if (!accessToken || !usernameVal || usernameVal === (user.username ?? '') || usernameFormatError) {
       setUsernameStatus('idle');
       setUsernameMessage(null);
       return;
@@ -205,7 +209,7 @@ export function SettingsTabContent({
       }
     }, 500);
     return () => clearTimeout(h);
-  }, [usernameVal, user.username, accessToken, t]);
+  }, [usernameVal, user.username, accessToken, t, usernameFormatError]);
 
   const usernameCooldownDays = (() => {
     const at = user.lastUsernameChangeAt;
@@ -227,6 +231,12 @@ export function SettingsTabContent({
           setSuccessField('fullName');
           setEditingField(null);
         } else if (field === 'username') {
+          const formatErr = validateUsernameFormat(usernameVal);
+          if (formatErr) {
+            setRequestStatus({ type: 'error', message: t(formatErr) });
+            setSavingField(null);
+            return;
+          }
           if (usernameStatus !== 'available' && usernameVal !== (user.username ?? '')) return;
           await onUpdateProfile({ username: usernameVal || null }, { success: '' });
           setSuccessField('username');
@@ -454,29 +464,27 @@ export function SettingsTabContent({
     return n === 'حذف' || n.toUpperCase() === 'DELETE';
   })();
 
-  const cardClass = 'rounded-2xl border border-slate-700 dark:border-slate-700 bg-slate-900/50 dark:bg-slate-900/50 shadow-md';
-  const cardPadding = 'p-6';
-  const inputClass = 'w-full bg-slate-800 dark:bg-slate-800 border border-slate-600 dark:border-slate-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-200';
-  const sectionTitleClass = 'text-base font-semibold text-slate-200 flex items-center gap-2';
+  const cardClass = 'rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6';
+  const inputBase = 'w-full bg-[var(--bg-input)] border rounded-xl px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none transition-colors';
 
   return (
     <div className="space-y-4">
       {/* 1. بيانات الحساب */}
-      <div className={cardClass}>
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection('account')}
-          className={`w-full flex items-center justify-between gap-2 ${cardPadding} hover:bg-slate-800/50 active:bg-slate-800/70 transition-colors text-left rounded-2xl`}
+          className="w-full flex items-center justify-between gap-2 p-6 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
         >
-          <h3 className={`${sectionTitleClass} mb-0`}>
-            <User className="w-5 h-5 text-slate-400" />
+          <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2 mb-0">
+            <User className="w-5 h-5 text-[var(--text-muted)]" />
             {t('settings.accountData')}
           </h3>
-          <ChevronDown className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${openSections.account ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-5 h-5 text-[var(--text-muted)] shrink-0 transition-transform duration-200 ${openSections.account ? 'rotate-180' : ''}`} />
         </button>
         {openSections.account && (
-          <div className={`${cardPadding} pt-0 border-t border-slate-700`}>
-        <div className="space-y-0 divide-y divide-slate-700">
+          <div className="px-6 pb-6 pt-0 border-t border-[var(--border)]">
+        <div className="space-y-0 divide-y divide-[var(--border-subtle)]">
           {(['fullName', 'username', 'email', 'phone'] as const).map((field) => {
             const label = t(`settings.${field === 'fullName' ? 'fullName' : field === 'username' ? 'username' : field === 'email' ? 'email' : 'phone'}`);
             const isEditing = editingField === field;
@@ -501,83 +509,84 @@ export function SettingsTabContent({
             const disabled = isUsername && usernameDisabled;
             return (
               <div key={field} className="py-4 first:pt-0">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-slate-300">{label}</span>
-                  {!isEditing && !disabled && (
-                    <button
-                      type="button"
-                      onClick={() => setEditingField(field)}
-                      className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      {t('settings.edit')}
-                    </button>
-                  )}
-                </div>
-                <div className="mt-2 border-b border-slate-700/80 pb-2 mb-2" />
-                {isEditing ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type={isPhone ? 'tel' : 'text'}
-                        value={value}
-                        onChange={(e) => setValue(isPhone ? e.target.value.replace(/\D/g, '') : e.target.value)}
-                        className={inputClass}
-                        placeholder={label}
-                        maxLength={isPhone ? 11 : undefined}
-                        disabled={disabled}
-                        autoFocus
-                      />
-                      {isUsername && (
-                        <span className="flex items-center gap-1 shrink-0">
-                          {usernameStatus === 'checking' && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
-                          {usernameStatus === 'available' && <Check className="w-4 h-4 text-emerald-400" />}
-                          {(usernameStatus === 'taken' || usernameStatus === 'error') && <X className="w-4 h-4 text-red-400" />}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => saveField(field)}
-                        disabled={savingField === field || (isUsername && usernameStatus !== 'available' && value !== (user.username ?? ''))}
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50"
-                      >
-                        {savingField === field ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : t('settings.save')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingField(null);
-                          setValue(
-                            field === 'fullName'
-                              ? user.fullName ?? ''
-                              : field === 'username'
-                                ? user.username ?? ''
-                                : field === 'email'
-                                  ? user.email ?? ''
-                                  : displayPhone(user.phone)
-                          );
-                          setPhoneError(null);
-                        }}
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-600 text-slate-300 hover:bg-slate-800"
-                      >
-                        {t('settings.cancel')}
-                      </button>
-                    </div>
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">{label}</label>
+                <div className="relative flex items-center">
+                  <input
+                    type={isPhone ? 'tel' : 'text'}
+                    value={value}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (isPhone) setValue(v.replace(/\D/g, ''));
+                      else if (isUsername) setValue(v.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, USERNAME_MAX_LENGTH));
+                      else setValue(v);
+                    }}
+                    className={`${inputBase} border-[var(--border)] disabled:opacity-90 pr-10 ${isEditing ? 'border-[var(--brand)] ring-2 ring-[var(--brand)]/20' : ''}`}
+                    placeholder={label}
+                    maxLength={isPhone ? 11 : isUsername ? USERNAME_MAX_LENGTH : undefined}
+                    disabled={!isEditing}
+                    autoFocus={isEditing}
+                  />
+                  <div className="absolute end-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    {isEditing ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => saveField(field)}
+                          disabled={savingField === field || (isUsername && (usernameFormatError || (usernameStatus !== 'available' && value !== (user.username ?? ''))))}
+                          className="p-1 rounded text-[var(--success)] hover:bg-[var(--success-bg)]"
+                          aria-label={t('settings.save')}
+                        >
+                          {savingField === field ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingField(null);
+                            setValue(
+                              field === 'fullName'
+                                ? user.fullName ?? ''
+                                : field === 'username'
+                                  ? user.username ?? ''
+                                  : field === 'email'
+                                    ? user.email ?? ''
+                                    : displayPhone(user.phone)
+                            );
+                            setPhoneError(null);
+                          }}
+                          className="p-1 rounded text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]"
+                          aria-label={t('settings.cancel')}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </>
+                    ) : (
+                      !disabled && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingField(field)}
+                          className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-subtle)]"
+                          aria-label={t('settings.edit')}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )
+                    )}
                   </div>
-                ) : (
-                  <p className="text-sm text-slate-500">{value || '—'}</p>
+                </div>
+                {isUsername && isEditing && (
+                  <p className="mt-1.5 text-xs flex items-center gap-1">
+                    {usernameFormatError && <span className="text-[var(--danger)] flex items-center gap-1"><X className="w-3.5 h-3.5" /> {t(usernameFormatError)}</span>}
+                    {!usernameFormatError && usernameStatus === 'checking' && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> ...</>}
+                    {!usernameFormatError && usernameStatus === 'available' && <span className="text-[var(--success)] flex items-center gap-1"><Check className="w-3.5 h-3.5" /> {i18n.language === 'ar' ? 'متاح' : 'Available'}</span>}
+                    {!usernameFormatError && (usernameStatus === 'taken' || usernameStatus === 'error') && <span className="text-[var(--danger)] flex items-center gap-1"><X className="w-3.5 h-3.5" /> {usernameMessage || t('settings.usernameTaken')}</span>}
+                  </p>
                 )}
-                {isUsername && usernameDisabled && (
-                  <p className="text-xs text-amber-500 mt-1">{t('settings.usernameChangeIn', { days: usernameCooldownDays })}</p>
+                {isUsername && usernameDisabled && !isEditing && (
+                  <p className="mt-1.5 text-xs text-[var(--text-muted)]">{t('settings.usernameChangeIn', { days: usernameCooldownDays })}</p>
                 )}
-                {isUsername && usernameMessage && (usernameStatus === 'taken' || usernameStatus === 'error') && (
-                  <p className="text-xs text-red-400 mt-1">{usernameMessage}</p>
-                )}
-                {isPhone && phoneError && <p className="text-xs text-red-400 mt-1">{phoneError}</p>}
+                {isPhone && phoneError && <p className="mt-1.5 text-xs text-[var(--danger)]">{phoneError}</p>}
                 {successField === field && (
-                  <p className="text-xs text-emerald-500 mt-1 flex items-center gap-1">
+                  <p className="mt-1.5 text-xs text-[var(--success)] flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" />
                     {t('settings.savedSuccess')}
                   </p>
@@ -591,279 +600,290 @@ export function SettingsTabContent({
       </div>
 
       {/* 2. الأمان والخصوصية */}
-      <div className={cardClass}>
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection('security')}
-          className={`w-full flex items-center justify-between gap-2 ${cardPadding} hover:bg-slate-800/50 active:bg-slate-800/70 transition-colors text-left rounded-2xl`}
+          className="w-full flex items-center justify-between gap-2 p-6 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
         >
-          <h3 className={`${sectionTitleClass} mb-0`}>
-            <Lock className="w-5 h-5 text-slate-400" />
+          <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2 mb-0">
+            <Lock className="w-5 h-5 text-[var(--text-muted)]" />
             {t('settings.securityPrivacy')}
           </h3>
-          <ChevronDown className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${openSections.security ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-5 h-5 text-[var(--text-muted)] shrink-0 transition-transform duration-200 ${openSections.security ? 'rotate-180' : ''}`} />
         </button>
         {openSections.security && (
-          <div className={`${cardPadding} pt-0 border-t border-slate-700`}>
-        <div className="space-y-0 divide-y divide-slate-700">
-          <div className="py-4 first:pt-0">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <Key className="w-4 h-4 text-slate-400" />
-                <span className="text-sm font-medium text-slate-200">{t('settings.password')}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowPasswordForm((v) => !v)}
-                className="text-xs font-medium text-violet-400 hover:text-violet-300"
-              >
-                {showPasswordForm ? t('settings.cancel') : t('settings.change')}
-              </button>
+          <div className="px-6 pb-6 pt-0 border-t border-[var(--border)]">
+
+        {/* كلمة المرور */}
+        <div className="py-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Key className="w-4 h-4 text-[var(--text-muted)]" />
+              <span className="text-sm font-medium text-[var(--text-primary)]">{t('settings.password')}</span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              {t('settings.lastChange')}: {lastPasswordChangeAt ? new Date(lastPasswordChangeAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) : t('settings.passwordNeverChanged')}
-            </p>
+            <button
+              type="button"
+              onClick={() => setShowPasswordForm((v) => !v)}
+              className="text-sm font-medium text-[var(--brand-text)] hover:underline"
+            >
+              {showPasswordForm ? t('settings.cancel') : `${t('settings.change')} ←`}
+            </button>
+          </div>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">
+            {t('settings.lastChange')}: {lastPasswordChangeAt ? new Date(lastPasswordChangeAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) : t('settings.passwordNeverChanged')}
+          </p>
+          <AnimatePresence>
             {showPasswordForm && (
-              <div className="mt-4 space-y-3">
-                <div className="relative">
-                  <input
-                    type={showCurrentPw ? 'text' : 'password'}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder={t('settings.currentPassword')}
-                    className={`${inputClass} pe-10`}
-                  />
-                  <button type="button" onClick={() => setShowCurrentPw((v) => !v)} className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400">
-                    {showCurrentPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showNewPw ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder={t('settings.newPassword')}
-                    className={`${inputClass} pe-10`}
-                  />
-                  <button type="button" onClick={() => setShowNewPw((v) => !v)} className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400">
-                    {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                <div className="relative">
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-4 space-y-3 pt-2">
+                  <div className="relative">
+                    <input
+                      type={showCurrentPw ? 'text' : 'password'}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder={t('settings.currentPassword')}
+                      className={`${inputBase} border-[var(--border)] pe-10`}
+                    />
+                    <button type="button" onClick={() => setShowCurrentPw((v) => !v)} className="absolute end-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+                      {showCurrentPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showNewPw ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder={t('settings.newPassword')}
+                      className={`${inputBase} border-[var(--border)] pe-10`}
+                    />
+                    <button type="button" onClick={() => setShowNewPw((v) => !v)} className="absolute end-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+                      {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder={t('settings.confirmPassword')}
-                    className={`${inputClass} pe-10`}
+                    className={`${inputBase} border-[var(--border)]`}
                   />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleChangePassword}
+                      disabled={changingPassword}
+                      className="px-3 py-2 rounded-xl text-sm font-medium bg-[var(--brand)] text-white hover:opacity-90 disabled:opacity-50"
+                    >
+                      {changingPassword ? <Loader2 className="w-4 h-4 animate-spin inline" /> : t('settings.update')}
+                    </button>
+                    <button type="button" onClick={() => setShowPasswordForm(false)} className="px-3 py-2 rounded-xl text-sm font-medium border border-[var(--border)] text-[var(--text-secondary)]">
+                      {t('settings.cancel')}
+                    </button>
+                  </div>
+                  {passwordMessage && <p className="text-xs text-[var(--text-muted)]">{passwordMessage}</p>}
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleChangePassword}
-                    disabled={changingPassword}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50"
-                  >
-                    {changingPassword ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : t('settings.update')}
-                  </button>
-                  <button type="button" onClick={() => setShowPasswordForm(false)} className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-600 text-slate-300">
-                    {t('settings.cancel')}
-                  </button>
-                </div>
-                {passwordMessage && <p className="text-xs text-slate-400">{passwordMessage}</p>}
-              </div>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
+        </div>
 
-          <div className="py-4 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-sm font-medium text-slate-200 flex items-center gap-2">
-                <Shield className="w-4 h-4 text-slate-400" />
-                {t('settings.twoFa')}
-              </p>
-              <p className="text-xs text-slate-500 mt-0.5">{t('settings.twoFaDesc')}</p>
+        {/* 2FA */}
+        <div className="py-4 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-2">
+              <Shield className="w-4 h-4 text-[var(--text-muted)]" />
+              {t('settings.twoFa')}
+            </p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">{t('settings.twoFaDesc')}</p>
+          </div>
+          {twoFactorEnabled ? (
+            <span className="text-xs px-2 py-1 rounded-full bg-[var(--success-bg)] text-[var(--success)]">{t('settings.enabled')}</span>
+          ) : !twoFaSecret ? (
+            <button
+              type="button"
+              onClick={handleTwoFaSetup}
+              disabled={twoFaLoading}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--brand)] text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {twoFaLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : t('settings.enable')}
+            </button>
+          ) : (
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                value={twoFaToken}
+                onChange={(e) => setTwoFaToken(e.target.value)}
+                placeholder="123456"
+                className="w-24 px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)]"
+              />
+              <button type="button" onClick={handleTwoFaVerify} disabled={twoFaLoading} className="px-2 py-1.5 rounded-lg text-xs bg-[var(--brand)] text-white">
+                {t('settings.update')}
+              </button>
             </div>
-            {twoFactorEnabled ? (
-              <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">{t('settings.enabled')}</span>
-            ) : !twoFaSecret ? (
-              <button
-                type="button"
-                onClick={handleTwoFaSetup}
-                disabled={twoFaLoading}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50"
-              >
-                {twoFaLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : t('settings.enable')}
-              </button>
-            ) : (
-              <div className="flex gap-2 items-center">
-                <input
-                  type="text"
-                  value={twoFaToken}
-                  onChange={(e) => setTwoFaToken(e.target.value)}
-                  placeholder="123456"
-                  className="w-24 px-2 py-1 rounded border border-slate-600 bg-slate-800 text-sm"
-                />
-                <button type="button" onClick={handleTwoFaVerify} disabled={twoFaLoading} className="px-2 py-1 rounded text-xs bg-violet-600 text-white">
-                  {t('settings.update')}
-                </button>
-              </div>
-            )}
-            {twoFaMessage && <p className="text-xs text-slate-400 mt-1 w-full">{twoFaMessage}</p>}
-          </div>
+          )}
+          {twoFaMessage && <p className="text-xs text-[var(--text-muted)] mt-1 w-full">{twoFaMessage}</p>}
+        </div>
 
-          <div className="pt-4">
-            <p className="text-sm font-medium text-slate-200 mb-3">{t('settings.sessions')}</p>
-            {sessionsLoading ? (
-              <p className="text-xs text-slate-500">{t('common.loading')}</p>
-            ) : sessions.length === 0 ? (
-              <p className="text-xs text-slate-500">{t('settings.noOtherSessions')}</p>
-            ) : (
-              <ul className="space-y-0 rounded-xl border border-slate-700 overflow-hidden">
-                {sessions.map((s) => {
-                  const dt = (s.deviceType || '').toLowerCase();
-                  const DeviceIcon = dt === 'mobile' ? Smartphone : dt === 'tablet' ? Tablet : Monitor;
-                  const label = sessionDeviceLabel(s, t);
-                  const lastActivity = formatLastActivity(s.createdAt, t);
-                  const location = [s.city, s.country].filter(Boolean).join(', ') || null;
-                  return (
-                    <li key={s.id} className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-700 last:border-b-0 bg-slate-800/30">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <DeviceIcon className="w-5 h-5 text-slate-500 shrink-0" />
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium text-slate-200">{label}</p>
-                            {s.isCurrentSession ? (
-                              <span className="text-xs px-2 py-0.5 rounded bg-violet-500/30 text-violet-300">{t('settings.youAreHere')}</span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => endSession(s.id)}
-                                disabled={revokingId === s.id}
-                                className="text-xs text-slate-400 hover:text-red-400"
-                              >
-                                {revokingId === s.id ? <Loader2 className="w-3 h-3 animate-spin inline" /> : t('settings.endSession')}
-                              </button>
-                            )}
-                          </div>
-                          {location && <p className="text-xs text-slate-500 mt-0.5">{location}</p>}
-                          <p className="text-xs text-slate-500">{lastActivity}</p>
+        {/* الجلسات النشطة */}
+        <div className="pt-4 border-t border-[var(--border-subtle)]">
+          <p className="text-sm font-medium text-[var(--text-primary)] mb-3 flex items-center gap-2">
+            {t('settings.sessions')}
+            {sessions.length > 0 && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--bg-input)] text-[var(--text-muted)]">{sessions.length}</span>
+            )}
+          </p>
+          {sessionsLoading ? (
+            <p className="text-xs text-[var(--text-muted)]">{t('common.loading')}</p>
+          ) : sessions.length === 0 ? (
+            <p className="text-xs text-[var(--text-muted)]">{t('settings.noOtherSessions')}</p>
+          ) : (
+            <ul className="space-y-0 rounded-xl border border-[var(--border)] overflow-hidden divide-y divide-[var(--border-subtle)]">
+              {sessions.map((s) => {
+                const dt = (s.deviceType || '').toLowerCase();
+                const DeviceIcon = dt === 'mobile' ? Smartphone : dt === 'tablet' ? Tablet : Monitor;
+                const label = sessionDeviceLabel(s, t);
+                const lastActivity = formatLastActivity(s.createdAt, t);
+                const location = [s.city, s.country].filter(Boolean).join(' · ') || null;
+                return (
+                  <li key={s.id} className="flex items-center justify-between gap-3 px-4 py-3 bg-[var(--bg-card)]">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <DeviceIcon className="w-5 h-5 text-[var(--text-muted)] shrink-0" />
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
+                          {s.isCurrentSession ? (
+                            <span className="text-xs px-2 py-0.5 rounded bg-[var(--brand-subtle)] text-[var(--brand-text)]">{t('settings.youAreHere')}</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => endSession(s.id)}
+                              disabled={revokingId === s.id}
+                              className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)]"
+                            >
+                              {revokingId === s.id ? <Loader2 className="w-3 h-3 animate-spin inline" /> : t('settings.endSession')}
+                            </button>
+                          )}
                         </div>
+                        {location && <p className="text-xs text-[var(--text-muted)] mt-0.5">{location}</p>}
+                        <p className="text-xs text-[var(--text-muted)]">{lastActivity}</p>
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            {sessions.length > 1 && (
-              <button
-                type="button"
-                onClick={revokeAllOther}
-                disabled={revokeAllOtherLoading}
-                className="mt-3 text-xs text-slate-500 hover:text-slate-400"
-              >
-                {revokeAllOtherLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : t('settings.endAllSessions')}
-              </button>
-            )}
-          </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {sessions.length > 1 && (
+            <button
+              type="button"
+              onClick={revokeAllOther}
+              disabled={revokeAllOtherLoading}
+              className="mt-3 text-xs text-[var(--danger)] hover:underline"
+            >
+              {revokeAllOtherLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : t('settings.endAllSessions')}
+            </button>
+          )}
         </div>
           </div>
         )}
       </div>
 
       {/* 3. التفضيلات */}
-      <div className={cardClass}>
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection('preferences')}
-          className={`w-full flex items-center justify-between gap-2 ${cardPadding} hover:bg-slate-800/50 active:bg-slate-800/70 transition-colors text-left rounded-2xl`}
+          className="w-full flex items-center justify-between gap-2 p-6 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
         >
-          <h3 className={`${sectionTitleClass} mb-0`}>
-            <Settings className="w-5 h-5 text-slate-400" />
+          <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2 mb-0">
+            <Settings className="w-5 h-5 text-[var(--text-muted)]" />
             {t('settings.preferences')}
           </h3>
-          <ChevronDown className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${openSections.preferences ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-5 h-5 text-[var(--text-muted)] shrink-0 transition-transform duration-200 ${openSections.preferences ? 'rotate-180' : ''}`} />
         </button>
         {openSections.preferences && (
-          <div className={`${cardPadding} pt-0 border-t border-slate-700`}>
-        <div className="space-y-0 divide-y divide-slate-700">
-          <div className="py-4 first:pt-0">
-            <p className="text-sm font-medium text-slate-200 mb-3">{t('settings.theme')}</p>
-            <div className="flex flex-row-reverse gap-2 justify-end">
-              {[
-                { key: 'dark', label: t('settings.dark'), icon: Moon },
-                { key: 'system', label: t('settings.system'), icon: Monitor },
-                { key: 'light', label: t('settings.light'), icon: Sun },
-              ].map((opt) => {
-                const active = (user.theme ?? 'system') === opt.key;
-                const Icon = opt.icon;
-                return (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => onUpdateProfile({ theme: opt.key }, { success: '' })}
-                    className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl border text-sm transition-all ${active ? 'border-violet-500 bg-violet-500/10' : 'border-slate-600 bg-slate-800/50 hover:border-slate-500'}`}
-                  >
-                    <Icon className="w-5 h-5 text-slate-300" />
-                    <span>{opt.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="py-4 flex items-center justify-between flex-wrap gap-2">
-            <p className="text-sm font-medium text-slate-200">{t('settings.language')}</p>
-            <div className="flex gap-2">
+          <div className="px-6 pb-6 pt-0 border-t border-[var(--border)]">
+        <p className="text-xs text-[var(--text-muted)] mb-3">{t('settings.theme')}</p>
+        <div className="grid grid-cols-3 gap-2 mb-6">
+          {[
+            { key: 'dark', label: t('settings.dark'), icon: Moon },
+            { key: 'system', label: t('settings.system'), icon: Monitor },
+            { key: 'light', label: t('settings.light'), icon: Sun },
+          ].map((opt) => {
+            const active = (user.theme ?? 'system') === opt.key;
+            const Icon = opt.icon;
+            return (
               <button
+                key={opt.key}
                 type="button"
-                onClick={() => onUpdateProfile({ language: 'ar' }, { success: '' })}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${user.language === 'ar' || !user.language ? 'bg-violet-600 text-white' : 'border border-slate-600 text-slate-400 hover:bg-slate-800'}`}
+                onClick={() => onUpdateProfile({ theme: opt.key }, { success: '' })}
+                className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 text-sm transition-all ${active ? 'border-[var(--brand)] bg-[var(--brand-subtle)]' : 'border-[var(--border)] bg-[var(--bg-input)] hover:border-[var(--border-strong)]'}`}
               >
-                {t('settings.arabic')}
+                <Icon className="w-5 h-5 text-[var(--text-secondary)]" />
+                <span className="text-[var(--text-primary)]">{opt.label}</span>
               </button>
-              <button
-                type="button"
-                onClick={() => onUpdateProfile({ language: 'en' }, { success: '' })}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${user.language === 'en' ? 'bg-violet-600 text-white' : 'border border-slate-600 text-slate-400 hover:bg-slate-800'}`}
-              >
-                {t('settings.english')}
-              </button>
-            </div>
+            );
+          })}
+        </div>
+
+        <p className="text-xs text-[var(--text-muted)] mb-3">{t('settings.language')}</p>
+        <div className="grid grid-cols-2 gap-2 mb-6">
+          <button
+            type="button"
+            onClick={() => onUpdateProfile({ language: 'ar' }, { success: '' })}
+            className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${user.language === 'ar' || !user.language ? 'bg-[var(--brand)] text-white' : 'border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'}`}
+          >
+            {t('settings.arabic')}
+          </button>
+          <button
+            type="button"
+            onClick={() => onUpdateProfile({ language: 'en' }, { success: '' })}
+            className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${user.language === 'en' ? 'bg-[var(--brand)] text-white' : 'border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'}`}
+          >
+            {t('settings.english')}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 pt-2 border-t border-[var(--border-subtle)]">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-[var(--text-primary)]">{t('settings.shariaMode')}</p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">{t('settings.shariaDescShort')}</p>
           </div>
-          <div className="py-4 flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-200">{t('settings.shariaMode')}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{t('settings.shariaDescShort')}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onUpdateProfile({ shariaMode: !user.shariaMode }, { success: '' })}
-              className={`relative w-11 h-6 rounded-full px-1 transition-colors flex items-center shrink-0 ${user.shariaMode ? 'bg-violet-600' : 'bg-slate-600'}`}
-            >
-              <span className={`absolute w-4 h-4 rounded-full bg-white shadow transition-transform ${user.shariaMode ? 'translate-x-6 rtl:-translate-x-6' : 'translate-x-0'}`} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => onUpdateProfile({ shariaMode: !user.shariaMode }, { success: '' })}
+            className={`relative w-11 h-6 rounded-full px-1 transition-colors flex items-center shrink-0 ${user.shariaMode ? 'bg-[var(--brand)]' : 'bg-[var(--border-strong)]'}`}
+          >
+            <span className={`absolute w-4 h-4 rounded-full bg-white shadow transition-transform ${user.shariaMode ? 'translate-x-6 rtl:-translate-x-6' : 'translate-x-0'}`} />
+          </button>
         </div>
           </div>
         )}
       </div>
 
       {/* 4. الإشعارات */}
-      <div className={cardClass}>
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
         <button
           type="button"
           onClick={() => toggleSection('notifications')}
-          className={`w-full flex items-center justify-between gap-2 ${cardPadding} hover:bg-slate-800/50 active:bg-slate-800/70 transition-colors text-left rounded-2xl`}
+          className="w-full flex items-center justify-between gap-2 p-6 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
         >
-          <h3 className={`${sectionTitleClass} mb-0`}>
-            <Bell className="w-5 h-5 text-slate-400" />
+          <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2 mb-0">
+            <Bell className="w-5 h-5 text-[var(--text-muted)]" />
             {t('settings.notifications')}
           </h3>
-          <ChevronDown className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${openSections.notifications ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-5 h-5 text-[var(--text-muted)] shrink-0 transition-transform duration-200 ${openSections.notifications ? 'rotate-180' : ''}`} />
         </button>
         {openSections.notifications && (
-          <div className={`${cardPadding} pt-0 border-t border-slate-700`}>
-        <div className="space-y-0 divide-y divide-slate-700">
+          <div className="px-6 pb-6 pt-0 border-t border-[var(--border)]">
+        <div className="space-y-0 divide-y divide-[var(--border-subtle)]">
           {[
             { key: 'notifySignals', label: t('settings.notifySignals'), desc: t('settings.notifySignalsDesc') },
             { key: 'notifyPortfolio', label: t('settings.notifyPortfolio'), desc: t('settings.notifyPortfolioDesc') },
@@ -873,15 +893,15 @@ export function SettingsTabContent({
           ].map(({ key, label, desc }) => {
             const value = (user as Record<string, unknown>)[key] ?? true;
             return (
-              <div key={key} className="flex items-center justify-between py-4 first:pt-0">
-                <div>
-                  <p className="text-sm font-medium text-slate-200">{label}</p>
-                  <p className="text-xs text-slate-500">{desc}</p>
+              <div key={key} className="flex items-center justify-between gap-4 py-4 first:pt-0">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">{desc}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => onUpdateProfile({ [key]: !value }, { success: '' })}
-                  className={`relative w-11 h-6 rounded-full px-1 transition-colors flex items-center ${value ? 'bg-violet-600' : 'bg-slate-600'}`}
+                  className={`relative w-11 h-6 rounded-full px-1 transition-colors flex items-center shrink-0 ${value ? 'bg-[var(--brand)]' : 'bg-[var(--border-strong)]'}`}
                 >
                   <span className={`absolute w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-6 rtl:-translate-x-6' : 'translate-x-0'}`} />
                 </button>
@@ -893,50 +913,48 @@ export function SettingsTabContent({
         )}
       </div>
 
-      {/* أسفل الصفحة: حذف الحساب فقط (تسجيل الخروج من الـ dropdown في الهيدر) */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-700">
-        <p className="text-xs text-slate-500">
-          <button type="button" onClick={() => setDeleteDialogOpen(true)} className="underline hover:text-slate-400">
-            {t('settings.deleteAccountPrompt')}
-          </button>
-        </p>
+      {/* أسفل الصفحة: حذف الحساب */}
+      <div className="pt-4 border-t border-[var(--border)]">
+        <button type="button" onClick={() => setDeleteDialogOpen(true)} className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] underline">
+          {t('settings.deleteAccountPrompt')}
+        </button>
       </div>
 
       {/* Delete account dialog */}
       {deleteDialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setDeleteDialogOpen(false)}>
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-center">
-              <Trash2 className="w-12 h-12 text-red-400" />
+              <Trash2 className="w-12 h-12 text-[var(--danger)]" />
             </div>
-            <h3 className="text-lg font-bold text-center text-slate-200">{t('settings.deleteTitle')}</h3>
-            <p className="text-sm font-medium text-slate-300 mt-2">{t('settings.deleteReadFirst')}</p>
-            <p className="text-xs text-slate-400 text-center">{t('settings.deleteWarning')}</p>
+            <h3 className="text-lg font-bold text-center text-[var(--text-primary)]">{t('settings.deleteTitle')}</h3>
+            <p className="text-sm font-medium text-[var(--text-secondary)] mt-2">{t('settings.deleteReadFirst')}</p>
+            <p className="text-xs text-[var(--text-muted)] text-center">{t('settings.deleteWarning')}</p>
             <input
               type="text"
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
               placeholder={t('settings.deleteConfirmPlaceholder')}
-              className={inputClass}
+              className={`${inputBase} border-[var(--border)]`}
             />
             <input
               type="password"
               value={deletePassword}
               onChange={(e) => setDeletePassword(e.target.value)}
               placeholder={t('settings.password')}
-              className={inputClass}
+              className={`${inputBase} border-[var(--border)]`}
             />
-            {deleteError && <p className="text-xs text-red-400">{deleteError}</p>}
+            {deleteError && <p className="text-xs text-[var(--danger)]">{deleteError}</p>}
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={handleDeleteAccount}
                 disabled={!deleteConfirmValid || !deletePassword || deleteSubmitting}
-                className="flex-1 py-2 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-500 disabled:opacity-50"
+                className="flex-1 py-2 rounded-xl text-sm font-medium bg-[var(--danger)] text-white hover:opacity-90 disabled:opacity-50"
               >
                 {deleteSubmitting ? <Loader2 className="w-4 h-4 animate-spin inline" /> : t('settings.confirmDelete')}
               </button>
-              <button type="button" onClick={() => setDeleteDialogOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium border border-slate-600 text-slate-400">
+              <button type="button" onClick={() => setDeleteDialogOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium border border-[var(--border)] text-[var(--text-secondary)]">
                 {t('settings.cancel')}
               </button>
             </div>
@@ -955,11 +973,11 @@ export function SettingsTabContent({
             onLogout();
           }}
         >
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-xl max-w-sm w-full p-6 text-center space-y-2" onClick={(e) => e.stopPropagation()}>
-            <p className="text-lg font-bold text-slate-200">
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-xl max-w-sm w-full p-6 text-center space-y-2" onClick={(e) => e.stopPropagation()}>
+            <p className="text-lg font-bold text-[var(--text-primary)]">
               {t('settings.goodbyeTitle', { name: goodbyeName })} 💙
             </p>
-            <p className="text-sm text-slate-400">{t('settings.goodbyeBody')}</p>
+            <p className="text-sm text-[var(--text-muted)]">{t('settings.goodbyeBody')}</p>
           </div>
         </div>
       )}
