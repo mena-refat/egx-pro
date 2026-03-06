@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from './store/authStore';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, UserPlus, TrendingUp, User as UserIcon, LayoutDashboard, PieChart, Calculator, Settings as SettingsIcon, Search, Eye, EyeOff, Sun, Moon, Monitor, Target, Bell, LogOut, ChevronLeft, ChevronRight, Trophy, Briefcase, UserPlus as UserPlusIcon } from 'lucide-react';
+import { LogIn, UserPlus, TrendingUp, User as UserIcon, LayoutDashboard, PieChart, Calculator, Settings as SettingsIcon, Search, Eye, EyeOff, Sun, Moon, Monitor, Target, Bell, LogOut, ChevronLeft, ChevronRight, Trophy, Briefcase, UserPlus as UserPlusIcon, BarChart3 } from 'lucide-react';
 import OnboardingWizard from './components/OnboardingWizard';
 import PortfolioTracker from './components/PortfolioTracker';
 import StockScreener from './components/StockScreener';
 import InvestmentCalculator from './components/InvestmentCalculator';
 import StockAnalysis from './components/StockAnalysis';
-import FinancialGoalsSidebar from './components/FinancialGoalsSidebar';
+import GoalsPage from './pages/GoalsPage';
+import MarketPage from './pages/MarketPage';
 import ProfilePage from './components/ProfilePage';
 import DashboardPage from './pages/DashboardPage';
 import { ErrorPage } from './components/ErrorPage';
@@ -48,6 +49,7 @@ export default function App() {
   });
 
   const [authMessage, setAuthMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [profileCompletion, setProfileCompletion] = useState<{ percentage: number; missing: { field: string; route: string }[] } | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('sidebarCollapsed') === 'true';
@@ -185,7 +187,7 @@ export default function App() {
   // Removed unused watchlist state
 
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
-  const knownPaths = ['/', '/portfolio', '/stocks', '/calculator', '/goals', '/profile', '/account'];
+  const knownPaths = ['/', '/portfolio', '/stocks', '/market', '/calculator', '/goals', '/profile', '/account'];
 
   // مزامنة الـ URL مع التبويب عند التحميل (عشان زر "اذهب وحقق التحدي" يودّي للصفحة الصحيحة)
   useEffect(() => {
@@ -195,6 +197,7 @@ export default function App() {
       '/': 'dashboard',
       '/portfolio': 'portfolio',
       '/stocks': 'stocks',
+      '/market': 'market',
       '/calculator': 'calculator',
       '/goals': 'goals',
       '/profile': 'profile',
@@ -226,6 +229,32 @@ export default function App() {
     document.documentElement.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = i18n.language;
   }, [i18n.language]);
+
+  const fetchProfileCompletion = useCallback(async () => {
+    if (!isAuthenticated || !accessToken) {
+      setProfileCompletion(null);
+      return;
+    }
+    try {
+      const res = await fetch('/api/profile/completion', { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setProfileCompletion({ percentage: data.percentage ?? 0, missing: data.missing ?? [] });
+      } else {
+        setProfileCompletion(null);
+      }
+    } catch {
+      setProfileCompletion(null);
+    }
+  }, [isAuthenticated, accessToken]);
+
+  useEffect(() => {
+    fetchProfileCompletion();
+  }, [fetchProfileCompletion]);
+
+  useEffect(() => {
+    if (activeTab === 'profile') fetchProfileCompletion();
+  }, [activeTab, fetchProfileCompletion]);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -284,7 +313,7 @@ export default function App() {
   }, [accessToken]);
 
   useEffect(() => {
-    if (isAuthenticated && activeTab === 'dashboard' && accessToken) {
+    if (isAuthenticated && (activeTab === 'dashboard' || activeTab === 'goals') && accessToken) {
       fetchDashboardData();
     }
   }, [isAuthenticated, activeTab, fetchDashboardData, accessToken]);
@@ -474,6 +503,7 @@ export default function App() {
               { id: 'dashboard', label: i18n.language === 'ar' ? 'الرئيسية' : 'Dashboard', icon: LayoutDashboard, path: '/' },
               { id: 'portfolio', label: i18n.language === 'ar' ? 'محفظتي' : 'Portfolio', icon: PieChart, path: '/portfolio' },
               { id: 'stocks', label: i18n.language === 'ar' ? 'الأسهم' : 'Stocks', icon: Search, path: '/stocks' },
+              { id: 'market', label: i18n.language === 'ar' ? 'السوق' : 'Market', icon: BarChart3, path: '/market' },
               { id: 'calculator', label: i18n.language === 'ar' ? 'الحاسبة' : 'Calculator', icon: Calculator, path: '/calculator' },
               { id: 'goals', label: i18n.language === 'ar' ? 'أهدافي المالية' : 'Financial Goals', icon: Target, path: '/goals' },
               { id: 'profile', label: i18n.language === 'ar' ? 'حسابي' : 'Profile', icon: UserIcon, path: '/profile' },
@@ -509,6 +539,33 @@ export default function App() {
 
         {/* Main Content */}
         <main className="flex-1 p-8 overflow-y-auto">
+          {/* Profile completion bar — visible when profile not 100%, click goes to Profile */}
+          {profileCompletion != null && profileCompletion.percentage < 100 && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('profile');
+                if (typeof window !== 'undefined') window.history.pushState(null, '', '/profile');
+              }}
+              className="w-full mb-4 flex items-center gap-3 p-3 rounded-xl border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 transition-colors text-left"
+              dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center gap-2 mb-1.5">
+                  <span className="text-sm font-medium text-slate-200">{t('overview.completeProfile')}</span>
+                  <span className="text-sm font-bold text-violet-400 shrink-0">{profileCompletion.percentage}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-violet-500 rounded-full transition-[width] duration-300"
+                    style={{ width: `${profileCompletion.percentage}%` }}
+                  />
+                </div>
+              </div>
+              <ChevronRight className={`w-5 h-5 text-violet-400 shrink-0 ${i18n.language === 'ar' ? 'rotate-180' : ''}`} />
+            </button>
+          )}
+
           <header className="flex justify-between items-center mb-12" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
             {/* Right in RTL: greeting */}
             <div className="text-end">
@@ -747,12 +804,9 @@ export default function App() {
                   {activeTab === 'dashboard' && <DashboardPage />}
                   {activeTab === 'portfolio' && <PortfolioTracker />}
                   {activeTab === 'stocks' && <StockScreener onSelectStock={(s) => setSelectedStock(s)} />}
+                  {activeTab === 'market' && <MarketPage onSelectStock={(s) => setSelectedStock(s)} />}
                   {activeTab === 'calculator' && <InvestmentCalculator />}
-                  {activeTab === 'goals' && (
-                    <div className="card-base p-8">
-                      <FinancialGoalsSidebar currentWealth={stats.totalValue} />
-                    </div>
-                  )}
+                  {activeTab === 'goals' && <GoalsPage currentWealth={stats?.totalValue ?? 0} />}
                   {activeTab === 'profile' && <ProfilePage />}
                 </>
               )}

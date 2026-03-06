@@ -121,16 +121,19 @@ model Portfolio {
 }
 
 model Goal {
-  id           String    @id @default(uuid())
-  userId       String
-  name         String
-  targetAmount Float
-  targetDate   DateTime
-  type         String    // apartment, car, retirement, etc.
-  achievedAt   DateTime? // عند تحقق الهدف
-  createdAt    DateTime  @default(now())
-
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  targetAmount  Float
+  currentAmount Float     @default(0)
+  currency      String    @default("EGP")
+  deadline      DateTime?
+  category      String
+  status        String    @default("active")
+  achievedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Watchlist {

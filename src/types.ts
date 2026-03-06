@@ -8,6 +8,13 @@ export interface Stock {
   marketCap: number;
   sector: string;
   description: string;
+  /** From API when available */
+  open?: number;
+  previousClose?: number;
+  high?: number;
+  low?: number;
+  high52w?: number;
+  low52w?: number;
 }
 
 export interface User {

@@ -21,6 +21,8 @@ export async function getStockPrice(ticker: string) {
       low: result.regularMarketDayLow,
       high52w: result.fiftyTwoWeekHigh,
       low52w: result.fiftyTwoWeekLow,
+      open: result.regularMarketOpen,
+      previousClose: result.regularMarketPreviousClose,
       name: result.longName || result.shortName || ticker,
     };
     await setCache(cacheKey, data, 60); // Cache for 60 seconds

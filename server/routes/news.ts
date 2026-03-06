@@ -20,6 +20,44 @@ const COMPANY_NAMES: Record<string, string> = {
   ARCC: 'العربية للأسمنت'
 };
 
+function mapArticle(article: { title: string; description: string; content: string; source: { name: string }; publishedAt: string; url: string }) {
+  const text = (article.title + ' ' + (article.description || '')).toLowerCase();
+  let sentiment: 'positive' | 'negative' | 'neutral' = 'neutral';
+  const positiveWords = ['أرباح', 'نمو', 'صعود', 'ارتفاع', 'إيجابي', 'توسع', 'profit', 'growth', 'rise'];
+  const negativeWords = ['خسائر', 'هبوط', 'تراجع', 'سلبي', 'انخفاض', 'loss', 'fall', 'decline'];
+  if (positiveWords.some(word => text.includes(word))) sentiment = 'positive';
+  else if (negativeWords.some(word => text.includes(word))) sentiment = 'negative';
+  return {
+    title: article.title,
+    summary: article.description || article.content,
+    source: article.source.name,
+    publishedAt: article.publishedAt,
+    sentiment,
+    url: article.url
+  };
+}
+
+router.get('/market', async (req, res) => {
+  const cacheKey = 'news_market';
+  try {
+    const cached = await getCache(cacheKey);
+    if (cached) return res.json(cached);
+    if (!NEWS_API_KEY) {
+      return res.status(500).json({ error: 'News API key missing' });
+    }
+    const query = encodeURIComponent('البورصة المصرية EGX سوق الأسهم مصر');
+    const response = await axios.get(
+      `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=15&apiKey=${NEWS_API_KEY}`
+    );
+    const news = (response.data.articles || []).map((a: { title: string; description: string; content: string; source: { name: string }; publishedAt: string; url: string }) => mapArticle(a));
+    await setCache(cacheKey, news, 1800);
+    res.json(news);
+  } catch (err) {
+    console.error('News API market error:', (err as Error).message);
+    res.status(500).json({ error: 'Failed to fetch market news' });
+  }
+});
+
 router.get('/:ticker', async (req, res) => {
   const { ticker } = req.params;
   const companyName = COMPANY_NAMES[ticker] || ticker;
@@ -42,25 +80,7 @@ router.get('/:ticker', async (req, res) => {
       `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=10&apiKey=${NEWS_API_KEY}`
     );
 
-    const news = response.data.articles.map((article: { title: string; description: string; content: string; source: { name: string }; publishedAt: string; url: string }) => {
-      const text = (article.title + ' ' + article.description).toLowerCase();
-      let sentiment: 'positive' | 'negative' | 'neutral' = 'neutral';
-      
-      const positiveWords = ['أرباح', 'نمو', 'صعود', 'ارتفاع', 'إيجابي', 'توسع', 'profit', 'growth', 'rise'];
-      const negativeWords = ['خسائر', 'هبوط', 'تراجع', 'سلبي', 'انخفاض', 'loss', 'fall', 'decline'];
-
-      if (positiveWords.some(word => text.includes(word))) sentiment = 'positive';
-      else if (negativeWords.some(word => text.includes(word))) sentiment = 'negative';
-
-      return {
-        title: article.title,
-        summary: article.description || article.content,
-        source: article.source.name,
-        publishedAt: article.publishedAt,
-        sentiment,
-        url: article.url
-      };
-    });
+    const news = response.data.articles.map((article: { title: string; description: string; content: string; source: { name: string }; publishedAt: string; url: string }) => mapArticle(article));
 
     await setCache(cacheKey, news, 1800); // 30 minutes
     res.json(news);

@@ -49,14 +49,48 @@ export async function getMarketOverview() {
       return { value: 0, change: 0, changePercent: 0 };
     };
 
+    // Gold (GC=F) and Silver (SI=F) in USD per troy oz
+    const commodities = ['GC=F', 'SI=F'];
+    const commoditiesData = await Promise.allSettled(
+      commodities.map((ticker) => yahooFinance.quote(ticker))
+    );
+    const formatCommodity = (result: PromiseSettledResult<unknown>) => {
+      if (result.status === 'fulfilled' && result.value) {
+        const val = result.value as { regularMarketPrice: number; regularMarketChange: number; regularMarketChangePercent: number };
+        return {
+          value: val.regularMarketPrice,
+          change: val.regularMarketChange,
+          changePercent: val.regularMarketChangePercent,
+        };
+      }
+      return { value: 0, change: 0, changePercent: 0 };
+    };
+    const goldUsd = formatCommodity(commoditiesData[0]);
+    const silverUsd = formatCommodity(commoditiesData[1]);
+    const ozToGram = 1 / 31.1035;
+    const usdRate = usdEgp.value || 1;
+    const gold = {
+      value: goldUsd.value,
+      change: goldUsd.change,
+      changePercent: goldUsd.changePercent,
+      valueEgxPerGram: goldUsd.value * ozToGram * usdRate,
+    };
+    const silver = {
+      value: silverUsd.value,
+      change: silverUsd.change,
+      changePercent: silverUsd.changePercent,
+      valueEgxPerGram: silverUsd.value * ozToGram * usdRate,
+    };
+
     const data = {
       usdEgp,
       egx30: formatIndex(indicesData[0]),
       egx70: formatIndex(indicesData[1]),
       egx100: formatIndex(indicesData[2]),
-      egx33: { value: 0, change: 0, changePercent: 0 }, // Mock
-      egx35: { value: 0, change: 0, changePercent: 0 }, // Mock
-      gold: { value: 0, change: 0, changePercent: 0 },  // Mock
+      egx33: { value: 0, change: 0, changePercent: 0 },
+      egx35: { value: 0, change: 0, changePercent: 0 },
+      gold,
+      silver,
       lastUpdated: Date.now(),
     };
 
@@ -67,3 +101,5 @@ export async function getMarketOverview() {
     return null;
   }
 }
+
+export type MarketOverview = Awaited<ReturnType<typeof getMarketOverview>>;

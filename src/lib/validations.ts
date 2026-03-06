@@ -143,9 +143,33 @@ export const usernameSchema = z.string()
   .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers and underscore')
   .transform((s) => s.trim().toLowerCase());
 
+const goalCategoryEnum = z.enum(['home', 'car', 'retirement', 'wealth', 'travel', 'other']);
+
 export const goalSchema = z.object({
-  name: z.string().min(3, 'Goal name must be at least 3 characters'),
-  targetAmount: z.number().positive('Target amount must be positive'),
-  targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').or(z.date()),
-  type: z.string().min(1, 'Goal type is required'),
+  title: z.string().min(3, 'Goal title must be at least 3 characters'),
+  category: goalCategoryEnum.default('home'),
+  targetAmount: z.coerce.number().positive('Target amount must be positive'),
+  currentAmount: z.coerce.number().min(0).optional().default(0),
+  currency: z.string().optional().default('EGP'),
+  deadline: z
+    .union([
+      z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      z.null(),
+      z.undefined(),
+    ])
+    .optional()
+    .nullable()
+    .transform((v) => (v === '' || v === undefined ? null : v)),
+});
+
+export const goalUpdateSchema = z.object({
+  title: z.string().min(3).optional(),
+  category: goalCategoryEnum.optional(),
+  targetAmount: z.number().positive().optional(),
+  currentAmount: z.number().min(0).optional(),
+  deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().or(z.null()),
+});
+
+export const goalAmountSchema = z.object({
+  currentAmount: z.number().min(0),
 });

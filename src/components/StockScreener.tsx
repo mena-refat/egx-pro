@@ -1,29 +1,38 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, Filter, TrendingUp, TrendingDown, Star, StarOff } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Search, TrendingUp, TrendingDown, Star, Plus } from 'lucide-react';
 import api from '../lib/api';
 import { useLivePrices } from '../hooks/useLivePrices';
-import { searchStocks } from '../lib/egxStocks';
-import StockNameDisplay from './StockNameDisplay';
+import { searchStocks, getStockName, getStockInfo } from '../lib/egxStocks';
+import { getSector, isInEGX30, isInEGX70, isInEGX100 } from '../lib/egxIndicesSectors';
 import { Stock } from '../types';
+
+interface StockWithMeta extends Stock {
+  inEGX30?: boolean;
+  inEGX70?: boolean;
+  inEGX100?: boolean;
+}
+
+type FilterId = 'all' | 'egx30' | 'egx70' | 'egx100' | 'banks' | 'realestate' | 'industry' | 'healthcare' | 'topGainers' | 'topLosers';
+type SortId = 'ticker' | 'price' | 'change' | 'volume';
 
 interface StockScreenerProps {
   onSelectStock: (stock: Stock) => void;
 }
 
 export default function StockScreener({ onSelectStock }: StockScreenerProps) {
-  const { i18n } = useTranslation('common');
-  const [stocks, setStocks] = useState<Stock[]>([]);
+  const { t, i18n } = useTranslation('common');
+  const [stocks, setStocks] = useState<StockWithMeta[]>([]);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [search, setSearch] = useState('');
-  const [sectorFilter, setSectorFilter] = useState('All');
+  const [filter, setFilter] = useState<FilterId>('all');
+  const [sort, setSort] = useState<SortId>('ticker');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const { prices: livePrices } = useLivePrices();
-
-  const isRTL = i18n.language === 'ar';
+  const isAr = i18n.language === 'ar';
+  const lang = isAr ? 'ar' : 'en';
 
   const fetchData = async () => {
     setLoading(true);
@@ -31,22 +40,37 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
     try {
       const [stocksRes, watchlistRes] = await Promise.all([
         api.get('/stocks/prices'),
-        api.get('/watchlist')
+        api.get('/watchlist'),
       ]);
-      
-      if (Array.isArray(stocksRes.data)) {
-        setStocks(stocksRes.data);
-      }
-      if (Array.isArray(watchlistRes.data)) {
-        setWatchlist(watchlistRes.data.map((w: { ticker: string }) => w.ticker));
-      }
+      const raw = Array.isArray(stocksRes.data) ? stocksRes.data : [];
+      const withMeta: StockWithMeta[] = raw.map((s: Record<string, unknown>) => {
+        const ticker = String(s.ticker ?? '');
+        const info = getStockInfo(ticker);
+        const nameAr = info?.nameAr ?? '';
+        const nameEn = info?.nameEn ?? '';
+        const sector = getSector(ticker, nameAr, nameEn, lang);
+        return {
+          ticker,
+          name: isAr ? nameAr : nameEn || ticker,
+          price: Number(s.price) || 0,
+          change: Number(s.change) || 0,
+          changePercent: Number(s.changePercent) || 0,
+          volume: Number(s.volume) || 0,
+          marketCap: Number(s.marketCap) || 0,
+          sector,
+          description: '',
+          inEGX30: isInEGX30(ticker),
+          inEGX70: isInEGX70(ticker),
+          inEGX100: isInEGX100(ticker),
+        };
+      });
+      setStocks(withMeta);
+      setWatchlist(Array.isArray(watchlistRes.data) ? (watchlistRes.data as { ticker: string }[]).map((w) => w.ticker) : []);
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'response' in err) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setError((err as any).response?.data?.error || 'Failed to fetch stocks data');
-      } else {
-        setError('Failed to fetch stocks data');
-      }
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        : null;
+      setError(msg || (isAr ? 'فشل تحميل الأسهم' : 'Failed to load stocks'));
     } finally {
       setLoading(false);
     }
@@ -56,50 +80,84 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
     fetchData();
   }, []);
 
-  const toggleWatchlist = async (ticker: string) => {
-    const isInWatchlist = watchlist.includes(ticker);
+  const toggleWatchlist = async (e: React.MouseEvent, ticker: string) => {
+    e.stopPropagation();
+    const isIn = watchlist.includes(ticker);
     try {
-      if (isInWatchlist) {
+      if (isIn) {
         await api.delete(`/watchlist/${ticker}`);
-        setWatchlist(prev => prev.filter(t => t !== ticker));
+        setWatchlist((prev) => prev.filter((t) => t !== ticker));
       } else {
         await api.post('/watchlist', { ticker });
-        setWatchlist(prev => [...prev, ticker]);
+        setWatchlist((prev) => [...prev, ticker]);
       }
-    } catch (err) {
-      console.error('Watchlist toggle error', err);
+    } catch {
+      // ignore
     }
   };
 
-  const sectors = useMemo(() => {
-    return ['All', ...new Set(stocks.map(s => s.sector).filter(Boolean))];
-  }, [stocks]);
+  const merged = useMemo(() => {
+    return stocks.map((s) => livePrices[s.ticker] ? { ...s, ...livePrices[s.ticker], sector: s.sector, inEGX30: s.inEGX30, inEGX70: s.inEGX70, inEGX100: s.inEGX100 } : s);
+  }, [stocks, livePrices]);
 
-  const filteredStocks = useMemo(() => {
-    const lang = i18n.language === 'ar' ? 'ar' : 'en';
+  const filtered = useMemo(() => {
+    let list = merged;
     const searchTrim = search.trim();
-    const matchingTickers = searchTrim
-      ? new Set(searchStocks(searchTrim, lang).map((eg) => eg.ticker.toUpperCase()))
-      : null;
-    return stocks
-      .filter((s) => {
-        const matchesSearch = !matchingTickers || matchingTickers.has(s.ticker.toUpperCase());
-        const matchesSector = sectorFilter === 'All' || s.sector === sectorFilter;
-        return matchesSearch && matchesSector;
-      })
-      .map((s) => livePrices[s.ticker] || s);
-  }, [stocks, search, sectorFilter, livePrices, i18n.language]);
+    if (searchTrim) {
+      const matches = searchStocks(searchTrim, lang).map((e) => e.ticker.toUpperCase());
+      const set = new Set(matches);
+      if (set.size > 0) list = list.filter((s) => set.has(s.ticker.toUpperCase()));
+      else list = list.filter((s) => s.ticker.toUpperCase().includes(searchTrim.toUpperCase()) || getStockName(s.ticker, lang).toLowerCase().includes(searchTrim.toLowerCase()));
+    }
+    if (filter === 'egx30') list = list.filter((s) => s.inEGX30);
+    if (filter === 'egx70') list = list.filter((s) => s.inEGX70);
+    if (filter === 'egx100') list = list.filter((s) => s.inEGX100);
+    if (filter === 'banks') list = list.filter((s) => (isAr ? s.sector === 'بنوك' : s.sector === 'Banks'));
+    if (filter === 'realestate') list = list.filter((s) => (isAr ? s.sector === 'عقارات' : s.sector === 'Real Estate'));
+    if (filter === 'industry') list = list.filter((s) => (isAr ? s.sector === 'صناعة' : s.sector === 'Industry'));
+    if (filter === 'healthcare') list = list.filter((s) => (isAr ? s.sector === 'رعاية صحية' : s.sector === 'Healthcare'));
+    if (filter === 'topGainers') list = [...list].sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0)).slice(0, 50);
+    if (filter === 'topLosers') list = [...list].sort((a, b) => (a.changePercent ?? 0) - (b.changePercent ?? 0)).slice(0, 50);
+    return list;
+  }, [merged, search, filter, isAr, lang]);
+
+  const sorted = useMemo(() => {
+    const list = [...filtered];
+    if (sort === 'ticker') list.sort((a, b) => a.ticker.localeCompare(b.ticker));
+    if (sort === 'price') list.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+    if (sort === 'change') list.sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0));
+    if (sort === 'volume') list.sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0));
+    return list;
+  }, [filtered, sort]);
+
+  const filters: { id: FilterId; labelKey: string }[] = [
+    { id: 'all', labelKey: 'stocks.filterAll' },
+    { id: 'egx30', labelKey: 'stocks.filterEGX30' },
+    { id: 'egx70', labelKey: 'stocks.filterEGX70' },
+    { id: 'egx100', labelKey: 'stocks.filterEGX100' },
+    { id: 'banks', labelKey: 'stocks.filterBanks' },
+    { id: 'realestate', labelKey: 'stocks.filterRealEstate' },
+    { id: 'industry', labelKey: 'stocks.filterIndustry' },
+    { id: 'healthcare', labelKey: 'stocks.filterHealthcare' },
+    { id: 'topGainers', labelKey: 'stocks.filterTopGainers' },
+    { id: 'topLosers', labelKey: 'stocks.filterTopLosers' },
+  ];
+
+  const formatVol = (v: number) => {
+    if (v >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
+    if (v >= 1e6) return `${(v / 1e6).toFixed(2)}M`;
+    if (v >= 1e3) return `${(v / 1e3).toFixed(2)}K`;
+    return String(v);
+  };
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex gap-4">
-          <div className="h-12 w-96 bg-slate-800/50 animate-pulse rounded-xl" />
-          <div className="h-12 w-32 bg-slate-800/50 animate-pulse rounded-xl" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
+        <div className="h-12 w-full max-w-md bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+        <div className="h-10 w-full overflow-hidden rounded-xl bg-slate-200 dark:bg-slate-700 animate-pulse" />
+        <div className="space-y-4">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-32 bg-slate-800/50 animate-pulse rounded-2xl" />
+            <div key={i} className="h-24 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -108,78 +166,116 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
 
   if (error) {
     return (
-      <div className="p-8 text-center text-red-500 card-base">
-        <p>{error}</p>
-        <button onClick={fetchData} className="mt-4 px-4 py-2 bg-violet-600 text-white rounded-xl hover:bg-violet-500">
-          {isRTL ? 'إعادة المحاولة' : 'Retry'}
+      <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-6 text-center" dir={isAr ? 'rtl' : 'ltr'}>
+        <p className="text-red-600 dark:text-red-400">{error}</p>
+        <button type="button" onClick={fetchData} className="mt-4 px-4 py-2 bg-violet-600 text-white rounded-xl hover:bg-violet-500">
+          {t('stocks.retry')}
         </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
-          <input 
+    <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
+      <header className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('stocks.title')}</h1>
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="absolute top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 ltr:left-3 rtl:right-3" />
+          <input
             type="text"
-            placeholder={isRTL ? 'ابحث عن سهم...' : 'Search stocks...'}
+            placeholder={t('stocks.searchPlaceholder')}
             value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full bg-slate-800 border border-white/5 rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-2.5 ltr:pl-10 ltr:pr-4 rtl:pr-10 rtl:pl-4 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
           />
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <Filter className="text-slate-500 w-4 h-4" />
-          <select 
-            value={sectorFilter}
-            onChange={e => setSectorFilter(e.target.value)}
-            className="bg-slate-800 border border-white/5 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all w-full md:w-auto"
+      </header>
+
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+        {filters.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => setFilter(f.id)}
+            className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+              filter === f.id
+                ? 'bg-violet-600 text-white'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
           >
-            {sectors.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
+            {t(f.labelKey)}
+          </button>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {filteredStocks.map(stock => (
-          <motion.div 
-            key={stock.ticker}
-            whileHover={{ y: -5 }}
-            onClick={() => onSelectStock(stock)}
-            className="card-base p-6 hover:border-violet-500/30 cursor-pointer group"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <StockNameDisplay ticker={stock.ticker} lang={isRTL ? 'ar' : 'en'} className="group-hover:text-violet-500 transition-colors" />
-              </div>
-              <button 
-                onClick={(e) => { e.stopPropagation(); toggleWatchlist(stock.ticker); }}
-                className={`p-2 transition-colors ${watchlist.includes(stock.ticker) ? 'text-yellow-500' : 'text-slate-400 hover:text-yellow-500'}`}
-              >
-                {watchlist.includes(stock.ticker) ? <Star className="w-4 h-4 fill-yellow-500" /> : <StarOff className="w-4 h-4" />}
-              </button>
-            </div>
-            
-            <div className="flex justify-between items-end">
-              <div>
-                <p className="text-2xl font-bold">{(stock.price || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
-                <p className="text-xs text-slate-500 uppercase tracking-wider">{stock.sector}</p>
-              </div>
-              <div className={`flex items-center gap-1 text-sm font-bold ${(stock.change || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                {(stock.change || 0) >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {(stock.change || 0) >= 0 ? '+' : ''}{(stock.changePercent || 0).toFixed(2)}%
-              </div>
-            </div>
-          </motion.div>
-        ))}
-        {filteredStocks.length === 0 && (
-          <div className="col-span-full text-center p-8 text-slate-500 border border-dashed border-slate-700 rounded-xl">
-            {isRTL ? 'لا توجد نتائج' : 'No results found'}
-          </div>
-        )}
+      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+        <span>{isAr ? 'ترتيب:' : 'Sort:'}</span>
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortId)}
+          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-slate-900 dark:text-slate-100"
+        >
+          <option value="ticker">{t('stocks.sortByTicker')}</option>
+          <option value="price">{t('stocks.sortByPrice')}</option>
+          <option value="change">{t('stocks.sortByChange')}</option>
+          <option value="volume">{t('stocks.sortByVolume')}</option>
+        </select>
       </div>
+
+      <ul className="space-y-3">
+        {sorted.map((stock) => {
+          const inWatch = watchlist.includes(stock.ticker);
+          const changeP = stock.changePercent ?? 0;
+          const isUp = changeP >= 0;
+          return (
+            <li
+              key={stock.ticker}
+              role="button"
+              tabIndex={0}
+              onClick={() => onSelectStock(stock)}
+              onKeyDown={(e) => e.key === 'Enter' && onSelectStock(stock)}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 hover:border-violet-400 dark:hover:border-violet-500/50 hover:shadow-md transition-all cursor-pointer"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">{stock.ticker}</p>
+                  <p className="font-medium text-slate-900 dark:text-slate-100 truncate">{getStockName(stock.ticker, lang)}</p>
+                </div>
+                <div className="text-left ltr:text-right shrink-0">
+                  <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                    {(stock.price ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {t('stocks.egp')}
+                  </p>
+                  <p className={`text-sm font-semibold flex items-center justify-end gap-0.5 ${isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {isUp ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                    {isUp ? '+' : ''}{(changeP).toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('stocks.volume')}: {formatVol(stock.volume ?? 0)}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => toggleWatchlist(e, stock.ticker)}
+                  className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${
+                    inWatch ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {inWatch ? <Star className="w-3.5 h-3.5 fill-amber-500" /> : <Plus className="w-3.5 h-3.5" />}
+                  {inWatch ? t('stockDetail.watchlistRemove') : t('stocks.watchlistAdd')}
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      {sorted.length === 0 && (
+        <div className="text-center py-12 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400">
+          {t('stocks.noResults')}
+        </div>
+      )}
     </div>
   );
 }

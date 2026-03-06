@@ -42,7 +42,8 @@ router.get('/market/overview', async (req, res) => {
         egx100: { value: 0, change: 0, changePercent: 0 },
         egx33: { value: 0, change: 0, changePercent: 0 },
         egx35: { value: 0, change: 0, changePercent: 0 },
-        gold: { value: 0, change: 0, changePercent: 0 },
+        gold: { value: 0, change: 0, changePercent: 0, valueEgxPerGram: 0 },
+        silver: { value: 0, change: 0, changePercent: 0, valueEgxPerGram: 0 },
         lastUpdated: Date.now(),
       };
       return res.json(fallback);
@@ -57,7 +58,8 @@ router.get('/market/overview', async (req, res) => {
       egx100: { value: 0, change: 0, changePercent: 0 },
       egx33: { value: 0, change: 0, changePercent: 0 },
       egx35: { value: 0, change: 0, changePercent: 0 },
-      gold: { value: 0, change: 0, changePercent: 0 },
+      gold: { value: 0, change: 0, changePercent: 0, valueEgxPerGram: 0 },
+      silver: { value: 0, change: 0, changePercent: 0, valueEgxPerGram: 0 },
       lastUpdated: Date.now(),
     };
     res.json(fallback);
@@ -100,13 +102,26 @@ router.get('/:ticker/financials', async (req, res) => {
 router.get('/:ticker/news', async (req, res) => {
   try {
     const { ticker } = req.params;
-    // Map ticker to company name (simplified for now)
-    const companyName = ticker; 
-    const news = await getStockNews(companyName);
+    const news = await getStockNews(ticker);
     res.json(news);
   } catch {
     res.status(500).json({ error: 'Failed to fetch stock news' });
   }
+});
+
+/** Order depth — not available from current API; placeholder */
+router.get('/:ticker/order-depth', async (_req, res) => {
+  res.json({ available: false, message: 'Order depth data not available' });
+});
+
+/** Investor categories (Egyptian market) — placeholder */
+router.get('/:ticker/investor-categories', async (_req, res) => {
+  res.json({ available: false, message: 'Investor categories not available' });
+});
+
+/** Trading stats (market-wide or per stock) — placeholder */
+router.get('/:ticker/trading-stats', async (_req, res) => {
+  res.json({ available: false, message: 'Trading stats not available' });
 });
 
 export default router;
