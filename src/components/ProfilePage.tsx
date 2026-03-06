@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { useProfileCompletion } from '../hooks/useProfileCompletion';
@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import api from '../lib/api';
 import { validateChangePassword } from '../lib/validations';
+import { AchievementCongratsCard } from './AchievementCongratsCard';
+import { SettingsTabContent } from './SettingsTabContent';
 
 // --- Sub-components ---
 
@@ -79,54 +81,131 @@ const LEVEL_META: { key: 'beginner' | 'growth' | 'pro' | 'legend'; label: string
 ];
 
 function AchievementsSection({ accessToken }: { accessToken: string | null }) {
+  const { setUnseenAchievementsCount } = useAuthStore();
   const [items, setItems] = useState<Achievement[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Achievement | null>(null);
+  const [unseenQueue, setUnseenQueue] = useState<Array<{ id: string; title: string; shortDescription: string }>>([]);
+  const [unseenIndex, setUnseenIndex] = useState(0);
 
   useEffect(() => {
     if (!accessToken) return;
-    const fetchAchievements = async () => {
+    let cancelled = false;
+
+    const run = async () => {
       setLoading(true);
       setError(null);
       try {
+        const unseenRes = await fetch('/api/user/unseen-achievements', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const unseenList = unseenRes.ok ? await unseenRes.json() : [];
+        if (cancelled) return;
+
+        if (unseenList.length > 0) {
+          setUnseenQueue(unseenList);
+          setUnseenIndex(0);
+          setItems([]);
+          setLoading(false);
+          return;
+        }
+
         const res = await fetch('/api/user/achievements', {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || 'Failed to load achievements');
-        }
+        if (cancelled) return;
+        if (!res.ok) throw new Error(data?.error || 'Failed to load achievements');
         const normalized: Achievement[] = Array.isArray(data)
-          ? data.map((a) => ({
-              id: a.id,
-              level: a.level,
-              title: a.title,
-              shortDescription: a.shortDescription ?? '',
-              longDescription: a.longDescription ?? '',
+          ? data.map((a: Record<string, unknown>) => ({
+              id: String(a.id ?? ''),
+              level: String(a.level ?? ''),
+              title: String(a.title ?? ''),
+              shortDescription: String(a.shortDescription ?? ''),
+              longDescription: String(a.longDescription ?? ''),
               completed: Boolean(a.completed),
-              date: a.date ? String(a.date) : null,
+              date: a.date ? String(a.date) : undefined,
               progress: typeof a.progress === 'number' ? a.progress : undefined,
               target: typeof a.target === 'number' ? a.target : undefined,
-              route: typeof a.route === 'string' ? a.route : null,
-            }))
+              route: typeof a.route === 'string' ? a.route : undefined,
+            })) as Achievement[]
           : [];
         setItems(normalized);
       } catch (err) {
-        console.error('Failed to load achievements', err);
-        setError('فشل تحميل شارات الإنجاز');
+        if (!cancelled) {
+          console.error('Failed to load achievements', err);
+          setError('فشل تحميل شارات الإنجاز');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-    fetchAchievements();
+
+    run();
+    return () => { cancelled = true; };
   }, [accessToken]);
+
+  const handleUnseenCardComplete = async () => {
+    const next = unseenIndex + 1;
+    if (next < unseenQueue.length) {
+      setUnseenIndex(next);
+      return;
+    }
+    setUnseenQueue([]);
+    setUnseenIndex(0);
+    setUnseenAchievementsCount(0);
+    try {
+      await fetch('/api/user/mark-achievements-seen', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+    } catch (e) {
+      console.error('Mark achievements seen failed', e);
+    }
+    const res = await fetch('/api/user/achievements', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const data = res.ok ? await res.json() : [];
+    const normalized: Achievement[] = Array.isArray(data)
+      ? (data.map((a: Record<string, unknown>) => ({
+          id: String(a.id ?? ''),
+          level: String(a.level ?? ''),
+          title: String(a.title ?? ''),
+          shortDescription: String(a.shortDescription ?? ''),
+          longDescription: String(a.longDescription ?? ''),
+          completed: Boolean(a.completed),
+          date: a.date ? String(a.date) : undefined,
+          progress: typeof a.progress === 'number' ? a.progress : undefined,
+          target: typeof a.target === 'number' ? a.target : undefined,
+          route: typeof a.route === 'string' ? a.route : undefined,
+        })) as Achievement[])
+      : [];
+    setItems(normalized);
+  };
 
   if (!accessToken) {
     return (
       <p className="text-sm text-center text-[#9ca3af]">
         قم بتسجيل الدخول لعرض الإنجازات.
       </p>
+    );
+  }
+
+  const currentUnseen = unseenQueue[unseenIndex];
+  if (currentUnseen) {
+    return (
+      <>
+        <AnimatePresence mode="wait">
+          <AchievementCongratsCard
+            key={currentUnseen.id + String(unseenIndex)}
+            title={currentUnseen.title}
+            shortDescription={currentUnseen.shortDescription}
+            onComplete={handleUnseenCardComplete}
+          />
+        </AnimatePresence>
+        <p className="text-sm text-center text-[#9ca3af]">جاري التحميل...</p>
+      </>
     );
   }
 
@@ -361,7 +440,7 @@ function SecuritySection({ accessToken }: { accessToken: string | null }) {
       username: user?.username ?? undefined,
     });
     if (!pwCheck.ok) {
-      setPasswordMessage(pwCheck.message);
+      setPasswordMessage('message' in pwCheck ? pwCheck.message : '');
       return;
     }
     setChangingPassword(true);
@@ -1098,6 +1177,10 @@ interface UserProfile {
   notifySignals?: boolean;
   notifyPortfolio?: boolean;
   notifyNews?: boolean;
+  notifyAchievements?: boolean;
+  notifyGoals?: boolean;
+  lastPasswordChangeAt?: string | null;
+  lastUsernameChangeAt?: string | null;
   userTitle?: string;
 }
 
@@ -1111,7 +1194,7 @@ interface ProfileStats {
 
 export default function ProfilePage() {
   const { t, i18n } = useTranslation('common');
-  const { user: authUser, accessToken, updateUser, logout } = useAuthStore();
+  const { user: authUser, accessToken, updateUser, logout, unseenAchievementsCount, setUnseenAchievementsCount } = useAuthStore();
   const [activeTab, setActiveTab] = useState('overview');
   const [user, setUser] = useState<UserProfile | null>(authUser as UserProfile | null);
 
@@ -1331,8 +1414,8 @@ export default function ProfilePage() {
     { id: 'overview', label: 'نظرة عامة', icon: User },
     { id: 'subscription', label: 'الاشتراك', icon: CreditCard },
     { id: 'referral', label: 'الدعوات', icon: Gift },
-  { id: 'achievements', label: 'الإنجازات', icon: Award, notification: true },
-    { id: 'settings', label: 'الإعدادات', icon: Settings },
+  { id: 'achievements', label: t('achievements.tabLabel'), icon: Award, notification: unseenAchievementsCount > 0 },
+    { id: 'settings', label: t('settings.tabLabel'), icon: Settings },
   ];
 
   const handleCopy = () => {
@@ -1359,7 +1442,7 @@ export default function ProfilePage() {
           >
             <tab.icon size={16} />
             {tab.label}
-            {tab.notification && <div className="absolute top-1 right-1 w-2 h-2 bg-[#ef4444] rounded-full" />}
+            {tab.notification && <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" style={{ width: 8, height: 8, minWidth: 8, minHeight: 8 }} />}
             {activeTab === tab.id && (
               <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full" />
             )}
@@ -1461,11 +1544,11 @@ export default function ProfilePage() {
             <AchievementsSection accessToken={accessToken} />
           )}
 
-          {activeTab === 'settings' && (
-            <div className="space-y-6">
+          {activeTab === 'settings' && user && (
+            <>
               {requestStatus && (
                 <div
-                  className={`p-3 rounded-xl text-sm ${
+                  className={`p-3 rounded-xl text-sm mb-4 ${
                     requestStatus.type === 'success'
                       ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
                       : 'bg-red-500/10 text-red-300 border border-red-500/30'
@@ -1474,336 +1557,14 @@ export default function ProfilePage() {
                   {requestStatus.message}
                 </div>
               )}
-
-              {/* Security & privacy */}
-              <SecuritySection accessToken={accessToken} />
-
-              {/* Account info */}
-              <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
-                <h3 className="font-bold text-[#9ca3af] mb-4 text-xs flex items-center gap-2 uppercase">
-                  <User className="w-4 h-4" />
-                  بيانات الحساب
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs text-[#9ca3af] mb-1">
-                      الاسم الكامل
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        value={fullNameInput}
-                        onChange={(e) => setFullNameInput(e.target.value)}
-                        className="flex-1 bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
-                      />
-                      <button
-                        onClick={() => saveField('fullName')}
-                        disabled={
-                          savingField === 'fullName' ||
-                          fullNameInput === (user.fullName || '')
-                        }
-                        className="px-4 py-2 rounded-xl text-sm font-bold bg-[#7c3aed] text-white disabled:opacity-50"
-                      >
-                        {savingField === 'fullName' ? 'جارٍ الحفظ...' : 'حفظ'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-[#9ca3af] mb-1">
-                      رقم الموبايل
-                    </label>
-                <div className="flex gap-2 items-center">
-                  <div className="flex items-center flex-1 bg-[#020617] border border-[#1f2937] rounded-xl px-3 py-1 focus-within:ring-2 focus-within:ring-[#7c3aed]">
-                    <span className="text-xs text-[#9ca3af] select-none">+20</span>
-                    <input
-                      value={phoneInput}
-                      onChange={(e) => {
-                        const digitsOnly = e.target.value.replace(/\D/g, '');
-                        setPhoneInput(digitsOnly);
-                      }}
-                      onBlur={() => {
-                        const digitsOnly = phoneInput.replace(/\D/g, '');
-                        if (!digitsOnly) {
-                          setPhoneError(i18n.language === 'ar' ? 'رقم الموبايل مطلوب' : 'Phone number is required');
-                        } else if (digitsOnly.length !== 11) {
-                          setPhoneError(
-                            i18n.language === 'ar'
-                              ? 'رقم الموبايل لازم يكون 11 رقم'
-                              : 'Phone number must be 11 digits'
-                          );
-                        } else if (!/^01[0125][0-9]{8}$/.test(digitsOnly)) {
-                          setPhoneError(
-                            i18n.language === 'ar'
-                              ? 'رقم الموبايل غير صحيح'
-                              : 'Invalid Egyptian phone number'
-                          );
-                        } else {
-                          setPhoneError(null);
-                        }
-                      }}
-                      maxLength={11}
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      className="flex-1 bg-transparent border-0 outline-none px-2 py-2 text-sm"
-                    />
-                  </div>
-                      <button
-                        onClick={() => saveField('phone')}
-                        disabled={
-                          savingField === 'phone' ||
-                          phoneInput === (user.phone || '')
-                        }
-                        className="px-4 py-2 rounded-xl text-sm font-bold bg-[#7c3aed] text-white disabled:opacity-50"
-                      >
-                        {savingField === 'phone' ? 'جارٍ الحفظ...' : 'حفظ'}
-                      </button>
-                    </div>
-                {phoneError && (
-                  <p className="mt-1 text-xs text-red-400">
-                    {phoneError}
-                  </p>
-                )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-[#9ca3af] mb-1">
-                      اسم المستخدم
-                    </label>
-                    <div className="flex gap-2 items-center">
-                      <div className="relative flex-1">
-                        <span className="absolute right-3 top-2 text-[#6b7280] text-sm">
-                          @
-                        </span>
-                        <input
-                          value={usernameInput}
-                          onChange={(e) =>
-                            setUsernameInput(e.target.value.replace(/^@/, ''))
-                          }
-                          className="w-full bg-[#020617] border border-[#1f2937] rounded-xl pr-7 pl-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
-                        />
-                        {usernameStatus === 'available' && (
-                          <Check className="absolute left-3 top-2 text-emerald-400" size={16} />
-                        )}
-                        {usernameStatus === 'taken' && (
-                          <Lock className="absolute left-3 top-2 text-red-400" size={16} />
-                        )}
-                      </div>
-                      <button
-                        onClick={() => saveField('username')}
-                        disabled={
-                          savingField === 'username' ||
-                          usernameInput === (user.username || '') ||
-                          (!!usernameInput && usernameStatus !== 'available')
-                        }
-                        className="px-4 py-2 rounded-xl text-sm font-bold bg-[#7c3aed] text-white disabled:opacity-50"
-                      >
-                        {savingField === 'username' ? 'جارٍ الحفظ...' : 'حفظ'}
-                      </button>
-                    </div>
-                    {usernameMessage && (
-                      <p
-                        className={`mt-1 text-xs ${
-                          usernameStatus === 'available'
-                            ? 'text-emerald-400'
-                            : usernameStatus === 'taken' || usernameStatus === 'error'
-                            ? 'text-red-400'
-                            : 'text-[#9ca3af]'
-                        }`}
-                      >
-                        {usernameMessage}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
-                <h3 className="font-bold text-[#9ca3af] mb-4 text-xs flex items-center gap-2 uppercase">
-                  <Settings className="w-4 h-4" />
-                  التفضيلات
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm">المظهر</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {[
-                        { key: 'light', label: 'فاتح', icon: Sun },
-                        { key: 'system', label: 'تلقائي', icon: Monitor },
-                        { key: 'dark', label: 'داكن', icon: Moon },
-                      ].map((option) => {
-                        const isActive =
-                          (user.theme ?? 'system') === option.key;
-                        const Icon = option.icon;
-                        return (
-                          <button
-                            key={option.key}
-                            type="button"
-                            onClick={() =>
-                              updateProfile(
-                                { theme: option.key as unknown as string },
-                                { success: 'تم تحديث المظهر بنجاح' }
-                              )
-                            }
-                            className={`flex flex-col items-center justify-center px-4 py-3 rounded-2xl border text-xs sm:text-sm transition-all ${
-                              isActive
-                                ? 'border-[#7c3aed] bg-[#1f2937]'
-                                : 'border-[#1f2937] bg-[#020617] hover:border-[#4b5563]'
-                            }`}
-                          >
-                            <Icon className="w-5 h-5 mb-1" />
-                            <span>{option.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="mt-2 text-[11px] text-[#9ca3af]">
-                      الوضع التلقائي يتبع إعدادات جهازك تلقائياً.
-                    </p>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0">
-                    <span>اللغة</span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateProfile(
-                            { language: 'ar' as unknown as string },
-                            { success: 'تم تغيير اللغة إلى العربية' }
-                          )
-                        }
-                        className={`px-3 py-1 rounded-full text-xs border ${
-                          user.language === 'ar' || !user.language
-                            ? 'bg-[#7c3aed] text-white border-transparent'
-                            : 'bg-[#020617] text-[#9ca3af] border-[#374151]'
-                        }`}
-                      >
-                        العربية
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateProfile(
-                            { language: 'en' as unknown as string },
-                            { success: 'Language changed to English' }
-                          )
-                        }
-                        className={`px-3 py-1 rounded-full text-xs border ${
-                          user.language === 'en'
-                            ? 'bg-[#7c3aed] text-white border-transparent'
-                            : 'bg-[#020617] text-[#9ca3af] border-[#374151]'
-                        }`}
-                      >
-                        English
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0">
-                    <span>وضع الشريعة</span>
-                    <Toggle
-                      checked={user.shariaMode}
-                      onChange={() =>
-                        updateProfile(
-                          { shariaMode: !user.shariaMode },
-                          { success: 'تم تحديث وضع الشريعة بنجاح' }
-                        )
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
-                <h3 className="font-bold text-[#9ca3af] mb-4 text-xs flex items-center gap-2 uppercase">
-                  <Bell className="w-4 h-4" />
-                  الإشعارات
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0">
-                    <span>إشارات الشراء والبيع</span>
-                    <Toggle
-                      checked={user.notifySignals ?? true}
-                      onChange={() =>
-                        updateProfile(
-                          { notifySignals: !(user.notifySignals ?? true) },
-                          { success: 'تم تحديث إعدادات الإشعارات' }
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0">
-                    <span>تحديثات المحفظة</span>
-                    <Toggle
-                      checked={user.notifyPortfolio ?? true}
-                      onChange={() =>
-                        updateProfile(
-                          { notifyPortfolio: !(user.notifyPortfolio ?? true) },
-                          { success: 'تم تحديث إعدادات الإشعارات' }
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-[#1f2937] last:border-0">
-                    <span>أخبار الأسهم</span>
-                    <Toggle
-                      checked={user.notifyNews ?? true}
-                      onChange={() =>
-                        updateProfile(
-                          { notifyNews: !(user.notifyNews ?? true) },
-                          { success: 'تم تحديث إعدادات الإشعارات' }
-                        )
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* تريد حذف حسابك؟ + تسجيل الخروج */}
-              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-[#1f2937]">
-                <p className="text-xs text-[#9ca3af]">
-                  تريد حذف حسابك؟{' '}
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const first = window.confirm(
-                        'هل أنت متأكد أنك تريد حذف حسابك؟ لن تتمكن من الوصول لبياناتك بعد الحذف النهائي.',
-                      );
-                      if (!first) return;
-                      const second = window.prompt(
-                        'من فضلك اكتب كلمة "حذف" للتأكيد النهائي على حذف الحساب.',
-                      );
-                      if (second !== 'حذف') return;
-                      try {
-                        const res = await fetch('/api/user/account', {
-                          method: 'DELETE',
-                        });
-                        const data = await res.json();
-                        if (!res.ok) {
-                          throw new Error(data?.error || 'فشل حذف الحساب');
-                        }
-                        alert('تم جدولة حذف حسابك خلال 30 يوم. سيتم تسجيل خروجك الآن.');
-                        logout();
-                      } catch (err) {
-                        console.error('Delete account error', err);
-                        alert('تعذر حذف الحساب الآن، حاول مرة أخرى لاحقاً.');
-                      }
-                    }}
-                    className="text-[#9ca3af] underline hover:text-[#e5e7eb]"
-                  >
-                    اضغط هنا
-                  </button>
-                </p>
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-[#374151] text-[#9ca3af] hover:bg-[#1f2937] hover:text-[#e5e7eb] transition-all"
-                >
-                  <LogOut className="w-4 h-4" />
-                  تسجيل الخروج
-                </button>
-              </div>
-            </div>
+              <SettingsTabContent
+                user={user}
+                accessToken={accessToken}
+                onUpdateProfile={updateProfile}
+                onLogout={logout}
+                setRequestStatus={setRequestStatus}
+              />
+            </>
           )}
         </motion.div>
       </AnimatePresence>
@@ -2136,7 +1897,7 @@ function AvatarWithUpload({
 
   const fileInputId = 'avatar-upload-input';
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 

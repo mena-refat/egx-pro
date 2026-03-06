@@ -3,6 +3,7 @@ import { getStockPrice, getStockHistory, getFinancials } from '../lib/yahoo.ts';
 import { getStockNews } from '../lib/news.ts';
 import { prisma } from '../lib/prisma.ts';
 import { rateLimit } from 'express-rate-limit';
+import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 
 const router = Router();
 
@@ -230,8 +231,10 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
       } as any,
     });
 
+    const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
+
     // 5. Return result
-    res.json({ analysis: analysisJson, id: savedAnalysis.id });
+    res.json({ analysis: analysisJson, id: savedAnalysis.id, newUnseenAchievements: newAchievements });
 
   } catch (error) {
     console.error('Analysis error:', error);

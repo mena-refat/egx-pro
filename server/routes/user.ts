@@ -5,6 +5,7 @@ import { normalizePhone, usernameSchema, isValidEgyptianPhone } from '../../src/
 import { AuthRequest } from './types';
 import { auditLog } from '../lib/audit.ts';
 import { ACHIEVEMENT_DEFS, type AchievementLevel } from '../lib/achievements.ts';
+import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
 import fs from 'fs';
@@ -13,14 +14,18 @@ import crypto from 'crypto';
 
 const router = Router();
 
-// Middleware to verify JWT
-const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
+// Middleware to verify JWT and reject deleted accounts
+const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'No token provided' });
-  
   const token = authHeader.split(' ')[1];
   try {
     const decoded = verifyAccessToken(token) as { sub: string };
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.sub },
+      select: { id: true, isDeleted: true },
+    });
+    if (!user || user.isDeleted) return res.status(401).json({ error: 'unauthorized' });
     req.userId = decoded.sub;
     next();
   } catch {
@@ -57,6 +62,14 @@ router.get('/profile', authenticate, async (req: AuthRequest, res: Response) => 
         hearAboutUs: true,
         investorProfile: true,
         userTitle: true,
+        lastPasswordChangeAt: true,
+        lastUsernameChangeAt: true,
+        twoFactorEnabled: true,
+        notifySignals: true,
+        notifyPortfolio: true,
+        notifyNews: true,
+        notifyAchievements: true,
+        notifyGoals: true,
       }
     });
     
@@ -84,6 +97,7 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
   try {
     const {
       fullName,
+      email: rawEmail,
       phone: rawPhone,
       username: rawUsername,
       riskTolerance,
@@ -99,6 +113,8 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
       notifySignals,
       notifyPortfolio,
       notifyNews,
+      notifyAchievements,
+      notifyGoals,
       hearAboutUs,
       investorProfile,
       isFirstLogin,
@@ -120,9 +136,26 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
       notifySignals,
       notifyPortfolio,
       notifyNews,
+      notifyAchievements,
+      notifyGoals,
       hearAboutUs,
       investorProfile,
     };
+
+    if (rawEmail !== undefined) {
+      const trimmed = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
+      if (!trimmed) {
+        data.email = null;
+      } else {
+        const existing = await prisma.user.findFirst({
+          where: { email: trimmed, id: { not: req.userId } },
+        });
+        if (existing) {
+          return res.status(400).json({ error: 'Email already used' });
+        }
+        data.email = trimmed;
+      }
+    }
 
     if (rawPhone !== undefined) {
       const trimmed = typeof rawPhone === 'string' ? rawPhone.trim() : '';
@@ -205,6 +238,7 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
       select: { phone: true, email: true },
     });
 
+    const completedBefore = await getCompletedAchievementIds(req.userId!);
     const user = await prisma.user.update({
       where: { id: req.userId },
       data,
@@ -216,6 +250,8 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
     if (before && data.email !== undefined && String(before.email ?? '') !== String(data.email ?? '')) {
       await auditLog({ userId: req.userId ?? undefined, action: 'EMAIL_CHANGED', req, result: 'success' });
     }
+
+    await addNewlyUnlockedAchievements(req.userId!, completedBefore);
 
     const responseUser = {
       ...user,
@@ -306,6 +342,42 @@ router.get('/profile/stats', authenticate, async (req: AuthRequest, res: Respons
   } catch (err) {
     console.error('Profile stats error:', err);
     res.status(500).json({ error: 'Failed to load profile stats' });
+  }
+});
+
+// قائمة الإنجازات غير المشاهدة (اسم + وصف) للكروت
+router.get('/unseen-achievements', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId! },
+      select: { unseenAchievements: true },
+    });
+    const ids = user?.unseenAchievements ?? [];
+    const list = ids
+      .map((id) => {
+        const def = ACHIEVEMENT_DEFS.find((d) => d.id === id);
+        if (!def) return null;
+        return { id: def.id, title: def.title, shortDescription: def.shortDescription };
+      })
+      .filter(Boolean);
+    res.json(list);
+  } catch (err) {
+    console.error('Unseen achievements error:', err);
+    res.status(500).json({ error: 'Failed to load unseen achievements' });
+  }
+});
+
+// تعليم الإنجازات كمشاهدة (عند فتح صفحة الإنجازات)
+router.post('/mark-achievements-seen', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    await prisma.user.update({
+      where: { id: req.userId! },
+      data: { unseenAchievements: [] },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Mark achievements seen error:', err);
+    res.status(500).json({ error: 'Failed to mark as seen' });
   }
 });
 
@@ -1031,6 +1103,20 @@ router.delete('/sessions/:id', authenticate, async (req: AuthRequest, res: Respo
   }
 });
 
+// End all other sessions (revoke all refresh tokens for this user; current tab stays until access token expires)
+router.post('/sessions/revoke-all-other', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    await prisma.refreshToken.updateMany({
+      where: { userId: req.userId! },
+      data: { isRevoked: true },
+    });
+    res.status(200).json({ message: 'All other sessions ended' });
+  } catch (err) {
+    console.error('Revoke all sessions error:', err);
+    res.status(500).json({ error: 'Failed to end sessions' });
+  }
+});
+
 // Upload / update avatar (expects base64 data URL string in body.image)
 router.post('/avatar', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -1078,9 +1164,34 @@ router.post('/avatar', authenticate, async (req: AuthRequest, res: Response) => 
   }
 });
 
-// Delete account
+// Delete account — يتطلب body: { confirmText: "حذف" | "DELETE", password }
 router.delete('/account', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const { confirmText, password } = (req.body || {}) as { confirmText?: string; password?: string };
+    const normalized = (confirmText || '').trim().toUpperCase();
+    if (normalized !== 'حذف' && normalized !== 'DELETE') {
+      return res.status(400).json({
+        error: 'invalid_confirm',
+        message: 'يرجى كتابة "حذف" أو "DELETE" للتأكيد',
+      });
+    }
+    if (!password || typeof password !== 'string') {
+      return res.status(400).json({ error: 'password_required', message: 'كلمة المرور مطلوبة' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId! },
+      select: { passwordHash: true, salt: true },
+    });
+    if (!user?.passwordHash || !user.salt) {
+      return res.status(400).json({ error: 'invalid_account', message: 'تعذر التحقق من الحساب' });
+    }
+    const { verifyPassword } = await import('../../src/lib/auth.ts');
+    const valid = await verifyPassword(password, user.passwordHash, user.salt);
+    if (!valid) {
+      return res.status(400).json({ error: 'wrong_password', message: 'كلمة المرور غير صحيحة' });
+    }
+
     const now = new Date();
     const deletionDate = new Date(now);
     deletionDate.setDate(deletionDate.getDate() + 30);
@@ -1102,9 +1213,7 @@ router.delete('/account', authenticate, async (req: AuthRequest, res: Response) 
       details: `scheduled_${deletionDate.toISOString()}`,
     });
 
-    await prisma.session.deleteMany({
-      where: { userId: req.userId! },
-    });
+    await prisma.refreshToken.deleteMany({ where: { userId: req.userId! } });
 
     res.status(200).json({
       success: true,

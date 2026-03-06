@@ -4,6 +4,7 @@ import { verifyAccessToken } from '../../src/lib/auth.ts';
 import { goalSchema } from '../../src/lib/validations.ts';
 import { ZodError } from 'zod';
 import { AuthRequest } from './types';
+import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 
 const router = Router();
 
@@ -38,6 +39,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const validatedData = goalSchema.parse(req.body);
     const { name, targetAmount, targetDate, type } = validatedData;
+    const completedBefore = await getCompletedAchievementIds(req.userId!);
     const goal = await prisma.goal.create({
       data: {
         userId: req.userId!,
@@ -47,7 +49,8 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
         type,
       },
     });
-    res.status(201).json(goal);
+    const newAchievements = await addNewlyUnlockedAchievements(req.userId!, completedBefore);
+    res.status(201).json({ ...goal, newUnseenAchievements: newAchievements });
   } catch (error) {
     if (error instanceof ZodError) {
       return res.status(400).json({ error: error.issues[0].message });

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
 import { getStockPrice } from '../lib/yahoo.ts';
 import { addHoldingSchema } from '../../src/lib/validations.ts';
+import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 
 const router = Router();
 
@@ -68,6 +69,7 @@ router.post('/add', async (req: Request, res: Response) => {
 
     const { ticker, shares, purchasePrice, purchaseDate } = parsed.data;
 
+    const completedBefore = await getCompletedAchievementIds(userId);
     const holding = await prisma.portfolio.create({
       data: {
         userId,
@@ -77,8 +79,8 @@ router.post('/add', async (req: Request, res: Response) => {
         buyDate: new Date(purchaseDate)
       }
     });
-
-    res.status(201).json(holding);
+    const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
+    res.status(201).json({ ...holding, newUnseenAchievements: newAchievements });
   } catch (error) {
     console.error('Error adding holding:', error);
     res.status(500).json({ error: 'Failed to add holding' });

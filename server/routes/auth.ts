@@ -61,12 +61,25 @@ router.post('/register', async (req: Request, res: Response) => {
     // Hash password
     const { hash, salt } = await hashPassword(password);
 
-    // Create user (at least one of email or phone)
     const referralCode = `EGX-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+    const firstName = fullName.trim().split(/\s+/)[0] || 'user';
+    const safeBase = firstName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user';
+    let username = '';
+    for (let i = 0; i < 100; i++) {
+      const digits = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join('');
+      const candidate = `${safeBase}-${digits}`;
+      const exists = await prisma.user.findUnique({ where: { username: candidate } });
+      if (!exists) {
+        username = candidate;
+        break;
+      }
+    }
+    if (!username) username = `${safeBase}-${Date.now().toString().slice(-8)}`;
 
     const user = await prisma.user.create({
       data: {
         fullName,
+        username,
         email: email ?? undefined,
         phone: phone || undefined,
         passwordHash: hash,
@@ -140,7 +153,10 @@ router.post('/login', async (req: Request, res: Response) => {
       : await prisma.user.findUnique({ where: { phone } });
     if (!user) {
       await auditLog({ action: 'LOGIN_FAILED', req, result: 'failure', details: 'user_not_found' });
-      return res.status(401).json({ error: 'unauthorized' });
+      return res.status(401).json({
+        error: 'account_not_found',
+        message: 'الحساب ده مش موجود. تقدر تسجّل حساب جديد.',
+      });
     }
     if (!user.passwordHash || !user.salt) {
       await auditLog({ userId: user.id, action: 'LOGIN_FAILED', req, result: 'failure', details: 'no_credentials' });
@@ -191,10 +207,14 @@ router.post('/login', async (req: Request, res: Response) => {
       data: { failedLoginAttempts: 0, lockedUntil: null },
     });
 
-    // Handle soft-deleted accounts (reactivation within 30 days)
+    let restored = false;
     if (user.isDeleted) {
       if (user.deletionScheduledFor && user.deletionScheduledFor < now) {
-        return res.status(401).json({ error: 'unauthorized' });
+        await auditLog({ userId: user.id, action: 'LOGIN_FAILED', req, result: 'failure', details: 'account_deleted_after_grace' });
+        return res.status(401).json({
+          error: 'account_not_found',
+          message: 'الحساب ده مش موجود. تقدر تسجّل حساب جديد.',
+        });
       }
       user = await prisma.user.update({
         where: { id: user.id },
@@ -204,6 +224,7 @@ router.post('/login', async (req: Request, res: Response) => {
           deletionScheduledFor: null,
         },
       });
+      restored = true;
     }
 
     if (user.twoFactorEnabled && user.twoFactorSecret) {
@@ -235,6 +256,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const safe = sanitizeUser(user as Record<string, unknown>);
     res.json({
       accessToken,
+      ...(restored && { restored: true }),
       user: safe ?? {
         id: user.id,
         email: user.email ?? undefined,

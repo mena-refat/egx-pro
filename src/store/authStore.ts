@@ -6,9 +6,12 @@ interface AuthState {
   user: User | null;
   accessToken: string | null;
   isAuthenticated: boolean;
+  unseenAchievementsCount: number;
   setAuth: (user: User, accessToken: string) => void;
   setUser: (user: User) => void;
   updateUser: (user: Partial<User>) => void;
+  setUnseenAchievementsCount: (n: number) => void;
+  addUnseenAchievementsCount: (by: number) => void;
   logout: () => void;
 }
 
@@ -18,18 +21,21 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       accessToken: null,
       isAuthenticated: false,
+      unseenAchievementsCount: 0,
       setAuth: (user, accessToken) => set({ user, accessToken, isAuthenticated: true }),
       setUser: (user) => set({ user }),
       updateUser: (updatedFields) => set((state) => ({
         user: state.user ? { ...state.user, ...updatedFields } : null
       })),
+      setUnseenAchievementsCount: (n) => set({ unseenAchievementsCount: n }),
+      addUnseenAchievementsCount: (by) => set((state) => ({ unseenAchievementsCount: state.unseenAchievementsCount + by })),
       logout: async () => {
         try {
           await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
         } catch (err) {
           console.error('Logout failed', err);
         }
-        set({ user: null, accessToken: null, isAuthenticated: false });
+        set({ user: null, accessToken: null, isAuthenticated: false, unseenAchievementsCount: 0 });
       },
     }),
     {

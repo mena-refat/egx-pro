@@ -78,12 +78,15 @@ export default function GoalTracker({ currentWealth }: { currentWealth: number }
           targetAmount: amountNum
         }),
       });
+      const data = await res.json();
       if (res.ok) {
         setIsAdding(false);
         setNewGoal({ name: '', targetAmount: '', targetDate: '', type: 'apartment' });
         setRefreshTrigger(prev => prev + 1);
+        if (Array.isArray(data.newUnseenAchievements) && data.newUnseenAchievements.length > 0) {
+          useAuthStore.getState().addUnseenAchievementsCount(data.newUnseenAchievements.length);
+        }
       } else {
-        const data = await res.json();
         setError(data.error || t('goals.errorAdd'));
       }
     } catch (err) {

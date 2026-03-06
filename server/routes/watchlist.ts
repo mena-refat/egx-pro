@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.ts';
 import { verifyAccessToken } from '../../src/lib/auth.ts';
 import { watchlistTickerSchema } from '../../src/lib/validations.ts';
 import { AuthRequest } from './types';
+import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 
 const router = Router();
 
@@ -49,13 +50,15 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     
     if (existing) return res.status(400).json({ error: 'Already in watchlist' });
 
+    const completedBefore = await getCompletedAchievementIds(req.userId!);
     const item = await prisma.watchlist.create({
       data: {
         userId: req.userId!,
         ticker,
       },
     });
-    res.status(201).json(item);
+    const newAchievements = await addNewlyUnlockedAchievements(req.userId!, completedBefore);
+    res.status(201).json({ ...item, newUnseenAchievements: newAchievements });
   } catch {
     res.status(500).json({ error: 'Internal server error' });
   }

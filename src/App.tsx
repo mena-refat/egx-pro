@@ -280,7 +280,13 @@ export default function App() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || data.error || 'Auth failed');
+      if (!res.ok) {
+        const msg = data.error === 'account_not_found'
+          ? (data.message || (i18n.language === 'ar' ? 'الحساب ده مش موجود. تقدر تسجّل حساب جديد.' : 'This account does not exist. You can register as new.'))
+          : (data.message || data.error || (i18n.language === 'ar' ? 'فشل تسجيل الدخول' : 'Auth failed'));
+        setError(msg);
+        return;
+      }
 
       if (isLogin) {
         if (data.twoFactorRequired) {
@@ -295,7 +301,10 @@ export default function App() {
         });
         const profileData = await profileRes.json();
         useAuthStore.getState().setAuth(profileData, data.accessToken);
-        setAuthMessage({ text: i18n.language === 'ar' ? 'تم تسجيل الدخول بنجاح!' : 'Login successful!', type: 'success' });
+        setAuthMessage({
+          text: data.restored ? t('settings.welcomeBack') : (i18n.language === 'ar' ? 'تم تسجيل الدخول بنجاح!' : 'Login successful!'),
+          type: 'success',
+        });
       } else {
         // Same as login: use returned token + user and optionally fetch full profile
         const profileRes = await fetch('/api/user/profile', {

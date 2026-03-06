@@ -225,25 +225,50 @@ async function startServer() {
     setupWebSocket(server);
   });
 
-  // Soft-delete cleanup + expired refresh tokens (daily)
+  // أرشفة الحسابات المحذوفة بعد 30 يوم + انتهاء الـ refresh tokens (يومي)
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   setInterval(async () => {
     try {
       const { prisma } = await import('./server/lib/prisma.ts');
       const now = new Date();
-      await prisma.user.deleteMany({
+      const toArchive = await prisma.user.findMany({
         where: {
           isDeleted: true,
           deletionScheduledFor: { lt: now },
         },
       });
-      // RefreshToken model في الـ schema — بعد تشغيل prisma generate يتوفر على الـ client
-      const prismaAny = prisma as typeof prisma & { refreshToken?: { deleteMany: (arg: { where: { expiresAt: { lt: Date } } }) => Promise<{ count: number }> } };
-      if (prismaAny.refreshToken) {
-        await prismaAny.refreshToken.deleteMany({
-          where: { expiresAt: { lt: now } },
-        });
+      const prismaWithArchive = prisma as typeof prisma & {
+        archivedUser: { create: (args: { data: Record<string, unknown> }) => Promise<unknown> };
+        refreshToken: { deleteMany: (args: { where: { expiresAt: { lt: Date } } }) => Promise<unknown> };
+      };
+      for (const u of toArchive) {
+        try {
+          await prismaWithArchive.archivedUser.create({
+            data: {
+              originalId: u.id,
+              email: u.email ?? undefined,
+              phone: u.phone ?? undefined,
+              username: u.username ?? undefined,
+              name: u.fullName ?? undefined,
+              userData: {
+                id: u.id,
+                email: u.email,
+                phone: u.phone,
+                username: u.username,
+                fullName: u.fullName,
+                createdAt: u.createdAt,
+                updatedAt: u.updatedAt,
+              },
+            },
+          });
+          await prisma.user.delete({ where: { id: u.id } });
+        } catch (e) {
+          console.error('Archive user error:', u.id, e);
+        }
       }
+      await prismaWithArchive.refreshToken.deleteMany({
+        where: { expiresAt: { lt: now } },
+      });
     } catch (err) {
       console.error('Cleanup job error:', err);
     }

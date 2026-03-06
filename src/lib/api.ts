@@ -40,7 +40,13 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const list = response.data?.newUnseenAchievements;
+    if (Array.isArray(list) && list.length > 0) {
+      useAuthStore.getState().addUnseenAchievementsCount(list.length);
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
