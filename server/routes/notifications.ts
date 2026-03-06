@@ -41,7 +41,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /api/notifications/mark-read — تعليم الكل كمقروء
+// POST /api/notifications/mark-read — تعليم الكل كمقروء (legacy)
 router.post('/mark-read', authenticate, async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
   try {
@@ -53,6 +53,51 @@ router.post('/mark-read', authenticate, async (req: AuthRequest, res: Response) 
   } catch (err) {
     console.error('Mark read error:', err);
     res.status(500).json({ error: 'Failed to mark as read' });
+  }
+});
+
+// PATCH /api/notifications/read-all — تعليم الكل كمقروء
+router.patch('/read-all', authenticate, async (req: AuthRequest, res: Response) => {
+  const userId = req.userId!;
+  try {
+    await prisma.notification.updateMany({
+      where: { userId },
+      data: { isRead: true },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Mark read all error:', err);
+    res.status(500).json({ error: 'Failed to mark as read' });
+  }
+});
+
+// PATCH /api/notifications/:id/read — تعليم إشعار واحد كمقروء
+router.patch('/:id/read', authenticate, async (req: AuthRequest, res: Response) => {
+  const userId = req.userId!;
+  const { id } = req.params;
+  try {
+    await prisma.notification.updateMany({
+      where: { id, userId },
+      data: { isRead: true },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Mark one read error:', err);
+    res.status(500).json({ error: 'Failed to mark as read' });
+  }
+});
+
+// DELETE /api/notifications/clear-all — حذف كل الإشعارات
+router.delete('/clear-all', authenticate, async (req: AuthRequest, res: Response) => {
+  const userId = req.userId!;
+  try {
+    await prisma.notification.deleteMany({
+      where: { userId },
+    });
+    res.status(204).send();
+  } catch (err) {
+    console.error('Clear all notifications error:', err);
+    res.status(500).json({ error: 'Failed to clear' });
   }
 });
 

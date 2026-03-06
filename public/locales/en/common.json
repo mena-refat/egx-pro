@@ -170,7 +170,12 @@
     "welcomeBack": "Welcome back! Your account is as you left it.",
     "markAllNotificationsRead": "Clear",
     "noNewNotifications": "No new notifications",
-    "settingsPage": "Settings"
+    "settingsPage": "Settings",
+    "clearAllNotifications": "Clear all",
+    "markAllAsRead": "Mark all as read",
+    "confirmClearNotifications": "Confirm clear?",
+    "yes": "Yes",
+    "no": "No"
   },
   "overview": {
     "tabLabel": "Overview",

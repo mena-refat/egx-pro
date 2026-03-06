@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from './store/authStore';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, UserPlus, TrendingUp, User as UserIcon, LayoutDashboard, PieChart, Calculator, Settings as SettingsIcon, Search, Eye, EyeOff, Sun, Moon, Monitor, Target, Bell, LogOut, ChevronLeft, ChevronRight, Trophy, Briefcase, UserPlus as UserPlusIcon, BarChart3 } from 'lucide-react';
+import { LogIn, UserPlus, TrendingUp, User as UserIcon, LayoutDashboard, PieChart, Calculator, Settings as SettingsIcon, Search, Eye, EyeOff, Sun, Moon, Monitor, Target, Bell, LogOut, ChevronLeft, ChevronRight, Trophy, Briefcase, UserPlus as UserPlusIcon, BarChart3, Circle } from 'lucide-react';
 import OnboardingWizard from './components/OnboardingWizard';
 import PortfolioTracker from './components/PortfolioTracker';
 import StockScreener from './components/StockScreener';
@@ -58,6 +58,7 @@ export default function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Array<{ id: string; type: string; title: string; body: string; isRead: boolean; createdAt: string }>>([]);
   const [notificationsUnread, setNotificationsUnread] = useState(0);
+  const [confirmClearNotifications, setConfirmClearNotifications] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const completionDropdownRef = useRef<HTMLDivElement>(null);
@@ -98,9 +99,31 @@ export default function App() {
   const markNotificationsRead = useCallback(async () => {
     if (!accessToken) return;
     try {
-      await fetch('/api/notifications/mark-read', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
+      await fetch('/api/notifications/read-all', { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}` } });
       setNotificationsUnread(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch {
+      // ignore
+    }
+  }, [accessToken]);
+
+  const markOneNotificationRead = useCallback(async (id: string) => {
+    if (!accessToken) return;
+    try {
+      await fetch(`/api/notifications/${id}/read`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}` } });
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+      setNotificationsUnread((c) => Math.max(0, c - 1));
+    } catch {
+      // ignore
+    }
+  }, [accessToken]);
+
+  const clearAllNotifications = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      await fetch('/api/notifications/clear-all', { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } });
+      setNotifications([]);
+      setNotificationsUnread(0);
     } catch {
       // ignore
     }
@@ -111,6 +134,32 @@ export default function App() {
     if (typeof window !== 'undefined') window.history.pushState(null, '', '/profile');
     window.dispatchEvent(new PopStateEvent('popstate'));
     setUserDropdownOpen(false);
+  };
+
+  const goToNotificationTarget = (type: string) => {
+    setNotificationsOpen(false);
+    if (type === 'achievement') {
+      setActiveTab('profile');
+      if (typeof window !== 'undefined') window.history.pushState(null, '', '/profile?tab=achievements');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    } else if (type === 'stock_target') {
+      setActiveTab('stocks');
+      setSelectedStock(null);
+      if (typeof window !== 'undefined') window.history.pushState(null, '', '/stocks');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    } else if (type === 'referral') {
+      setActiveTab('profile');
+      if (typeof window !== 'undefined') window.history.pushState(null, '', '/profile?tab=referral');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    } else if (type === 'goal') {
+      setActiveTab('goals');
+      if (typeof window !== 'undefined') window.history.pushState(null, '', '/goals');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    } else if (type === 'portfolio') {
+      setActiveTab('portfolio');
+      if (typeof window !== 'undefined') window.history.pushState(null, '', '/portfolio');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
   };
 
   useEffect(() => {
@@ -735,19 +784,46 @@ export default function App() {
                       initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
-                      className="absolute left-0 top-full mt-2 w-80 max-h-96 overflow-auto rounded-xl border border-slate-700 bg-slate-900 shadow-xl z-50"
+                      className="absolute left-0 top-full mt-2 w-80 max-h-96 overflow-auto rounded-xl border border-slate-700 bg-slate-900 shadow-xl z-[100] flex flex-col"
                     >
-                      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-                        <span className="font-medium text-slate-200">{t('settings.notifications')}</span>
-                        {notificationsUnread > 0 && (
-                          <button type="button" onClick={markNotificationsRead} className="text-xs text-violet-400 hover:text-violet-300">
-                            {t('settings.markAllNotificationsRead')}
+                      <div className="shrink-0 border-b border-slate-700 px-4 py-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-slate-200">{t('settings.notifications')}</span>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmClearNotifications(true)}
+                            className="text-xs text-violet-400 hover:text-violet-300"
+                          >
+                            {t('settings.clearAllNotifications')}
                           </button>
+                        </div>
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={markNotificationsRead}
+                            className="text-xs text-slate-400 hover:text-slate-300"
+                          >
+                            {t('settings.markAllAsRead')}
+                          </button>
+                        </div>
+                        {confirmClearNotifications && (
+                          <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs">
+                            <span className="text-slate-300">{t('settings.confirmClearNotifications')}</span>
+                            <button type="button" onClick={() => { clearAllNotifications(); setConfirmClearNotifications(false); }} className="text-violet-400 hover:text-violet-300 font-medium">
+                              {t('settings.yes')}
+                            </button>
+                            <button type="button" onClick={() => setConfirmClearNotifications(false)} className="text-slate-400 hover:text-slate-300">
+                              {t('settings.no')}
+                            </button>
+                          </div>
                         )}
                       </div>
-                      <div className="p-2">
+                      <div className="p-2 overflow-auto min-h-0">
                         {notifications.length === 0 ? (
-                          <p className="text-sm text-slate-500 py-4 text-center">{t('settings.noNewNotifications')}</p>
+                          <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+                            <Bell className="w-10 h-10 mb-2 opacity-60" />
+                            <p className="text-sm">{t('settings.noNewNotifications')}</p>
+                          </div>
                         ) : (
                           notifications.map((n) => {
                             const Icon = n.type === 'achievement' ? Trophy : n.type === 'stock_target' ? TrendingUp : n.type === 'referral' ? UserPlusIcon : n.type === 'goal' ? Target : Briefcase;
@@ -760,14 +836,25 @@ export default function App() {
                               return t('settings.lastActivityDays', { d: Math.floor(diff / 86400) });
                             })();
                             return (
-                              <div key={n.id} className={`flex gap-3 px-3 py-2 rounded-lg ${!n.isRead ? 'bg-violet-500/10' : ''}`}>
+                              <button
+                                key={n.id}
+                                type="button"
+                                onClick={() => {
+                                  if (!n.isRead) markOneNotificationRead(n.id);
+                                  goToNotificationTarget(n.type);
+                                }}
+                                className={`w-full flex gap-2 px-3 py-2.5 rounded-lg text-left transition-colors ${!n.isRead ? 'bg-violet-500/10 hover:bg-violet-500/15' : 'hover:bg-white/5'}`}
+                              >
+                                <span className="w-2 shrink-0 flex items-start justify-center pt-2">
+                                  {!n.isRead && <Circle className="w-2 h-2 text-violet-400 fill-violet-400" aria-hidden />}
+                                </span>
                                 <Icon className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
                                 <div className="min-w-0 flex-1">
                                   <p className="text-sm font-medium text-slate-200">{n.title}</p>
                                   {n.body && <p className="text-xs text-slate-500 mt-0.5">{n.body}</p>}
                                   <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
                                 </div>
-                              </div>
+                              </button>
                             );
                           })
                         )}
@@ -795,7 +882,7 @@ export default function App() {
                       initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
-                      className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-slate-700 bg-slate-900 shadow-xl z-50 overflow-hidden"
+                      className="absolute left-0 top-full mt-2 w-[200px] rounded-xl border border-slate-700 bg-slate-900 shadow-xl z-[100] overflow-hidden"
                     >
                       <div className="px-4 py-3 border-b border-slate-700">
                         <p className="font-medium text-slate-200 truncate">{user?.fullName || '—'}</p>

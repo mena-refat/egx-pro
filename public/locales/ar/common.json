@@ -170,7 +170,12 @@
     "welcomeBack": "مرحباً بعودتك! حسابك كما تركته.",
     "markAllNotificationsRead": "مسح",
     "noNewNotifications": "لا توجد إشعارات جديدة",
-    "settingsPage": "الإعدادات"
+    "settingsPage": "الإعدادات",
+    "clearAllNotifications": "مسح الكل",
+    "markAllAsRead": "تحديد الكل مقروء",
+    "confirmClearNotifications": "تأكيد المسح؟",
+    "yes": "نعم",
+    "no": "لا"
   },
   "overview": {
     "tabLabel": "نظرة عامة",
