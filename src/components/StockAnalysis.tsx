@@ -17,6 +17,8 @@ import {
   Info,
   Plus,
   X,
+  Lock,
+  Crown,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
@@ -111,6 +113,10 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [shariaDismissed, setShariaDismissed] = useState(false);
   const [statsInfoOpen, setStatsInfoOpen] = useState(false);
+  const [analysisPlan, setAnalysisPlan] = useState<{ used: number; quota: number } | null>(null);
+  const [showAnalysisLimitModal, setShowAnalysisLimitModal] = useState(false);
+  const [showWatchlistLimitModal, setShowWatchlistLimitModal] = useState(false);
+  const isPro = user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'annual' || user?.plan === 'pro' || user?.plan === 'yearly';
 
   const open = (priceDetail?.open as number) ?? stock.open ?? 0;
   const previousClose = (priceDetail?.previousClose as number) ?? stock.previousClose ?? 0;
@@ -164,18 +170,40 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
     return () => { cancelled = true; };
   }, [stock.ticker, chartRange]);
 
+  useEffect(() => {
+    if (activeTab !== 'ai') return;
+    api.get<{ analysis: { used: number; quota: number } }>('/billing/plan').then((res) => {
+      const a = res.data?.analysis;
+      if (a && Number.isFinite(a.quota)) setAnalysisPlan({ used: a.used, quota: a.quota });
+    }).catch(() => setAnalysisPlan(null));
+  }, [activeTab]);
+
   const getAnalysis = async () => {
+    const quota = analysisPlan?.quota ?? 3;
+    const used = analysisPlan?.used ?? 0;
+    if (!isPro && used >= quota) {
+      setShowAnalysisLimitModal(true);
+      return;
+    }
     setLoadingAnalysis(true);
     setErrorAnalysis(null);
     try {
       const res = await api.post(`/analysis/${stock.ticker}`);
-      if (res.data?.analysis) setAnalysis(res.data.analysis);
-      else throw new Error('Invalid format');
+      if (res.data?.analysis) {
+        setAnalysis(res.data.analysis);
+        if (analysisPlan && Number.isFinite(analysisPlan.quota)) setAnalysisPlan((p) => p ? { ...p, used: p.used + 1 } : null);
+      } else throw new Error('Invalid format');
     } catch (err: unknown) {
-      const msg = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        : null;
-      setErrorAnalysis(msg || 'Failed to generate analysis');
+      const data = err && typeof err === 'object' && 'response' in err ? (err as { response?: { data?: { code?: string } } }).response?.data : undefined;
+      if (data?.code === 'ANALYSIS_LIMIT_REACHED') {
+        setShowAnalysisLimitModal(true);
+        setAnalysisPlan((p) => p ? { ...p, used: p.quota } : null);
+      } else {
+        const msg = err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+          : null;
+        setErrorAnalysis(msg || 'Failed to generate analysis');
+      }
     } finally {
       setLoadingAnalysis(false);
     }
@@ -193,7 +221,10 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
         setWatchlist((p) => [...p, stock.ticker]);
         if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('profile-completion-changed'));
       }
-    } catch {}
+    } catch (err: unknown) {
+      const data = err && typeof err === 'object' && 'response' in err ? (err as { response?: { data?: { code?: string } } }).response?.data : undefined;
+      if (data?.code === 'WATCHLIST_LIMIT') setShowWatchlistLimitModal(true);
+    }
   };
 
   const tabs: { id: TabId; labelKey: string }[] = [
@@ -359,13 +390,20 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             </div>
           </section>
 
-          {/* Order depth placeholder */}
-          <section>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">{t('stockDetail.orderDepth')}</h3>
+          {/* Order depth — Pro for full data */}
+          <section className="relative">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">{t('stockDetail.orderDepth')} {!isPro && <Lock className="w-4 h-4 text-slate-400" />}</h3>
             {orderDepthAvailable ? (
               <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-slate-500 dark:text-slate-400 text-sm">—</div>
             ) : (
               <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 text-slate-500 dark:text-slate-400 text-sm">{t('stockDetail.orderDepthUnavailable')}</div>
+            )}
+            {!isPro && (
+              <div className="absolute inset-0 top-8 rounded-xl bg-slate-900/70 dark:bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
+                <Crown className="w-8 h-8 text-violet-400" />
+                <p className="text-sm font-medium text-slate-200">{t('plan.availableInPro')}</p>
+                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-violet-400 hover:text-violet-300 font-medium">{t('plan.subscribeToAccess')}</button>
+              </div>
             )}
           </section>
 
@@ -416,24 +454,38 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
         </div>
       )}
 
-      {/* Tab: Statistics */}
+      {/* Tab: Statistics — advanced stats Pro */}
       {activeTab === 'stats' && (
         <div className="space-y-6">
-          <section>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">{t('stockDetail.investorCategories')}</h3>
+          <section className="relative">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-2">{t('stockDetail.investorCategories')} {!isPro && <Lock className="w-4 h-4 text-slate-400" />}</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t('stockDetail.investorCategoriesDesc')}</p>
             {investorCategoriesAvailable ? (
               <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-sm">—</div>
             ) : (
               <p className="text-sm text-slate-500 dark:text-slate-400 rounded-xl border border-slate-200 dark:border-slate-700 p-4">{t('stockDetail.investorCategoriesUnavailable')}</p>
             )}
+            {!isPro && (
+              <div className="absolute inset-0 top-14 rounded-xl bg-slate-900/70 dark:bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
+                <Crown className="w-8 h-8 text-violet-400" />
+                <p className="text-sm font-medium text-slate-200">{t('plan.availableInPro')}</p>
+                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-violet-400 hover:text-violet-300 font-medium">{t('plan.subscribeToAccess')}</button>
+              </div>
+            )}
           </section>
-          <section>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">{t('stockDetail.tradingStats')}</h3>
+          <section className="relative">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">{t('stockDetail.tradingStats')} {!isPro && <Lock className="w-4 h-4 text-slate-400" />}</h3>
             {tradingStatsAvailable ? (
               <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-sm">—</div>
             ) : (
               <p className="text-sm text-slate-500 dark:text-slate-400 rounded-xl border border-slate-200 dark:border-slate-700 p-4">{t('stockDetail.tradingStatsUnavailable')}</p>
+            )}
+            {!isPro && (
+              <div className="absolute inset-0 top-12 rounded-xl bg-slate-900/70 dark:bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
+                <Crown className="w-8 h-8 text-violet-400" />
+                <p className="text-sm font-medium text-slate-200">{t('plan.availableInPro')}</p>
+                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-violet-400 hover:text-violet-300 font-medium">{t('plan.subscribeToAccess')}</button>
+              </div>
             )}
           </section>
         </div>
@@ -442,6 +494,17 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       {/* Tab: AI - keep existing content */}
       {activeTab === 'ai' && (
         <div className="space-y-8">
+          {!isPro && analysisPlan != null && Number.isFinite(analysisPlan.quota) && (
+            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
+              <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">{t('plan.usedAnalysisThisMonth', { used: analysisPlan.used, quota: analysisPlan.quota })}</p>
+              <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-[width] ${analysisPlan.used >= analysisPlan.quota ? 'bg-red-500' : analysisPlan.used >= 2 ? 'bg-amber-500' : 'bg-violet-500'}`}
+                  style={{ width: `${Math.min((analysisPlan.used / analysisPlan.quota) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
           {!analysis && !loadingAnalysis && !errorAnalysis && (
             <div className="text-center py-12 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
               <BrainCircuit className="w-12 h-12 text-slate-500 mx-auto mb-4" />
@@ -526,6 +589,37 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               </a>
             ))
           )}
+        </div>
+      )}
+
+      {/* Analysis limit reached — Pro upsell modal */}
+      {showAnalysisLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowAnalysisLimitModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+            <BrainCircuit className="w-12 h-12 text-violet-500 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">{t('plan.analysisLimitTitle')}</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">{t('plan.analysisLimitBody')}</p>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              <button type="button" onClick={() => { setShowAnalysisLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm">
+                {t('plan.subscribeNow')}
+              </button>
+              <button type="button" onClick={() => setShowAnalysisLimitModal(false)} className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium text-sm hover:bg-slate-100 dark:hover:bg-slate-700">
+                {t('plan.waitNextMonth')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showWatchlistLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowWatchlistLimitModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">{t('plan.watchlistLimitMessage')}</p>
+            <div className="flex gap-2 justify-center">
+              <button type="button" onClick={() => { setShowWatchlistLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm">{t('plan.subscribeNow')}</button>
+              <button type="button" onClick={() => setShowWatchlistLimitModal(false)} className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl font-medium text-sm">{t('plan.cancel')}</button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.ts';
 import { getStockPrice } from '../lib/yahoo.ts';
 import { addHoldingSchema } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
+import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 
 const router = Router();
 
@@ -65,6 +66,23 @@ router.post('/add', async (req: Request, res: Response) => {
     if (!parsed.success) {
       const msg = parsed.error.issues[0]?.message ?? 'Invalid input';
       return res.status(400).json({ error: msg });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
+    });
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!isPro(user)) {
+      const count = await prisma.portfolio.count({ where: { userId } });
+      if (count >= FREE_LIMITS.portfolioStocks) {
+        return res.status(403).json({
+          error: 'pro_required',
+          code: 'PORTFOLIO_LIMIT',
+          message: 'هذه الميزة متاحة في Pro',
+          limit: FREE_LIMITS.portfolioStocks,
+        });
+      }
     }
 
     const { ticker, shares, purchasePrice, purchaseDate } = parsed.data;

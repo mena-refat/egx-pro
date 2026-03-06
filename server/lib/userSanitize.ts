@@ -5,8 +5,8 @@
 const SAFE_USER_KEYS = [
   'id', 'email', 'phone', 'fullName', 'username', 'isEmailVerified', 'twoFactorEnabled',
   'avatarUrl', 'riskTolerance', 'investmentHorizon', 'monthlyBudget', 'shariaMode', 'islamicMode',
-  'onboardingCompleted', 'interestedSectors', 'language', 'theme', 'subscriptionPlan', 'subscriptionEndsAt',
-  'analysisUsageMonth', 'analysisUsageCount', 'referralCode', 'referredBy', 'totalReferrals',
+  'onboardingCompleted', 'interestedSectors', 'language', 'theme', 'subscriptionPlan', 'subscriptionEndsAt', 'plan',
+  'analysisUsageMonth', 'analysisUsageCount', 'aiAnalysisUsedThisMonth', 'aiAnalysisResetDate', 'referralCode', 'referredBy', 'totalReferrals',
   'referralProDaysRemaining', 'referralProExpiresAt', 'notifySignals', 'notifyPortfolio', 'notifyNews',
   'lastLoginAt', 'loginStreak', 'lastPasswordChangeAt', 'lastUsernameChangeAt', 'usernameChangeCount',
   'isFirstLogin', 'hearAboutUs', 'investorProfile', 'userTitle', 'createdAt', 'updatedAt',

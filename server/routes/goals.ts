@@ -5,6 +5,7 @@ import { goalSchema, goalUpdateSchema, goalAmountSchema } from '../../src/lib/va
 import { ZodError } from 'zod';
 import { AuthRequest } from './types';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
+import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 
 const router = Router();
 
@@ -37,6 +38,23 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 // POST /api/goals — create goal
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId! },
+      select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
+    });
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!isPro(user)) {
+      const count = await prisma.goal.count({ where: { userId: req.userId! } });
+      if (count >= FREE_LIMITS.goals) {
+        return res.status(403).json({
+          error: 'pro_required',
+          code: 'GOALS_LIMIT',
+          message: 'هذه الميزة متاحة في Pro',
+          limit: FREE_LIMITS.goals,
+        });
+      }
+    }
+
     const raw = req.body && typeof req.body === 'object' ? req.body : {};
     const body = {
       title: raw.title ?? '',

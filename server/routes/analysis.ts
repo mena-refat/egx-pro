@@ -4,6 +4,7 @@ import { getStockNews } from '../lib/news.ts';
 import { prisma } from '../lib/prisma.ts';
 import { rateLimit } from 'express-rate-limit';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
+import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 
 const router = Router();
 
@@ -12,6 +13,14 @@ type Plan = 'free' | 'pro' | 'annual';
 function getCurrentMonthKey() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getFirstDayOfNextMonth(): Date {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  d.setDate(1);
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
 // Rate limit: 20 analysis per hour per user (network-level)
@@ -41,46 +50,45 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
     }
 
     // 0. Enforce subscription-based quota
-    const monthKey = getCurrentMonthKey();
-    // NOTE: these fields are present in the database schema; cast to any to avoid tight coupling to generated Prisma types
+    const now = new Date();
     const user = await prisma.user.findUnique({
       where: { id: userId },
-    }) as any;
+      select: {
+        subscriptionPlan: true,
+        subscriptionEndsAt: true,
+        referralProExpiresAt: true,
+        plan: true,
+        aiAnalysisUsedThisMonth: true,
+        aiAnalysisResetDate: true,
+      },
+    });
 
     if (!user) {
       return res.status(404).json({ error: 'not_found' });
     }
 
-    const plan = (user.subscriptionPlan as Plan) || 'free';
-    const now = new Date();
-    const isExpired =
-      (plan === 'pro' || plan === 'annual') &&
-      user.subscriptionEndsAt !== null &&
-      user.subscriptionEndsAt < now;
+    const effectivePro = isPro(user);
+    const quota = effectivePro ? Infinity : FREE_LIMITS.aiAnalysisPerMonth;
 
-    const hasReferralPro =
-      user.referralProExpiresAt && user.referralProExpiresAt > now;
+    // Reset AI counter if we entered a new month
+    let usedThisMonth = user.aiAnalysisUsedThisMonth ?? 0;
+    const resetDate = user.aiAnalysisResetDate;
+    if (resetDate == null || now >= resetDate) {
+      usedThisMonth = 0;
+      const nextReset = getFirstDayOfNextMonth();
+      await prisma.user.update({
+        where: { id: userId },
+        data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: nextReset },
+      });
+    }
 
-    const effectivePlan: Plan =
-      isExpired && !hasReferralPro
-        ? 'free'
-        : (plan === 'pro' || plan === 'annual')
-        ? plan
-        : hasReferralPro
-        ? 'pro'
-        : 'free';
-
-    const usedThisMonth =
-      user.analysisUsageMonth === monthKey ? user.analysisUsageCount : 0;
-
-    const quota = effectivePlan === 'free' ? 3 : Infinity;
-
-    if (effectivePlan === 'free' && usedThisMonth >= quota) {
+    if (!effectivePro && usedThisMonth >= quota) {
       return res.status(402).json({
         error: 'Free plan limit reached',
         code: 'ANALYSIS_LIMIT_REACHED',
+        message: 'هذه الميزة متاحة في Pro',
         details: {
-          plan: effectivePlan,
+          plan: 'free',
           used: usedThisMonth,
           quota,
         },
@@ -219,16 +227,14 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
     });
 
     // 4. Update usage counters
+    const updatedUsed = usedThisMonth + 1;
     await prisma.user.update({
       where: { id: userId },
-      // cast to any to allow using extended fields before regenerating Prisma client
       data: {
-        analysisUsageMonth: monthKey,
-        analysisUsageCount:
-          user.analysisUsageMonth === monthKey
-            ? usedThisMonth + 1
-            : 1,
-      } as any,
+        aiAnalysisUsedThisMonth: updatedUsed,
+        analysisUsageMonth: getCurrentMonthKey(),
+        analysisUsageCount: updatedUsed,
+      },
     });
 
     const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);

@@ -40,12 +40,11 @@ export function usePortfolio(livePrices: Record<string, { price: number }>) {
       });
       await fetchPortfolio();
     } catch (err: unknown) {
-      let errorMessage = 'Failed to add holding';
-      if (err && typeof err === 'object' && 'response' in err) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        errorMessage = (err as any).response?.data?.error || errorMessage;
-      }
-      throw new Error(errorMessage, { cause: err });
+      const data = err && typeof err === 'object' && 'response' in err ? (err as { response?: { data?: { error?: string; code?: string } } }).response?.data : undefined;
+      const errorMessage = data?.error || 'Failed to add holding';
+      const e = new Error(errorMessage, { cause: err });
+      if (data?.code === 'PORTFOLIO_LIMIT') (e as Error & { code?: string }).code = 'PORTFOLIO_LIMIT';
+      throw e;
     }
   };
 

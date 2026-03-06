@@ -25,6 +25,7 @@ import {
   Bell,
   LogOut,
   CalendarCheck,
+  Crown,
 } from 'lucide-react';
 import api from '../lib/api';
 import { validateChangePassword } from '../lib/validations';
@@ -891,7 +892,7 @@ function SubscriptionSection() {
           </p>
           <div className="w-full h-2 bg-[#1f2937] rounded-full overflow-hidden mb-2">
             <div
-              className="h-full bg-[#7c3aed]"
+              className={`h-full ${quota && isFree && analysis.used >= quota ? 'bg-red-500' : quota && isFree && analysis.used >= 2 ? 'bg-amber-500' : 'bg-[#7c3aed]'}`}
               style={{
                 width: quota
                   ? `${Math.min((analysis.used / quota) * 100, 100)}%`
@@ -942,7 +943,7 @@ function SubscriptionSection() {
                     '3 تحليلات ذكاء اصطناعي شهرياً',
                     'أسعار حية للأسهم',
                     'محفظة أساسية',
-                    'قائمة مراقبة (5 أسهم)',
+                    'قائمة مراقبة (20 سهم)',
                   ].map((feature) => (
                     <li key={feature} className="flex items-center gap-2">
                       <Check className="w-3 h-3 text-[#6b7280]" />
@@ -1494,8 +1495,15 @@ export default function ProfilePage() {
                     </div>
                     {user.username && <p className="text-[#9ca3af] text-sm mt-0.5">@{user.username}</p>}
                     <div className="mt-2">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#1f2937] text-[#e5e7eb] border border-[#374151]">
-                        {user.subscriptionPlan === 'pro' || user.subscriptionPlan === 'annual' ? t('overview.planPro') : t('overview.planFree')}
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                        user.subscriptionPlan === 'annual' || user.plan === 'yearly'
+                          ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                          : user.subscriptionPlan === 'pro' || user.subscriptionPlan === 'annual' || user.plan === 'pro'
+                            ? 'bg-violet-500/20 text-violet-400 border-violet-500/30'
+                            : 'bg-[#1f2937] text-[#e5e7eb] border-[#374151]'
+                      }`}>
+                        {(user.subscriptionPlan === 'pro' || user.subscriptionPlan === 'annual' || user.plan === 'pro' || user.plan === 'yearly') && <Crown className="w-3.5 h-3.5" />}
+                        {user.subscriptionPlan === 'annual' || user.plan === 'yearly' ? t('overview.planYearly') : user.subscriptionPlan === 'pro' || user.plan === 'pro' ? t('overview.planPro') : t('overview.planFree')}
                       </span>
                     </div>
                   </div>

@@ -5,6 +5,7 @@ import { watchlistTickerSchema, watchlistCheckTargetsSchema } from '../../src/li
 import { AuthRequest } from './types';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { createNotification } from '../lib/createNotification.ts';
+import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 
 const router = Router();
 
@@ -44,6 +45,23 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     }
     const { ticker } = parsed.data;
 
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId! },
+      select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
+    });
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!isPro(user)) {
+      const count = await prisma.watchlist.count({ where: { userId: req.userId! } });
+      if (count >= FREE_LIMITS.watchlistStocks) {
+        return res.status(403).json({
+          error: 'pro_required',
+          code: 'WATCHLIST_LIMIT',
+          message: 'هذه الميزة متاحة في Pro',
+          limit: FREE_LIMITS.watchlistStocks,
+        });
+      }
+    }
+
     // Check if already exists
     const existing = await prisma.watchlist.findFirst({
       where: { userId: req.userId!, ticker }
@@ -65,12 +83,25 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Update watchlist item (e.g. target price)
+// Update watchlist item (e.g. target price) — price alerts are Pro only
 router.patch('/:ticker', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const ticker = req.params.ticker?.toUpperCase();
     if (!ticker) return res.status(400).json({ error: 'Invalid ticker' });
     const targetPrice = typeof req.body?.targetPrice === 'number' ? req.body.targetPrice : null;
+    if (targetPrice != null) {
+      const user = await prisma.user.findUnique({
+        where: { id: req.userId! },
+        select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
+      });
+      if (!user || !isPro(user)) {
+        return res.status(403).json({
+          error: 'pro_required',
+          code: 'PRICE_ALERTS_PRO',
+          message: 'هذه الميزة متاحة في Pro',
+        });
+      }
+    }
     await prisma.watchlist.updateMany({
       where: { userId: req.userId!, ticker },
       data: targetPrice != null ? { targetPrice } : { targetPrice: null, targetReachedNotifiedAt: null },

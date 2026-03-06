@@ -10,7 +10,7 @@ import { getStockName, getStockInfo, searchStocks } from '../lib/egxStocks';
 import { Stock } from '../types';
 
 export default function PortfolioTracker() {
-  const { i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const { prices: livePrices } = useLivePrices();
   const { holdings, stats, isLoading, error, addHolding, removeHolding } = usePortfolio(livePrices);
   
@@ -19,6 +19,7 @@ export default function PortfolioTracker() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [newHolding, setNewHolding] = useState({ ticker: '', shares: '', avgPrice: '', buyDate: new Date().toISOString().split('T')[0] });
   const [addError, setAddError] = useState<string | null>(null);
+  const [showPortfolioLimitModal, setShowPortfolioLimitModal] = useState(false);
 
   const isRTL = i18n.language === 'ar';
 
@@ -80,7 +81,11 @@ export default function PortfolioTracker() {
       setNewHolding({ ticker: '', shares: '', avgPrice: '', buyDate: new Date().toISOString().split('T')[0] });
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setAddError(err.message);
+        if ((err as Error & { code?: string }).code === 'PORTFOLIO_LIMIT') {
+          setShowPortfolioLimitModal(true);
+        } else {
+          setAddError(err.message);
+        }
       } else {
         setAddError('An unknown error occurred');
       }
@@ -413,6 +418,18 @@ export default function PortfolioTracker() {
           </div>
         )}
       </AnimatePresence>
+
+      {showPortfolioLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowPortfolioLimitModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">{t('plan.portfolioLimitMessage')}</p>
+            <div className="flex gap-2 justify-center">
+              <button type="button" onClick={() => { setShowPortfolioLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm">{t('plan.subscribeNow')}</button>
+              <button type="button" onClick={() => setShowPortfolioLimitModal(false)} className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl font-medium text-sm">{t('plan.cancel')}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -279,6 +279,24 @@ async function startServer() {
       console.error('Cleanup job error:', err);
     }
   }, ONE_DAY_MS);
+
+  // كل أول الشهر: إعادة تعيين عداد تحليلات الذكاء الاصطناعي للمجانيين
+  let lastAiResetMonth = '';
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      if (now.getDate() !== 1 || lastAiResetMonth === monthKey) return;
+      lastAiResetMonth = monthKey;
+      const { prisma } = await import('./server/lib/prisma.ts');
+      const nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
+      await prisma.user.updateMany({
+        data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: nextReset },
+      });
+    } catch (err) {
+      console.error('AI usage reset job error:', err);
+    }
+  }, 60 * 60 * 1000);
 }
 
 startServer().catch(err => {

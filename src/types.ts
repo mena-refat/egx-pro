@@ -37,6 +37,9 @@ export interface User {
   avatarUrl?: string | null;
   subscriptionPlan?: 'free' | 'pro' | 'annual';
   subscriptionEndsAt?: string | null;
+  plan?: 'free' | 'pro' | 'yearly';
+  aiAnalysisUsedThisMonth?: number;
+  aiAnalysisResetDate?: string | null;
   notifySignals?: boolean;
   notifyPortfolio?: boolean;
   notifyNews?: boolean;

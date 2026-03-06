@@ -30,8 +30,11 @@ model User {
   theme             String    @default("system")
   subscriptionPlan  String    @default("free") // free, pro, annual
   subscriptionEndsAt DateTime?
+  plan              String    @default("free") // "free" | "pro" | "yearly"
   analysisUsageMonth String?   // e.g. "2026-03"
   analysisUsageCount Int       @default(0)
+  aiAnalysisUsedThisMonth Int  @default(0)
+  aiAnalysisResetDate    DateTime?
   referralCode      String?   @unique
   referredBy        String?
   referralUsed      String?

@@ -29,6 +29,7 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
   const [sort, setSort] = useState<SortId>('ticker');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showWatchlistLimitModal, setShowWatchlistLimitModal] = useState(false);
 
   const { prices: livePrices } = useLivePrices();
   const isAr = i18n.language === 'ar';
@@ -92,8 +93,9 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
         setWatchlist((prev) => [...prev, ticker]);
         if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('profile-completion-changed'));
       }
-    } catch {
-      // ignore
+    } catch (err: unknown) {
+      const data = err && typeof err === 'object' && 'response' in err ? (err as { response?: { data?: { code?: string } } }).response?.data : undefined;
+      if (data?.code === 'WATCHLIST_LIMIT') setShowWatchlistLimitModal(true);
     }
   };
 
@@ -275,6 +277,18 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
       {sorted.length === 0 && (
         <div className="text-center py-12 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400">
           {t('stocks.noResults')}
+        </div>
+      )}
+
+      {showWatchlistLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowWatchlistLimitModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">{t('plan.watchlistLimitMessage')}</p>
+            <div className="flex gap-2 justify-center">
+              <button type="button" onClick={() => { setShowWatchlistLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm">{t('plan.subscribeNow')}</button>
+              <button type="button" onClick={() => setShowWatchlistLimitModal(false)} className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl font-medium text-sm">{t('plan.cancel')}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -196,6 +196,7 @@
     "levelLegend": "أسطورة",
     "planFree": "مجاني",
     "planPro": "Pro",
+    "planYearly": "Pro سنوي",
     "statsAnalyses": "التحليلات",
     "statsStocks": "الأسهم",
     "statsDays": "أيام",
@@ -356,5 +357,20 @@
     "purity999": "عيار 999",
     "purity925": "عيار 925",
     "purity800": "عيار 800"
+  },
+  "plan": {
+    "analysisLimitTitle": "أنت مستثمر جاد!",
+    "analysisLimitBody": "استخدمت كل تحليلاتك الشهرية. الـ Pro يعطيك تحليلات غير محدودة طوال الوقت.",
+    "subscribeNow": "اشترك الآن — 149 ج/شهر",
+    "waitNextMonth": "انتظر الشهر الجاي",
+    "portfolioLimitMessage": "وصلت لحد 10 أسهم في المحفظة. الـ Pro يعطيك محفظة غير محدودة.",
+    "watchlistLimitMessage": "وصلت لحد 20 سهم في قائمة المراقبة. الـ Pro يعطيك قائمة غير محدودة.",
+    "goalsLimitMessage": "وصلت لحد 3 أهداف مالية. الـ Pro يعطيك أهدافاً غير محدودة.",
+    "priceAlertsProMessage": "تنبيهات الأسعار متاحة في Pro. احصل على تنبيه فوري لما السهم يوصل للسعر اللي تحدده.",
+    "availableInPro": "متاح في Pro",
+    "subscribeToAccess": "اشترك للوصول",
+    "cancel": "إلغاء",
+    "later": "لاحقاً",
+    "usedAnalysisThisMonth": "استخدمت {{used}} من {{quota}} تحليلات هذا الشهر"
   }
 }

@@ -314,6 +314,16 @@ export default function App() {
     return () => window.removeEventListener('profile-completion-changed', handler);
   }, [fetchProfileCompletion]);
 
+  useEffect(() => {
+    const handler = () => {
+      if (typeof window !== 'undefined') window.history.pushState(null, '', '/profile?tab=subscription');
+      setActiveTab('profile');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    };
+    window.addEventListener('navigate-to-subscription', handler);
+    return () => window.removeEventListener('navigate-to-subscription', handler);
+  }, []);
+
   const fetchDashboardData = useCallback(async () => {
     try {
       const [holdingsRes, stocksRes, watchlistRes] = await Promise.all([

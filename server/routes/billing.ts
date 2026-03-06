@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
+import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 
 const router = Router();
 
@@ -18,10 +19,13 @@ router.get('/plan', async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
+        plan: true,
         subscriptionPlan: true,
         subscriptionEndsAt: true,
         analysisUsageMonth: true,
         analysisUsageCount: true,
+        aiAnalysisUsedThisMonth: true,
+        aiAnalysisResetDate: true,
         referralProDaysRemaining: true,
         referralProExpiresAt: true,
       },
@@ -29,25 +33,22 @@ router.get('/plan', async (req: Request, res: Response) => {
 
     if (!user) return res.status(404).json({ error: 'not_found' });
 
-    const monthKey = getCurrentMonthKey();
-    const usedThisMonth =
-      user.analysisUsageMonth === monthKey ? user.analysisUsageCount : 0;
-
     const now = new Date();
-    const hasReferralPro =
-      !!user.referralProExpiresAt && user.referralProExpiresAt > now;
+    const effectivePro = isPro(user);
+    const monthKey = getCurrentMonthKey();
+    const resetDate = user.aiAnalysisResetDate;
+    const inCurrentPeriod = resetDate != null && now < resetDate;
+    const usedLegacy = user.analysisUsageMonth === monthKey ? user.analysisUsageCount : 0;
+    const usedNew = user.aiAnalysisUsedThisMonth ?? 0;
+    const usedThisMonth = inCurrentPeriod ? usedNew : (resetDate != null && now >= resetDate ? 0 : usedLegacy);
 
     const effectivePlan: Plan =
-      (user.subscriptionPlan as Plan) === 'pro' || (user.subscriptionPlan as Plan) === 'annual'
-        ? (user.subscriptionPlan as Plan)
-        : hasReferralPro
-        ? 'pro'
+      effectivePro
+        ? ((user.subscriptionPlan as Plan) === 'annual' ? 'annual' : 'pro')
         : 'free';
 
     const quota =
-      effectivePlan === 'free'
-        ? 3
-        : Infinity;
+      effectivePro ? Infinity : FREE_LIMITS.aiAnalysisPerMonth;
 
     res.json({
       plan: effectivePlan,
@@ -56,6 +57,7 @@ router.get('/plan', async (req: Request, res: Response) => {
         month: monthKey,
         used: usedThisMonth,
         quota,
+        aiAnalysisResetDate: user.aiAnalysisResetDate,
       },
       referralPro: {
         daysRemaining: user.referralProDaysRemaining ?? 0,

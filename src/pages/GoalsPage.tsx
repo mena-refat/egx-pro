@@ -497,6 +497,7 @@ function AddEditGoalModal({
   );
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [showGoalsLimitModal, setShowGoalsLimitModal] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -543,6 +544,11 @@ function AddEditGoalModal({
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
+          if (res.status === 403 && data.code === 'GOALS_LIMIT') {
+            setShowGoalsLimitModal(true);
+            setSubmitting(false);
+            return;
+          }
           throw new Error(data.error || 'Failed');
         }
       } else if (goalId) {
@@ -690,6 +696,17 @@ function AddEditGoalModal({
           </div>
         </form>
       </div>
+      {showGoalsLimitModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowGoalsLimitModal(false)}>
+          <div className="bg-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-6 text-center border border-slate-700" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-slate-300 mb-6">{t('plan.goalsLimitMessage')}</p>
+            <div className="flex gap-2 justify-center">
+              <button type="button" onClick={() => { setShowGoalsLimitModal(false); onClose(); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm">{t('plan.subscribeNow')}</button>
+              <button type="button" onClick={() => setShowGoalsLimitModal(false)} className="px-4 py-2.5 border border-slate-600 rounded-xl font-medium text-sm text-slate-300">{t('plan.cancel')}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

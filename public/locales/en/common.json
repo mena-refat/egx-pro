@@ -196,6 +196,7 @@
     "levelLegend": "Legend",
     "planFree": "Free",
     "planPro": "Pro",
+    "planYearly": "Pro Yearly",
     "statsAnalyses": "Analyses",
     "statsStocks": "Stocks",
     "statsDays": "Days",
@@ -356,6 +357,21 @@
     "purity999": "999",
     "purity925": "925",
     "purity800": "800"
+  },
+  "plan": {
+    "analysisLimitTitle": "You're a serious investor!",
+    "analysisLimitBody": "You've used all your monthly analyses. Pro gives you unlimited analyses all the time.",
+    "subscribeNow": "Subscribe now — 149 EGP/month",
+    "waitNextMonth": "Wait for next month",
+    "portfolioLimitMessage": "You've reached the limit of 10 stocks in your portfolio. Pro gives you an unlimited portfolio.",
+    "watchlistLimitMessage": "You've reached the limit of 20 stocks in your watchlist. Pro gives you an unlimited watchlist.",
+    "goalsLimitMessage": "You've reached the limit of 3 financial goals. Pro gives you unlimited goals.",
+    "priceAlertsProMessage": "Price alerts are available in Pro. Get an instant alert when a stock reaches your target price.",
+    "availableInPro": "Available in Pro",
+    "subscribeToAccess": "Subscribe to access",
+    "cancel": "Cancel",
+    "later": "Later",
+    "usedAnalysisThisMonth": "Used {{used}} of {{quota}} analyses this month"
   },
   "achievements": {
     "levels": {
