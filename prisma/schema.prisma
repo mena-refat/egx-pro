@@ -16,8 +16,9 @@ model User {
   fullName          String?
   username          String?   @unique
   isEmailVerified   Boolean   @default(false)
-  twoFactorEnabled  Boolean   @default(false)
-  twoFactorSecret   String?
+  twoFactorEnabled   Boolean   @default(false)
+  twoFactorSecret    String?
+  twoFactorEnabledAt DateTime?
   avatarUrl         String?
   riskTolerance     String?   @default("moderate")
   investmentHorizon Int?      @default(5)

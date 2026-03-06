@@ -76,6 +76,27 @@ export function verifyAccessToken(token: string) {
   });
 }
 
+/** Short-lived token returned after login when 2FA is required. */
+export function generate2FATempToken(userId: string): string {
+  const rawKey = process.env.JWT_PRIVATE_KEY;
+  const isRealKey = rawKey && rawKey.includes('BEGIN RSA PRIVATE KEY') && !rawKey.includes('...');
+  const isDev = process.env.NODE_ENV === 'development';
+  const secret = isRealKey ? rawKey.replace(/\\n/g, '\n') : process.env.JWT_ACCESS_TOKEN_SECRET;
+  const effectiveSecret = secret || 'temp-secret-key-123';
+  const algorithm = isRealKey ? 'RS256' : 'HS256';
+  return jwt.sign(
+    { sub: userId, purpose: '2fa_pending' },
+    effectiveSecret,
+    { expiresIn: '5m', algorithm: algorithm as jwt.Algorithm }
+  );
+}
+
+export function verify2FATempToken(token: string): { userId: string } {
+  const decoded = verifyAccessToken(token) as { sub: string; purpose?: string };
+  if (decoded.purpose !== '2fa_pending') throw new Error('Invalid token purpose');
+  return { userId: decoded.sub };
+}
+
 /** Refresh token: 64 bytes, not JWT — not decodable. */
 export function generateRefreshToken() {
   return crypto.randomBytes(64).toString('hex');

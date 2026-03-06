@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from './store/authStore';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, UserPlus, TrendingUp, User as UserIcon, LayoutDashboard, PieChart, Calculator, Settings as SettingsIcon, Search, Eye, EyeOff, Sun, Moon, Monitor, Target, Bell, LogOut, ChevronLeft, ChevronRight, Trophy, Briefcase, UserPlus as UserPlusIcon, BarChart3, Circle } from 'lucide-react';
+import { LogIn, UserPlus, TrendingUp, User as UserIcon, LayoutDashboard, PieChart, Calculator, Settings as SettingsIcon, Search, Eye, EyeOff, Sun, Moon, Monitor, Target, Bell, LogOut, ChevronLeft, ChevronRight, Trophy, Briefcase, UserPlus as UserPlusIcon, BarChart3, Circle, Smartphone } from 'lucide-react';
 import OnboardingWizard from './components/OnboardingWizard';
 import PortfolioTracker from './components/PortfolioTracker';
 import StockScreener from './components/StockScreener';
 import InvestmentCalculator from './components/InvestmentCalculator';
 import StockAnalysis from './components/StockAnalysis';
 import DelayNotice from './components/DelayNotice';
+import { OTPInput } from './components/OTPInput';
 import GoalsPage from './pages/GoalsPage';
 import MarketPage from './pages/MarketPage';
 import ProfilePage from './components/ProfilePage';
@@ -27,8 +28,9 @@ export default function App() {
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
   const [showTwoFactorInput, setShowTwoFactorInput] = useState(false);
-  const [twoFactorToken, setTwoFactorToken] = useState('');
-  const [tempUserId, setTempUserId] = useState('');
+  const [twoFactorOtp, setTwoFactorOtp] = useState('');
+  const [twoFaTempToken, setTwoFaTempToken] = useState('');
+  const [twoFaCountdown, setTwoFaCountdown] = useState(30);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light' | 'system'>(() => {
@@ -444,9 +446,12 @@ export default function App() {
       }
 
       if (isLogin) {
-        if (data.twoFactorRequired) {
-          setTempUserId(data.userId);
+        if (data.requires2FA && data.tempToken) {
+          setTwoFaTempToken(data.tempToken);
+          setTwoFactorOtp('');
+          setTwoFaCountdown(30);
           setShowTwoFactorInput(true);
+          setError('');
           return;
         }
 
@@ -474,23 +479,33 @@ export default function App() {
     }
   };
 
-  const handleTwoFactorVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleTwoFactorComplete = async (code: string) => {
+    if (!twoFaTempToken) return;
     setError('');
     try {
-      const res = await fetch('/api/auth/2fa/verify', {
+      const res = await fetch('/api/auth/2fa/authenticate', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: tempUserId, token: twoFactorToken }),
+        body: JSON.stringify({ tempToken: twoFaTempToken, code }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Verification failed');
+      if (!res.ok) {
+        let msg = 'Verification failed';
+        if (data.error === 'invalid_code') msg = t('settings.invalidCode');
+        else if (data.error === 'invalid_or_expired_token') msg = i18n.language === 'ar' ? 'انتهت صلاحية الرابط، سجّل الدخول من جديد' : 'Session expired, please log in again';
+        else if (data.message) msg = data.message;
+        else if (data.error && typeof data.error === 'string') msg = data.error;
+        throw new Error(msg);
+      }
 
-      useAuthStore.getState().setAuth(data.user, data.accessToken);
+      const profileRes = await fetch('/api/user/profile', { headers: { 'Authorization': `Bearer ${data.accessToken}` } });
+      const profileData = profileRes.ok ? await profileRes.json() : data.user;
+      useAuthStore.getState().setAuth(profileData, data.accessToken);
       setShowTwoFactorInput(false);
-      setTwoFactorToken('');
+      setTwoFactorOtp('');
+      setTwoFaTempToken('');
       setAuthMessage({ text: t('auth.loginSuccess'), type: 'success' });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Verification failed');
@@ -513,6 +528,14 @@ export default function App() {
       setError(err instanceof Error ? err.message : 'Google login failed');
     }
   };
+
+  useEffect(() => {
+    if (!showTwoFactorInput) return;
+    const interval = setInterval(() => {
+      setTwoFaCountdown((c) => (c <= 1 ? 30 : c - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [showTwoFactorInput]);
 
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
@@ -983,51 +1006,43 @@ export default function App() {
           </div>
 
           {showTwoFactorInput ? (
-            <form onSubmit={handleTwoFactorVerify} className="space-y-4">
+            <div className="space-y-4">
               <div className="text-center mb-6">
-                <div className="bg-violet-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <SettingsIcon className="w-8 h-8 text-violet-500" />
+                <div className="bg-[var(--brand-subtle)] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Smartphone className="w-8 h-8 text-[var(--brand)]" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">{i18n.language === 'ar' ? 'المصادقة الثنائية' : 'Two-Factor Authentication'}</h3>
+                <h3 className="text-xl font-bold mb-2">{i18n.language === 'ar' ? 'أدخل كود التحقق' : 'Enter verification code'}</h3>
                 <p className="text-[var(--text-muted)] text-sm">
                   {t('auth.twoFactorDesc')}
                 </p>
               </div>
 
-              <div>
-                <input 
-                  type="text" 
-                  maxLength={6}
-                  value={twoFactorToken}
-                  onChange={(e) => setTwoFactorToken(e.target.value.replace(/\D/g, ''))}
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-[var(--brand)] transition-all placeholder-[var(--text-muted)] text-[var(--text-primary)]"
-                  placeholder="000000"
-                  autoFocus
-                />
-              </div>
+              <OTPInput
+                value={twoFactorOtp}
+                onChange={setTwoFactorOtp}
+                onComplete={handleTwoFactorComplete}
+                error={!!error}
+              />
+
+              <p className="text-xs text-[var(--text-muted)] text-center">
+                {i18n.language === 'ar' ? 'الكود يتحدث كل 30 ثانية' : 'Code refreshes every 30 seconds'}{' '}
+                <span className="font-medium text-[var(--text-secondary)]">⏱ {twoFaCountdown} {i18n.language === 'ar' ? 'ثانية' : 's'}</span>
+              </p>
 
               {error && (
-                <p className="text-red-500 text-sm bg-red-500/10 p-3 rounded-xl border border-red-500/20 text-center">
+                <p className="text-[var(--danger)] text-sm bg-[var(--danger-bg)] p-3 rounded-xl border border-[var(--danger)]/20 text-center">
                   {error}
                 </p>
               )}
-
-              <button 
-                type="submit"
-                disabled={twoFactorToken.length !== 6}
-                className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-violet-600/20 transition-all active:scale-95"
-              >
-                {t('auth.verify')}
-              </button>
               
               <button 
                 type="button"
-                onClick={() => setShowTwoFactorInput(false)}
+                onClick={() => { setShowTwoFactorInput(false); setTwoFaTempToken(''); setTwoFactorOtp(''); setError(''); }}
                 className="w-full text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm py-2"
               >
-                {t('auth.backToLogin')}
+                ← {i18n.language === 'ar' ? 'رجوع لتسجيل الدخول' : 'Back to login'}
               </button>
-            </form>
+            </div>
           ) : (
             <>
               <form onSubmit={handleAuth} className="space-y-4">

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
-import { hashPassword, verifyPassword, generateAccessToken, generateRefreshToken, hashRefreshToken } from '../../src/lib/auth.ts';
+import { hashPassword, verifyPassword, generateAccessToken, generateRefreshToken, hashRefreshToken, generate2FATempToken, verify2FATempToken, verifyAccessToken } from '../../src/lib/auth.ts';
 import { z } from 'zod';
 import axios from 'axios';
 import speakeasy from 'speakeasy';
@@ -23,6 +23,18 @@ const getCookieOptions = () => ({
 
 import { parseUserAgent } from '../lib/parseUserAgent.ts';
 import { getGeoFromIp } from '../lib/geoFromIp.ts';
+import qrcode from 'qrcode';
+
+function getAuthUserId(req: Request): string | null {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  try {
+    const decoded = verifyAccessToken(authHeader.slice(7)) as { sub: string };
+    return decoded.sub;
+  } catch {
+    return null;
+  }
+}
 
 function getSessionDevice(req: Request): { deviceType: string; browser: string; os: string } {
   const ua = req.headers['user-agent'];
@@ -251,9 +263,10 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     if (user.twoFactorEnabled && user.twoFactorSecret) {
+      const tempToken = generate2FATempToken(user.id);
       return res.json({
-        twoFactorRequired: true,
-        userId: user.id,
+        requires2FA: true,
+        tempToken,
       });
     }
 
@@ -293,12 +306,18 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
-// Login 2FA: verify TOTP then create session (no Bearer required)
-router.post('/2fa/verify', async (req: Request, res: Response) => {
+// Complete login after 2FA: body { tempToken, code }
+router.post('/2fa/authenticate', async (req: Request, res: Response) => {
   try {
-    const { userId, token } = req.body as { userId?: string; token?: string };
-    if (!userId || !token || typeof token !== 'string' || token.length !== 6) {
+    const { tempToken, code } = req.body as { tempToken?: string; code?: string };
+    if (!tempToken || !code || typeof code !== 'string' || code.length !== 6) {
       return res.status(400).json({ error: 'Invalid request' });
+    }
+    let userId: string;
+    try {
+      userId = verify2FATempToken(tempToken).userId;
+    } catch {
+      return res.status(401).json({ error: 'invalid_or_expired_token' });
     }
 
     const user = await prisma.user.findUnique({
@@ -313,11 +332,12 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
     const valid = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: 'base32',
-      token,
+      token: code,
+      window: 1,
     });
 
     if (!valid) {
-      return res.status(401).json({ error: 'unauthorized' });
+      return res.status(401).json({ error: 'invalid_code' });
     }
 
     const loginId = user.email ?? user.phone ?? '';
@@ -326,14 +346,16 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
     const refreshHash = hashRefreshToken(refreshToken);
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
 
+    const refreshData = await getRefreshTokenData(req, user.id, refreshHash, expiresAt).catch(() => ({
+      token: refreshHash,
+      userId: user.id,
+      expiresAt,
+      ...getSessionDevice(req),
+      ipAddress: req.ip || null,
+    }));
+
     await prisma.refreshToken.create({
-      data: {
-        token: refreshHash,
-        userId: user.id,
-        expiresAt,
-        ...getSessionDevice(req),
-        ipAddress: req.ip || null,
-      },
+      data: refreshData,
     });
 
     await prisma.user.update({
@@ -360,8 +382,133 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('2FA verify login error:', error);
-    res.status(500).json({ error: 'Verification failed' });
+    console.error('2FA authenticate error:', error);
+    const message = error instanceof Error ? error.message : 'Verification failed';
+    res.status(500).json({ error: 'Verification failed', message });
+  }
+});
+
+// 2FA Setup (requires Bearer) — generate secret, save to DB, return QR + manual code
+router.post('/2fa/setup', async (req: Request, res: Response) => {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return res.status(401).json({ error: 'unauthorized' });
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true },
+    });
+    if (!user) return res.status(401).json({ error: 'unauthorized' });
+
+    const secret = speakeasy.generateSecret({
+      name: `EGX Pro (${user.email || userId})`,
+      length: 20,
+    });
+    const base32 = secret.base32 ?? '';
+    const otpauthUrl = secret.otpauth_url ?? '';
+    const qrCodeUrl = await qrcode.toDataURL(otpauthUrl);
+    const manualCode = base32.replace(/(.{4})/g, '$1 ').trim();
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { twoFactorSecret: base32, twoFactorEnabled: false },
+    });
+
+    res.json({
+      secret: base32,
+      qrCodeUrl,
+      manualCode,
+    });
+  } catch (err) {
+    console.error('2FA setup error:', err);
+    res.status(500).json({ error: 'Failed to setup 2FA' });
+  }
+});
+
+// 2FA Verify and enable (requires Bearer) — body { code }
+router.post('/2fa/verify', async (req: Request, res: Response) => {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return res.status(401).json({ error: 'unauthorized' });
+
+    const { code } = req.body as { code?: string };
+    if (!code || typeof code !== 'string' || code.length !== 6) {
+      return res.status(400).json({ error: 'invalid_code' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { twoFactorSecret: true },
+    });
+    if (!user?.twoFactorSecret) return res.status(400).json({ error: 'Setup 2FA first' });
+
+    const valid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: code,
+      window: 1,
+    });
+
+    if (!valid) {
+      return res.status(400).json({ error: 'invalid_code' });
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { twoFactorEnabled: true, twoFactorEnabledAt: new Date() },
+    });
+    await auditLog({ userId, action: 'TWO_FA_ENABLED', req, result: 'success' });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('2FA verify enable error:', err);
+    res.status(500).json({ error: 'Failed to verify 2FA' });
+  }
+});
+
+// 2FA Disable (requires Bearer) — body { code, password }
+router.post('/2fa/disable', async (req: Request, res: Response) => {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) return res.status(401).json({ error: 'unauthorized' });
+
+    const { code, password } = req.body as { code?: string; password?: string };
+    if (!code || typeof code !== 'string' || code.length !== 6 || !password) {
+      return res.status(400).json({ error: 'code_and_password_required' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true, salt: true, twoFactorSecret: true },
+    });
+    if (!user?.passwordHash || !user.salt) return res.status(401).json({ error: 'unauthorized' });
+    if (!user.twoFactorSecret) return res.status(400).json({ error: '2FA not enabled' });
+
+    const passwordValid = await verifyPassword(password, user.passwordHash, user.salt);
+    if (!passwordValid) {
+      return res.status(401).json({ error: 'wrong_password' });
+    }
+
+    const valid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: code,
+      window: 1,
+    });
+    if (!valid) {
+      return res.status(400).json({ error: 'invalid_code' });
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { twoFactorEnabled: false, twoFactorSecret: null, twoFactorEnabledAt: null },
+    });
+    await auditLog({ userId, action: 'TWO_FA_DISABLED', req, result: 'success' });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('2FA disable error:', err);
+    res.status(500).json({ error: 'Failed to disable 2FA' });
   }
 });
 

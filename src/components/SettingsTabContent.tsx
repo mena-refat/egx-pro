@@ -5,6 +5,8 @@ import {
   User,
   Lock,
   Shield,
+  ShieldCheck,
+  ShieldOff,
   Settings,
   Bell,
   Moon,
@@ -14,6 +16,7 @@ import {
   EyeOff,
   Trash2,
   Check,
+  CheckCircle,
   X,
   Loader2,
   Smartphone,
@@ -21,8 +24,10 @@ import {
   Key,
   Pencil,
   ChevronDown,
+  Copy,
 } from 'lucide-react';
 import { validateChangePassword, validateUsernameFormat, USERNAME_MAX_LENGTH } from '../lib/validations';
+import { OTPInput } from './OTPInput';
 
 export interface SettingsUserProfile {
   id: string;
@@ -33,6 +38,7 @@ export interface SettingsUserProfile {
   lastPasswordChangeAt?: string | null;
   lastUsernameChangeAt?: string | null;
   twoFactorEnabled?: boolean;
+  twoFactorEnabledAt?: string | null;
   language?: string;
   theme?: string;
   shariaMode?: boolean;
@@ -116,11 +122,20 @@ export function SettingsTabContent({
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
 
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(user.twoFactorEnabled));
-  const [twoFaSecret, setTwoFaSecret] = useState<string | null>(null);
-  const [twoFaQr, setTwoFaQr] = useState<string | null>(null);
-  const [twoFaToken, setTwoFaToken] = useState('');
-  const [twoFaLoading, setTwoFaLoading] = useState(false);
-  const [twoFaMessage, setTwoFaMessage] = useState<string | null>(null);
+  const [twoFactorEnabledAt, setTwoFactorEnabledAt] = useState<string | null>(null);
+
+  const [enable2FAModalOpen, setEnable2FAModalOpen] = useState(false);
+  const [enable2FAStep, setEnable2FAStep] = useState<1 | 2 | 3 | 'success'>(1);
+  const [setupData, setSetupData] = useState<{ qrCodeUrl: string; manualCode: string } | null>(null);
+  const [enable2FAOtp, setEnable2FAOtp] = useState('');
+  const [enable2FAError, setEnable2FAError] = useState<string | null>(null);
+  const [enable2FALoading, setEnable2FALoading] = useState(false);
+
+  const [disable2FAModalOpen, setDisable2FAModalOpen] = useState(false);
+  const [disable2FAPassword, setDisable2FAPassword] = useState('');
+  const [disable2FAOtp, setDisable2FAOtp] = useState('');
+  const [disable2FAError, setDisable2FAError] = useState<string | null>(null);
+  const [disable2FALoading, setDisable2FALoading] = useState(false);
 
   const [sessions, setSessions] = useState<Array<{
     id: string;
@@ -169,6 +184,7 @@ export function SettingsTabContent({
         if (res.ok) {
           setLastPasswordChangeAt(data.lastPasswordChangeAt ?? null);
           setTwoFactorEnabled(Boolean(data.twoFactorEnabled));
+          setTwoFactorEnabledAt(data.twoFactorEnabledAt ?? null);
         }
       } catch {
         // ignore
@@ -382,44 +398,83 @@ export function SettingsTabContent({
     }
   };
 
-  const handleTwoFaSetup = async () => {
+  const openEnable2FAModal = () => {
+    setEnable2FAModalOpen(true);
+    setEnable2FAStep(1);
+    setSetupData(null);
+    setEnable2FAOtp('');
+    setEnable2FAError(null);
+  };
+
+  const fetch2FASetup = async () => {
     if (!accessToken) return;
-    setTwoFaLoading(true);
-    setTwoFaMessage(null);
+    setEnable2FALoading(true);
+    setEnable2FAError(null);
     try {
-      const res = await fetch('/api/user/2fa/setup', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
+      const res = await fetch('/api/auth/2fa/setup', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Failed');
-      setTwoFaSecret(data.secret);
-      setTwoFaQr(data.qrCode);
+      setSetupData({ qrCodeUrl: data.qrCodeUrl, manualCode: data.manualCode });
+      setEnable2FAStep(2);
     } catch {
-      setTwoFaMessage(i18n.language === 'ar' ? 'فشل تهيئة 2FA' : 'Failed to setup 2FA');
+      setEnable2FAError(t('settings.twoFaSetupFailed'));
     } finally {
-      setTwoFaLoading(false);
+      setEnable2FALoading(false);
     }
   };
 
-  const handleTwoFaVerify = async () => {
-    if (!accessToken || !twoFaSecret || !twoFaToken) return;
-    setTwoFaLoading(true);
-    setTwoFaMessage(null);
+  const submitEnable2FA = async (code: string) => {
+    if (!accessToken) return;
+    setEnable2FALoading(true);
+    setEnable2FAError(null);
     try {
-      const res = await fetch('/api/user/2fa/verify', {
+      const res = await fetch('/api/auth/2fa/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ token: twoFaToken, secret: twoFaSecret }),
+        body: JSON.stringify({ code }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Failed');
+      if (!res.ok) throw new Error(data?.error || 'invalid_code');
       setTwoFactorEnabled(true);
-      setTwoFaMessage(t('settings.enabled'));
-      setTwoFaToken('');
-      setTwoFaSecret(null);
-      setTwoFaQr(null);
+      setEnable2FAStep('success');
+      const secRes = await fetch('/api/user/security', { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (secRes.ok) {
+        const sec = await secRes.json();
+        setTwoFactorEnabledAt(sec.twoFactorEnabledAt ?? null);
+      }
     } catch {
-      setTwoFaMessage(t('settings.invalidCode'));
+      setEnable2FAError(t('settings.twoFaInvalidCodeTryAgain'));
     } finally {
-      setTwoFaLoading(false);
+      setEnable2FALoading(false);
+    }
+  };
+
+  const submitDisable2FA = async () => {
+    if (!accessToken || !disable2FAPassword || disable2FAOtp.length !== 6) return;
+    setDisable2FALoading(true);
+    setDisable2FAError(null);
+    try {
+      const res = await fetch('/api/auth/2fa/disable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ code: disable2FAOtp, password: disable2FAPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data?.error === 'wrong_password') setDisable2FAError(t('settings.wrongPassword'));
+        else if (data?.error === 'invalid_code') setDisable2FAError(t('settings.invalidCode'));
+        else setDisable2FAError(data?.error || 'Failed');
+        return;
+      }
+      setTwoFactorEnabled(false);
+      setTwoFactorEnabledAt(null);
+      setDisable2FAModalOpen(false);
+      setDisable2FAPassword('');
+      setDisable2FAOtp('');
+    } catch {
+      setDisable2FAError(t('settings.twoFaSetupFailed'));
+    } finally {
+      setDisable2FALoading(false);
     }
   };
 
@@ -507,6 +562,8 @@ export function SettingsTabContent({
             const isUsername = field === 'username';
             const isPhone = field === 'phone';
             const disabled = isUsername && usernameDisabled;
+            const isRtl = i18n.language === 'ar';
+            const ltrField = isPhone || isUsername || field === 'email';
             return (
               <div key={field} className="py-4 first:pt-0">
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5">{label}</label>
@@ -520,13 +577,14 @@ export function SettingsTabContent({
                       else if (isUsername) setValue(v.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, USERNAME_MAX_LENGTH));
                       else setValue(v);
                     }}
-                    className={`${inputBase} border-[var(--border)] disabled:opacity-90 pr-10 ${isEditing ? 'border-[var(--brand)] ring-2 ring-[var(--brand)]/20' : ''}`}
+                    dir={ltrField ? 'ltr' : undefined}
+                    className={`${inputBase} border-[var(--border)] disabled:opacity-90 pl-10 pr-4 ${isRtl ? 'text-right' : ''} ${isEditing ? 'border-[var(--brand)] ring-2 ring-[var(--brand)]/20' : ''}`}
                     placeholder={label}
                     maxLength={isPhone ? 11 : isUsername ? USERNAME_MAX_LENGTH : undefined}
                     disabled={!isEditing}
                     autoFocus={isEditing}
                   />
-                  <div className="absolute end-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
                     {isEditing ? (
                       <>
                         <button
@@ -698,38 +756,157 @@ export function SettingsTabContent({
         <div className="py-4 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-2">
-              <Shield className="w-4 h-4 text-[var(--text-muted)]" />
+              {twoFactorEnabled ? <ShieldCheck className="w-4 h-4 text-[var(--success)]" /> : <Shield className="w-4 h-4 text-[var(--text-muted)]" />}
               {t('settings.twoFa')}
             </p>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">{t('settings.twoFaDesc')}</p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              {twoFactorEnabled && twoFactorEnabledAt
+                ? t('settings.twoFaEnabledSince', { date: new Date(twoFactorEnabledAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) })
+                : t('settings.twoFaDesc')}
+            </p>
+            {!twoFactorEnabled && <p className="text-xs text-[var(--text-muted)]">{t('settings.twoFaNotEnabled')}</p>}
           </div>
-          {twoFactorEnabled ? (
-            <span className="text-xs px-2 py-1 rounded-full bg-[var(--success-bg)] text-[var(--success)]">{t('settings.enabled')}</span>
-          ) : !twoFaSecret ? (
-            <button
-              type="button"
-              onClick={handleTwoFaSetup}
-              disabled={twoFaLoading}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--brand)] text-white hover:opacity-90 disabled:opacity-50"
-            >
-              {twoFaLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : t('settings.enable')}
-            </button>
-          ) : (
-            <div className="flex gap-2 items-center">
-              <input
-                type="text"
-                value={twoFaToken}
-                onChange={(e) => setTwoFaToken(e.target.value)}
-                placeholder="123456"
-                className="w-24 px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)]"
-              />
-              <button type="button" onClick={handleTwoFaVerify} disabled={twoFaLoading} className="px-2 py-1.5 rounded-lg text-xs bg-[var(--brand)] text-white">
-                {t('settings.update')}
+          <div className="flex items-center gap-2">
+            {twoFactorEnabled ? (
+              <>
+                <span className="text-xs px-2 py-1 rounded-full bg-[var(--success-bg)] text-[var(--success)]">● {t('settings.enabled')}</span>
+                <button
+                  type="button"
+                  onClick={() => { setDisable2FAModalOpen(true); setDisable2FAError(null); setDisable2FAPassword(''); setDisable2FAOtp(''); }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]"
+                >
+                  {t('settings.twoFaDisableConfirm')}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={openEnable2FAModal}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--brand)] text-white hover:opacity-90"
+              >
+                {t('settings.enable')}
               </button>
-            </div>
-          )}
-          {twoFaMessage && <p className="text-xs text-[var(--text-muted)] mt-1 w-full">{twoFaMessage}</p>}
+            )}
+          </div>
         </div>
+
+        {/* Enable 2FA Modal */}
+        {enable2FAModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => !enable2FALoading && enable2FAStep !== 'success' && setEnable2FAModalOpen(false)}>
+            <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+              {enable2FAStep === 'success' ? (
+                <>
+                  <div className="flex justify-center mb-4"><CheckCircle className="w-16 h-16 text-[var(--success)]" /></div>
+                  <h3 className="text-lg font-bold text-center text-[var(--text-primary)]">{t('settings.twoFaSuccessTitle')}</h3>
+                  <p className="text-sm text-[var(--text-muted)] text-center mt-2">{t('settings.twoFaSuccessDesc')}</p>
+                  <button type="button" onClick={() => { setEnable2FAModalOpen(false); }} className="w-full mt-6 py-2.5 rounded-xl text-sm font-medium bg-[var(--brand)] text-white">
+                    {t('settings.twoFaDone')}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Shield className="w-6 h-6 text-[var(--brand)]" />
+                    <h3 className="text-lg font-bold text-[var(--text-primary)]">{t('settings.twoFaEnableTitle')}</h3>
+                  </div>
+                  <div className="border-b border-[var(--border)] mb-4" />
+                  <p className="text-xs text-[var(--text-muted)] mb-4">{enable2FAStep} {i18n.language === 'ar' ? 'من 3' : 'of 3'}</p>
+
+                  {enable2FAStep === 1 && (
+                    <>
+                      <p className="text-sm text-[var(--text-muted)] mb-3">{t('settings.twoFaStep1Desc')}</p>
+                      <div className="grid grid-cols-1 gap-2 mb-6">
+                        {['Google Authenticator', 'Authy', 'Microsoft Authenticator'].map((name, i) => (
+                          <div key={i} className="p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)]">
+                            {name}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-end">
+                        <button type="button" onClick={fetch2FASetup} disabled={enable2FALoading} className="px-4 py-2 rounded-xl text-sm font-medium bg-[var(--brand)] text-white">
+                          {enable2FALoading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : `${t('settings.twoFaNext')} ←`}
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {enable2FAStep === 2 && setupData && (
+                    <>
+                      <p className="text-sm text-[var(--text-muted)] mb-3">{t('settings.twoFaStep2Desc')}</p>
+                      <div className="flex justify-center mb-4">
+                        <img src={setupData.qrCodeUrl} alt="QR Code" className="w-[200px] h-[200px] rounded-lg border border-[var(--border)]" />
+                      </div>
+                      <p className="text-xs text-[var(--text-muted)] mb-1">{t('settings.twoFaStep2Manual')}</p>
+                      <div className="flex items-center gap-2 mb-6">
+                        <code className="flex-1 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] font-mono">
+                          {setupData.manualCode}
+                        </code>
+                        <button type="button" onClick={() => navigator.clipboard.writeText(setupData.manualCode.replace(/\s/g, ''))} className="p-2 rounded-lg border border-[var(--border)]" title={t('settings.twoFaCopyCode')}>
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex justify-between">
+                        <button type="button" onClick={() => setEnable2FAStep(1)} className="px-4 py-2 rounded-xl text-sm font-medium border border-[var(--border)]">
+                          ← {t('settings.twoFaPrev')}
+                        </button>
+                        <button type="button" onClick={() => setEnable2FAStep(3)} className="px-4 py-2 rounded-xl text-sm font-medium bg-[var(--brand)] text-white">
+                          {t('settings.twoFaNext')} ←
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {enable2FAStep === 3 && (
+                    <>
+                      <p className="text-sm text-[var(--text-muted)] mb-4">{t('settings.twoFaStep3Desc')}</p>
+                      <OTPInput value={enable2FAOtp} onChange={setEnable2FAOtp} onComplete={submitEnable2FA} error={!!enable2FAError} className="mb-4" />
+                      {enable2FAError && <p className="text-xs text-[var(--danger)] mb-4 text-center">{enable2FAError}</p>}
+                      <div className="flex justify-between">
+                        <button type="button" onClick={() => setEnable2FAStep(2)} disabled={enable2FALoading} className="px-4 py-2 rounded-xl text-sm font-medium border border-[var(--border)]">
+                          ← {t('settings.twoFaPrev')}
+                        </button>
+                        <button type="button" onClick={() => enable2FAOtp.length === 6 && submitEnable2FA(enable2FAOtp)} disabled={enable2FAOtp.length !== 6 || enable2FALoading} className="px-4 py-2 rounded-xl text-sm font-medium bg-[var(--brand)] text-white">
+                          {enable2FALoading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : `✓ ${t('settings.enable')}`}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Disable 2FA Modal */}
+        {disable2FAModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => !disable2FALoading && setDisable2FAModalOpen(false)}>
+            <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-center mb-4"><ShieldOff className="w-12 h-12 text-[var(--danger)]" /></div>
+              <h3 className="text-lg font-bold text-center text-[var(--text-primary)]">{t('settings.twoFaDisableTitle')}</h3>
+              <div className="border-b border-[var(--border)] my-4" />
+              <p className="text-sm text-[var(--text-muted)] mb-4">{t('settings.twoFaDisableDesc')}</p>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">{t('settings.password')}</label>
+              <input
+                type="password"
+                value={disable2FAPassword}
+                onChange={(e) => setDisable2FAPassword(e.target.value)}
+                className={`${inputBase} border-[var(--border)] mb-4`}
+                placeholder={t('settings.password')}
+              />
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">{i18n.language === 'ar' ? 'كود التحقق من التطبيق' : 'Verification code from app'}</label>
+              <OTPInput value={disable2FAOtp} onChange={setDisable2FAOtp} className="mb-4" />
+              {disable2FAError && <p className="text-xs text-[var(--danger)] mb-4">{disable2FAError}</p>}
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={() => setDisable2FAModalOpen(false)} disabled={disable2FALoading} className="px-4 py-2 rounded-xl text-sm font-medium border border-[var(--border)]">
+                  {t('settings.cancel')}
+                </button>
+                <button type="button" onClick={submitDisable2FA} disabled={!disable2FAPassword || disable2FAOtp.length !== 6 || disable2FALoading} className="px-4 py-2 rounded-xl text-sm font-medium bg-[var(--danger)] text-white">
+                  {disable2FALoading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : t('settings.twoFaDisableConfirm')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* الجلسات النشطة */}
         <div className="pt-4 border-t border-[var(--border-subtle)]">

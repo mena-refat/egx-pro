@@ -7,8 +7,6 @@ import { auditLog } from '../lib/audit.ts';
 import { ACHIEVEMENT_DEFS, type AchievementLevel } from '../lib/achievements.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { createNotification } from '../lib/createNotification.ts';
-import speakeasy from 'speakeasy';
-import qrcode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -977,73 +975,7 @@ router.post('/referral/use', authenticate, async (req: AuthRequest, res: Respons
   }
 });
 
-// 2FA Setup
-router.post('/2fa/setup', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const secret = speakeasy.generateSecret({
-      name: `EGX Pro (${req.userId})`,
-    });
-
-    const qrCodeUrl = await qrcode.toDataURL(secret.otpauth_url || '');
-
-    res.json({
-      secret: secret.base32,
-      qrCode: qrCodeUrl,
-    });
-  } catch (err) {
-    console.error('2FA setup error:', err);
-    res.status(500).json({ error: 'Failed to setup 2FA' });
-  }
-});
-
-// 2FA Verify and Enable
-router.post('/2fa/verify', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const { token, secret } = req.body;
-
-    const verified = speakeasy.totp.verify({
-      secret,
-      encoding: 'base32',
-      token,
-    });
-
-    if (verified) {
-      await prisma.user.update({
-        where: { id: req.userId },
-        data: {
-          twoFactorEnabled: true,
-          twoFactorSecret: secret,
-        },
-      });
-      await auditLog({ userId: req.userId ?? undefined, action: 'TWO_FA_ENABLED', req, result: 'success' });
-      res.json({ success: true });
-    } else {
-      res.status(400).json({ error: 'Invalid token' });
-    }
-  } catch (err) {
-    console.error('2FA verify error:', err);
-    res.status(500).json({ error: 'Failed to verify 2FA' });
-  }
-});
-
-// 2FA Disable
-router.post('/2fa/disable', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    await prisma.user.update({
-      where: { id: req.userId },
-      data: {
-        twoFactorEnabled: false,
-        twoFactorSecret: null,
-      },
-    });
-    res.json({ success: true });
-  } catch (err) {
-    console.error('2FA disable error:', err);
-    res.status(500).json({ error: 'Failed to disable 2FA' });
-  }
-});
-
-// Security overview (password & 2FA)
+// Security overview (password & 2FA) — 2FA setup/verify/disable are under /api/auth/2fa/
 router.get('/security', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
@@ -1051,6 +983,7 @@ router.get('/security', authenticate, async (req: AuthRequest, res: Response) =>
       select: {
         lastPasswordChangeAt: true,
         twoFactorEnabled: true,
+        twoFactorEnabledAt: true,
         createdAt: true,
         lastLoginAt: true,
         lastLoginIp: true,
@@ -1064,6 +997,7 @@ router.get('/security', authenticate, async (req: AuthRequest, res: Response) =>
     res.json({
       lastPasswordChangeAt: user.lastPasswordChangeAt,
       twoFactorEnabled: user.twoFactorEnabled,
+      twoFactorEnabledAt: user.twoFactorEnabledAt ?? undefined,
       createdAt: user.createdAt,
       lastLoginAt: user.lastLoginAt,
       lastLoginIp: user.lastLoginIp,
