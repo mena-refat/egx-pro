@@ -6,7 +6,6 @@ import {
   Shield,
   Settings,
   Bell,
-  LogOut,
   Moon,
   Sun,
   Monitor,
@@ -127,6 +126,8 @@ export function SettingsTabContent({
     browser?: string;
     os?: string;
     deviceInfo?: string;
+    city?: string;
+    country?: string;
     createdAt: string;
     isCurrentSession?: boolean;
   }>>([]);
@@ -276,12 +277,14 @@ export function SettingsTabContent({
         }
       }
       setSessions(
-        list.map((s: { id: string; deviceType?: string; browser?: string; os?: string; deviceInfo?: string; createdAt: string; isCurrentSession?: boolean }) => ({
+        list.map((s: { id: string; deviceType?: string; browser?: string; os?: string; deviceInfo?: string; city?: string; country?: string; createdAt: string; isCurrentSession?: boolean }) => ({
           id: s.id,
           deviceType: s.deviceType,
           browser: s.browser,
           os: s.os,
           deviceInfo: s.deviceInfo,
+          city: s.city,
+          country: s.country,
           createdAt: s.createdAt,
           isCurrentSession: s.isCurrentSession ?? false,
         }))
@@ -589,7 +592,7 @@ export function SettingsTabContent({
               </button>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              {t('settings.lastChange')}: {lastPasswordChangeAt ? new Date(lastPasswordChangeAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-GB') : '—'}
+              {t('settings.lastChange')}: {lastPasswordChangeAt ? new Date(lastPasswordChangeAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) : t('settings.passwordNeverChanged')}
             </p>
             {showPasswordForm && (
               <div className="mt-4 space-y-3">
@@ -693,29 +696,31 @@ export function SettingsTabContent({
                   const DeviceIcon = dt === 'mobile' ? Smartphone : dt === 'tablet' ? Tablet : Monitor;
                   const label = sessionDeviceLabel(s, t);
                   const lastActivity = formatLastActivity(s.createdAt, t);
+                  const location = [s.city, s.country].filter(Boolean).join(', ') || null;
                   return (
                     <li key={s.id} className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-700 last:border-b-0 bg-slate-800/30">
                       <div className="flex items-center gap-3 min-w-0">
                         <DeviceIcon className="w-5 h-5 text-slate-500 shrink-0" />
                         <div>
-                          <p className="text-sm font-medium text-slate-200">{label}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium text-slate-200">{label}</p>
+                            {s.isCurrentSession ? (
+                              <span className="text-xs px-2 py-0.5 rounded bg-violet-500/30 text-violet-300">{t('settings.youAreHere')}</span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => endSession(s.id)}
+                                disabled={revokingId === s.id}
+                                className="text-xs text-slate-400 hover:text-red-400"
+                              >
+                                {revokingId === s.id ? <Loader2 className="w-3 h-3 animate-spin inline" /> : t('settings.endSession')}
+                              </button>
+                            )}
+                          </div>
+                          {location && <p className="text-xs text-slate-500 mt-0.5">{location}</p>}
                           <p className="text-xs text-slate-500">{lastActivity}</p>
                         </div>
                       </div>
-                      <span className="flex items-center gap-2 shrink-0">
-                        {s.isCurrentSession ? (
-                          <span className="text-xs px-2 py-1 rounded bg-violet-500/30 text-violet-300">{t('settings.youAreHere')}</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => endSession(s.id)}
-                            disabled={revokingId === s.id}
-                            className="text-xs text-slate-400 hover:text-red-400"
-                          >
-                            {revokingId === s.id ? <Loader2 className="w-3 h-3 animate-spin inline" /> : t('settings.endSession')}
-                          </button>
-                        )}
-                      </span>
                     </li>
                   );
                 })}
@@ -835,17 +840,9 @@ export function SettingsTabContent({
         </div>
       </div>
 
-      {/* أسفل الصفحة: صف واحد — تسجيل الخروج على اليمين، حذف الحساب على اليسار */}
+      {/* أسفل الصفحة: حذف الحساب فقط (تسجيل الخروج من الـ dropdown في الهيدر) */}
       <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-700">
-        <button
-          type="button"
-          onClick={onLogout}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 transition-all order-2 sm:order-2 ms-auto"
-        >
-          {t('settings.logout')}
-          <LogOut className="w-4 h-4" />
-        </button>
-        <p className="text-xs text-slate-500 order-1 sm:order-1">
+        <p className="text-xs text-slate-500">
           <button type="button" onClick={() => setDeleteDialogOpen(true)} className="underline hover:text-slate-400">
             {t('settings.deleteAccountPrompt')}
           </button>

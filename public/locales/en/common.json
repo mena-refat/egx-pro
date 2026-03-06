@@ -78,6 +78,7 @@
     "usernameTaken": "Username is already taken",
     "password": "Password",
     "lastChange": "Last changed",
+    "passwordNeverChanged": "Password has never been changed",
     "change": "Change",
     "currentPassword": "Current password",
     "newPassword": "New password",
@@ -130,7 +131,10 @@
     "confirmDelete": "Confirm deletion",
     "goodbyeTitle": "We'll miss you, {{name}}",
     "goodbyeBody": "Your account is kept for 30 days. You can come back anytime.",
-    "welcomeBack": "Welcome back! Your account is as you left it."
+    "welcomeBack": "Welcome back! Your account is as you left it.",
+    "markAllNotificationsRead": "Clear",
+    "noNewNotifications": "No new notifications",
+    "settingsPage": "Settings"
   },
   "market": {
     "overview": "Market Overview",

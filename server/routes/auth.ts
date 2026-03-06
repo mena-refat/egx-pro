@@ -22,10 +22,38 @@ const getCookieOptions = () => ({
 });
 
 import { parseUserAgent } from '../lib/parseUserAgent.ts';
+import { getGeoFromIp } from '../lib/geoFromIp.ts';
 
 function getSessionDevice(req: Request): { deviceType: string; browser: string; os: string } {
   const ua = req.headers['user-agent'];
   return parseUserAgent(ua);
+}
+
+async function getRefreshTokenData(
+  req: Request,
+  userId: string,
+  refreshHash: string,
+  expiresAt: Date
+): Promise<{
+  token: string;
+  userId: string;
+  expiresAt: Date;
+  deviceType: string;
+  browser: string;
+  os: string;
+  ipAddress: string | null;
+  city?: string;
+  country?: string;
+}> {
+  const geo = await getGeoFromIp(req.ip);
+  return {
+    token: refreshHash,
+    userId,
+    expiresAt,
+    ...getSessionDevice(req),
+    ipAddress: req.ip || null,
+    ...(geo && { city: geo.city, country: geo.country }),
+  };
 }
 
 router.post('/register', async (req: Request, res: Response) => {
@@ -97,13 +125,7 @@ router.post('/register', async (req: Request, res: Response) => {
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
 
     await prisma.refreshToken.create({
-      data: {
-        token: refreshHash,
-        userId: user.id,
-        expiresAt,
-        ...getSessionDevice(req),
-        ipAddress: req.ip || null,
-      },
+      data: await getRefreshTokenData(req, user.id, refreshHash, expiresAt),
     });
 
     await prisma.user.update({
@@ -242,13 +264,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
 
     await prisma.refreshToken.create({
-      data: {
-        token: refreshHash,
-        userId: user.id,
-        expiresAt,
-        ...getSessionDevice(req),
-        ipAddress: req.ip || null,
-      },
+      data: await getRefreshTokenData(req, user.id, refreshHash, expiresAt),
     });
 
     res.cookie('refreshToken', refreshToken, getCookieOptions());
@@ -459,6 +475,8 @@ router.get('/sessions', async (req: Request, res: Response) => {
         browser: s.browser ?? undefined,
         os: s.os ?? undefined,
         deviceInfo: s.deviceInfo ?? undefined,
+        city: s.city ?? undefined,
+        country: s.country ?? undefined,
         createdAt: s.createdAt,
         expiresAt: s.expiresAt,
         isCurrentSession: s.id === currentId,
@@ -663,13 +681,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     const refreshHash = hashRefreshToken(refreshToken);
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
     await prisma.refreshToken.create({
-      data: {
-        token: refreshHash,
-        userId: user.id,
-        expiresAt,
-        ...getSessionDevice(req),
-        ipAddress: req.ip || null,
-      },
+      data: await getRefreshTokenData(req, user.id, refreshHash, expiresAt),
     });
 
     res.cookie('refreshToken', refreshToken, getCookieOptions());

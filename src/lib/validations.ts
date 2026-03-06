@@ -125,6 +125,15 @@ export const addHoldingSchema = z.object({
 
 export const watchlistTickerSchema = z.object({
   ticker: z.string().min(2, 'Ticker must be at least 2 characters').max(20).toUpperCase(),
+  targetPrice: z.number().positive().optional(),
+});
+
+export const watchlistCheckTargetsSchema = z.object({
+  items: z.array(z.object({
+    ticker: z.string(),
+    targetPrice: z.number().positive(),
+    currentPrice: z.number().nonnegative(),
+  })),
 });
 
 /** Username: 3–30 chars, letters/numbers/underscore only; stored without @ */

@@ -156,6 +156,9 @@ async function startServer() {
   const goalsRoutes = (await import('./server/routes/goals.ts')).default;
   app.use('/api/goals', goalsRoutes);
 
+  const notificationsRoutes = (await import('./server/routes/notifications.ts')).default;
+  app.use('/api/notifications', notificationsRoutes);
+
   const billingRoutes = (await import('./server/routes/billing.ts')).default;
   app.use('/api/billing', billingRoutes);
 

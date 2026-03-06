@@ -6,6 +6,7 @@ import { AuthRequest } from './types';
 import { auditLog } from '../lib/audit.ts';
 import { ACHIEVEMENT_DEFS, type AchievementLevel } from '../lib/achievements.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
+import { createNotification } from '../lib/createNotification.ts';
 import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
 import fs from 'fs';
@@ -877,6 +878,7 @@ router.post('/referral/use', authenticate, async (req: AuthRequest, res: Respons
       where: { id: req.userId },
       select: {
         id: true,
+        fullName: true,
         referralUsed: true,
       },
     });
@@ -957,6 +959,13 @@ router.post('/referral/use', authenticate, async (req: AuthRequest, res: Respons
         },
       });
     });
+
+    await createNotification(
+      referrer.id,
+      'referral',
+      'دعوة ناجحة',
+      currentUser.fullName ? `صديقك ${currentUser.fullName} انضم بكودك` : 'صديق انضم بكودك'
+    );
 
     res.json({
       success: true,
@@ -1079,6 +1088,8 @@ router.get('/sessions', authenticate, async (req: AuthRequest, res: Response) =>
         browser: s.browser ?? undefined,
         os: s.os ?? undefined,
         deviceInfo: s.deviceInfo ?? undefined,
+        city: s.city ?? undefined,
+        country: s.country ?? undefined,
         createdAt: s.createdAt,
         expiresAt: s.expiresAt,
         isCurrentSession: false,

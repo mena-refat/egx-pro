@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from './store/authStore';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, UserPlus, TrendingUp, User as UserIcon, LayoutDashboard, PieChart, Calculator, Settings as SettingsIcon, Search, Eye, EyeOff, Sun, Moon, Monitor, Target } from 'lucide-react';
+import { LogIn, UserPlus, TrendingUp, User as UserIcon, LayoutDashboard, PieChart, Calculator, Settings as SettingsIcon, Search, Eye, EyeOff, Sun, Moon, Monitor, Target, Bell, LogOut, ChevronLeft, ChevronRight, Trophy, Briefcase, UserPlus as UserPlusIcon } from 'lucide-react';
 import OnboardingWizard from './components/OnboardingWizard';
 import { useProfileCompletion } from './hooks/useProfileCompletion';
 import PortfolioTracker from './components/PortfolioTracker';
@@ -50,6 +50,65 @@ export default function App() {
   });
 
   const [authMessage, setAuthMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('sidebarCollapsed') === 'true';
+  });
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{ id: string; type: string; title: string; body: string; isRead: boolean; createdAt: string }>>([]);
+  const [notificationsUnread, setNotificationsUnread] = useState(0);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) setUserDropdownOpen(false);
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node)) setNotificationsOpen(false);
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      const res = await fetch('/api/notifications', { headers: { Authorization: `Bearer ${accessToken}` } });
+      const data = await res.json();
+      if (res.ok && data?.notifications) {
+        setNotifications(data.notifications);
+        setNotificationsUnread(data.unreadCount ?? 0);
+      }
+    } catch {
+      // ignore
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (isAuthenticated && accessToken) fetchNotifications();
+  }, [isAuthenticated, accessToken, fetchNotifications]);
+
+  const markNotificationsRead = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      await fetch('/api/notifications/mark-read', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
+      setNotificationsUnread(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch {
+      // ignore
+    }
+  }, [accessToken]);
+
+  const goToSettings = () => {
+    setActiveTab('profile');
+    if (typeof window !== 'undefined') window.history.pushState(null, '', '/profile');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    setUserDropdownOpen(false);
+  };
 
   useEffect(() => {
     const applyTheme = (nextTheme: 'dark' | 'light' | 'system') => {
@@ -393,14 +452,26 @@ export default function App() {
   if (isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col md:flex-row">
-        {/* Sidebar */}
-        <aside className="w-full md:w-64 bg-slate-900 border-r border-white/5 p-6 flex flex-col gap-8">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="text-violet-500 w-8 h-8" />
-            <h1 className="text-2xl font-bold tracking-tight">EGX Pro</h1>
+        {/* Sidebar - collapsible */}
+        <aside
+          className={`w-full md:flex-shrink-0 bg-slate-900 border-r border-white/5 flex flex-col gap-6 transition-[width] duration-200 ease-in-out overflow-hidden ${sidebarCollapsed ? 'md:w-16' : 'md:w-60'}`}
+        >
+          <div className="p-4 flex items-center justify-between gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+              <TrendingUp className="text-violet-500 w-8 h-8 shrink-0" />
+              <h1 className={`text-xl font-bold tracking-tight truncate transition-opacity duration-200 ${sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>EGX Pro</h1>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed((c) => !c)}
+              className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5"
+              aria-label={sidebarCollapsed ? (i18n.language === 'ar' ? 'توسيع القائمة' : 'Expand sidebar') : (i18n.language === 'ar' ? 'طي القائمة' : 'Collapse sidebar')}
+            >
+              {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+            </button>
           </div>
 
-          <nav className="flex-1 space-y-2">
+          <nav className="flex-1 px-3 space-y-1">
             {[
               { id: 'dashboard', label: i18n.language === 'ar' ? 'الرئيسية' : 'Dashboard', icon: LayoutDashboard, path: '/' },
               { id: 'portfolio', label: i18n.language === 'ar' ? 'محفظتي' : 'Portfolio', icon: PieChart, path: '/portfolio' },
@@ -411,26 +482,29 @@ export default function App() {
             ].map(item => (
               <button
                 key={item.id}
+                title={sidebarCollapsed ? item.label : undefined}
                 onClick={() => {
                   setActiveTab(item.id);
                   setSelectedStock(null);
                   if (typeof window !== 'undefined') window.history.pushState(null, '', item.path);
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === item.id ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${sidebarCollapsed ? 'justify-center' : ''} ${activeTab === item.id ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
               >
-                <item.icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
+                <item.icon className="w-5 h-5 shrink-0" />
+                <span className={`font-medium truncate transition-opacity duration-200 ${sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>{item.label}</span>
               </button>
             ))}
           </nav>
 
-          <div className="pt-6 border-t border-white/5">
-            <button 
+          <div className="p-3 pt-4 border-t border-white/5">
+            <button
+              type="button"
+              title={sidebarCollapsed ? (i18n.language === 'ar' ? 'English' : 'العربية') : undefined}
               onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')}
-              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors"
+              className={`w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors rounded-xl ${sidebarCollapsed ? 'justify-center' : ''}`}
             >
-              <SettingsIcon className="w-4 h-4" />
-              {i18n.language === 'ar' ? 'English' : 'العربية'}
+              <SettingsIcon className="w-4 h-4 shrink-0" />
+              <span className={`truncate transition-opacity duration-200 ${sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>{i18n.language === 'ar' ? 'English' : 'العربية'}</span>
             </button>
           </div>
         </aside>
@@ -448,7 +522,116 @@ export default function App() {
                 <p className="text-slate-400">{i18n.language === 'ar' ? 'إليك نظرة سريعة على استثماراتك اليوم' : 'Here is a quick look at your investments today'}</p>
               )}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {/* Notifications */}
+              <div className="relative" ref={notificationsRef}>
+                <button
+                  type="button"
+                  onClick={() => { setNotificationsOpen((o) => !o); if (!notificationsOpen) fetchNotifications(); }}
+                  className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5"
+                  aria-label={t('settings.notifications')}
+                >
+                  <Bell className="w-5 h-5" />
+                  {notificationsUnread > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" aria-hidden />
+                  )}
+                </button>
+                <AnimatePresence>
+                  {notificationsOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="absolute left-0 top-full mt-2 w-80 max-h-96 overflow-auto rounded-xl border border-slate-700 bg-slate-900 shadow-xl z-50"
+                    >
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+                        <span className="font-medium text-slate-200">{t('settings.notifications')}</span>
+                        {notificationsUnread > 0 && (
+                          <button type="button" onClick={markNotificationsRead} className="text-xs text-violet-400 hover:text-violet-300">
+                            {t('settings.markAllNotificationsRead')}
+                          </button>
+                        )}
+                      </div>
+                      <div className="p-2">
+                        {notifications.length === 0 ? (
+                          <p className="text-sm text-slate-500 py-4 text-center">{t('settings.noNewNotifications')}</p>
+                        ) : (
+                          notifications.map((n) => {
+                            const Icon = n.type === 'achievement' ? Trophy : n.type === 'stock_target' ? TrendingUp : n.type === 'referral' ? UserPlusIcon : n.type === 'goal' ? Target : Briefcase;
+                            const timeAgo = (() => {
+                              const d = new Date(n.createdAt);
+                              const diff = (Date.now() - d.getTime()) / 1000;
+                              if (diff < 60) return t('settings.lastActivityMoments');
+                              if (diff < 3600) return t('settings.lastActivityMinutes', { m: Math.floor(diff / 60) });
+                              if (diff < 86400) return t('settings.lastActivityHours', { h: Math.floor(diff / 3600) });
+                              return t('settings.lastActivityDays', { d: Math.floor(diff / 86400) });
+                            })();
+                            return (
+                              <div key={n.id} className={`flex gap-3 px-3 py-2 rounded-lg ${!n.isRead ? 'bg-violet-500/10' : ''}`}>
+                                <Icon className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-slate-200">{n.title}</p>
+                                  {n.body && <p className="text-xs text-slate-500 mt-0.5">{n.body}</p>}
+                                  <p className="text-xs text-slate-500 mt-1">{timeAgo}</p>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* User dropdown */}
+              <div className="relative" ref={userDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserDropdownOpen((o) => !o)}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5"
+                >
+                  <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center shrink-0">
+                    <UserIcon className="w-4 h-4" />
+                  </div>
+                  <div className="text-left hidden sm:block">
+                    <p className="text-sm font-medium truncate max-w-[120px]">{user?.fullName || t('auth.login')}</p>
+                    {user?.username && <p className="text-xs text-slate-500 truncate max-w-[120px]">@{user.username}</p>}
+                  </div>
+                </button>
+                <AnimatePresence>
+                  {userDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-slate-700 bg-slate-900 shadow-xl z-50 overflow-hidden"
+                    >
+                      <div className="px-4 py-3 border-b border-slate-700">
+                        <p className="font-medium text-slate-200 truncate">{user?.fullName || '—'}</p>
+                        <p className="text-sm text-slate-500 truncate">{user?.username ? `@${user.username}` : '—'}</p>
+                      </div>
+                      <a
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); goToSettings(); }}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
+                      >
+                        <SettingsIcon className="w-4 h-4" />
+                        {t('settings.settingsPage')}
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => { logout(); setUserDropdownOpen(false); }}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white border-t border-slate-700"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        {t('settings.logout')}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
               {/* Theme toggle - compact header version */}
               <div className="flex items-center gap-1 rounded-full bg-slate-900/60 border border-slate-700/80 px-1 py-1 text-slate-400 text-xs">
                 <button

@@ -3,6 +3,7 @@
  */
 import { prisma } from './prisma.ts';
 import { ACHIEVEMENT_DEFS } from './achievements.ts';
+import { createNotification } from './createNotification.ts';
 
 export type AchievementContext = {
   now: Date;
@@ -272,5 +273,11 @@ export async function addNewlyUnlockedAchievements(
     where: { id: userId },
     data: { unseenAchievements: newUnseen },
   });
+  for (const id of toAdd) {
+    const def = ACHIEVEMENT_DEFS.find((d) => d.id === id);
+    const title = def ? `حققت إنجاز "${def.title}"` : 'إنجاز جديد';
+    const body = def?.shortDescription ?? 'تهانينا!';
+    await createNotification(userId, 'achievement', title, body);
+  }
   return toAdd;
 }

@@ -71,6 +71,7 @@ model User {
   analyses           Analysis[]
   referralsSent      Referral[] @relation("ReferralsSent")
   referralsReceived  Referral[] @relation("ReferralsReceived")
+  notifications      Notification[]
 }
 
 model RefreshToken {
@@ -85,6 +86,8 @@ model RefreshToken {
   browser    String?   // Chrome | Firefox | Safari | Edge | etc.
   os         String?   // Windows | macOS | iOS | Android | etc.
   ipAddress  String?
+  city       String?
+  country    String?
   isRevoked  Boolean   @default(false)
 }
 
@@ -131,10 +134,12 @@ model Goal {
 }
 
 model Watchlist {
-  id        String   @id @default(uuid())
-  userId    String
-  ticker    String
-  createdAt DateTime @default(now())
+  id                      String    @id @default(uuid())
+  userId                  String
+  ticker                  String
+  targetPrice             Float?
+  targetReachedNotifiedAt DateTime?
+  createdAt               DateTime  @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -171,6 +176,17 @@ model DiscountCode {
   usedCount  Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // achievement | stock_target | referral | goal | portfolio
+  title     String
+  body      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 model ArchivedUser {

@@ -78,6 +78,7 @@
     "usernameTaken": "اسم المستخدم مستخدم بالفعل",
     "password": "كلمة المرور",
     "lastChange": "آخر تغيير",
+    "passwordNeverChanged": "لم يتم تغيير كلمة المرور من قبل",
     "change": "تغيير",
     "currentPassword": "كلمة المرور الحالية",
     "newPassword": "كلمة المرور الجديدة",
@@ -130,7 +131,10 @@
     "confirmDelete": "تأكيد الحذف",
     "goodbyeTitle": "هنفتقدك يا {{name}}",
     "goodbyeBody": "حسابك محفوظ لمدة 30 يوماً. يمكنك العودة في أي وقت.",
-    "welcomeBack": "مرحباً بعودتك! حسابك كما تركته."
+    "welcomeBack": "مرحباً بعودتك! حسابك كما تركته.",
+    "markAllNotificationsRead": "مسح",
+    "noNewNotifications": "لا توجد إشعارات جديدة",
+    "settingsPage": "الإعدادات"
   },
   "market": {
     "overview": "نظرة على السوق",
