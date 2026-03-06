@@ -21,10 +21,11 @@ const getCookieOptions = () => ({
   maxAge: REFRESH_TOKEN_AGE_MS,
 });
 
-function getDeviceInfo(req: Request): string {
-  const ua = req.headers['user-agent'] || 'Unknown';
-  const short = ua.length > 200 ? ua.slice(0, 200) + '…' : ua;
-  return short;
+import { parseUserAgent } from '../lib/parseUserAgent.ts';
+
+function getSessionDevice(req: Request): { deviceType: string; browser: string; os: string } {
+  const ua = req.headers['user-agent'];
+  return parseUserAgent(ua);
 }
 
 router.post('/register', async (req: Request, res: Response) => {
@@ -100,7 +101,7 @@ router.post('/register', async (req: Request, res: Response) => {
         token: refreshHash,
         userId: user.id,
         expiresAt,
-        deviceInfo: getDeviceInfo(req),
+        ...getSessionDevice(req),
         ipAddress: req.ip || null,
       },
     });
@@ -245,7 +246,7 @@ router.post('/login', async (req: Request, res: Response) => {
         token: refreshHash,
         userId: user.id,
         expiresAt,
-        deviceInfo: getDeviceInfo(req),
+        ...getSessionDevice(req),
         ipAddress: req.ip || null,
       },
     });
@@ -314,7 +315,7 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
         token: refreshHash,
         userId: user.id,
         expiresAt,
-        deviceInfo: getDeviceInfo(req),
+        ...getSessionDevice(req),
         ipAddress: req.ip || null,
       },
     });
@@ -454,8 +455,10 @@ router.get('/sessions', async (req: Request, res: Response) => {
     res.json(
       list.map((s) => ({
         id: s.id,
-        deviceInfo: s.deviceInfo,
-        ipAddress: s.ipAddress,
+        deviceType: s.deviceType ?? undefined,
+        browser: s.browser ?? undefined,
+        os: s.os ?? undefined,
+        deviceInfo: s.deviceInfo ?? undefined,
         createdAt: s.createdAt,
         expiresAt: s.expiresAt,
         isCurrentSession: s.id === currentId,
@@ -664,7 +667,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
         token: refreshHash,
         userId: user.id,
         expiresAt,
-        deviceInfo: getDeviceInfo(req),
+        ...getSessionDevice(req),
         ipAddress: req.ip || null,
       },
     });

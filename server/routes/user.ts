@@ -1075,11 +1075,13 @@ router.get('/sessions', authenticate, async (req: AuthRequest, res: Response) =>
     res.json(
       list.map((s) => ({
         id: s.id,
-        deviceInfo: s.deviceInfo,
-        ipAddress: s.ipAddress,
+        deviceType: s.deviceType ?? undefined,
+        browser: s.browser ?? undefined,
+        os: s.os ?? undefined,
+        deviceInfo: s.deviceInfo ?? undefined,
         createdAt: s.createdAt,
         expiresAt: s.expiresAt,
-        isCurrentSession: false, // لا يُعرف بدون مقارنة الـ cookie
+        isCurrentSession: false,
       }))
     );
   } catch (err) {

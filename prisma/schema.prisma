@@ -80,7 +80,10 @@ model RefreshToken {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt  DateTime
   createdAt  DateTime  @default(now())
-  deviceInfo String?
+  deviceInfo String?   // legacy raw UA; prefer deviceType/browser/os
+  deviceType String?   // desktop | mobile | tablet
+  browser    String?   // Chrome | Firefox | Safari | Edge | etc.
+  os         String?   // Windows | macOS | iOS | Android | etc.
   ipAddress  String?
   isRevoked  Boolean   @default(false)
 }

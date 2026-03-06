@@ -424,19 +424,13 @@ export default function App() {
             ))}
           </nav>
 
-          <div className="pt-6 border-t border-white/5 space-y-4">
+          <div className="pt-6 border-t border-white/5">
             <button 
               onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')}
               className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors"
             >
               <SettingsIcon className="w-4 h-4" />
               {i18n.language === 'ar' ? 'English' : 'العربية'}
-            </button>
-            <button 
-              onClick={logout}
-              className="w-full px-4 py-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-colors text-sm font-bold"
-            >
-              {t('auth.logout')}
             </button>
           </div>
         </aside>

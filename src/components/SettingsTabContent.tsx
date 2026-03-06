@@ -17,6 +17,9 @@ import {
   X,
   Loader2,
   Smartphone,
+  Tablet,
+  Key,
+  Pencil,
 } from 'lucide-react';
 import { validateChangePassword } from '../lib/validations';
 
@@ -40,6 +43,32 @@ export interface SettingsUserProfile {
 }
 
 const USERNAME_COOLDOWN_DAYS = 7;
+
+function formatLastActivity(
+  createdAt: string,
+  t: (key: string, opts?: Record<string, number>) => string
+): string {
+  const diff = Date.now() - new Date(createdAt).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (mins < 1) return t('settings.lastActivityMoments');
+  if (mins < 60) return t('settings.lastActivityMinutes', { m: mins });
+  if (hours < 24) return t('settings.lastActivityHours', { h: hours });
+  return t('settings.lastActivityDays', { d: days });
+}
+
+function sessionDeviceLabel(
+  s: { deviceType?: string; browser?: string; os?: string; deviceInfo?: string },
+  t: (key: string) => string
+): string {
+  const browser = s.browser || 'Unknown';
+  const os = s.os || 'Unknown';
+  const on = t('settings.sessionOn');
+  if (browser && os) return `${browser} ${on} ${os}`;
+  if (s.deviceInfo && s.deviceInfo.length < 80) return s.deviceInfo;
+  return `${browser} ${on} ${os}`;
+}
 
 function displayPhone(phone: string | null | undefined): string {
   if (!phone) return '';
@@ -92,7 +121,15 @@ export function SettingsTabContent({
   const [twoFaLoading, setTwoFaLoading] = useState(false);
   const [twoFaMessage, setTwoFaMessage] = useState<string | null>(null);
 
-  const [sessions, setSessions] = useState<Array<{ id: string; deviceInfo?: string; createdAt: string; isCurrentSession?: boolean }>>([]);
+  const [sessions, setSessions] = useState<Array<{
+    id: string;
+    deviceType?: string;
+    browser?: string;
+    os?: string;
+    deviceInfo?: string;
+    createdAt: string;
+    isCurrentSession?: boolean;
+  }>>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokeAllOtherLoading, setRevokeAllOtherLoading] = useState(false);
@@ -211,7 +248,7 @@ export function SettingsTabContent({
           setEditingField(null);
         }
         setRequestStatus({ type: 'success', message: i18n.language === 'ar' ? 'تم الحفظ بنجاح' : 'Saved successfully' });
-        setTimeout(() => setSuccessField(null), 3000);
+        setTimeout(() => setSuccessField(null), 2000);
       } catch (e) {
         setRequestStatus({ type: 'error', message: (e as Error).message || 'Failed to save' });
       } finally {
@@ -239,8 +276,11 @@ export function SettingsTabContent({
         }
       }
       setSessions(
-        list.map((s) => ({
+        list.map((s: { id: string; deviceType?: string; browser?: string; os?: string; deviceInfo?: string; createdAt: string; isCurrentSession?: boolean }) => ({
           id: s.id,
+          deviceType: s.deviceType,
+          browser: s.browser,
+          os: s.os,
           deviceInfo: s.deviceInfo,
           createdAt: s.createdAt,
           isCurrentSession: s.isCurrentSession ?? false,
@@ -402,19 +442,20 @@ export function SettingsTabContent({
     return n === 'حذف' || n.toUpperCase() === 'DELETE';
   })();
 
-  const cardClass = 'p-6 rounded-2xl border border-slate-700 dark:border-slate-700 bg-slate-900/50 dark:bg-slate-900/50 shadow-md';
+  const cardClass = 'rounded-2xl border border-slate-700 dark:border-slate-700 bg-slate-900/50 dark:bg-slate-900/50 shadow-md';
+  const cardPadding = 'p-6';
   const inputClass = 'w-full bg-slate-800 dark:bg-slate-800 border border-slate-600 dark:border-slate-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-200';
-  const labelClass = 'text-xs text-slate-400 mb-1 block';
+  const sectionTitleClass = 'text-base font-semibold text-slate-200 flex items-center gap-2';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* 1. بيانات الحساب */}
-      <div className={cardClass}>
-        <h3 className="font-bold text-slate-400 mb-4 text-xs flex items-center gap-2 uppercase">
-          <User className="w-4 h-4" />
+      <div className={`${cardClass} ${cardPadding}`}>
+        <h3 className={`${sectionTitleClass} mb-4`}>
+          <User className="w-5 h-5 text-slate-400" />
           {t('settings.accountData')}
         </h3>
-        <div className="space-y-4">
+        <div className="space-y-0 divide-y divide-slate-700">
           {(['fullName', 'username', 'email', 'phone'] as const).map((field) => {
             const label = t(`settings.${field === 'fullName' ? 'fullName' : field === 'username' ? 'username' : field === 'email' ? 'email' : 'phone'}`);
             const isEditing = editingField === field;
@@ -438,19 +479,21 @@ export function SettingsTabContent({
             const isPhone = field === 'phone';
             const disabled = isUsername && usernameDisabled;
             return (
-              <div key={field}>
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <label className={labelClass}>{label}</label>
+              <div key={field} className="py-4 first:pt-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-slate-300">{label}</span>
                   {!isEditing && !disabled && (
                     <button
                       type="button"
                       onClick={() => setEditingField(field)}
-                      className="text-xs text-violet-400 hover:text-violet-300"
+                      className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300"
                     >
+                      <Pencil className="w-3.5 h-3.5" />
                       {t('settings.edit')}
                     </button>
                   )}
                 </div>
+                <div className="mt-2 border-b border-slate-700/80 pb-2 mb-2" />
                 {isEditing ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -462,6 +505,7 @@ export function SettingsTabContent({
                         placeholder={label}
                         maxLength={isPhone ? 11 : undefined}
                         disabled={disabled}
+                        autoFocus
                       />
                       {isUsername && (
                         <span className="flex items-center gap-1 shrink-0">
@@ -478,11 +522,7 @@ export function SettingsTabContent({
                         disabled={savingField === field || (isUsername && usernameStatus !== 'available' && value !== (user.username ?? ''))}
                         className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50"
                       >
-                        {savingField === field ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin inline" />
-                        ) : (
-                          t('settings.save')
-                        )}
+                        {savingField === field ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : t('settings.save')}
                       </button>
                       <button
                         type="button"
@@ -506,7 +546,7 @@ export function SettingsTabContent({
                     </div>
                   </div>
                 ) : (
-                  <input type="text" readOnly value={value || '—'} className={`${inputClass} cursor-default opacity-90`} />
+                  <p className="text-sm text-slate-500">{value || '—'}</p>
                 )}
                 {isUsername && usernameDisabled && (
                   <p className="text-xs text-amber-500 mt-1">{t('settings.usernameChangeIn', { days: usernameCooldownDays })}</p>
@@ -515,7 +555,12 @@ export function SettingsTabContent({
                   <p className="text-xs text-red-400 mt-1">{usernameMessage}</p>
                 )}
                 {isPhone && phoneError && <p className="text-xs text-red-400 mt-1">{phoneError}</p>}
-                {successField === field && <p className="text-xs text-emerald-400 mt-1">{i18n.language === 'ar' ? 'تم الحفظ بنجاح' : 'Saved successfully'}</p>}
+                {successField === field && (
+                  <p className="text-xs text-emerald-500 mt-1 flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" />
+                    {i18n.language === 'ar' ? 'تم الحفظ بنجاح' : 'Saved successfully'}
+                  </p>
+                )}
               </div>
             );
           })}
@@ -523,20 +568,17 @@ export function SettingsTabContent({
       </div>
 
       {/* 2. الأمان والخصوصية */}
-      <div className={cardClass}>
-        <h3 className="font-bold text-slate-400 mb-4 text-xs flex items-center gap-2 uppercase">
-          <Lock className="w-4 h-4" />
+      <div className={`${cardClass} ${cardPadding}`}>
+        <h3 className={`${sectionTitleClass} mb-4`}>
+          <Lock className="w-5 h-5 text-slate-400" />
           {t('settings.securityPrivacy')}
         </h3>
-
-        <div className="space-y-4">
-          <div className="border-b border-slate-700 pb-4">
+        <div className="space-y-0 divide-y divide-slate-700">
+          <div className="py-4 first:pt-0">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <p className="text-sm font-medium text-slate-200">{t('settings.password')}</p>
-                <p className="text-xs text-slate-500">
-                  {t('settings.lastChange')}: {lastPasswordChangeAt ? new Date(lastPasswordChangeAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-GB') : '—'}
-                </p>
+              <div className="flex items-center gap-2">
+                <Key className="w-4 h-4 text-slate-400" />
+                <span className="text-sm font-medium text-slate-200">{t('settings.password')}</span>
               </div>
               <button
                 type="button"
@@ -546,8 +588,11 @@ export function SettingsTabContent({
                 {showPasswordForm ? t('settings.cancel') : t('settings.change')}
               </button>
             </div>
+            <p className="text-xs text-slate-500 mt-1">
+              {t('settings.lastChange')}: {lastPasswordChangeAt ? new Date(lastPasswordChangeAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-GB') : '—'}
+            </p>
             {showPasswordForm && (
-              <div className="mt-3 space-y-3">
+              <div className="mt-4 space-y-3">
                 <div className="relative">
                   <input
                     type={showCurrentPw ? 'text' : 'password'}
@@ -572,13 +617,15 @@ export function SettingsTabContent({
                     {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder={t('settings.confirmPassword')}
-                  className={inputClass}
-                />
+                <div className="relative">
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder={t('settings.confirmPassword')}
+                    className={`${inputClass} pe-10`}
+                  />
+                </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -597,13 +644,13 @@ export function SettingsTabContent({
             )}
           </div>
 
-          <div className="border-b border-slate-700 pb-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="py-4 flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-medium text-slate-200 flex items-center gap-2">
-                <Shield className="w-4 h-4" />
+                <Shield className="w-4 h-4 text-slate-400" />
                 {t('settings.twoFa')}
               </p>
-              <p className="text-xs text-slate-500">{t('settings.twoFaDesc')}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{t('settings.twoFaDesc')}</p>
             </div>
             {twoFactorEnabled ? (
               <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">{t('settings.enabled')}</span>
@@ -630,36 +677,48 @@ export function SettingsTabContent({
                 </button>
               </div>
             )}
-            {twoFaMessage && <p className="text-xs text-slate-400 mt-1">{twoFaMessage}</p>}
+            {twoFaMessage && <p className="text-xs text-slate-400 mt-1 w-full">{twoFaMessage}</p>}
           </div>
 
-          <div>
-            <p className="text-sm font-medium text-slate-200 mb-2">{t('settings.sessions')}</p>
+          <div className="pt-4">
+            <p className="text-sm font-medium text-slate-200 mb-3">{t('settings.sessions')}</p>
             {sessionsLoading ? (
               <p className="text-xs text-slate-500">{i18n.language === 'ar' ? 'جاري التحميل...' : 'Loading...'}</p>
             ) : sessions.length === 0 ? (
               <p className="text-xs text-slate-500">{i18n.language === 'ar' ? 'لا توجد جلسات أخرى' : 'No other sessions'}</p>
             ) : (
-              <ul className="space-y-2">
-                {sessions.map((s) => (
-                  <li key={s.id} className="flex items-center justify-between gap-2 py-2 border-b border-slate-700 last:border-0">
-                    <span className="flex items-center gap-2 text-sm text-slate-300">
-                      <Smartphone className="w-4 h-4 text-slate-500" />
-                      {s.deviceInfo || 'Device'} — {new Date(s.createdAt).toLocaleString(i18n.language === 'ar' ? 'ar-EG' : 'en-GB')}
-                    </span>
-                    <span className="flex items-center gap-2">
-                      {s.isCurrentSession && <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/30 text-violet-300">{t('settings.youAreHere')}</span>}
-                      <button
-                        type="button"
-                        onClick={() => endSession(s.id)}
-                        disabled={revokingId === s.id}
-                        className="text-xs text-red-400 hover:text-red-300"
-                      >
-                        {revokingId === s.id ? <Loader2 className="w-3 h-3 animate-spin inline" /> : t('settings.endSession')}
-                      </button>
-                    </span>
-                  </li>
-                ))}
+              <ul className="space-y-0 rounded-xl border border-slate-700 overflow-hidden">
+                {sessions.map((s) => {
+                  const dt = (s.deviceType || '').toLowerCase();
+                  const DeviceIcon = dt === 'mobile' ? Smartphone : dt === 'tablet' ? Tablet : Monitor;
+                  const label = sessionDeviceLabel(s, t);
+                  const lastActivity = formatLastActivity(s.createdAt, t);
+                  return (
+                    <li key={s.id} className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-700 last:border-b-0 bg-slate-800/30">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <DeviceIcon className="w-5 h-5 text-slate-500 shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-slate-200">{label}</p>
+                          <p className="text-xs text-slate-500">{lastActivity}</p>
+                        </div>
+                      </div>
+                      <span className="flex items-center gap-2 shrink-0">
+                        {s.isCurrentSession ? (
+                          <span className="text-xs px-2 py-1 rounded bg-violet-500/30 text-violet-300">{t('settings.youAreHere')}</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => endSession(s.id)}
+                            disabled={revokingId === s.id}
+                            className="text-xs text-slate-400 hover:text-red-400"
+                          >
+                            {revokingId === s.id ? <Loader2 className="w-3 h-3 animate-spin inline" /> : t('settings.endSession')}
+                          </button>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             )}
             {sessions.length > 1 && (
@@ -667,7 +726,7 @@ export function SettingsTabContent({
                 type="button"
                 onClick={revokeAllOther}
                 disabled={revokeAllOtherLoading}
-                className="mt-2 text-xs text-slate-400 hover:text-slate-300"
+                className="mt-3 text-xs text-slate-500 hover:text-slate-400"
               >
                 {revokeAllOtherLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : t('settings.endAllSessions')}
               </button>
@@ -677,15 +736,15 @@ export function SettingsTabContent({
       </div>
 
       {/* 3. التفضيلات */}
-      <div className={cardClass}>
-        <h3 className="font-bold text-slate-400 mb-4 text-xs flex items-center gap-2 uppercase">
-          <Settings className="w-4 h-4" />
+      <div className={`${cardClass} ${cardPadding}`}>
+        <h3 className={`${sectionTitleClass} mb-4`}>
+          <Settings className="w-5 h-5 text-slate-400" />
           {t('settings.preferences')}
         </h3>
-        <div className="space-y-4">
-          <div>
-            <p className="text-sm text-slate-300 mb-2">{t('settings.theme')}</p>
-            <div className="grid grid-cols-3 gap-2">
+        <div className="space-y-0 divide-y divide-slate-700">
+          <div className="py-4 first:pt-0">
+            <p className="text-sm font-medium text-slate-200 mb-3">{t('settings.theme')}</p>
+            <div className="flex flex-row-reverse gap-2 justify-end">
               {[
                 { key: 'dark', label: t('settings.dark'), icon: Moon },
                 { key: 'system', label: t('settings.system'), icon: Monitor },
@@ -698,7 +757,7 @@ export function SettingsTabContent({
                     key={opt.key}
                     type="button"
                     onClick={() => onUpdateProfile({ theme: opt.key }, { success: '' })}
-                    className={`flex flex-col items-center gap-1 px-3 py-3 rounded-xl border text-sm transition-all ${active ? 'border-violet-500 bg-slate-800' : 'border-slate-600 bg-slate-800/50 hover:border-slate-500'}`}
+                    className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl border text-sm transition-all ${active ? 'border-violet-500 bg-violet-500/10' : 'border-slate-600 bg-slate-800/50 hover:border-slate-500'}`}
                   >
                     <Icon className="w-5 h-5 text-slate-300" />
                     <span>{opt.label}</span>
@@ -707,34 +766,34 @@ export function SettingsTabContent({
               })}
             </div>
           </div>
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <p className="text-sm text-slate-300">{t('settings.language')}</p>
+          <div className="py-4 flex items-center justify-between flex-wrap gap-2">
+            <p className="text-sm font-medium text-slate-200">{t('settings.language')}</p>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => onUpdateProfile({ language: 'ar' }, { success: '' })}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${user.language === 'ar' || !user.language ? 'bg-violet-600 text-white' : 'border border-slate-600 text-slate-400'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${user.language === 'ar' || !user.language ? 'bg-violet-600 text-white' : 'border border-slate-600 text-slate-400 hover:bg-slate-800'}`}
               >
                 {t('settings.arabic')}
               </button>
               <button
                 type="button"
                 onClick={() => onUpdateProfile({ language: 'en' }, { success: '' })}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${user.language === 'en' ? 'bg-violet-600 text-white' : 'border border-slate-600 text-slate-400'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${user.language === 'en' ? 'bg-violet-600 text-white' : 'border border-slate-600 text-slate-400 hover:bg-slate-800'}`}
               >
                 {t('settings.english')}
               </button>
             </div>
           </div>
-          <div className="flex items-center justify-between py-2 border-t border-slate-700">
-            <div>
+          <div className="py-4 flex items-center justify-between gap-4">
+            <div className="min-w-0">
               <p className="text-sm font-medium text-slate-200">{t('settings.shariaMode')}</p>
-              <p className="text-xs text-slate-500">{t('settings.shariaDesc')}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{t('settings.shariaDescShort')}</p>
             </div>
             <button
               type="button"
               onClick={() => onUpdateProfile({ shariaMode: !user.shariaMode }, { success: '' })}
-              className={`relative w-11 h-6 rounded-full px-1 transition-colors flex items-center ${user.shariaMode ? 'bg-violet-600' : 'bg-slate-600'}`}
+              className={`relative w-11 h-6 rounded-full px-1 transition-colors flex items-center shrink-0 ${user.shariaMode ? 'bg-violet-600' : 'bg-slate-600'}`}
             >
               <span className={`absolute w-4 h-4 rounded-full bg-white shadow transition-transform ${user.shariaMode ? 'translate-x-6 rtl:-translate-x-6' : 'translate-x-0'}`} />
             </button>
@@ -743,12 +802,12 @@ export function SettingsTabContent({
       </div>
 
       {/* 4. الإشعارات */}
-      <div className={cardClass}>
-        <h3 className="font-bold text-slate-400 mb-4 text-xs flex items-center gap-2 uppercase">
-          <Bell className="w-4 h-4" />
+      <div className={`${cardClass} ${cardPadding}`}>
+        <h3 className={`${sectionTitleClass} mb-4`}>
+          <Bell className="w-5 h-5 text-slate-400" />
           {t('settings.notifications')}
         </h3>
-        <div className="space-y-3">
+        <div className="space-y-0 divide-y divide-slate-700">
           {[
             { key: 'notifySignals', label: t('settings.notifySignals'), desc: t('settings.notifySignalsDesc') },
             { key: 'notifyPortfolio', label: t('settings.notifyPortfolio'), desc: t('settings.notifyPortfolioDesc') },
@@ -758,7 +817,7 @@ export function SettingsTabContent({
           ].map(({ key, label, desc }) => {
             const value = (user as Record<string, unknown>)[key] ?? true;
             return (
-              <div key={key} className="flex items-center justify-between py-2 border-b border-slate-700 last:border-0">
+              <div key={key} className="flex items-center justify-between py-4 first:pt-0">
                 <div>
                   <p className="text-sm font-medium text-slate-200">{label}</p>
                   <p className="text-xs text-slate-500">{desc}</p>
@@ -776,22 +835,21 @@ export function SettingsTabContent({
         </div>
       </div>
 
-      {/* أسفل الصفحة: تسجيل الخروج + حذف الحساب */}
+      {/* أسفل الصفحة: صف واحد — تسجيل الخروج على اليمين، حذف الحساب على اليسار */}
       <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-700">
-        <p className="text-xs text-slate-500">
-          {t('settings.deleteAccount')}{' '}
-          <button type="button" onClick={() => setDeleteDialogOpen(true)} className="underline hover:text-slate-400">
-            {t('settings.deleteClickHere')}
-          </button>
-        </p>
         <button
           type="button"
           onClick={onLogout}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-slate-600 text-slate-400 hover:bg-slate-800 hover:text-slate-300 transition-all"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 transition-all order-2 sm:order-2 ms-auto"
         >
-          <LogOut className="w-4 h-4" />
           {t('settings.logout')}
+          <LogOut className="w-4 h-4" />
         </button>
+        <p className="text-xs text-slate-500 order-1 sm:order-1">
+          <button type="button" onClick={() => setDeleteDialogOpen(true)} className="underline hover:text-slate-400">
+            {t('settings.deleteAccountPrompt')}
+          </button>
+        </p>
       </div>
 
       {/* Delete account dialog */}
