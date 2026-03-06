@@ -327,6 +327,9 @@
   "market": {
     "overview": "نظرة على السوق",
     "livePrices": "الأسعار اللحظية",
+    "allPricesLive": "جميع الأسعار لحظية",
+    "stocksDelayed10": "أسعار الأسهم متأخرة 10 دقائق",
+    "upgradeToLivePrices": "ترقية للأسعار اللحظية",
     "usdEgp": "الدولار / الجنيه",
     "egx30": "EGX 30",
     "egx30Capped": "EGX 30 Capped",
@@ -357,6 +360,28 @@
     "purity999": "عيار 999",
     "purity925": "عيار 925",
     "purity800": "عيار 800"
+  },
+  "delay": {
+    "noticeTitle": "أسعار الأسهم متأخرة 10 دقائق",
+    "noticeBody": "لأعضاء الخطة المجانية. ترقّ للـ Pro للحصول على أسعار لحظية فورية.",
+    "upgradeToPro": "ترقية للـ Pro",
+    "gotIt": "فهمت، شكراً",
+    "liveBadge": "Live",
+    "delayedBadge": "متأخر 10 دقائق",
+    "lastUpdateAt": "آخر تحديث: {{time}}",
+    "priceAsAt": "السعر كما في {{time}}",
+    "marketClosed": "السوق مغلق",
+    "lastCloseAt": "آخر إغلاق: {{time}}",
+    "preSession": "جلسة استكشافية",
+    "lastPrice": "آخر سعر",
+    "goldClosedUntil": "مغلق حتى الأحد"
+  },
+  "marketStatus": {
+    "closed": "مغلق",
+    "pre": "استكشافية",
+    "open": "مفتوح",
+    "auction": "مزاد الإغلاق",
+    "closing": "إغلاق"
   },
   "plan": {
     "analysisLimitTitle": "أنت مستثمر جاد!",

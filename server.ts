@@ -297,6 +297,25 @@ async function startServer() {
       console.error('AI usage reset job error:', err);
     }
   }, 60 * 60 * 1000);
+
+  // كل 10 دقائق: تحديث كاش الأسعار المتأخرة للمجانيين
+  const TEN_MIN_MS = 10 * 60 * 1000;
+  setInterval(async () => {
+    try {
+      const { getStockPrice } = await import('./server/lib/yahoo.ts');
+      const { setCache } = await import('./server/lib/redis.ts');
+      const { EGX_TICKERS } = await import('./server/lib/egxTickers.ts');
+      const now = Date.now();
+      for (const ticker of EGX_TICKERS) {
+        const data = await getStockPrice(ticker);
+        if (data) {
+          await setCache(`stock:price:delayed:${ticker}`, { ...data, delayedAt: now }, 15 * 60);
+        }
+      }
+    } catch (err) {
+      console.error('Delayed prices refresh error:', err);
+    }
+  }, TEN_MIN_MS);
 }
 
 startServer().catch(err => {

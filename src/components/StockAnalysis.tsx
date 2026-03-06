@@ -19,6 +19,8 @@ import {
   X,
   Lock,
   Crown,
+  Circle,
+  Timer,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
@@ -116,6 +118,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
   const [analysisPlan, setAnalysisPlan] = useState<{ used: number; quota: number } | null>(null);
   const [showAnalysisLimitModal, setShowAnalysisLimitModal] = useState(false);
   const [showWatchlistLimitModal, setShowWatchlistLimitModal] = useState(false);
+  const [egxStatus, setEgxStatus] = useState<{ status: string; label?: { ar: string; en: string } } | null>(null);
   const isPro = user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'annual' || user?.plan === 'pro' || user?.plan === 'yearly';
 
   const open = (priceDetail?.open as number) ?? stock.open ?? 0;
@@ -146,6 +149,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       try {
         const [priceRes, histRes, finRes, depthRes, invRes, statsRes, newsRes, watchRes] = await Promise.all([
           api.get(`/stocks/${stock.ticker}/price`),
+          api.get<{ egx: { status: string; label?: { ar: string; en: string } } }>('/stocks/market/status').catch(() => ({ data: null })),
           api.get(`/stocks/${stock.ticker}/history`, { params: { range: chartRange } }),
           api.get(`/stocks/${stock.ticker}/financials`).catch(() => ({ data: null })),
           api.get(`/stocks/${stock.ticker}/order-depth`).catch(() => ({ data: { available: false } })),
@@ -156,6 +160,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
         ]);
         if (cancelled) return;
         setPriceDetail(priceRes.data as Record<string, unknown>);
+        if (statusRes.data?.egx) setEgxStatus(statusRes.data.egx);
         setHistory(Array.isArray(histRes.data) ? histRes.data : []);
         setFinancials(finRes.data as Record<string, unknown> | null);
         setOrderDepthAvailable((depthRes.data as { available?: boolean })?.available ?? false);
@@ -286,7 +291,50 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             {(stock.changePercent ?? 0) >= 0 ? '+' : ''}{(stock.changePercent ?? 0).toFixed(2)}% {(stock.change ?? 0) >= 0 ? '+' : ''}{formatNum(stock.change)} ج
           </span>
         </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('stockDetail.lastUpdate')}: {new Date().toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}</p>
+        {/* Price status: Live / delayed 10 min / market closed / pre-market */}
+        <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+          {egxStatus?.status === 'closed' && (
+            <>
+              <span className="inline-flex items-center gap-1">
+                <Circle className="w-3 h-3 text-slate-500 fill-slate-500" aria-hidden />
+                {t('delay.marketClosed')}
+              </span>
+              <span>{t('delay.lastCloseAt', { time: '14:30' })}</span>
+            </>
+          )}
+          {egxStatus?.status === 'pre' && (
+            <span className="inline-flex items-center gap-1">
+              <Circle className="w-3 h-3 text-amber-500 fill-amber-500" aria-hidden />
+              {t('delay.preSession')}
+            </span>
+          )}
+          {egxStatus && egxStatus.status !== 'closed' && egxStatus.status !== 'pre' && (
+            <>
+              {priceDetail?.isDelayed ? (
+                <>
+                  <span className="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                    <Timer className="w-3 h-3" aria-hidden />
+                    {t('delay.delayedBadge')}
+                  </span>
+                  {priceDetail?.priceTime && (
+                    <span>{t('delay.priceAsAt', { time: String(priceDetail.priceTime) })}</span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                    <Circle className="w-3 h-3 fill-emerald-500" aria-hidden />
+                    {t('delay.liveBadge')}
+                  </span>
+                  <span>{t('delay.lastUpdateAt', { time: (priceDetail?.priceTime as string) || new Date().toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) })}</span>
+                </>
+              )}
+            </>
+          )}
+          {!egxStatus && (
+            <span>{t('stockDetail.lastUpdate')}: {new Date().toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}</span>
+          )}
+        </div>
 
         {showShariaBanner && (
           <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 dark:text-amber-200 text-sm">

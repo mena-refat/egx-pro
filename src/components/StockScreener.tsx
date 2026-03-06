@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, TrendingUp, TrendingDown, Star, Plus } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, Star, Plus, Circle, Timer } from 'lucide-react';
 import api from '../lib/api';
 import { useLivePrices } from '../hooks/useLivePrices';
+import { useAuthStore } from '../store/authStore';
 import { searchStocks, getStockName, getStockInfo } from '../lib/egxStocks';
 import { getSector, isInEGX30, isInEGX70, isInEGX100 } from '../lib/egxIndicesSectors';
 import { Stock } from '../types';
@@ -22,6 +23,8 @@ interface StockScreenerProps {
 
 export default function StockScreener({ onSelectStock }: StockScreenerProps) {
   const { t, i18n } = useTranslation('common');
+  const user = useAuthStore((s) => s.user);
+  const isPro = user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'annual' || user?.plan === 'pro' || user?.plan === 'yearly';
   const [stocks, setStocks] = useState<StockWithMeta[]>([]);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [search, setSearch] = useState('');
@@ -181,7 +184,20 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
   return (
     <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
       <header className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('stocks.title')}</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('stocks.title')}</h1>
+          {isPro ? (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10">
+              <Circle className="w-3 h-3 fill-emerald-500" aria-hidden />
+              {t('delay.liveBadge')}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full bg-slate-500/10">
+              <Timer className="w-3 h-3" aria-hidden />
+              {t('delay.delayedBadge')}
+            </span>
+          )}
+        </div>
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 ltr:left-3 rtl:right-3" />
           <input

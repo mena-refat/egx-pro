@@ -8,6 +8,7 @@ import PortfolioTracker from './components/PortfolioTracker';
 import StockScreener from './components/StockScreener';
 import InvestmentCalculator from './components/InvestmentCalculator';
 import StockAnalysis from './components/StockAnalysis';
+import DelayNotice from './components/DelayNotice';
 import GoalsPage from './pages/GoalsPage';
 import MarketPage from './pages/MarketPage';
 import ProfilePage from './components/ProfilePage';
@@ -934,6 +935,10 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
+              <DelayNotice
+                showWhenStockPage={activeTab === 'market' || activeTab === 'stocks' || !!selectedStock}
+                isPro={user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'annual' || user?.plan === 'pro' || user?.plan === 'yearly' || false}
+              />
               {selectedStock ? (
                 <StockAnalysis stock={selectedStock} onBack={() => setSelectedStock(null)} />
               ) : (

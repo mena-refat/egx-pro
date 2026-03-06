@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
-import { getStockPrice } from '../lib/yahoo.ts';
+import { getStockPrice, getStockPriceDelayed } from '../lib/yahoo.ts';
 import { addHoldingSchema } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
@@ -12,6 +12,11 @@ router.get('/', async (req: Request, res: Response) => {
     const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id);
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
+    });
+    const delayed = user ? !isPro(user) : false;
     const holdings = await prisma.portfolio.findMany({
       where: { userId }
     });
@@ -19,8 +24,9 @@ router.get('/', async (req: Request, res: Response) => {
     let totalValue = 0;
     let totalCost = 0;
 
+    const getPrice = delayed ? getStockPriceDelayed : getStockPrice;
     const enrichedHoldings = await Promise.all(holdings.map(async (holding) => {
-      const currentPriceData = await getStockPrice(holding.ticker) as { price: number } | null;
+      const currentPriceData = await getPrice(holding.ticker) as { price: number; isDelayed?: boolean; priceTime?: string } | null;
       const currentPrice = currentPriceData?.price ?? holding.avgPrice;
       const currentValue = currentPrice * holding.shares;
       const costBasis = holding.avgPrice * holding.shares;
@@ -35,7 +41,8 @@ router.get('/', async (req: Request, res: Response) => {
         currentPrice,
         currentValue,
         gainLoss,
-        gainLossPercent
+        gainLossPercent,
+        ...(currentPriceData && 'isDelayed' in currentPriceData && { isDelayed: currentPriceData.isDelayed, priceTime: currentPriceData.priceTime }),
       };
     }));
 

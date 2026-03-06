@@ -10,11 +10,15 @@ import {
   ChevronDown,
   ChevronRight,
   Moon,
+  Circle,
+  Timer,
+  ChevronLeft,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import api from '../lib/api';
 import { getStockName } from '../lib/egxStocks';
 import { Stock } from '../types';
+import { useAuthStore } from '../store/authStore';
 
 type DataPoint = { value: number; change: number; changePercent: number };
 
@@ -26,9 +30,11 @@ interface MarketOverview {
   egx100: DataPoint;
   egx33?: DataPoint;
   egx35?: DataPoint;
-  gold: DataPoint & { valueEgxPerGram?: number; buyEgxPerGram?: number; sellEgxPerGram?: number };
-  silver: DataPoint & { valueEgxPerGram?: number; buyEgxPerGram?: number; sellEgxPerGram?: number };
+  gold: DataPoint & { valueEgxPerGram?: number; buyEgxPerGram?: number; sellEgxPerGram?: number; isDelayed?: boolean };
+  silver: DataPoint & { valueEgxPerGram?: number; buyEgxPerGram?: number; sellEgxPerGram?: number; isDelayed?: boolean };
   lastUpdated: number;
+  egxStatus?: { status: string; label?: { ar: string; en: string } };
+  goldMarketStatus?: { isOpen: boolean; label?: { ar: string; en: string } };
 }
 
 interface NewsItem {
@@ -76,6 +82,8 @@ function MiniSparkline({ changePercent }: { changePercent: number }) {
 
 export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stock) => void }) {
   const { t, i18n } = useTranslation('common');
+  const user = useAuthStore((s) => s.user);
+  const isPro = user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'annual' || user?.plan === 'pro' || user?.plan === 'yearly';
   const isAr = i18n.language === 'ar';
   const [overview, setOverview] = useState<MarketOverview | null>(null);
   const [stocks, setStocks] = useState<Stock[]>([]);
@@ -213,16 +221,41 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
 
   return (
     <div className="space-y-8" dir={dir}>
-      {/* Top: title + refresh icon */}
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-          {isAr ? 'السوق' : 'Market'}
-        </h1>
+      {/* Top: title + subtitle (Live vs delayed) + refresh */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            {isAr ? 'السوق' : 'Market'}
+          </h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+            {isPro ? (
+              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                <Circle className="w-3.5 h-3.5 fill-emerald-500" aria-hidden />
+                {t('market.allPricesLive')}
+              </span>
+            ) : (
+              <>
+                <span className="inline-flex items-center gap-1">
+                  <Timer className="w-3.5 h-3.5" aria-hidden />
+                  {t('market.stocksDelayed10')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))}
+                  className="inline-flex items-center gap-0.5 text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                >
+                  {t('market.upgradeToLivePrices')}
+                  <ChevronLeft className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} aria-hidden />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
         <button
           type="button"
           onClick={refreshAll}
           disabled={refreshing}
-          className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+          className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 self-start sm:self-center"
           aria-label={isAr ? 'تحديث' : 'Refresh'}
         >
           <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -247,14 +280,28 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
         ) : (
           <>
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 shadow-sm">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">USD/EGP</p>
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">USD/EGP</p>
+                <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  <Circle className="w-3 h-3 fill-emerald-500" aria-hidden /> {t('delay.liveBadge')}
+                </span>
+              </div>
               <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{formatValue(usdVal, 2)}</p>
               <span className={`text-xs font-semibold ${(overview?.usdEgp?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.usdEgp?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
                 {formatChange(overview?.usdEgp?.changePercent ?? 0)}
               </span>
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 shadow-sm">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">{t('market.gold24k')}</p>
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('market.gold24k')}</p>
+                {overview?.goldMarketStatus?.isOpen === false ? (
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('delay.lastPrice')} · {t('delay.goldClosedUntil')}</span>
+                ) : overview?.gold?.isDelayed ? (
+                  <span className="inline-flex items-center gap-0.5 text-xs font-medium text-slate-500 dark:text-slate-400"><Timer className="w-3 h-3" aria-hidden /> {t('delay.delayedBadge')}</span>
+                ) : (
+                  <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"><Circle className="w-3 h-3 fill-emerald-500" aria-hidden /> {t('delay.liveBadge')}</span>
+                )}
+              </div>
               <p className="text-sm text-slate-600 dark:text-slate-300">{t('market.buy')}: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatValue(goldBuy24, 0)}</span> {t('market.perGram')}</p>
               <p className="text-sm text-slate-600 dark:text-slate-300">{t('market.sell')}: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatValue(goldSell24, 0)}</span> {t('market.perGram')}</p>
               <span className={`text-xs font-semibold ${(overview?.gold?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.gold?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
@@ -262,7 +309,16 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
               </span>
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 shadow-sm">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">{t('market.silver999')}</p>
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('market.silver999')}</p>
+                {overview?.goldMarketStatus?.isOpen === false ? (
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('delay.lastPrice')} · {t('delay.goldClosedUntil')}</span>
+                ) : overview?.silver?.isDelayed ? (
+                  <span className="inline-flex items-center gap-0.5 text-xs font-medium text-slate-500 dark:text-slate-400"><Timer className="w-3 h-3" aria-hidden /> {t('delay.delayedBadge')}</span>
+                ) : (
+                  <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"><Circle className="w-3 h-3 fill-emerald-500" aria-hidden /> {t('delay.liveBadge')}</span>
+                )}
+              </div>
               <p className="text-sm text-slate-600 dark:text-slate-300">{t('market.buy')}: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatValue(silverBuy999, 2)}</span> {t('market.perGram')}</p>
               <p className="text-sm text-slate-600 dark:text-slate-300">{t('market.sell')}: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatValue(silverSell999, 2)}</span> {t('market.perGram')}</p>
               <span className={`text-xs font-semibold ${(overview?.silver?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.silver?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>

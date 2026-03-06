@@ -4,14 +4,34 @@ import { EGX_TICKERS } from './egxTickers.ts';
 
 const yahooFinance = new YahooFinance();
 
-export async function getStockPrice(ticker: string) {
+const DELAY_MINUTES = 10;
+
+export type StockPriceData = {
+  ticker: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  volume: number | null;
+  high?: number;
+  low?: number;
+  high52w?: number;
+  low52w?: number;
+  open?: number;
+  previousClose?: number;
+  name: string;
+  isDelayed?: boolean;
+  delayMinutes?: number;
+  priceTime?: string;
+};
+
+export async function getStockPrice(ticker: string): Promise<(StockPriceData & { delayedAt?: number }) | null> {
   const cacheKey = `stock:price:${ticker}`;
-  const cached = await getCache(cacheKey);
+  const cached = await getCache<StockPriceData & { delayedAt?: number }>(cacheKey);
   if (cached) return cached;
 
   try {
     const result = await yahooFinance.quote(`${ticker}.CA`);
-    const data = {
+    const data: StockPriceData & { delayedAt?: number } = {
       ticker,
       price: result.regularMarketPrice,
       change: result.regularMarketChange,
@@ -25,7 +45,7 @@ export async function getStockPrice(ticker: string) {
       previousClose: result.regularMarketPreviousClose,
       name: result.longName || result.shortName || ticker,
     };
-    await setCache(cacheKey, data, 60); // Cache for 60 seconds
+    await setCache(cacheKey, data, 60);
     return data;
   } catch (error) {
     console.error(`Error fetching price for ${ticker}:`, error);
@@ -33,12 +53,45 @@ export async function getStockPrice(ticker: string) {
   }
 }
 
+/** للخطة المجانية: سعر متأخر 10 دقائق من الكاش */
+export async function getStockPriceDelayed(ticker: string): Promise<(StockPriceData & { isDelayed: boolean; delayMinutes: number; priceTime: string }) | null> {
+  const delayedKey = `stock:price:delayed:${ticker}`;
+  const delayed = await getCache<StockPriceData & { delayedAt: number }>(delayedKey);
+  if (delayed && delayed.delayedAt) {
+    const priceTime = new Date(delayed.delayedAt).toISOString().slice(11, 19);
+    return {
+      ...delayed,
+      isDelayed: true,
+      delayMinutes: DELAY_MINUTES,
+      priceTime,
+    };
+  }
+  const live = await getStockPrice(ticker);
+  if (!live) return null;
+  const tenMinAgo = Date.now() - DELAY_MINUTES * 60 * 1000;
+  const priceTime = new Date(tenMinAgo).toISOString().slice(11, 19);
+  return {
+    ...live,
+    isDelayed: true,
+    delayMinutes: DELAY_MINUTES,
+    priceTime,
+  };
+}
+
 export async function getBulkPrices(tickers: string[] = EGX_TICKERS) {
   const promises = tickers.map(ticker => getStockPrice(ticker));
   const results = await Promise.allSettled(promises);
-  
   return results
-    .filter((r): r is PromiseFulfilledResult<unknown> => r.status === 'fulfilled' && r.value !== null)
+    .filter((r): r is PromiseFulfilledResult<StockPriceData | (StockPriceData & { delayedAt?: number })> => r.status === 'fulfilled' && r.value !== null)
+    .map(r => r.value);
+}
+
+/** أسعار متأخرة للمجانيين */
+export async function getBulkPricesDelayed(tickers: string[] = EGX_TICKERS): Promise<(StockPriceData & { isDelayed: boolean; delayMinutes: number; priceTime: string })[]> {
+  const promises = tickers.map(ticker => getStockPriceDelayed(ticker));
+  const results = await Promise.allSettled(promises);
+  return results
+    .filter((r): r is PromiseFulfilledResult<StockPriceData & { isDelayed: boolean; delayMinutes: number; priceTime: string }> => r.status === 'fulfilled' && r.value !== null)
     .map(r => r.value);
 }
 

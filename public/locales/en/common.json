@@ -327,6 +327,9 @@
   "market": {
     "overview": "Market Overview",
     "livePrices": "Live Prices",
+    "allPricesLive": "All prices are real-time",
+    "stocksDelayed10": "Stock prices delayed by 10 minutes",
+    "upgradeToLivePrices": "Upgrade for real-time prices",
     "usdEgp": "USD / EGP",
     "egx30": "EGX 30",
     "egx30Capped": "EGX 30 Capped",
@@ -357,6 +360,28 @@
     "purity999": "999",
     "purity925": "925",
     "purity800": "800"
+  },
+  "delay": {
+    "noticeTitle": "Stock prices are delayed by 10 minutes",
+    "noticeBody": "For free plan members. Upgrade to Pro for real-time prices.",
+    "upgradeToPro": "Upgrade to Pro",
+    "gotIt": "Got it, thanks",
+    "liveBadge": "Live",
+    "delayedBadge": "Delayed 10 min",
+    "lastUpdateAt": "Last update: {{time}}",
+    "priceAsAt": "Price as at {{time}}",
+    "marketClosed": "Market closed",
+    "lastCloseAt": "Last close: {{time}}",
+    "preSession": "Pre-market session",
+    "lastPrice": "Last price",
+    "goldClosedUntil": "Closed until Sunday"
+  },
+  "marketStatus": {
+    "closed": "Closed",
+    "pre": "Pre-market",
+    "open": "Open",
+    "auction": "Closing auction",
+    "closing": "Closing"
   },
   "plan": {
     "analysisLimitTitle": "You're a serious investor!",
