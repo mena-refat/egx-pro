@@ -308,6 +308,12 @@ export default function App() {
     if (activeTab === 'profile') fetchProfileCompletion();
   }, [activeTab, fetchProfileCompletion]);
 
+  useEffect(() => {
+    const handler = () => { fetchProfileCompletion(); };
+    window.addEventListener('profile-completion-changed', handler);
+    return () => window.removeEventListener('profile-completion-changed', handler);
+  }, [fetchProfileCompletion]);
+
   const fetchDashboardData = useCallback(async () => {
     try {
       const [holdingsRes, stocksRes, watchlistRes] = await Promise.all([

@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const [marketOverview, setMarketOverview] = useState<{
     usdEgp: { value: number; change: number; changePercent: number };
     egx30: { value: number; change: number; changePercent: number };
+    egx30Capped?: { value: number; change: number; changePercent: number };
     egx70: { value: number; change: number; changePercent: number };
     egx100: { value: number; change: number; changePercent: number };
     egx33: { value: number; change: number; changePercent: number };
@@ -137,12 +138,13 @@ export default function DashboardPage() {
           ) : marketOverview ? (
             <div className="flex gap-3 min-w-0">
               {[
-                { label: 'EGX30', value: marketOverview.egx30?.value, change: marketOverview.egx30?.changePercent },
-                { label: 'EGX70', value: marketOverview.egx70?.value, change: marketOverview.egx70?.changePercent },
-                { label: 'EGX100', value: marketOverview.egx100?.value, change: marketOverview.egx100?.changePercent },
-                { label: 'USD/EGP', value: marketOverview.usdEgp?.value, change: marketOverview.usdEgp?.changePercent },
-                { label: 'EGX33', value: marketOverview.egx33?.value, change: marketOverview.egx33?.changePercent },
-                { label: 'EGX35', value: marketOverview.egx35?.value, change: marketOverview.egx35?.changePercent },
+                { label: t('market.egx30'), value: marketOverview.egx30?.value, change: marketOverview.egx30?.changePercent },
+                { label: t('market.egx30Capped'), value: marketOverview.egx30Capped?.value, change: marketOverview.egx30Capped?.changePercent },
+                { label: t('market.egx70'), value: marketOverview.egx70?.value, change: marketOverview.egx70?.changePercent },
+                { label: t('market.egx100'), value: marketOverview.egx100?.value, change: marketOverview.egx100?.changePercent },
+                { label: t('market.usdEgp'), value: marketOverview.usdEgp?.value, change: marketOverview.usdEgp?.changePercent },
+                { label: t('market.egx33Sharia'), value: marketOverview.egx33?.value, change: marketOverview.egx33?.changePercent },
+                { label: t('market.egx35lv'), value: marketOverview.egx35?.value, change: marketOverview.egx35?.changePercent },
                 { label: 'Gold', value: marketOverview.gold?.value, change: marketOverview.gold?.changePercent },
               ].map((item, idx) => (
                 <div

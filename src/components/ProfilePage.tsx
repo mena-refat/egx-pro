@@ -1360,6 +1360,9 @@ export default function ProfilePage() {
       }
       // refresh stats that depend on user activity/profile
       fetchStats();
+      // refresh completion so header + overview hide progress when 100%
+      fetchCompletion();
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('profile-completion-changed'));
     } catch (error) {
       console.error('Failed to update profile', error);
       if (!messages?.error) {

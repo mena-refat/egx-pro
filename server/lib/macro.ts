@@ -31,10 +31,10 @@ export async function getMarketOverview() {
       console.error('Error fetching exchange rate:', error);
     }
 
-    // Fetch EGX Indices
-    const indices = ['^EGX30', '^EGX70', '^EGX100'];
+    // Fetch EGX Indices — EGX 30, 30 Capped, 70 EWI, 100 EWI, 33 Shariah, 35 LV
+    const indexTickers = ['^EGX30', '^EGX70', '^EGX100', '^EGX33', '^EGX35'];
     const indicesData = await Promise.allSettled(
-      indices.map(ticker => yahooFinance.quote(ticker))
+      indexTickers.map(ticker => yahooFinance.quote(ticker))
     );
 
     const formatIndex = (result: PromiseSettledResult<unknown>) => {
@@ -48,6 +48,12 @@ export async function getMarketOverview() {
       }
       return { value: 0, change: 0, changePercent: 0 };
     };
+
+    const egx30 = formatIndex(indicesData[0]);
+    const egx70 = formatIndex(indicesData[1]);
+    const egx100 = formatIndex(indicesData[2]);
+    const egx33 = formatIndex(indicesData[3]);
+    const egx35 = formatIndex(indicesData[4]);
 
     // Gold (GC=F) and Silver (SI=F) in USD per troy oz
     const commodities = ['GC=F', 'SI=F'];
@@ -69,26 +75,34 @@ export async function getMarketOverview() {
     const silverUsd = formatCommodity(commoditiesData[1]);
     const ozToGram = 1 / 31.1035;
     const usdRate = usdEgp.value || 1;
+    const spread = 0.02; // ~2% فرق شراء/بيع
+    const goldMid = goldUsd.value * ozToGram * usdRate;
     const gold = {
       value: goldUsd.value,
       change: goldUsd.change,
       changePercent: goldUsd.changePercent,
-      valueEgxPerGram: goldUsd.value * ozToGram * usdRate,
+      valueEgxPerGram: goldMid,
+      buyEgxPerGram: goldMid * (1 + spread),
+      sellEgxPerGram: goldMid * (1 - spread),
     };
+    const silverMid = silverUsd.value * ozToGram * usdRate;
     const silver = {
       value: silverUsd.value,
       change: silverUsd.change,
       changePercent: silverUsd.changePercent,
-      valueEgxPerGram: silverUsd.value * ozToGram * usdRate,
+      valueEgxPerGram: silverMid,
+      buyEgxPerGram: silverMid * (1 + spread),
+      sellEgxPerGram: silverMid * (1 - spread),
     };
 
     const data = {
       usdEgp,
-      egx30: formatIndex(indicesData[0]),
-      egx70: formatIndex(indicesData[1]),
-      egx100: formatIndex(indicesData[2]),
-      egx33: { value: 0, change: 0, changePercent: 0 },
-      egx35: { value: 0, change: 0, changePercent: 0 },
+      egx30,
+      egx30Capped: egx30, // نفس بيانات EGX 30 حتى يتوفر مصدر منفصل لـ Capped
+      egx70,
+      egx100,
+      egx33,
+      egx35,
       gold,
       silver,
       lastUpdated: Date.now(),

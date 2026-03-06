@@ -90,6 +90,7 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
       } else {
         await api.post('/watchlist', { ticker });
         setWatchlist((prev) => [...prev, ticker]);
+        if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('profile-completion-changed'));
       }
     } catch {
       // ignore

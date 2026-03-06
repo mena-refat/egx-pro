@@ -565,6 +565,7 @@ function AddEditGoalModal({
           throw new Error(data.error || 'Failed');
         }
       }
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('profile-completion-changed'));
       onSaved();
     } catch (e) {
       setErr(e instanceof Error ? e.message : t('goals.errorAdd'));

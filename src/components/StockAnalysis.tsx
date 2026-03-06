@@ -191,6 +191,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       } else {
         await api.post('/watchlist', { ticker: stock.ticker });
         setWatchlist((p) => [...p, stock.ticker]);
+        if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('profile-completion-changed'));
       }
     } catch {}
   };

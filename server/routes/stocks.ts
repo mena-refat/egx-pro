@@ -38,12 +38,13 @@ router.get('/market/overview', async (req, res) => {
       const fallback = {
         usdEgp: { value: 0, change: 0, changePercent: 0 },
         egx30: { value: 0, change: 0, changePercent: 0 },
+        egx30Capped: { value: 0, change: 0, changePercent: 0 },
         egx70: { value: 0, change: 0, changePercent: 0 },
         egx100: { value: 0, change: 0, changePercent: 0 },
         egx33: { value: 0, change: 0, changePercent: 0 },
         egx35: { value: 0, change: 0, changePercent: 0 },
-        gold: { value: 0, change: 0, changePercent: 0, valueEgxPerGram: 0 },
-        silver: { value: 0, change: 0, changePercent: 0, valueEgxPerGram: 0 },
+        gold: { value: 0, change: 0, changePercent: 0, valueEgxPerGram: 0, buyEgxPerGram: 0, sellEgxPerGram: 0 },
+        silver: { value: 0, change: 0, changePercent: 0, valueEgxPerGram: 0, buyEgxPerGram: 0, sellEgxPerGram: 0 },
         lastUpdated: Date.now(),
       };
       return res.json(fallback);
@@ -54,12 +55,13 @@ router.get('/market/overview', async (req, res) => {
     const fallback = {
       usdEgp: { value: 0, change: 0, changePercent: 0 },
       egx30: { value: 0, change: 0, changePercent: 0 },
+      egx30Capped: { value: 0, change: 0, changePercent: 0 },
       egx70: { value: 0, change: 0, changePercent: 0 },
       egx100: { value: 0, change: 0, changePercent: 0 },
       egx33: { value: 0, change: 0, changePercent: 0 },
       egx35: { value: 0, change: 0, changePercent: 0 },
-      gold: { value: 0, change: 0, changePercent: 0, valueEgxPerGram: 0 },
-      silver: { value: 0, change: 0, changePercent: 0, valueEgxPerGram: 0 },
+      gold: { value: 0, change: 0, changePercent: 0, valueEgxPerGram: 0, buyEgxPerGram: 0, sellEgxPerGram: 0 },
+      silver: { value: 0, change: 0, changePercent: 0, valueEgxPerGram: 0, buyEgxPerGram: 0, sellEgxPerGram: 0 },
       lastUpdated: Date.now(),
     };
     res.json(fallback);

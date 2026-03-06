@@ -21,12 +21,13 @@ type DataPoint = { value: number; change: number; changePercent: number };
 interface MarketOverview {
   usdEgp: DataPoint;
   egx30: DataPoint;
+  egx30Capped?: DataPoint;
   egx70: DataPoint;
   egx100: DataPoint;
   egx33?: DataPoint;
   egx35?: DataPoint;
-  gold: DataPoint & { valueEgxPerGram?: number };
-  silver: DataPoint & { valueEgxPerGram?: number };
+  gold: DataPoint & { valueEgxPerGram?: number; buyEgxPerGram?: number; sellEgxPerGram?: number };
+  silver: DataPoint & { valueEgxPerGram?: number; buyEgxPerGram?: number; sellEgxPerGram?: number };
   lastUpdated: number;
 }
 
@@ -155,19 +156,45 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
   }, [stocks]);
 
   const gold24 = overview?.gold?.valueEgxPerGram ?? 0;
+  const goldBuy24 = overview?.gold?.buyEgxPerGram ?? gold24 * 1.02;
+  const goldSell24 = overview?.gold?.sellEgxPerGram ?? gold24 * 0.98;
   const goldRates = useMemo(() => ({
     '24': gold24,
     '21': gold24 * (21 / 24),
     '18': gold24 * (18 / 24),
     '14': gold24 * (14 / 24),
   }), [gold24]);
+  const goldRatesBuy = useMemo(() => ({
+    '24': goldBuy24,
+    '21': goldBuy24 * (21 / 24),
+    '18': goldBuy24 * (18 / 24),
+    '14': goldBuy24 * (14 / 24),
+  }), [goldBuy24]);
+  const goldRatesSell = useMemo(() => ({
+    '24': goldSell24,
+    '21': goldSell24 * (21 / 24),
+    '18': goldSell24 * (18 / 24),
+    '14': goldSell24 * (14 / 24),
+  }), [goldSell24]);
 
   const silver999 = overview?.silver?.valueEgxPerGram ?? 0;
+  const silverBuy999 = overview?.silver?.buyEgxPerGram ?? silver999 * 1.02;
+  const silverSell999 = overview?.silver?.sellEgxPerGram ?? silver999 * 0.98;
   const silverRates = useMemo(() => ({
     '999': silver999,
     '925': silver999 * (925 / 999),
     '800': silver999 * (800 / 999),
   }), [silver999]);
+  const silverRatesBuy = useMemo(() => ({
+    '999': silverBuy999,
+    '925': silverBuy999 * (925 / 999),
+    '800': silverBuy999 * (800 / 999),
+  }), [silverBuy999]);
+  const silverRatesSell = useMemo(() => ({
+    '999': silverSell999,
+    '925': silverSell999 * (925 / 999),
+    '800': silverSell999 * (800 / 999),
+  }), [silverSell999]);
 
   const usdVal = overview?.usdEgp?.value ?? 0;
   const buyRate = usdVal * 0.995;
@@ -175,6 +202,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
 
   const indices = useMemo(() => [
     { key: 'egx30', label: t('market.egx30'), data: overview?.egx30, icon: null },
+    { key: 'egx30Capped', label: t('market.egx30Capped'), data: overview?.egx30Capped, icon: null },
     { key: 'egx70', label: t('market.egx70'), data: overview?.egx70, icon: null },
     { key: 'egx100', label: t('market.egx100'), data: overview?.egx100, icon: null },
     { key: 'egx33', label: t('market.egx33Sharia'), data: overview?.egx33, icon: Moon },
@@ -227,14 +255,16 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 shadow-sm">
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">{t('market.gold24k')}</p>
-              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{formatValue(gold24, 0)} {t('market.perGram')}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">{t('market.buy')}: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatValue(goldBuy24, 0)}</span> {t('market.perGram')}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">{t('market.sell')}: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatValue(goldSell24, 0)}</span> {t('market.perGram')}</p>
               <span className={`text-xs font-semibold ${(overview?.gold?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.gold?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
                 {formatChange(overview?.gold?.changePercent ?? 0)}
               </span>
             </div>
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 shadow-sm">
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">{t('market.silver999')}</p>
-              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{formatValue(silver999, 2)} {t('market.perGram')}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">{t('market.buy')}: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatValue(silverBuy999, 2)}</span> {t('market.perGram')}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">{t('market.sell')}: <span className="font-semibold text-slate-900 dark:text-slate-100">{formatValue(silverSell999, 2)}</span> {t('market.perGram')}</p>
               <span className={`text-xs font-semibold ${(overview?.silver?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.silver?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
                 {formatChange(overview?.silver?.changePercent ?? 0)}
               </span>
@@ -254,13 +284,13 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
           </span>
         </div>
         {loadingOverview ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {[...Array(5)].map((_, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
               <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 h-28 animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {indices.map(({ key, label, data, icon: Icon }) => {
               const val = data?.value ?? 0;
               const changeP = data?.changePercent ?? 0;
@@ -350,7 +380,11 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
                               {t(`market.karat${k}` as 'market.karat24')}
                             </span>
                           </span>
-                          <span className="font-medium text-slate-900 dark:text-slate-100">{formatValue(goldRates[k], 0)} {t('market.perGram')}</span>
+                          <span className="text-slate-700 dark:text-slate-300">
+                            {t('market.buy')}: <span className="font-medium text-slate-900 dark:text-slate-100">{formatValue(goldRatesBuy[k], 0)}</span>
+                            {' · '}
+                            {t('market.sell')}: <span className="font-medium text-slate-900 dark:text-slate-100">{formatValue(goldRatesSell[k], 0)}</span> {t('market.perGram')}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -392,7 +426,11 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
                               {t(`market.purity${k}` as 'market.purity999')}
                             </span>
                           </span>
-                          <span className="font-medium text-slate-900 dark:text-slate-100">{formatValue(silverRates[k], 2)} {t('market.perGram')}</span>
+                          <span className="text-slate-700 dark:text-slate-300">
+                            {t('market.buy')}: <span className="font-medium text-slate-900 dark:text-slate-100">{formatValue(silverRatesBuy[k], 2)}</span>
+                            {' · '}
+                            {t('market.sell')}: <span className="font-medium text-slate-900 dark:text-slate-100">{formatValue(silverRatesSell[k], 2)}</span> {t('market.perGram')}
+                          </span>
                         </li>
                       ))}
                     </ul>
