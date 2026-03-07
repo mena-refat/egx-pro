@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { User, Lock, Settings, Bell, Trash2 } from 'lucide-react';
 import { AccountTab, SecurityTab, PreferencesTab, NotificationsTab, DangerZoneTab } from './features/profile';
 import type { ProfileUser } from './features/profile';
@@ -16,16 +17,22 @@ const TABS = [
 
 export default function ProfilePage() {
   const { t, i18n } = useTranslation('common');
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user: authUser, accessToken, updateUser, logout } = useAuthStore();
-  const [activeTab, setActiveTab] = useState('account');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') ?? 'account');
   const [requestStatus, setRequestStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [user, setUser] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const tab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
-    if (tab && TABS.some((t) => t.id === tab)) setActiveTab(tab);
-  }, []);
+    const tab = searchParams.get('tab');
+    if (tab && TABS.some((tb) => tb.id === tab)) setActiveTab(tab);
+  }, [searchParams]);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId }, { replace: true });
+  };
 
   useEffect(() => {
     if (authUser) { setUser(authUser as unknown as ProfileUser); setLoading(false); return; }
@@ -70,7 +77,7 @@ export default function ProfilePage() {
         {TABS.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabChange(tab.id)}
             className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
               activeTab === tab.id ? 'bg-[var(--brand)] text-[var(--text-primary)]' : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] border border-[var(--border)]'
             }`}

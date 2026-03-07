@@ -14,7 +14,7 @@ import {
   Timer,
   ChevronLeft,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../lib/api';
 import { getStockName } from '../lib/egxStocks';
 import { Stock } from '../types';

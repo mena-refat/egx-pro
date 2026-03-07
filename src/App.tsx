@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
@@ -6,22 +6,25 @@ import { useNotifications } from './hooks/useNotifications';
 import { useTheme } from './hooks/useTheme';
 import { useProfileCompletion } from './hooks/useProfileCompletion';
 import { useDashboardStats } from './hooks/useDashboardStats';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import OnboardingWizard from './components/OnboardingWizard';
-import PortfolioTracker from './components/PortfolioTracker';
-import StockScreener from './components/StockScreener';
-import InvestmentCalculator from './components/InvestmentCalculator';
 import DelayNotice from './components/DelayNotice';
-import GoalsPage from './pages/GoalsPage';
-import MarketPage from './pages/MarketPage';
-import StockDetailPage from './pages/StockDetailPage';
-import ProfilePage from './components/ProfilePage';
 import DashboardPage from './pages/DashboardPage';
 import AuthPage from './pages/AuthPage';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
+import PageLoader from './components/shared/PageLoader';
 import { SubscriptionTab, ReferralTab, AchievementsTab, AccountOverviewTab } from './components/features/settings';
+import SettingsLayout from './components/layout/SettingsLayout';
+
+const PortfolioTracker = lazy(() => import('./components/PortfolioTracker'));
+const StockScreener = lazy(() => import('./components/StockScreener'));
+const MarketPage = lazy(() => import('./pages/MarketPage'));
+const GoalsPage = lazy(() => import('./pages/GoalsPage'));
+const InvestmentCalculator = lazy(() => import('./components/InvestmentCalculator'));
+const StockDetailPage = lazy(() => import('./pages/StockDetailPage'));
+const ProfilePage = lazy(() => import('./components/ProfilePage'));
 
 export default function App() {
   const { i18n } = useTranslation('common');
@@ -102,22 +105,27 @@ export default function App() {
         <AnimatePresence mode="wait">
           <motion.div key={pathname} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
             <DelayNotice showWhenStockPage={pathname === '/market' || pathname === '/stocks' || pathname.startsWith('/stocks/')} isPro={user?.plan === 'pro' || user?.plan === 'yearly' || false} />
-            <Routes>
-              <Route path="/" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
-              <Route path="/dashboard" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
-              <Route path="/portfolio" element={<ErrorBoundary><PortfolioTracker /></ErrorBoundary>} />
-              <Route path="/stocks" element={<ErrorBoundary><StockScreener onSelectStock={(s) => navigate(`/stocks/${s.ticker}`)} /></ErrorBoundary>} />
-              <Route path="/stocks/:ticker" element={<ErrorBoundary><StockDetailPage /></ErrorBoundary>} />
-              <Route path="/market" element={<ErrorBoundary><MarketPage onSelectStock={(s) => navigate(`/stocks/${s.ticker}`)} /></ErrorBoundary>} />
-              <Route path="/calculator" element={<ErrorBoundary><InvestmentCalculator /></ErrorBoundary>} />
-              <Route path="/goals" element={<ErrorBoundary><GoalsPage currentWealth={stats.totalValue} /></ErrorBoundary>} />
-              <Route path="/settings" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
-              <Route path="/settings/subscription" element={<ErrorBoundary><SubscriptionTab /></ErrorBoundary>} />
-              <Route path="/settings/referrals" element={<ErrorBoundary><ReferralTab /></ErrorBoundary>} />
-              <Route path="/settings/achievements" element={<ErrorBoundary><AchievementsTab /></ErrorBoundary>} />
-              <Route path="/settings/overview" element={<ErrorBoundary><AccountOverviewTab /></ErrorBoundary>} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
+                <Route path="/dashboard" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
+                <Route path="/portfolio" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><PortfolioTracker /></Suspense></ErrorBoundary>} />
+                <Route path="/stocks" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><StockScreener onSelectStock={(s) => navigate(`/stocks/${s.ticker}`)} /></Suspense></ErrorBoundary>} />
+                <Route path="/stocks/:ticker" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><StockDetailPage /></Suspense></ErrorBoundary>} />
+                <Route path="/market" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><MarketPage onSelectStock={(s) => navigate(`/stocks/${s.ticker}`)} /></Suspense></ErrorBoundary>} />
+                <Route path="/calculator" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><InvestmentCalculator /></Suspense></ErrorBoundary>} />
+                <Route path="/goals" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><GoalsPage currentWealth={stats.totalValue} /></Suspense></ErrorBoundary>} />
+                <Route path="/settings" element={<ErrorBoundary><SettingsLayout /></ErrorBoundary>}>
+                  <Route index element={<Navigate to="/settings/account" replace />} />
+                  <Route path="account" element={<AccountOverviewTab />} />
+                  <Route path="subscription" element={<SubscriptionTab />} />
+                  <Route path="referrals" element={<ReferralTab />} />
+                  <Route path="achievements" element={<AchievementsTab />} />
+                </Route>
+                <Route path="/profile" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><ProfilePage /></Suspense></ErrorBoundary>} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>

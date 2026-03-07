@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight, CreditCard, Gift, Award, LayoutGrid } from 'lucide-react';
+import { TrendingUp, LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 
 export type SidebarProps = {
   activeRoute: string;
@@ -16,11 +16,8 @@ const NAV_ITEMS = [
   { id: 'market', path: '/market', icon: BarChart3 },
   { id: 'calculator', path: '/calculator', icon: Calculator },
   { id: 'goals', path: '/goals', icon: Target },
-  { id: 'profile', path: '/settings', icon: UserIcon },
-  { id: 'subscription', path: '/settings/subscription', icon: CreditCard },
-  { id: 'referrals', path: '/settings/referrals', icon: Gift },
-  { id: 'achievements', path: '/settings/achievements', icon: Award },
-  { id: 'overview', path: '/settings/overview', icon: LayoutGrid },
+  { id: 'profile', path: '/profile', icon: UserIcon },
+  { id: 'settings', path: '/settings/account', icon: Settings },
 ] as const;
 
 export function Sidebar({ activeRoute, onNavigate, collapsed, onToggle }: SidebarProps) {
@@ -47,7 +44,7 @@ export function Sidebar({ activeRoute, onNavigate, collapsed, onToggle }: Sideba
 
       <nav className="flex-1 px-3 space-y-1">
         {NAV_ITEMS.map((item) => {
-          const isActive = item.path === '/' ? (activeRoute === '/' || activeRoute === '/dashboard') : (activeRoute === item.path || activeRoute.startsWith(item.path + '/'));
+          const isActive = item.path === '/' ? (activeRoute === '/' || activeRoute === '/dashboard') : (item.path === '/settings/account' ? activeRoute.startsWith('/settings') : (activeRoute === item.path || activeRoute.startsWith(item.path + '/')));
           const label = t(`nav.${item.id}`);
           return (
             <button

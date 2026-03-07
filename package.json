@@ -13,7 +13,6 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@google/genai": "^1.29.0",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^6.0.0",
     "@tailwindcss/vite": "^4.1.14",
@@ -40,7 +39,6 @@
     "lightweight-charts": "^5.1.0",
     "lucide-react": "^0.546.0",
     "morgan": "^1.10.1",
-    "motion": "^12.34.4",
     "pg": "^8.19.0",
     "prisma": "^6.0.0",
     "qrcode": "^1.5.4",

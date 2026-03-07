@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../store/authStore';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { LogIn, UserPlus, TrendingUp, Eye, EyeOff, Smartphone } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { OTPInput } from '../components/ui/OTPInput';
 import { loginSchema, registerSchema, validateRegisterPassword, normalizePhone } from '../lib/validations';
 import type { User } from '../types';
+
+type AuthFormData = {
+  emailOrPhone: string;
+  password: string;
+  fullName?: string;
+};
 
 function ensureUserShape(u: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
   if (!u || typeof u !== 'object') return null;
@@ -24,15 +31,22 @@ export default function AuthPage() {
   const { t, i18n } = useTranslation('common');
   const setAuth = useAuthStore((s) => s.setAuth);
   const [isLogin, setIsLogin] = useState(true);
-  const [emailOrPhone, setEmailOrPhone] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [error, setError] = useState('');
+  const [authError, setAuthError] = useState('');
   const [showTwoFactorInput, setShowTwoFactorInput] = useState(false);
   const [twoFactorOtp, setTwoFactorOtp] = useState('');
   const [twoFaTempToken, setTwoFaTempToken] = useState('');
   const [authMessage, setAuthMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setError,
+    reset,
+  } = useForm<AuthFormData>({
+    defaultValues: { emailOrPhone: '', password: '', fullName: '' },
+  });
 
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
@@ -53,81 +67,97 @@ export default function AuthPage() {
     return () => window.removeEventListener('message', handleMessage);
   }, [setAuth]);
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const onSubmit = async (data: AuthFormData) => {
+    setAuthError('');
     try {
       if (isLogin) {
-        const result = loginSchema.safeParse({ emailOrPhone, password });
-        if (!result.success) throw new Error(result.error.issues?.[0]?.message || 'Invalid input');
+        const result = loginSchema.safeParse(data);
+        if (!result.success) {
+          const issue = result.error.issues[0];
+          setError((issue.path[0] as keyof AuthFormData) ?? 'emailOrPhone', { message: issue.message });
+          return;
+        }
       } else {
-        const result = registerSchema.safeParse({ emailOrPhone, password, fullName });
-        if (!result.success) throw new Error(result.error.issues?.[0]?.message || 'Invalid input');
-        const pwCheck = validateRegisterPassword(password, emailOrPhone);
-        if (!pwCheck.ok) throw new Error((pwCheck as { ok: false; message: string }).message);
-        if (!emailOrPhone.includes('@')) {
-          const digitsOnly = emailOrPhone.replace(/\D/g, '');
-          if (!digitsOnly) throw new Error(t('auth.phoneRequired'));
+        const result = registerSchema.safeParse(data);
+        if (!result.success) {
+          const issue = result.error.issues[0];
+          setError((issue.path[0] as keyof AuthFormData) ?? 'emailOrPhone', { message: issue.message });
+          return;
+        }
+        const pwCheck = validateRegisterPassword(data.password, data.emailOrPhone ?? '');
+        if (!pwCheck.ok) {
+          setError('password', { message: (pwCheck as { ok: false; message: string }).message });
+          return;
+        }
+        if (!(data.emailOrPhone ?? '').includes('@')) {
+          const digitsOnly = (data.emailOrPhone ?? '').replace(/\D/g, '');
+          if (!digitsOnly) {
+            setError('emailOrPhone', { message: t('auth.phoneRequired') });
+            return;
+          }
           const normalized = normalizePhone(digitsOnly);
-          if (normalized.length !== 11 || !/^01[0125][0-9]{8}$/.test(normalized)) throw new Error(t('error.invalid_phone'));
+          if (normalized.length !== 11 || !/^01[0125][0-9]{8}$/.test(normalized)) {
+            setError('emailOrPhone', { message: t('error.invalid_phone') });
+            return;
+          }
         }
       }
 
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-      const body = isLogin ? { emailOrPhone, password } : { emailOrPhone, password, fullName };
+      const body = isLogin ? { emailOrPhone: data.emailOrPhone, password: data.password } : { emailOrPhone: data.emailOrPhone, password: data.password, fullName: data.fullName ?? '' };
       const res = await fetch(endpoint, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
-      let data: { error?: string; message?: string; accessToken?: string; user?: unknown; requires2FA?: boolean; tempToken?: string; restored?: boolean } = {};
+      let resData: { error?: string; message?: string; accessToken?: string; user?: unknown; requires2FA?: boolean; tempToken?: string; restored?: boolean } = {};
       try {
         const text = await res.text();
-        if (text) data = JSON.parse(text) as typeof data;
+        if (text) resData = JSON.parse(text) as typeof resData;
       } catch {
-        data = { error: res.status === 429 ? 'Too many requests' : 'Server error' };
+        resData = { error: res.status === 429 ? 'Too many requests' : 'Server error' };
       }
       if (!res.ok) {
-        let msg = data.message || data.error || t('auth.authFailed');
-        if (data.error === 'account_not_found') msg = data.message || t('auth.accountNotExist');
-        else if (data.error === 'account_locked') msg = data.message || t('auth.errors.accountLocked');
-        else if (data.error === 'already_registered' || data.error === 'service_unavailable') msg = data.message || msg;
-        setError(msg);
+        let msg = resData.message || resData.error || t('auth.authFailed');
+        if (resData.error === 'account_not_found') msg = resData.message || t('auth.accountNotExist');
+        else if (resData.error === 'account_locked') msg = resData.message || t('auth.errors.accountLocked');
+        else if (resData.error === 'already_registered' || resData.error === 'service_unavailable') msg = resData.message || msg;
+        setAuthError(msg);
         return;
       }
 
-      if (isLogin && data.requires2FA && data.tempToken) {
-        setTwoFaTempToken(data.tempToken);
+      if (isLogin && resData.requires2FA && resData.tempToken) {
+        setTwoFaTempToken(resData.tempToken);
         setTwoFactorOtp('');
         setShowTwoFactorInput(true);
-        setError('');
+        setAuthError('');
         return;
       }
 
-      let profileData = data.user as Record<string, unknown> | undefined;
+      let profileData = resData.user as Record<string, unknown> | undefined;
       try {
-        const profileRes = await fetch('/api/user/profile', { headers: { Authorization: `Bearer ${data.accessToken}` }, credentials: 'include' });
+        const profileRes = await fetch('/api/user/profile', { headers: { Authorization: `Bearer ${resData.accessToken}` }, credentials: 'include' });
         if (profileRes.ok) {
           const text = await profileRes.text();
           if (text) profileData = JSON.parse(text) as Record<string, unknown>;
         }
       } catch {
-        profileData = (data.user as Record<string, unknown>) ?? profileData;
+        profileData = (resData.user as Record<string, unknown>) ?? profileData;
       }
-      const userForAuth = ensureUserShape(profileData ?? (data.user as Record<string, unknown>));
-      if (userForAuth && data.accessToken) setAuth(userForAuth as unknown as User, data.accessToken);
+      const userForAuth = ensureUserShape(profileData ?? (resData.user as Record<string, unknown>));
+      if (userForAuth && resData.accessToken) setAuth(userForAuth as unknown as User, resData.accessToken);
       setAuthMessage({
-        text: isLogin ? (data.restored ? t('settings.welcomeBack') : t('auth.loginSuccess')) : t('auth.registerSuccess'),
+        text: isLogin ? (resData.restored ? t('settings.welcomeBack') : t('auth.loginSuccess')) : t('auth.registerSuccess'),
         type: 'success',
       });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Auth failed');
+      setAuthError(err instanceof Error ? err.message : 'Auth failed');
     }
   };
 
   const handleTwoFactorComplete = async (code: string) => {
     if (!twoFaTempToken) return;
-    setError('');
+    setAuthError('');
     const cleanCode = code.toString().replace(/\s/g, '');
-    if (cleanCode.length !== 6) { setError(t('settings.enterFullCode')); return; }
-    if (!/^\d{6}$/.test(cleanCode)) { setError(t('settings.codeMustBe6Digits')); return; }
+    if (cleanCode.length !== 6) { setAuthError(t('settings.enterFullCode')); return; }
+    if (!/^\d{6}$/.test(cleanCode)) { setAuthError(t('settings.codeMustBe6Digits')); return; }
     try {
       const res = await fetch('/api/auth/2fa/authenticate', {
         method: 'POST',
@@ -151,7 +181,7 @@ export default function AuthPage() {
       setTwoFaTempToken('');
       setAuthMessage({ text: t('auth.loginSuccess'), type: 'success' });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Verification failed');
+      setAuthError(err instanceof Error ? err.message : 'Verification failed');
     }
   };
 
@@ -165,7 +195,7 @@ export default function AuthPage() {
       const top = window.screenY + (window.outerHeight - height) / 2;
       window.open(url, 'google_login', `width=${width},height=${height},left=${left},top=${top}`);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Google login failed');
+      setAuthError(err instanceof Error ? err.message : 'Google login failed');
     }
   };
 
@@ -180,10 +210,10 @@ export default function AuthPage() {
 
         <motion.div layout className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-8 shadow-[var(--shadow-lg)]">
           <div className="flex gap-4 mb-8 p-1 bg-[var(--bg-secondary)] rounded-2xl">
-            <Button fullWidth variant={isLogin ? 'primary' : 'ghost'} size="md" onClick={() => { setIsLogin(true); setShowTwoFactorInput(false); setError(''); }}>
+            <Button fullWidth variant={isLogin ? 'primary' : 'ghost'} size="md" onClick={() => { setIsLogin(true); setShowTwoFactorInput(false); setAuthError(''); reset(); }}>
               {t('auth.login')}
             </Button>
-            <Button fullWidth variant={!isLogin ? 'primary' : 'ghost'} size="md" onClick={() => { setIsLogin(false); setShowTwoFactorInput(false); setError(''); }}>
+            <Button fullWidth variant={!isLogin ? 'primary' : 'ghost'} size="md" onClick={() => { setIsLogin(false); setShowTwoFactorInput(false); setAuthError(''); reset(); }}>
               {t('auth.register')}
             </Button>
           </div>
@@ -197,33 +227,44 @@ export default function AuthPage() {
                 <h3 className="text-xl font-bold mb-2">{t('auth.enterVerificationCode')}</h3>
                 <p className="text-[var(--text-muted)] text-sm">{t('auth.twoFactorDesc')}</p>
               </div>
-              <OTPInput value={twoFactorOtp} onChange={setTwoFactorOtp} onComplete={handleTwoFactorComplete} error={!!error} />
-              {error && <p className="text-[var(--danger)] text-sm bg-[var(--danger-bg)] p-3 rounded-xl border border-[var(--danger)]/20 text-center">{error}</p>}
-              <Button type="button" variant="ghost" fullWidth onClick={() => { setShowTwoFactorInput(false); setTwoFaTempToken(''); setTwoFactorOtp(''); setError(''); }}>
+              <OTPInput value={twoFactorOtp} onChange={setTwoFactorOtp} onComplete={handleTwoFactorComplete} error={!!authError} />
+              {authError && <p className="text-[var(--danger)] text-sm bg-[var(--danger-bg)] p-3 rounded-xl border border-[var(--danger)]/20 text-center">{authError}</p>}
+              <Button type="button" variant="ghost" fullWidth onClick={() => { setShowTwoFactorInput(false); setTwoFaTempToken(''); setTwoFactorOtp(''); setAuthError(''); }}>
                 ← {t('auth.backToLogin')}
               </Button>
             </div>
           ) : (
             <>
-              <form onSubmit={handleAuth} className="space-y-4">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <AnimatePresence mode="wait">
                   {!isLogin && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                      <Input label={t('auth.fullName')} type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Ahmed Mohamed" />
+                      <Input {...register('fullName')} label={t('auth.fullName')} type="text" placeholder="Ahmed Mohamed" autoComplete="name" disabled={isSubmitting} error={errors.fullName?.message} />
                     </motion.div>
                   )}
                 </AnimatePresence>
-                <Input label={t('auth.emailOrPhone')} type="text" required autoComplete="username" value={emailOrPhone} onChange={(e) => setEmailOrPhone(e.target.value)} placeholder={t('auth.placeholderEmailPhone')} />
+                <Input {...register('emailOrPhone')} label={t('auth.emailOrPhone')} type="text" autoComplete="username" placeholder={t('auth.placeholderEmailPhone')} disabled={isSubmitting} error={errors.emailOrPhone?.message} />
                 <div className="relative">
-                  <Input label={t('auth.password')} type={showPassword ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••" />
+                  <Input {...register('password')} label={t('auth.password')} type={showPassword ? 'text' : 'password'} autoComplete={isLogin ? 'current-password' : 'new-password'} placeholder="••••••" disabled={isSubmitting} error={errors.password?.message} />
                   <Button type="button" variant="ghost" size="sm" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-9 text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </Button>
                 </div>
                 {authMessage && <p className={`text-sm p-3 rounded-xl border text-center ${authMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>{authMessage.text}</p>}
-                {error && <p className="text-red-500 text-sm bg-red-500/10 p-3 rounded-xl border border-red-500/20">{error}</p>}
-                <Button type="submit" fullWidth size="lg" icon={isLogin ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />} iconPosition="left">
-                  {isLogin ? t('auth.login') : t('auth.register')}
+                {authError && <p className="text-red-500 text-sm bg-red-500/10 p-3 rounded-xl border border-red-500/20">{authError}</p>}
+                <Button type="submit" fullWidth size="lg" disabled={isSubmitting} icon={isSubmitting ? undefined : (isLogin ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />)} iconPosition="left"
+                  className="flex items-center justify-center gap-2">
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden>
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V8H4v4z" />
+                      </svg>
+                      {t('auth.loading')}
+                    </>
+                  ) : (
+                    isLogin ? t('auth.login') : t('auth.register')
+                  )}
                 </Button>
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[var(--border)]" /></div>

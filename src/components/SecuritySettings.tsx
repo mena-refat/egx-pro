@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Shield, Smartphone, CheckCircle2, AlertCircle, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 
