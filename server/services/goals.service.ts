@@ -9,11 +9,20 @@ type GoalSchema = z.infer<typeof goalSchema>;
 type GoalUpdateSchema = z.infer<typeof goalUpdateSchema>;
 
 export const GoalsService = {
-  async getUserGoals(userId: string) {
-    return prisma.goal.findMany({
-      where: { userId },
-      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
-    });
+  async getUserGoals(userId: string, page = 1, limit = 50) {
+    const where = { userId };
+    const orderBy = [{ status: 'asc' as const }, { createdAt: 'desc' as const }];
+    const pageNum = Math.max(1, page);
+    const limitNum = Math.min(50, Math.max(1, limit));
+    const skip = (pageNum - 1) * limitNum;
+    const [items, total] = await Promise.all([
+      prisma.goal.findMany({ where, orderBy, skip, take: limitNum }),
+      prisma.goal.count({ where }),
+    ]);
+    return {
+      items,
+      pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
+    };
   },
 
   async create(user: AuthUser, body: unknown): Promise<{ goal: Awaited<ReturnType<typeof prisma.goal.create>>; newUnseenAchievements: string[] }> {

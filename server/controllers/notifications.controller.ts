@@ -6,8 +6,10 @@ export const NotificationsController = {
   getAll: async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) return res.status(401).json({ error: 'unauthorized' });
+    const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+    const limit = Math.min(50, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
     try {
-      const data = await NotificationService.getList(userId);
+      const data = await NotificationService.getList(userId, page, limit);
       res.json(data);
     } catch (err) {
       console.error('Notifications list error:', err);

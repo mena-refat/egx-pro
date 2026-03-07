@@ -24,7 +24,7 @@ const analysisLimiter = rateLimit({
   keyGenerator: (req) => {
     const userId = (req as Request & { user?: { id: string } }).user?.id;
     if (userId) return userId;
-    return req.ip || 'unknown';
+    return (req.ip ?? 'unknown').replace(/^::ffff:/, '');
   },
   validate: { 
     xForwardedForHeader: false,

@@ -6,8 +6,10 @@ export const PortfolioController = {
   getAll: async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    const page = req.query.page != null ? Math.max(1, parseInt(String(req.query.page), 10)) : undefined;
+    const limit = req.query.limit != null ? Math.min(50, Math.max(1, parseInt(String(req.query.limit), 10))) : undefined;
     try {
-      const data = await PortfolioService.getPortfolio(userId);
+      const data = await PortfolioService.getPortfolio(userId, page, limit);
       res.json(data);
     } catch (error) {
       console.error('Error fetching portfolio:', error);

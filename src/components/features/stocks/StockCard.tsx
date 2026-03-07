@@ -18,7 +18,7 @@ export default function StockCard({
   changePercent = 0,
   isConnected
 }: StockCardProps) {
-  const { i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const isPositive = change >= 0;
   const isRTL = i18n.language === 'ar';
   const lang = isRTL ? 'ar' : 'en';
@@ -43,7 +43,7 @@ export default function StockCard({
           )}
           {!isConnected && (
             <span className="text-[10px] text-amber-500 animate-pulse font-medium">
-              {isRTL ? 'جاري التحديث...' : 'Updating...'}
+              {t('common.updating')}
             </span>
           )}
         </div>

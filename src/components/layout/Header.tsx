@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
-import { User as UserIcon, Settings as SettingsIcon, Sun, Moon, Monitor, Target, Bell, LogOut, Trophy, Briefcase, UserPlus as UserPlusIcon, ChevronRight, Circle, TrendingUp } from 'lucide-react';
+import { User as UserIcon, Settings as SettingsIcon, Sun, Moon, Monitor, Target, Bell, LogOut, Trophy, Briefcase, UserPlus as UserPlusIcon, ChevronRight } from 'lucide-react';
 import type { NotificationItem } from '../../hooks/useNotifications';
+import { NotificationDropdown } from '../features/notifications/NotificationDropdown';
 
 type User = { fullName?: string; username?: string; avatarUrl?: string };
 
@@ -10,6 +11,7 @@ export type HeaderProps = {
   user: User | null;
   notifications: NotificationItem[];
   unreadCount: number;
+  notificationsLoading?: boolean;
   fetchNotifications: () => void;
   markAllRead: () => void;
   markOneRead: (id: string) => void;
@@ -25,6 +27,7 @@ export function Header({
   user,
   notifications,
   unreadCount,
+  notificationsLoading = false,
   fetchNotifications,
   markAllRead,
   markOneRead,
@@ -162,42 +165,11 @@ export function Header({
                   )}
                 </div>
                 <div className="p-2 overflow-auto min-h-0">
-                  {notifications.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-[var(--text-muted)]">
-                      <Bell className="w-10 h-10 mb-2 opacity-60" />
-                      <p className="text-sm">{t('settings.noNewNotifications')}</p>
-                    </div>
-                  ) : (
-                    notifications.map((n) => {
-                      const Icon = n.type === 'achievement' ? Trophy : n.type === 'stock_target' ? TrendingUp : n.type === 'referral' ? UserPlusIcon : n.type === 'goal' ? Target : Briefcase;
-                      const timeAgo = (() => {
-                        const d = new Date(n.createdAt);
-                        const diff = (Date.now() - d.getTime()) / 1000;
-                        if (diff < 60) return t('settings.lastActivityMoments');
-                        if (diff < 3600) return t('settings.lastActivityMinutes', { m: Math.floor(diff / 60) });
-                        if (diff < 86400) return t('settings.lastActivityHours', { h: Math.floor(diff / 3600) });
-                        return t('settings.lastActivityDays', { d: Math.floor(diff / 86400) });
-                      })();
-                      return (
-                        <button
-                          key={n.id}
-                          type="button"
-                          onClick={() => { if (!n.isRead) markOneRead(n.id); goToNotificationTarget(n.type); }}
-                          className={`w-full flex gap-2 px-3 py-2.5 rounded-lg text-left transition-colors ${!n.isRead ? 'bg-[var(--brand-subtle)] hover:opacity-90' : 'hover:bg-[var(--bg-card-hover)]'}`}
-                        >
-                          <span className="w-2 shrink-0 flex items-start justify-center pt-2">
-                            {!n.isRead && <Circle className="w-2 h-2 text-[var(--brand-text)] fill-[var(--brand-text)]" aria-hidden />}
-                          </span>
-                          <Icon className="w-4 h-4 text-[var(--brand-text)] shrink-0 mt-0.5" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-[var(--text-secondary)]">{n.title}</p>
-                            {n.body && <p className="text-xs text-[var(--text-muted)] mt-0.5">{n.body}</p>}
-                            <p className="text-xs text-[var(--text-muted)] mt-1">{timeAgo}</p>
-                          </div>
-                        </button>
-                      );
-                    })
-                  )}
+                  <NotificationDropdown
+                    notifications={notifications}
+                    loading={notificationsLoading}
+                    onItemClick={(id, type, isRead) => { if (!isRead) markOneRead(id); goToNotificationTarget(type); }}
+                  />
                 </div>
               </motion.div>
             )}

@@ -13,10 +13,12 @@ export type NotificationItem = {
 export function useNotifications(isAuthenticated: boolean) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
     const token = getAccessToken();
     if (!token) return;
+    setNotificationsLoading(true);
     try {
       const res = await fetch('/api/notifications', {
         headers: { Authorization: `Bearer ${token}` },
@@ -28,6 +30,8 @@ export function useNotifications(isAuthenticated: boolean) {
       }
     } catch {
       // ignore
+    } finally {
+      setNotificationsLoading(false);
     }
   }, []);
 
@@ -85,6 +89,7 @@ export function useNotifications(isAuthenticated: boolean) {
   return {
     notifications,
     unreadCount,
+    notificationsLoading,
     fetchNotifications,
     markAllRead,
     markOneRead,

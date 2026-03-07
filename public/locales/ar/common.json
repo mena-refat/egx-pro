@@ -19,7 +19,9 @@
     "no": "لا",
     "ok": "موافق",
     "skip": "تخطي",
-    "later": "لاحقاً"
+    "later": "لاحقاً",
+    "retry": "إعادة المحاولة",
+    "updating": "جاري التحديث..."
   },
   "nav": {
     "dashboard": "الرئيسية",
@@ -29,6 +31,9 @@
     "calculator": "الحاسبة",
     "goals": "أهدافي المالية",
     "profile": "حسابي",
+    "subscription": "الاشتراك",
+    "referrals": "الإحالات",
+    "achievements": "الإنجازات",
     "expandSidebar": "توسيع القائمة",
     "collapseSidebar": "طي القائمة"
   },
@@ -98,6 +103,8 @@
     "authFailed": "فشل تسجيل الدخول",
     "loginSuccess": "تم تسجيل الدخول بنجاح!",
     "registerSuccess": "تم إنشاء الحساب بنجاح!",
+    "phoneRequired": "رقم الموبايل مطلوب",
+    "sessionExpired": "انتهت صلاحية الرابط، سجّل الدخول من جديد",
     "errors": {
       "invalidEmail": "بريد إلكتروني غير صحيح",
       "invalidPhone": "رقم الموبايل غير صحيح",
@@ -163,7 +170,10 @@
     "currency": "جنيه",
     "yearsMonths": "سنة و{{m}} أشهر",
     "monthsLeft": "{{m}} أشهر",
-    "daysLeft": "{{d}} أيام"
+    "daysLeft": "{{d}} أيام",
+    "yearOne": "سنة",
+    "yearMany": "سنوات",
+    "andMonths": "و{{m}} أشهر"
   },
   "dashboard": {
     "liveWatchlist": "قائمة المتابعة اللحظية",
@@ -210,6 +220,7 @@
     "phone": "رقم الموبايل",
     "usernameChangeIn": "يمكن التغيير بعد {{days}} أيام",
     "usernameTaken": "اسم المستخدم مستخدم بالفعل",
+    "usernameAvailable": "متاح",
     "usernameMax20": "حد أقصى 20 حرفاً",
     "usernameMin3": "3 أحرف على الأقل",
     "usernameInvalidChars": "فقط حروف إنجليزية وأرقام و _ و -",
@@ -243,7 +254,9 @@
     "lastActivityMinutes": "منذ {{m}} دقائق",
     "lastActivityHours": "منذ {{h}} ساعات",
     "lastActivityDays": "منذ {{d}} أيام",
+    "dangerZone": "منطقة الخطر",
     "deleteAccountPrompt": "تريد حذف حسابك؟ اضغط هنا",
+    "deleteAccountWarning": "حذف الحساب نهائي. يمكنك طلب استعادة خلال 30 يوماً.",
     "sessionOn": "على",
     "deviceDesktop": "كمبيوتر",
     "deviceMobile": "موبايل",
@@ -301,6 +314,7 @@
     "twoFaSuccessDesc": "حسابك الآن محمي بطبقة أمان إضافية.",
     "twoFaNext": "التالي",
     "twoFaPrev": "السابق",
+    "stepOf": "{{current}} من {{total}}",
     "twoFaDone": "ممتاز!",
     "twoFaDisableTitle": "تعطيل المصادقة الثنائية",
     "twoFaDisableDesc": "هذا سيقلل من أمان حسابك.",
@@ -315,7 +329,10 @@
   },
   "profile": {
     "loading": "جاري التحميل...",
-    "loadError": "فشل تحميل الملف الشخصي"
+    "loadError": "فشل تحميل الملف الشخصي",
+    "avatarUpdated": "تم تحديث صورة البروفايل بنجاح",
+    "avatarUploadFailed": "فشل رفع الصورة",
+    "changeAvatar": "تغيير الصورة"
   },
   "overview": {
     "tabLabel": "نظرة عامة",
@@ -464,7 +481,45 @@
     "readMore": "اقرأ المزيد",
     "shariaWarning": "هذا السهم قد لا يكون متوافقاً مع الشريعة",
     "shariaIgnore": "تجاهل وأكمل",
-    "shariaBadge": "متوافق مع الشريعة"
+    "shariaBadge": "متوافق مع الشريعة",
+    "defaultDescription": "شركة مدرجة في البورصة المصرية.",
+    "aiAnalysis": "تحليل الذكاء الاصطناعي",
+    "aiAnalysisDesc": "احصل على تحليل شامل للسهم باستخدام أحدث نماذج الذكاء الاصطناعي.",
+    "generateAnalysis": "توليد التحليل",
+    "analyzing": "جاري التحليل...",
+    "retry": "إعادة المحاولة",
+    "fundamental": "التحليل الأساسي",
+    "technical": "التحليل الفني",
+    "disclaimer": "إخلاء مسؤولية",
+    "openDesc": "سعر أول صفقة في اليوم",
+    "peDesc": "نسبة السعر إلى الأرباح",
+    "epsDesc": "ربحية السهم"
+  },
+  "portfolio": {
+    "invalidTicker": "يرجى إدخال رمز سهم صحيح",
+    "sharesPositive": "الكمية يجب أن تكون أكبر من صفر",
+    "pricePositive": "السعر يجب أن يكون أكبر من صفر",
+    "deleteConfirm": "هل أنت متأكد من حذف هذا السهم؟",
+    "totalValue": "إجمالي القيمة",
+    "profitLoss": "الربح / الخسارة",
+    "holdingsCount": "عدد الأسهم",
+    "yourHoldings": "الأسهم المملوكة",
+    "addStock": "إضافة سهم",
+    "stock": "السهم",
+    "shares": "الكمية",
+    "avgPrice": "متوسط السعر",
+    "currentPrice": "السعر الحالي",
+    "pnl": "الربح/الخسارة",
+    "noHoldings": "لا توجد أسهم مضافة بعد",
+    "sectorAllocation": "توزيع القطاعات",
+    "notEnoughData": "لا توجد بيانات كافية",
+    "addNewHolding": "إضافة سهم جديد",
+    "ticker": "رمز السهم",
+    "searchPlaceholder": "ابحث بالرمز أو الاسم...",
+    "noResults": "لا توجد نتائج",
+    "typeToSearch": "اكتب للبحث بالعربي أو الإنجليزي أو الرمز",
+    "buyPrice": "سعر الشراء",
+    "buyDate": "تاريخ الشراء"
   },
   "market": {
     "title": "السوق",

@@ -82,11 +82,13 @@ async function startServer() {
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
   // Rate Limiting — always respond with JSON so the client never gets "Too many requests" as plain text
+  const ipKey = (req: express.Request) => (req.ip ?? 'unknown').replace(/^::ffff:/, '');
   const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => ipKey(req),
     handler: (_req, res) => res.status(429).json({ error: 'محاولات كثيرة، انتظر 15 دقيقة' }),
   });
   const registerLimiter = rateLimit({
@@ -94,6 +96,7 @@ async function startServer() {
     max: 3,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => ipKey(req),
     handler: (_req, res) => res.status(429).json({ error: 'محاولات كثيرة، انتظر ساعة' }),
   });
   const refreshLimiter = rateLimit({
@@ -101,6 +104,7 @@ async function startServer() {
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => ipKey(req),
     handler: (_req, res) => res.status(429).json({ error: 'محاولات كثيرة، انتظر دقيقة' }),
   });
   const apiLimiter = rateLimit({
@@ -108,6 +112,7 @@ async function startServer() {
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => ipKey(req),
     skip: (req) => req.path.startsWith('/api/auth'), // لا نحسب تسجيل الدخول/التسجيل ضمن الحد العام
     handler: (_req, res) => res.status(429).json({ error: 'طلبات كثيرة، انتظر قليلاً' }),
   });

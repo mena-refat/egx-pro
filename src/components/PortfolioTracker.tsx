@@ -10,6 +10,7 @@ import { getStockName, getStockInfo, searchStocks } from '../lib/egxStocks';
 import { Stock } from '../types';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import { Skeleton } from './ui/Skeleton';
 
 export default function PortfolioTracker() {
   const { t, i18n } = useTranslation('common');
@@ -59,15 +60,15 @@ export default function PortfolioTracker() {
     const priceNum = parseFloat(newHolding.avgPrice);
 
     if (!newHolding.ticker || newHolding.ticker.length < 2) {
-      setAddError(isRTL ? 'يرجى إدخال رمز سهم صحيح' : 'Please enter a valid ticker');
+      setAddError(t('portfolio.invalidTicker'));
       return;
     }
     if (isNaN(sharesNum) || sharesNum <= 0) {
-      setAddError(isRTL ? 'الكمية يجب أن تكون أكبر من صفر' : 'Shares must be greater than zero');
+      setAddError(t('portfolio.sharesPositive'));
       return;
     }
     if (isNaN(priceNum) || priceNum <= 0) {
-      setAddError(isRTL ? 'السعر يجب أن يكون أكبر من صفر' : 'Price must be greater than zero');
+      setAddError(t('portfolio.pricePositive'));
       return;
     }
 
@@ -95,7 +96,7 @@ export default function PortfolioTracker() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(isRTL ? 'هل أنت متأكد من حذف هذا السهم؟' : 'Are you sure you want to delete this holding?')) return;
+    if (!confirm(t('portfolio.deleteConfirm'))) return;
     try {
       await removeHolding(id);
     } catch (err: unknown) {
@@ -123,13 +124,13 @@ export default function PortfolioTracker() {
     return (
       <div className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="card-base p-6 h-32 animate-pulse bg-slate-800/50" />
-          ))}
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 h-96 card-base animate-pulse bg-slate-800/50" />
-          <div className="h-96 card-base animate-pulse bg-slate-800/50" />
+          <Skeleton className="lg:col-span-2 h-96 w-full rounded-xl" />
+          <Skeleton className="h-96 w-full rounded-xl" />
         </div>
       </div>
     );
@@ -150,14 +151,14 @@ export default function PortfolioTracker() {
         <div className="card-base p-6">
           <div className="flex items-center gap-3 text-[var(--text-secondary)] mb-2">
             <Briefcase className="w-4 h-4" />
-            <span className="text-sm font-medium uppercase tracking-wider">{isRTL ? 'إجمالي القيمة' : 'Total Value'}</span>
+            <span className="text-sm font-medium uppercase tracking-wider">{t('portfolio.totalValue')}</span>
           </div>
           <p className="text-3xl font-bold">{stats.totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-sm font-normal text-[var(--text-muted)]">EGP</span></p>
         </div>
         <div className="card-base p-6">
           <div className="flex items-center gap-3 text-[var(--text-secondary)] mb-2">
             {stats.totalGain >= 0 ? <TrendingUp className="w-4 h-4 text-emerald-500" /> : <TrendingDown className="w-4 h-4 text-red-500" />}
-            <span className="text-sm font-medium uppercase tracking-wider">{isRTL ? 'الربح / الخسارة' : 'Profit / Loss'}</span>
+            <span className="text-sm font-medium uppercase tracking-wider">{t('portfolio.profitLoss')}</span>
           </div>
           <div className="flex items-baseline gap-2">
             <p className={`text-3xl font-bold ${stats.totalGain >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -171,7 +172,7 @@ export default function PortfolioTracker() {
         <div className="card-base p-6">
           <div className="flex items-center gap-3 text-[var(--text-secondary)] mb-2">
             <PieChartIcon className="w-4 h-4" />
-            <span className="text-sm font-medium uppercase tracking-wider">{isRTL ? 'عدد الأسهم' : 'Holdings Count'}</span>
+            <span className="text-sm font-medium uppercase tracking-wider">{t('portfolio.holdingsCount')}</span>
           </div>
           <p className="text-3xl font-bold">{holdings.length}</p>
         </div>
@@ -181,9 +182,9 @@ export default function PortfolioTracker() {
         {/* Holdings List */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold">{isRTL ? 'الأسهم المملوكة' : 'Your Holdings'}</h3>
+            <h3 className="text-xl font-bold">{t('portfolio.yourHoldings')}</h3>
             <Button onClick={() => setIsAdding(true)} variant="primary" size="md" icon={<Plus className="w-4 h-4" />} iconPosition="left">
-              {isRTL ? 'إضافة سهم' : 'Add Stock'}
+              {t('portfolio.addStock')}
             </Button>
           </div>
 
@@ -192,11 +193,11 @@ export default function PortfolioTracker() {
               <table className="w-full text-right">
                 <thead className="bg-slate-50 dark:bg-white/5 text-[var(--text-muted)] dark:text-[var(--text-secondary)] text-xs uppercase tracking-wider">
                   <tr>
-                    <th className="px-6 py-4 font-medium">{isRTL ? 'السهم' : 'Stock'}</th>
-                    <th className="px-6 py-4 font-medium">{isRTL ? 'الكمية' : 'Shares'}</th>
-                    <th className="px-6 py-4 font-medium">{isRTL ? 'متوسط السعر' : 'Avg Price'}</th>
-                    <th className="px-6 py-4 font-medium">{isRTL ? 'السعر الحالي' : 'Current'}</th>
-                    <th className="px-6 py-4 font-medium">{isRTL ? 'الربح/الخسارة' : 'P&L'}</th>
+                    <th className="px-6 py-4 font-medium">{t('portfolio.stock')}</th>
+                    <th className="px-6 py-4 font-medium">{t('portfolio.shares')}</th>
+                    <th className="px-6 py-4 font-medium">{t('portfolio.avgPrice')}</th>
+                    <th className="px-6 py-4 font-medium">{t('portfolio.currentPrice')}</th>
+                    <th className="px-6 py-4 font-medium">{t('portfolio.pnl')}</th>
                     <th className="px-6 py-4 font-medium"></th>
                   </tr>
                 </thead>
@@ -237,7 +238,7 @@ export default function PortfolioTracker() {
                   {holdings.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center text-[var(--text-muted)]">
-                        {isRTL ? 'لا توجد أسهم مضافة بعد' : 'No holdings added yet'}
+                        {t('portfolio.noHoldings')}
                       </td>
                     </tr>
                   )}
@@ -249,7 +250,7 @@ export default function PortfolioTracker() {
 
         {/* Allocation Chart */}
         <div className="card-base p-8">
-          <h3 className="text-xl font-bold mb-8">{isRTL ? 'توزيع القطاعات' : 'Sector Allocation'}</h3>
+          <h3 className="text-xl font-bold mb-8">{t('portfolio.sectorAllocation')}</h3>
           <div className="h-64">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -294,11 +295,11 @@ export default function PortfolioTracker() {
               exit={{ scale: 0.9, opacity: 0 }}
               className="card-base p-8 w-full max-w-md shadow-2xl"
             >
-              <h3 className="text-2xl font-bold mb-6">{isRTL ? 'إضافة سهم جديد' : 'Add New Holding'}</h3>
+              <h3 className="text-2xl font-bold mb-6">{t('portfolio.addNewHolding')}</h3>
               <form onSubmit={handleAdd} className="space-y-4">
                 <div className="relative">
                   <Input
-                    label={isRTL ? 'رمز السهم' : 'Ticker'}
+                    label={t('portfolio.ticker')}
                     type="text"
                     required
                     value={newHolding.ticker}
@@ -307,7 +308,7 @@ export default function PortfolioTracker() {
                       setNewHolding({ ...newHolding, ticker: e.target.value });
                       setShowSuggestions(true);
                     }}
-                    placeholder={isRTL ? 'ابحث بالرمز أو الاسم...' : 'Search by ticker or name...'}
+                    placeholder={t('portfolio.searchPlaceholder')}
                     inputClassName="input-base"
                   />
                   
@@ -348,7 +349,7 @@ export default function PortfolioTracker() {
                             })
                           ) : (
                             <div className="px-4 py-3 text-sm text-[var(--text-muted)] text-center">
-                              {newHolding.ticker.trim() ? (isRTL ? 'لا توجد نتائج' : 'No results found') : (isRTL ? 'اكتب للبحث بالعربي أو الإنجليزي أو الرمز' : 'Type to search by ticker or name')}
+                              {newHolding.ticker.trim() ? t('portfolio.noResults') : t('portfolio.typeToSearch')}
                             </div>
                           );
                         })()}
@@ -357,8 +358,8 @@ export default function PortfolioTracker() {
                   </AnimatePresence>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <Input label={isRTL ? 'الكمية' : 'Shares'} type="number" required step="any" value={newHolding.shares} onChange={e => setNewHolding({ ...newHolding, shares: e.target.value })} inputClassName="input-base" />
-                  <Input label={isRTL ? 'سعر الشراء' : 'Buy Price'} type="number" required step="any" value={newHolding.avgPrice} onChange={e => setNewHolding({ ...newHolding, avgPrice: e.target.value })} inputClassName="input-base" />
+                  <Input label={t('portfolio.shares')} type="number" required step="any" value={newHolding.shares} onChange={e => setNewHolding({ ...newHolding, shares: e.target.value })} inputClassName="input-base" />
+                  <Input label={t('portfolio.buyPrice')} type="number" required step="any" value={newHolding.avgPrice} onChange={e => setNewHolding({ ...newHolding, avgPrice: e.target.value })} inputClassName="input-base" />
                 </div>
                 <Input label={isRTL ? 'تاريخ الشراء' : 'Buy Date'} type="date" required value={newHolding.buyDate} onChange={e => setNewHolding({ ...newHolding, buyDate: e.target.value })} inputClassName="input-base" />
                 
@@ -370,10 +371,10 @@ export default function PortfolioTracker() {
 
                 <div className="flex gap-4 mt-8">
                   <Button type="button" variant="secondary" size="lg" fullWidth onClick={() => { setIsAdding(false); setShowSuggestions(false); setAddError(null); }}>
-                    {isRTL ? 'إلغاء' : 'Cancel'}
+                    {t('common.cancel')}
                   </Button>
                   <Button type="submit" variant="primary" size="lg" fullWidth>
-                    {isRTL ? 'حفظ' : 'Save'}
+                    {t('common.save')}
                   </Button>
                 </div>
               </form>

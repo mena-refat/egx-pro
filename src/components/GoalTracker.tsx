@@ -35,9 +35,8 @@ export default function GoalTracker({ currentWealth }: { currentWealth: number }
           return;
         }
         const data = await res.json();
-        if (Array.isArray(data)) {
-          setGoals(data);
-        }
+        if (Array.isArray(data?.items)) setGoals(data.items);
+        else if (Array.isArray(data)) setGoals(data);
       } catch (err) {
         console.error('Fetch goals error', err);
       } finally {

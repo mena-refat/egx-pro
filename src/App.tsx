@@ -20,6 +20,8 @@ import DashboardPage from './pages/DashboardPage';
 import AuthPage from './pages/AuthPage';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import { ErrorBoundary } from './components/shared/ErrorBoundary';
+import { SubscriptionTab, ReferralTab, AchievementsTab } from './components/features/settings';
 import { Stock } from './types';
 
 export default function App() {
@@ -32,7 +34,7 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
-  const { notifications, unreadCount: notificationsUnread, fetchNotifications, markAllRead: markNotificationsRead, markOneRead: markOneNotificationRead, clearAll: clearAllNotifications } = useNotifications(isAuthenticated);
+  const { notifications, unreadCount: notificationsUnread, notificationsLoading, fetchNotifications, markAllRead: markNotificationsRead, markOneRead: markOneNotificationRead, clearAll: clearAllNotifications } = useNotifications(isAuthenticated);
   const stats = useDashboardStats(isAuthenticated, pathname, accessToken);
 
   useEffect(() => { localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed)); }, [sidebarCollapsed]);
@@ -88,6 +90,7 @@ export default function App() {
           user={user ?? null}
           notifications={notifications}
           unreadCount={notificationsUnread}
+          notificationsLoading={notificationsLoading}
           fetchNotifications={fetchNotifications}
           markAllRead={markNotificationsRead}
           markOneRead={markOneNotificationRead}
@@ -102,14 +105,17 @@ export default function App() {
           <motion.div key={pathname + (selectedStock ? `-${selectedStock.ticker}` : '')} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
             <DelayNotice showWhenStockPage={pathname === '/market' || pathname === '/stocks' || pathname.startsWith('/stocks/') || !!selectedStock} isPro={user?.plan === 'pro' || user?.plan === 'yearly' || false} />
             <Routes>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/portfolio" element={<PortfolioTracker />} />
-              <Route path="/stocks" element={selectedStock ? <StockAnalysis stock={selectedStock} onBack={() => setSelectedStock(null)} /> : <StockScreener onSelectStock={(s) => setSelectedStock(s)} />} />
-              <Route path="/market" element={<MarketPage onSelectStock={(s) => setSelectedStock(s)} />} />
-              <Route path="/calculator" element={<InvestmentCalculator />} />
-              <Route path="/goals" element={<GoalsPage currentWealth={stats.totalValue} />} />
-              <Route path="/settings" element={<ProfilePage />} />
+              <Route path="/" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
+              <Route path="/dashboard" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
+              <Route path="/portfolio" element={<ErrorBoundary><PortfolioTracker /></ErrorBoundary>} />
+              <Route path="/stocks" element={<ErrorBoundary>{selectedStock ? <StockAnalysis stock={selectedStock} onBack={() => setSelectedStock(null)} /> : <StockScreener onSelectStock={(s) => setSelectedStock(s)} />}</ErrorBoundary>} />
+              <Route path="/market" element={<ErrorBoundary><MarketPage onSelectStock={(s) => setSelectedStock(s)} /></ErrorBoundary>} />
+              <Route path="/calculator" element={<ErrorBoundary><InvestmentCalculator /></ErrorBoundary>} />
+              <Route path="/goals" element={<ErrorBoundary><GoalsPage currentWealth={stats.totalValue} /></ErrorBoundary>} />
+              <Route path="/settings" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
+              <Route path="/settings/subscription" element={<ErrorBoundary><SubscriptionTab /></ErrorBoundary>} />
+              <Route path="/settings/referrals" element={<ErrorBoundary><ReferralTab /></ErrorBoundary>} />
+              <Route path="/settings/achievements" element={<ErrorBoundary><AchievementsTab /></ErrorBoundary>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </motion.div>

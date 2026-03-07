@@ -19,7 +19,9 @@
     "no": "No",
     "ok": "OK",
     "skip": "Skip",
-    "later": "Later"
+    "later": "Later",
+    "retry": "Retry",
+    "updating": "Updating..."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -29,6 +31,9 @@
     "calculator": "Calculator",
     "goals": "Financial Goals",
     "profile": "Profile",
+    "subscription": "Subscription",
+    "referrals": "Referrals",
+    "achievements": "Achievements",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar"
   },
@@ -109,6 +114,8 @@
     "authFailed": "Auth failed",
     "loginSuccess": "Login successful!",
     "registerSuccess": "Account created successfully!",
+    "phoneRequired": "Phone number is required",
+    "sessionExpired": "Session expired, please log in again",
     "errors": {
       "invalidEmail": "Invalid email",
       "invalidPhone": "Invalid phone number",
@@ -174,7 +181,10 @@
     "yearsMonths": "1 year and {{m}} months",
     "monthsLeft": "{{m}} months",
     "daysLeft": "{{d}} days",
-    "noGoalsSet": "No goals set"
+    "noGoalsSet": "No goals set",
+    "yearOne": "year",
+    "yearMany": "years",
+    "andMonths": "and {{m}} months"
   },
   "dashboard": {
     "liveWatchlist": "Live Watchlist",
@@ -182,7 +192,10 @@
     "totalValue": "Total Value",
     "topPerformer": "Top Performer",
     "portfolioPerformance": "Portfolio Performance",
-    "watchlist": "Watchlist"
+    "watchlist": "Watchlist",
+    "connecting": "Connecting...",
+    "showIndicators": "Show Indicators",
+    "hideIndicators": "Hide Indicators"
   },
   "achievements": {
     "congrats": "Congratulations!",
@@ -204,6 +217,7 @@
     "phone": "Phone number",
     "usernameChangeIn": "You can change again in {{days}} days",
     "usernameTaken": "Username is already taken",
+    "usernameAvailable": "Available",
     "usernameMax20": "Maximum 20 characters",
     "usernameMin3": "At least 3 characters",
     "usernameInvalidChars": "Only English letters, numbers, _ and -",
@@ -237,7 +251,9 @@
     "lastActivityMinutes": "{{m}} minutes ago",
     "lastActivityHours": "{{h}} hours ago",
     "lastActivityDays": "{{d}} days ago",
+    "dangerZone": "Danger zone",
     "deleteAccountPrompt": "Want to delete your account? Click here",
+    "deleteAccountWarning": "Deleting your account is permanent. You can request restoration within 30 days.",
     "sessionOn": "on",
     "deviceDesktop": "Computer",
     "deviceMobile": "Mobile",
@@ -295,6 +311,7 @@
     "twoFaSuccessDesc": "Your account is now protected with an extra layer of security.",
     "twoFaNext": "Next",
     "twoFaPrev": "Previous",
+    "stepOf": "{{current}} of {{total}}",
     "twoFaDone": "Got it!",
     "twoFaDisableTitle": "Disable Two-Factor Authentication",
     "twoFaDisableDesc": "This will reduce your account security.",
@@ -309,7 +326,10 @@
   },
   "profile": {
     "loading": "Loading...",
-    "loadError": "Failed to load profile"
+    "loadError": "Failed to load profile",
+    "avatarUpdated": "Profile picture updated successfully",
+    "avatarUploadFailed": "Failed to upload image",
+    "changeAvatar": "Change photo"
   },
   "overview": {
     "tabLabel": "Overview",
@@ -458,7 +478,45 @@
     "readMore": "Read more",
     "shariaWarning": "This stock may not be Sharia-compliant",
     "shariaIgnore": "Dismiss",
-    "shariaBadge": "Sharia compliant"
+    "shariaBadge": "Sharia compliant",
+    "defaultDescription": "Listed company on EGX.",
+    "aiAnalysis": "AI Analysis",
+    "aiAnalysisDesc": "Get a comprehensive analysis using state-of-the-art AI models.",
+    "generateAnalysis": "Generate Analysis",
+    "analyzing": "Analyzing...",
+    "retry": "Retry",
+    "fundamental": "Fundamental",
+    "technical": "Technical",
+    "disclaimer": "Disclaimer",
+    "openDesc": "First trade price of the day",
+    "peDesc": "Price to earnings ratio",
+    "epsDesc": "Earnings per share"
+  },
+  "portfolio": {
+    "invalidTicker": "Please enter a valid ticker",
+    "sharesPositive": "Shares must be greater than zero",
+    "pricePositive": "Price must be greater than zero",
+    "deleteConfirm": "Are you sure you want to delete this holding?",
+    "totalValue": "Total Value",
+    "profitLoss": "Profit / Loss",
+    "holdingsCount": "Holdings Count",
+    "yourHoldings": "Your Holdings",
+    "addStock": "Add Stock",
+    "stock": "Stock",
+    "shares": "Shares",
+    "avgPrice": "Avg Price",
+    "currentPrice": "Current",
+    "pnl": "P&L",
+    "noHoldings": "No holdings added yet",
+    "sectorAllocation": "Sector Allocation",
+    "notEnoughData": "Not enough data",
+    "addNewHolding": "Add New Holding",
+    "ticker": "Ticker",
+    "searchPlaceholder": "Search by ticker or name...",
+    "noResults": "No results found",
+    "typeToSearch": "Type to search by ticker or name",
+    "buyPrice": "Buy Price",
+    "buyDate": "Buy Date"
   },
   "market": {
     "title": "Market",

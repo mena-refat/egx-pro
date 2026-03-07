@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { TrendingUp, LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight, CreditCard, Gift, Award } from 'lucide-react';
 
 export type SidebarProps = {
   activeRoute: string;
@@ -17,6 +17,9 @@ const NAV_ITEMS = [
   { id: 'calculator', path: '/calculator', icon: Calculator },
   { id: 'goals', path: '/goals', icon: Target },
   { id: 'profile', path: '/settings', icon: UserIcon },
+  { id: 'subscription', path: '/settings/subscription', icon: CreditCard },
+  { id: 'referrals', path: '/settings/referrals', icon: Gift },
+  { id: 'achievements', path: '/settings/achievements', icon: Award },
 ] as const;
 
 export function Sidebar({ activeRoute, onNavigate, collapsed, onToggle }: SidebarProps) {

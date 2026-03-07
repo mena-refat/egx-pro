@@ -67,7 +67,7 @@ export default function AuthPage() {
         if (!pwCheck.ok) throw new Error((pwCheck as { ok: false; message: string }).message);
         if (!emailOrPhone.includes('@')) {
           const digitsOnly = emailOrPhone.replace(/\D/g, '');
-          if (!digitsOnly) throw new Error(i18n.language === 'ar' ? 'رقم الموبايل مطلوب' : 'Phone number is required');
+          if (!digitsOnly) throw new Error(t('auth.phoneRequired'));
           const normalized = normalizePhone(digitsOnly);
           if (normalized.length !== 11 || !/^01[0125][0-9]{8}$/.test(normalized)) throw new Error(t('error.invalid_phone'));
         }
@@ -87,7 +87,7 @@ export default function AuthPage() {
       if (!res.ok) {
         let msg = data.message || data.error || t('auth.authFailed');
         if (data.error === 'account_not_found') msg = data.message || t('auth.accountNotExist');
-        else if (data.error === 'account_locked') msg = data.message || (i18n.language === 'ar' ? 'الحساب مقفل مؤقتاً' : 'Account temporarily locked');
+        else if (data.error === 'account_locked') msg = data.message || t('auth.errors.accountLocked');
         else if (data.error === 'already_registered' || data.error === 'service_unavailable') msg = data.message || msg;
         setError(msg);
         return;
@@ -139,7 +139,7 @@ export default function AuthPage() {
       if (!res.ok) {
         let msg = 'Verification failed';
         if (data.error === 'invalid_code') msg = t('settings.invalidCodeLong');
-        else if (data.error === 'invalid_or_expired_token') msg = i18n.language === 'ar' ? 'انتهت صلاحية الرابط، سجّل الدخول من جديد' : 'Session expired, please log in again';
+        else if (data.error === 'invalid_or_expired_token') msg = t('auth.sessionExpired');
         else if (data.message) msg = data.message;
         throw new Error(msg);
       }

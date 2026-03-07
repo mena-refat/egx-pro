@@ -35,6 +35,7 @@ import api from '../lib/api';
 import { getStockName, getStockInfo } from '../lib/egxStocks';
 import { getSector, isShariaCompliant } from '../lib/egxIndicesSectors';
 import { useAuthStore } from '../store/authStore';
+import { Skeleton } from './ui/Skeleton';
 import { Stock, AnalysisResult } from '../types';
 
 interface NewsItem {
@@ -489,7 +490,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
               <p className="font-medium text-slate-900 dark:text-slate-100">{getStockName(stock.ticker, lang)}</p>
               <p className="text-sm text-[var(--text-muted)] dark:text-slate-400 mt-1">{info?.nameEn}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">{stock.description || (isRTL ? 'شركة مدرجة في البورصة المصرية.' : 'Listed company on EGX.')}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">{stock.description || t('stockDetail.defaultDescription')}</p>
               <p className="text-xs text-[var(--text-muted)] dark:text-slate-400 mt-2">{t('stockDetail.listedIn')}: EGX30 | {sector}</p>
             </div>
           </section>
@@ -556,19 +557,20 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           {!analysis && !loadingAnalysis && !errorAnalysis && (
             <div className="text-center py-12 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
               <BrainCircuit className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">{isRTL ? 'تحليل الذكاء الاصطناعي' : 'AI Analysis'}</h3>
-              <p className="text-[var(--text-muted)] dark:text-slate-400 mb-6 max-w-md mx-auto">{isRTL ? 'احصل على تحليل شامل للسهم باستخدام أحدث نماذج الذكاء الاصطناعي.' : 'Get a comprehensive analysis using state-of-the-art AI models.'}</p>
+              <h3 className="text-xl font-bold mb-2">{t('stockDetail.aiAnalysis')}</h3>
+              <p className="text-[var(--text-muted)] dark:text-slate-400 mb-6 max-w-md mx-auto">{t('stockDetail.aiAnalysisDesc')}</p>
               <button type="button" onClick={getAnalysis} className="px-6 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold flex items-center gap-2 mx-auto">
-                <Zap className="w-4 h-4" /> {isRTL ? 'توليد التحليل' : 'Generate Analysis'}
+                <Zap className="w-4 h-4" /> {t('stockDetail.generateAnalysis')}
               </button>
             </div>
           )}
           {loadingAnalysis && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-6">
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
-                <BrainCircuit className="w-12 h-12 text-violet-500" />
-              </motion.div>
-              <p className="text-[var(--text-muted)]">{isRTL ? 'جاري التحليل...' : 'Analyzing...'}</p>
+            <div className="flex flex-col py-12 space-y-4 max-w-md mx-auto">
+              <Skeleton height={32} className="w-full" />
+              <Skeleton height={20} className="w-4/5" />
+              <Skeleton height={20} className="w-3/4" />
+              <Skeleton height={20} className="w-5/6" />
+              <Skeleton height={80} className="w-full rounded-xl mt-4" />
             </div>
           )}
           {errorAnalysis && (
@@ -576,7 +578,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               <ShieldAlert className="w-8 h-8 text-red-500 mx-auto mb-2" />
               <p className="text-red-500 mb-4">{errorAnalysis}</p>
               <button type="button" onClick={getAnalysis} className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-bold flex items-center gap-2 mx-auto">
-                <RefreshCw className="w-4 h-4" /> {isRTL ? 'إعادة المحاولة' : 'Retry'}
+                <RefreshCw className="w-4 h-4" /> {t('stockDetail.retry')}
               </button>
             </div>
           )}
@@ -587,7 +589,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-violet-500 font-bold"><BarChart3 className="w-5 h-5" /> {isRTL ? 'التحليل الأساسي' : 'Fundamental'}</div>
+                  <div className="flex items-center gap-2 text-violet-500 font-bold"><BarChart3 className="w-5 h-5" /> {t('stockDetail.fundamental')}</div>
                   <div className="text-sm text-[var(--text-muted)] dark:text-slate-400 space-y-2">
                     <p><span className="text-slate-900 dark:text-slate-200 font-medium">Outlook:</span> {analysis.fundamental?.outlook}</p>
                     <p><span className="text-slate-900 dark:text-slate-200 font-medium">Ratios:</span> {analysis.fundamental?.ratios}</p>
@@ -595,7 +597,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 </div>
                 </div>
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-blue-500 font-bold"><TrendingUp className="w-5 h-5" /> {isRTL ? 'التحليل الفني' : 'Technical'}</div>
+                  <div className="flex items-center gap-2 text-blue-500 font-bold"><TrendingUp className="w-5 h-5" /> {t('stockDetail.technical')}</div>
                   <div className="text-sm text-[var(--text-muted)] dark:text-slate-400 space-y-2">
                     <p><span className="text-slate-900 dark:text-slate-200 font-medium">Signal:</span> {analysis.technical?.signal}</p>
                     <p><span className="text-slate-900 dark:text-slate-200 font-medium">Levels:</span> {analysis.technical?.levels}</p>
@@ -612,7 +614,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 </div>
               </div>
               <div className="p-6 bg-red-500/5 border border-red-500/10 rounded-2xl">
-                <div className="flex items-center gap-2 text-red-400 font-bold mb-2"><ShieldAlert className="w-4 h-4" /> {isRTL ? 'إخلاء مسؤولية' : 'Disclaimer'}</div>
+                <div className="flex items-center gap-2 text-red-400 font-bold mb-2"><ShieldAlert className="w-4 h-4" /> {t('stockDetail.disclaimer')}</div>
                 <p className="text-xs text-[var(--text-muted)]">{analysis.disclaimer}</p>
               </div>
             </motion.div>
@@ -680,9 +682,9 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               <button type="button" onClick={() => setStatsInfoOpen(false)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700"><X className="w-5 h-5" /></button>
             </div>
             <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-2">
-              <li><strong>{t('stockDetail.open')}:</strong> {isRTL ? 'سعر أول صفقة في اليوم' : 'First trade price of the day'}</li>
-              <li><strong>P/E:</strong> {isRTL ? 'نسبة السعر إلى الأرباح' : 'Price to earnings ratio'}</li>
-              <li><strong>EPS:</strong> {isRTL ? 'ربحية السهم' : 'Earnings per share'}</li>
+              <li><strong>{t('stockDetail.open')}:</strong> {t('stockDetail.openDesc')}</li>
+              <li><strong>P/E:</strong> {t('stockDetail.peDesc')}</li>
+              <li><strong>EPS:</strong> {t('stockDetail.epsDesc')}</li>
             </ul>
         </div>
       </div>

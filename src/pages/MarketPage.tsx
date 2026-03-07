@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   TrendingUp,
@@ -19,6 +19,7 @@ import api from '../lib/api';
 import { getStockName } from '../lib/egxStocks';
 import { Stock } from '../types';
 import { useAuthStore } from '../store/authStore';
+import { Skeleton } from '../components/ui/Skeleton';
 
 type DataPoint = { value: number; change: number; changePercent: number };
 
@@ -284,7 +285,11 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
         {loadingOverview ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 h-28 animate-pulse" />
+              <div key={i} className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-2">
+                <Skeleton height={16} className="w-1/3" />
+                <Skeleton height={24} className="w-1/2" />
+                <Skeleton height={14} className="w-1/4" />
+              </div>
             ))}
           </div>
         ) : (
@@ -328,9 +333,9 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
         </h2>
         {loadingOverview ? (
           <div className="space-y-4">
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 h-24 animate-pulse" />
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 h-20 animate-pulse" />
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 h-20 animate-pulse" />
+            <Skeleton height={96} className="w-full rounded-xl" />
+            <Skeleton height={80} className="w-full rounded-xl" />
+            <Skeleton height={80} className="w-full rounded-xl" />
           </div>
         ) : (
           <div className="space-y-4">
@@ -467,8 +472,20 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
         </h2>
         {loadingStocks ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 h-72 animate-pulse" />
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 h-72 animate-pulse" />
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <React.Fragment key={i}>
+                  <Skeleton height={48} className="w-full" />
+                </React.Fragment>
+              ))}
+            </div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <React.Fragment key={i}>
+                  <Skeleton height={48} className="w-full" />
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -479,7 +496,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
               </div>
               <ul className="divide-y divide-slate-200 dark:divide-slate-700">
                 {topGainers.length === 0 ? (
-                  <li className="px-4 py-6 text-center text-slate-500 dark:text-slate-400 text-sm">{isAr ? 'لا توجد بيانات' : 'No data'}</li>
+                  <li className="px-4 py-6 text-center text-slate-500 dark:text-slate-400 text-sm">{t('market.noData')}</li>
                 ) : (
                   topGainers.map((s) => (
                     <li key={s.ticker}>
@@ -512,7 +529,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
               </div>
               <ul className="divide-y divide-slate-200 dark:divide-slate-700">
                 {topLosers.length === 0 ? (
-                  <li className="px-4 py-6 text-center text-slate-500 dark:text-slate-400 text-sm">{isAr ? 'لا توجد بيانات' : 'No data'}</li>
+                  <li className="px-4 py-6 text-center text-slate-500 dark:text-slate-400 text-sm">{t('market.noData')}</li>
                 ) : (
                   topLosers.map((s) => (
                     <li key={s.ticker}>
@@ -550,7 +567,11 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
         {loadingNews ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 h-36 animate-pulse" />
+              <div key={i} className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-2">
+                <Skeleton height={18} className="w-full" />
+                <Skeleton height={14} className="w-4/5" />
+                <Skeleton height={12} className="w-1/3" />
+              </div>
             ))}
           </div>
         ) : news.length === 0 ? (

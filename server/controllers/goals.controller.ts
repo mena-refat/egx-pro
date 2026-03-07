@@ -8,8 +8,10 @@ export const GoalsController = {
     try {
       const userId = req.user?.id ?? req.userId;
       if (!userId) return res.status(401).json({ error: 'unauthorized' });
-      const goals = await GoalsService.getUserGoals(userId);
-      res.json(goals);
+      const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+      const limit = Math.min(50, Math.max(1, parseInt((req.query.limit as string) || '50', 10)));
+      const data = await GoalsService.getUserGoals(userId, page, limit);
+      res.json(data);
     } catch {
       res.status(500).json({ error: 'Internal server error' });
     }

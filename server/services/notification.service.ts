@@ -1,16 +1,31 @@
 import { prisma } from '../lib/prisma.ts';
 
 export const NotificationService = {
-  async getList(userId: string) {
-    const [list, unreadCount] = await Promise.all([
+  async getList(userId: string, page = 1, limit = 20) {
+    const pageNum = Math.max(1, page);
+    const limitNum = Math.min(50, Math.max(1, limit));
+    const skip = (pageNum - 1) * limitNum;
+    const where = { userId };
+    const [list, total, unreadCount] = await Promise.all([
       prisma.notification.findMany({
-        where: { userId },
+        where,
         orderBy: { createdAt: 'desc' },
-        take: 20,
+        skip,
+        take: limitNum,
       }),
+      prisma.notification.count({ where }),
       prisma.notification.count({ where: { userId, isRead: false } }),
     ]);
-    return { notifications: list, unreadCount };
+    return {
+      notifications: list,
+      unreadCount,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    };
   },
 
   async markAllRead(userId: string) {

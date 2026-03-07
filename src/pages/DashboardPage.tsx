@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
 import StockCard from '../components/features/stocks/StockCard';
 import PortfolioPerformanceChart from '../components/PortfolioPerformanceChart';
+import { Skeleton } from '../components/ui/Skeleton';
 import { useLivePrices } from '../hooks/useLivePrices';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { getStockName, getStockInfo } from '../lib/egxStocks';
@@ -100,6 +101,16 @@ export default function DashboardPage() {
 
   const isRTL = i18n.language === 'ar';
 
+  if (portfolioLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* سطر حالة السوق: اليمين = السوق مفتوح، اليسار = إخفاء المؤشرات */}
@@ -107,7 +118,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`} />
           <span className="font-medium text-slate-200">
-            {isConnected ? (isRTL ? 'السوق مفتوح' : 'Market Open') : (isRTL ? 'جاري الاتصال...' : 'Connecting...')}
+            {isConnected ? t('header.market_open') : t('dashboard.connecting')}
           </span>
         </div>
         <button
@@ -125,14 +136,14 @@ export default function DashboardPage() {
           {marketLoading ? (
             <div className="flex gap-3">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-14 w-32 shrink-0 rounded-xl bg-slate-800/50 animate-pulse" />
+                <span key={i} className="shrink-0 inline-block w-32"><Skeleton className="h-14 w-full rounded-xl" /></span>
               ))}
             </div>
           ) : marketError ? (
             <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center text-red-400 text-sm">
               <p>{marketError}</p>
               <button type="button" onClick={fetchMarketOverview} className="mt-2 text-violet-400 hover:underline">
-                {isRTL ? 'إعادة المحاولة' : 'Retry'}
+                {t('common.retry')}
               </button>
             </div>
           ) : marketOverview ? (
@@ -184,7 +195,9 @@ export default function DashboardPage() {
         {watchlistLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="card-base p-6 h-32 animate-pulse bg-slate-800/50" />
+              <React.Fragment key={i}>
+                <Skeleton className="h-32 w-full rounded-xl" />
+              </React.Fragment>
             ))}
           </div>
         ) : (
@@ -213,7 +226,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-3 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="card-base p-6">
-              <h4 className="text-sm text-[var(--text-secondary)] mb-2">{i18n.language === 'ar' ? 'إجمالي القيمة' : 'Total Value'}</h4>
+              <h4 className="text-sm text-[var(--text-secondary)] mb-2">{t('dashboard.totalValue')}</h4>
               {portfolioLoading ? (
                 <div className="h-10 w-32 bg-slate-800 animate-pulse rounded" />
               ) : portfolioError ? (

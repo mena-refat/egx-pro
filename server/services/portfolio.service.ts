@@ -6,13 +6,23 @@ import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 import type { AuthUser } from '../routes/types.ts';
 
 export const PortfolioService = {
-  async getPortfolio(userId: string) {
+  async getPortfolio(userId: string, page?: number, limit?: number) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
     });
     const delayed = user ? !isPro(user) : false;
-    const holdings = await prisma.portfolio.findMany({ where: { userId } });
+    const where = { userId };
+    const pageNum = page != null ? Math.max(1, page) : 1;
+    const limitNum = limit != null ? Math.min(50, Math.max(1, limit)) : 1000;
+    const skip = (pageNum - 1) * limitNum;
+    const usePagination = page != null && limit != null;
+    const [holdings, total] = usePagination
+      ? await Promise.all([
+          prisma.portfolio.findMany({ where, skip, take: limitNum, orderBy: { buyDate: 'desc' } }),
+          prisma.portfolio.count({ where }),
+        ])
+      : [await prisma.portfolio.findMany({ where }), 0];
 
     const tickers = holdings.map((h) => h.ticker);
     const priceMap = new Map<string, { price: number; isDelayed?: boolean; priceTime?: string }>();
@@ -48,10 +58,14 @@ export const PortfolioService = {
     const totalGainLoss = totalValue - totalCost;
     const totalGainLossPercent = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
 
-    return {
+    const result: { holdings: typeof enrichedHoldings; summary: { totalValue: number; totalCost: number; totalGainLoss: number; totalGainLossPercent: number }; pagination?: { page: number; limit: number; total: number; totalPages: number } } = {
       holdings: enrichedHoldings,
       summary: { totalValue, totalCost, totalGainLoss, totalGainLossPercent },
     };
+    if (usePagination) {
+      result.pagination = { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) };
+    }
+    return result;
   },
 
   async addHolding(user: AuthUser, body: unknown): Promise<{ holding: Awaited<ReturnType<typeof prisma.portfolio.create>>; newUnseenAchievements: string[] }> {

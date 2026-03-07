@@ -16,6 +16,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Skeleton } from '../components/ui/Skeleton';
 
 export interface GoalRecord {
   id: string;
@@ -69,7 +70,8 @@ function formatTimeLeft(deadline: string | null, t: (key: string, opts?: object)
   if (months >= 12) {
     const y = Math.floor(months / 12);
     const m = months % 12;
-    return locale.startsWith('ar') ? `${y} ${y === 1 ? 'سنة' : 'سنوات'} و${m} أشهر` : `${y} year${y > 1 ? 's' : ''} and ${m} months`;
+    const yearKey = y === 1 ? 'goals.yearOne' : 'goals.yearMany';
+    return `${y} ${t(yearKey)} ${t('goals.andMonths', { m })}`;
   }
   if (months >= 1) return t('goals.monthsLeft', { m: months });
   return t('goals.daysLeft', { d: days });
@@ -102,7 +104,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       const res = await fetch('/api/goals', { headers: { Authorization: `Bearer ${accessToken}` } });
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
-      setGoals(Array.isArray(data) ? data : []);
+      setGoals(Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []);
     } catch {
       setError(t('goals.errorAdd'));
     } finally {
@@ -117,6 +119,24 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
   const activeGoals = goals.filter((g) => g.status !== 'completed');
   const completedGoals = goals.filter((g) => g.status === 'completed');
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton height={40} className="w-full max-w-md" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-3">
+              <Skeleton height={20} className="w-3/4" />
+              <Skeleton height={28} className="w-1/2" />
+              <Skeleton height={16} className="w-full" />
+              <Skeleton height={16} className="w-2/3" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Portfolio value - always show when we have a value so goals stay in sync */}
@@ -129,7 +149,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       )}
 
       {/* Header when there are goals */}
-      {!loading && goals.length > 0 && (
+      {goals.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-slate-100">{t('goals.title')}</h2>
@@ -149,7 +169,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       )}
 
       {/* Empty state */}
-      {!loading && goals.length === 0 && (
+      {goals.length === 0 && (
         <div className="card-base p-10 flex flex-col items-center justify-center text-center max-w-lg mx-auto">
           <Target className="w-16 h-16 text-violet-500 mb-4" />
           <h3 className="text-xl font-bold text-slate-100 mb-2">{t('goals.emptyTitle')}</h3>
@@ -166,7 +186,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       )}
 
       {/* Active goal cards */}
-      {!loading && activeGoals.length > 0 && (
+      {activeGoals.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {activeGoals.map((goal) => (
             <GoalCard
@@ -217,7 +237,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       )}
 
       {/* Add goal button when we have goals but no header button visible on mobile */}
-      {!loading && activeGoals.length > 0 && (
+      {activeGoals.length > 0 && (
         <div className="flex justify-center lg:hidden">
           <button
             type="button"
@@ -231,7 +251,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       )}
 
       {/* Completed section */}
-      {!loading && completedGoals.length > 0 && (
+      {completedGoals.length > 0 && (
         <div className="border border-slate-700 rounded-xl overflow-hidden bg-slate-800/30">
           <button
             type="button"
