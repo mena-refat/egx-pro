@@ -1,3 +1,11 @@
+import { z } from 'zod';
+
+/** متغيرات مطلوبة في الإنتاج فقط (مثل Resend) */
+const requiredInProdSchema = z.object({
+  RESEND_API_KEY: z.string().min(1),
+  FROM_EMAIL: z.string().email(),
+});
+
 /**
  * Validate required environment variables at startup.
  * أي secret مش موجود يطلع error واضح وقت التشغيل.
@@ -25,6 +33,17 @@ export function validateEnv(): void {
 
   if (isProd && (!process.env.AUTH_PEPPER || process.env.AUTH_PEPPER === 'default-pepper-if-missing')) {
     missing.push('AUTH_PEPPER (يجب تعيينه وقيمة غير افتراضية في الإنتاج)');
+  }
+
+  if (isProd) {
+    const prodResult = requiredInProdSchema.safeParse({
+      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      FROM_EMAIL: process.env.FROM_EMAIL,
+    });
+    if (!prodResult.success) {
+      const keys = prodResult.error.issues.map((e) => e.path.join('.')).filter(Boolean);
+      keys.forEach((k) => missing.push(k));
+    }
   }
 
   if (missing.length > 0) {

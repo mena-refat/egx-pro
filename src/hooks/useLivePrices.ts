@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Stock } from '../types';
+import { getAccessToken } from '../lib/auth/tokens';
 
 export function useLivePrices() {
   const [prices, setPrices] = useState<Record<string, Stock>>({});
@@ -9,12 +10,15 @@ export function useLivePrices() {
 
   useEffect(() => {
     const connect = () => {
+      const token = getAccessToken();
+      if (!token) return;
+
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const { hostname, port } = window.location;
 
       // في حالة التشغيل عبر Vite على 5173 نخلي الـ WebSocket على 3000 (السيرفر Node)
       const targetPort = port === '5173' ? '3000' : (port || '3000');
-      const wsUrl = `${protocol}//${hostname}:${targetPort}`;
+      const wsUrl = `${protocol}//${hostname}:${targetPort}?token=${encodeURIComponent(token)}`;
       
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;

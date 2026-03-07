@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
+import { authenticate } from '../middleware/auth.middleware.ts';
+import type { AuthRequest } from './types.ts';
+import { auditLog } from '../lib/audit.ts';
 
 const router = Router();
 
@@ -11,9 +14,9 @@ function getCurrentMonthKey() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-router.get('/plan', async (req: Request, res: Response) => {
+router.get('/plan', authenticate, async (req: Request, res: Response) => {
   try {
-    const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id);
+    const userId = (req as AuthRequest).user?.id;
     if (!userId) return res.status(401).json({ error: 'unauthorized' });
 
     const user = await prisma.user.findUnique({
@@ -66,9 +69,9 @@ router.get('/plan', async (req: Request, res: Response) => {
   }
 });
 //@ Validate discount code for a given plan
-router.post('/discount/validate', async (req: Request, res: Response) => {
+router.post('/discount/validate', authenticate, async (req: Request, res: Response) => {
   try {
-    const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id);
+    const userId = (req as AuthRequest).user?.id;
     if (!userId) return res.status(401).json({ error: 'unauthorized' });
 
     const { code, plan } = req.body as { code?: string; plan?: Plan };
@@ -116,14 +119,27 @@ router.post('/discount/validate', async (req: Request, res: Response) => {
 });
 
 // Upgrade endpoint with optional discount code (no real payment integration)
-router.post('/upgrade', async (req: Request, res: Response) => {
+router.post('/upgrade', authenticate, async (req: Request, res: Response) => {
   try {
-    const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id);
+    const userId = (req as AuthRequest).user?.id;
     if (!userId) return res.status(401).json({ error: 'unauthorized' });
 
     const { plan, discountCode } = req.body as { plan: Plan; discountCode?: string };
     if (!['pro', 'annual'].includes(plan)) {
       return res.status(400).json({ error: 'Invalid plan' });
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan: true, planExpiresAt: true },
+    });
+    if (
+      currentUser?.plan === 'yearly' &&
+      plan === 'pro' &&
+      currentUser.planExpiresAt &&
+      currentUser.planExpiresAt > new Date()
+    ) {
+      return res.status(400).json({ error: 'لا يمكن التحويل من سنوي لشهري أثناء الاشتراك النشط' });
     }
 
     let appliedDiscount: { id: string } | null = null;
@@ -169,6 +185,14 @@ router.post('/upgrade', async (req: Request, res: Response) => {
         plan: true,
         planExpiresAt: true,
       },
+    });
+
+    await auditLog({
+      userId,
+      action: 'SUBSCRIPTION_UPGRADE',
+      details: `Upgraded to ${plan}${appliedDiscount ? ` with discount ${discountCode}` : ''}`,
+      result: 'success',
+      req: { ip: req.ip, headers: req.headers as { 'user-agent'?: string } },
     });
 
     res.json({

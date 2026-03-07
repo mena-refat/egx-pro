@@ -19,6 +19,7 @@ import {
   validateChangePassword,
 } from '../../src/lib/validations.ts';
 import { auditLog, type AuditReq } from '../lib/audit.ts';
+import { EmailService } from './email.service.ts';
 import { sanitizeUser } from '../lib/userSanitize.ts';
 import { buildRefreshTokenData } from '../lib/refreshTokenData.ts';
 import speakeasy from 'speakeasy';
@@ -126,6 +127,13 @@ export async function register(
       lastPasswordChangeAt: new Date(),
     },
   });
+
+  // أرسل Welcome email في الخلفية (لا تنتظره)
+  if (user.email) {
+    EmailService.sendWelcome(user.email, user.fullName ?? 'مستخدم').catch((err) =>
+      console.error('Failed to send welcome email:', err)
+    );
+  }
 
   const loginId = user.email ?? user.phone ?? '';
   const accessToken = generateAccessToken({ id: user.id, email: loginId });
@@ -513,6 +521,11 @@ export async function changePassword(
     where: { id: userId },
     data: { passwordHash: hash, salt, lastPasswordChangeAt: new Date() },
   });
+  if (user.email) {
+    EmailService.sendPasswordChanged(user.email).catch((err) =>
+      console.error('Failed to send password change email:', err)
+    );
+  }
   if (ctx?.auditReq) await auditLog({ userId, action: 'PASSWORD_CHANGED', req: ctx.auditReq, result: 'success' });
   return { success: true };
 }
@@ -580,6 +593,9 @@ export async function googleCallback(
         referralCode,
       },
     });
+    EmailService.sendWelcome(user.email!, user.fullName ?? 'مستخدم').catch((err) =>
+      console.error('Failed to send welcome email:', err)
+    );
   } else if (!user.referralCode) {
     const referralCode = `EGX-${randomUUID().slice(0, 8).toUpperCase()}`;
     user = await prisma.user.update({

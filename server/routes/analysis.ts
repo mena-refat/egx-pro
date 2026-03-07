@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { getStockPrice, getStockHistory, getFinancials } from '../lib/yahoo.ts';
 import { getStockNews } from '../lib/news.ts';
 import { prisma } from '../lib/prisma.ts';
-import { rateLimit } from 'express-rate-limit';
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 
@@ -24,7 +24,7 @@ const analysisLimiter = rateLimit({
   keyGenerator: (req) => {
     const userId = (req as Request & { user?: { id: string } }).user?.id;
     if (userId) return userId;
-    return (req.ip ?? 'unknown').replace(/^::ffff:/, '');
+    return ipKeyGenerator(req.ip ?? 'unknown');
   },
   validate: { 
     xForwardedForHeader: false,

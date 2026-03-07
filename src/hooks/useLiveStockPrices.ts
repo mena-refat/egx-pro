@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { getAccessToken } from '../lib/auth/tokens';
 
 interface StockData {
   ticker: string;
@@ -24,10 +25,13 @@ export const useLiveStockPrices = () => {
   const connect = useCallback(() => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
+    const token = getAccessToken();
+    if (!token) return;
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const { hostname, port } = window.location;
     const targetPort = port === '5173' ? '3000' : (port || '3000');
-    const wsUrl = `${protocol}//${hostname}:${targetPort}`;
+    const wsUrl = `${protocol}//${hostname}:${targetPort}?token=${encodeURIComponent(token)}`;
 
     console.log(`🔌 Connecting to WebSocket: ${wsUrl}`);
     const socket = new WebSocket(wsUrl);

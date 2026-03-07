@@ -26,8 +26,29 @@ export function setupWebSocket(server: Server) {
 
   wss.on('close', () => clearInterval(pingInterval));
 
-  wss.on('connection', async (ws) => {
-    const extWs = ws as WebSocket & { isAlive?: boolean };
+  wss.on('connection', async (ws, req) => {
+    const extWs = ws as WebSocket & { isAlive?: boolean; userId?: string };
+
+    // ── Auth Check ──────────────────────────────────────────
+    const url = new URL(req.url ?? '', `http://${req.headers.host}`);
+    const token = url.searchParams.get('token');
+
+    if (!token) {
+      ws.close(1008, 'Authentication required');
+      return;
+    }
+
+    try {
+      const { verifyAccessToken } = await import('../src/lib/auth.ts');
+      const payload = verifyAccessToken(token) as { sub?: string };
+      if (!payload?.sub) throw new Error('Invalid token');
+      extWs.userId = payload.sub;
+    } catch {
+      ws.close(1008, 'Invalid or expired token');
+      return;
+    }
+    // ── End Auth Check ──────────────────────────────────────
+
     extWs.isAlive = true;
     console.log('🔌 New client connected. Total:', wss.clients.size);
 
