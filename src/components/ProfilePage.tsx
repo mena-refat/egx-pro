@@ -135,8 +135,8 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
         setItems(normalized);
       } catch (err) {
         if (!cancelled) {
-          console.error('Failed to load achievements', err);
-          setError('فشل تحميل شارات الإنجاز');
+        console.error('Failed to load achievements', err);
+        setError('فشل تحميل شارات الإنجاز');
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -263,12 +263,12 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {list.map((badge) => {
-                  const completed = badge.completed;
+        const completed = badge.completed;
                   const percent = getProgressPercent(badge);
-                  return (
+        return (
                     <motion.button
                       type="button"
-                      key={badge.id}
+            key={badge.id}
                       whileHover={{ scale: 1.02 }}
                       onClick={() => setSelected(badge)}
                       className={`p-4 rounded-2xl border text-right shadow-md transition-all ${
@@ -284,14 +284,14 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
                           </p>
                           <div className="w-full h-1.5 bg-[#111827] rounded-full overflow-hidden">
                             <div className="h-full bg-[#7c3aed]" style={{ width: `${percent}%` }} />
-                          </div>
-                        </div>
+                </div>
+              </div>
                       )}
                     </motion.button>
-                  );
-                })}
+        );
+      })}
               </div>
-            </div>
+    </div>
           );
         })}
       </div>
@@ -901,9 +901,9 @@ function SubscriptionSection() {
             />
           </div>
           {!quota && (
-            <p className="text-xs text-[#9ca3af]">
+          <p className="text-xs text-[#9ca3af]">
               {`${analysis.used} تحليل هذا الشهر (غير محدود)`}
-            </p>
+          </p>
           )}
         </div>
         {error && (
@@ -951,7 +951,7 @@ function SubscriptionSection() {
                     </li>
                   ))}
                 </ul>
-                <button
+        <button
                   disabled
                   className="mt-3 w-full text-xs font-bold rounded-xl py-2 border border-[#374151] text-[#9ca3af] cursor-default bg-[#020617]"
                 >
@@ -1027,7 +1027,7 @@ function SubscriptionSection() {
                     : upgrading
                     ? 'جارٍ الترقية...'
                     : 'اشترك في Pro'}
-                </button>
+        </button>
               </button>
             );
           }
@@ -1035,7 +1035,7 @@ function SubscriptionSection() {
           // annual
           const isCurrentAnnual = plan === 'annual';
           return (
-            <button
+        <button
               type="button"
               key="annual"
               onClick={() => setSelectedPlan('annual')}
@@ -1100,7 +1100,7 @@ function SubscriptionSection() {
                   : upgrading
                   ? 'جارٍ الترقية...'
                   : 'اشترك في السنوي'}
-              </button>
+        </button>
             </button>
           );
         })}
@@ -1510,18 +1510,18 @@ export default function ProfilePage() {
                         {(user.subscriptionPlan === 'pro' || user.subscriptionPlan === 'annual' || user.plan === 'pro' || user.plan === 'yearly') && <Crown className="w-3.5 h-3.5" />}
                         {user.subscriptionPlan === 'annual' || user.plan === 'yearly' ? t('overview.planYearly') : user.subscriptionPlan === 'pro' || user.plan === 'pro' ? t('overview.planPro') : t('overview.planFree')}
                       </span>
-                    </div>
                   </div>
-                </div>
-              </div>
+                  </div>
+                  </div>
+                    </div>
 
               {/* Profile completion bar — only when < 100% */}
               {completionData && completionData.percentage < 100 && (
                 <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] shadow-md">
-                  <div className="flex justify-between text-sm mb-2">
+                    <div className="flex justify-between text-sm mb-2">
                     <span className="font-medium text-[#e5e7eb]">{t('overview.completeProfile')}</span>
                     <span className="font-bold text-violet-400">{completionData.percentage}%</span>
-                  </div>
+                    </div>
                   <div className="w-full h-2 bg-[#1f2937] rounded-full overflow-hidden mb-4">
                     <motion.div
                       className="h-full bg-violet-500"
@@ -1529,7 +1529,7 @@ export default function ProfilePage() {
                       animate={{ width: `${completionData.percentage}%` }}
                       transition={{ duration: 0.5 }}
                     />
-                  </div>
+                    </div>
                   <p className="text-xs text-[#9ca3af] mb-2">{t('overview.missingItems')}</p>
                   <div className="flex flex-wrap gap-2">
                     {completionData.missing.map((m) => {
@@ -1558,7 +1558,7 @@ export default function ProfilePage() {
                       );
                     })}
                   </div>
-                </div>
+              </div>
               )}
 
               {/* Stats cards — 4 in a row */}
@@ -1625,7 +1625,7 @@ export default function ProfilePage() {
           )}
         </motion.div>
       </AnimatePresence>
-    </div>
+                    </div>
   );
 }
 
@@ -1754,7 +1754,7 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
     return (
       <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] text-center text-sm text-[#9ca3af]">
         جاري تحميل بيانات الدعوات...
-      </div>
+                    </div>
     );
   }
 
@@ -1762,7 +1762,7 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
     return (
       <div className="p-6 rounded-2xl border border-[#1f2937] bg-[#111827] text-center text-sm text-red-400">
         {error}
-      </div>
+                  </div>
     );
   }
 
@@ -1790,7 +1790,7 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
           <p className="text-sm text-slate-200">
             كل ما دعوت صديق وسجّل بكودك، اقتربت خطوة من شهر Pro مجاني كامل — بدون أي تكلفة.
           </p>
-        </div>
+                      </div>
 
         {/* Code card */}
         <div className="space-y-2">
@@ -1800,7 +1800,7 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
               {code}
             </span>
             <div className="flex gap-2 justify-center md:justify-end">
-              <button
+                      <button
                 type="button"
                 onClick={handleShare}
                 className="flex items-center gap-1 text-xs font-bold bg-white text-[#7c3aed] px-4 py-2 rounded-lg shadow"
@@ -1813,8 +1813,8 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
                 className="flex items-center gap-1 text-xs font-bold bg-transparent border border-white/40 px-3 py-2 rounded-lg"
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'تم النسخ' : 'نسخ الكود'}
-              </button>
-            </div>
+                      </button>
+                    </div>
           </div>
         </div>
 
@@ -1862,13 +1862,13 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
                   {isCompleted && (
                     <p className="mt-1 text-[10px] text-slate-200 truncate max-w-[5rem] text-center">
                       {friendName.split(' ')[0] || friendName}
-                    </p>
-                  )}
-                </div>
+                      </p>
+                    )}
+                  </div>
               );
             })}
-          </div>
-        </div>
+                </div>
+              </div>
 
         {/* Reward card */}
         <div
@@ -1885,8 +1885,8 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
               <p className="text-[11px] text-slate-300">
                 شهر Pro مجاني — قيمته 149 جنيه
               </p>
-            </div>
-          </div>
+                  </div>
+                  </div>
           <p className="text-[11px] text-slate-300 mb-2">
             {Math.min(completedCount, goal)} من {goal} مكتملة
           </p>
@@ -1915,7 +1915,7 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
               ادعو مزيداً من الأصدقاء لتحصل على شهر كامل من EGX Pro مجاناً.
             </p>
           )}
-        </div>
+                  </div>
 
         {/* Social proof */}
         <div className="pt-2 text-[11px] text-slate-300">
@@ -1924,7 +1924,7 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
               انضم {weeklyJoinedCount} مستخدم هذا الأسبوع عن طريق الدعوات.
             </p>
           )}
-        </div>
+                </div>
 
         {message && (
           <p className="text-xs text-emerald-300">
@@ -1937,7 +1937,7 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
             {error}
           </p>
         )}
-      </div>
+              </div>
     </div>
   );
 }
@@ -2027,18 +2027,18 @@ function AvatarWithUpload({
             ) : (
               <div className="w-full h-full bg-[var(--bg-card)] flex items-center justify-center text-[var(--text-muted)]">
                 <User className="w-8 h-8" />
+                      </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
         <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] transition-opacity">
           {uploading ? 'جارٍ الرفع...' : (user.avatarUrl ? 'تغيير الصورة' : 'اضغط لإضافة صورة')}
         </div>
         {isPro && (
           <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-black shadow">
             PRO
-          </div>
-        )}
+            </div>
+          )}
       </button>
       <input
         id={fileInputId}

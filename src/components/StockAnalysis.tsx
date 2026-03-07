@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  BrainCircuit,
-  TrendingUp,
+import { 
+  BrainCircuit, 
+  TrendingUp, 
   TrendingDown,
-  ShieldAlert,
-  Target,
-  BarChart3,
+  ShieldAlert, 
+  Target, 
+  BarChart3, 
   Newspaper,
   ChevronLeft,
   Star,
@@ -256,12 +256,12 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       {/* Fixed Header */}
       <div className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 py-4 -mx-4 mb-6">
         <div className="flex items-center justify-between gap-2 mb-2">
-          <button
+        <button 
             type="button"
-            onClick={onBack}
+          onClick={onBack}
             className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-          >
-            <ChevronLeft className={`w-5 h-5 ${isRTL ? 'rotate-180' : ''}`} />
+        >
+          <ChevronLeft className={`w-5 h-5 ${isRTL ? 'rotate-180' : ''}`} />
             {t('stockDetail.back')}
           </button>
           <div className="flex items-center gap-2">
@@ -273,7 +273,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             >
               {watchlist.includes(stock.ticker) ? <Star className="w-3.5 h-3.5 fill-amber-500" /> : <Plus className="w-3.5 h-3.5" />}
               {watchlist.includes(stock.ticker) ? t('stockDetail.watchlistRemove') : t('stockDetail.watchlistAdd')}
-            </button>
+        </button>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -282,15 +282,15 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
               {t('stockDetail.shariaBadge')}
             </span>
-          )}
-        </div>
+                )}
+              </div>
         <div className="flex items-center gap-3 mt-2">
           <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{formatNum(price)} ج.م</span>
           <span className={`text-sm font-semibold flex items-center gap-0.5 ${(stock.changePercent ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
             {(stock.changePercent ?? 0) >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
             {(stock.changePercent ?? 0) >= 0 ? '+' : ''}{(stock.changePercent ?? 0).toFixed(2)}% {(stock.change ?? 0) >= 0 ? '+' : ''}{formatNum(stock.change)} ج
           </span>
-        </div>
+                </div>
         {/* Price status: Live / delayed 10 min / market closed / pre-market */}
         <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
           {egxStatus?.status === 'closed' && (
@@ -334,16 +334,16 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           {!egxStatus && (
             <span>{t('stockDetail.lastUpdate')}: {new Date().toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}</span>
           )}
-        </div>
-
+            </div>
+            
         {showShariaBanner && (
           <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 dark:text-amber-200 text-sm">
             <span>{t('stockDetail.shariaWarning')}</span>
             <button type="button" onClick={() => setShariaDismissed(true)} className="font-medium underline">
               {t('stockDetail.shariaIgnore')}
-            </button>
-          </div>
-        )}
+                </button>
+              </div>
+            )}
       </div>
 
       {/* Tabs */}
@@ -358,7 +358,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             {t(tab.labelKey)}
           </button>
         ))}
-      </div>
+              </div>
 
       {/* Tab: Details */}
       {activeTab === 'details' && (
@@ -367,7 +367,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           <section>
             <div className="flex gap-2 mb-2 overflow-x-auto">
               {chartRanges.map((r) => (
-                <button
+                <button 
                   key={r.id}
                   type="button"
                   onClick={() => setChartRange(r.id)}
@@ -376,7 +376,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                   {t(r.labelKey)}
                 </button>
               ))}
-            </div>
+              </div>
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 overflow-hidden" style={{ height: 220 }}>
               {history.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -416,7 +416,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                   <p className="font-semibold text-slate-900 dark:text-slate-100">{val}</p>
                 </div>
               ))}
-            </div>
+                    </div>
           </section>
 
           {/* Extended stats + info modal */}
@@ -426,7 +426,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               <button type="button" onClick={() => setStatsInfoOpen(true)} className="p-1 rounded text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700" aria-label="Info">
                 <Info className="w-4 h-4" />
               </button>
-            </div>
+                    </div>
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">{t('stockDetail.high52w')}</span><span>{formatNum(high52w)} ج</span></div>
               <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">{t('stockDetail.low52w')}</span><span>{formatNum(low52w)} ج</span></div>
@@ -435,7 +435,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">{t('stockDetail.eps')}</span><span>{formatNum((financials as { eps?: number })?.eps)}</span></div>
               <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">{t('stockDetail.pe')}</span><span>{(financials as { pe?: number })?.pe != null ? `${Number((financials as { pe?: number }).pe).toFixed(1)}x` : '—'}</span></div>
               <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">{t('stockDetail.avgDailyVolume')}</span><span>{formatBig(volume)} ج</span></div>
-            </div>
+                  </div>
           </section>
 
           {/* Order depth — Pro for full data */}
@@ -451,7 +451,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 <Crown className="w-8 h-8 text-violet-400" />
                 <p className="text-sm font-medium text-slate-200">{t('plan.availableInPro')}</p>
                 <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-violet-400 hover:text-violet-300 font-medium">{t('plan.subscribeToAccess')}</button>
-              </div>
+                </div>
             )}
           </section>
 
@@ -518,7 +518,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 <Crown className="w-8 h-8 text-violet-400" />
                 <p className="text-sm font-medium text-slate-200">{t('plan.availableInPro')}</p>
                 <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-violet-400 hover:text-violet-300 font-medium">{t('plan.subscribeToAccess')}</button>
-              </div>
+                  </div>
             )}
           </section>
           <section className="relative">
@@ -592,7 +592,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                     <p><span className="text-slate-900 dark:text-slate-200 font-medium">Outlook:</span> {analysis.fundamental?.outlook}</p>
                     <p><span className="text-slate-900 dark:text-slate-200 font-medium">Ratios:</span> {analysis.fundamental?.ratios}</p>
                     <p className="text-emerald-500 font-bold">Verdict: {analysis.fundamental?.verdict}</p>
-                  </div>
+                </div>
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-blue-500 font-bold"><TrendingUp className="w-5 h-5" /> {isRTL ? 'التحليل الفني' : 'Technical'}</div>
@@ -631,7 +631,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
                   <span>{item.source}</span>
                   <span>{new Date(item.publishedAt).toLocaleString(i18n.language)}</span>
-                </div>
+            </div>
                 <h4 className="font-medium text-slate-900 dark:text-slate-100 mb-2">{item.title}</h4>
                 <span className="text-sm text-violet-600 dark:text-violet-400 font-medium inline-flex items-center gap-1">{t('stockDetail.readMore')} <ExternalLink className="w-4 h-4" /></span>
               </a>
@@ -684,8 +684,8 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               <li><strong>P/E:</strong> {isRTL ? 'نسبة السعر إلى الأرباح' : 'Price to earnings ratio'}</li>
               <li><strong>EPS:</strong> {isRTL ? 'ربحية السهم' : 'Earnings per share'}</li>
             </ul>
-          </div>
         </div>
+      </div>
       )}
     </div>
   );

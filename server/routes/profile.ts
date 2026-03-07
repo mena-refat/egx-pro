@@ -1,35 +1,15 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
-import { verifyAccessToken } from '../../src/lib/auth.ts';
 import { AuthRequest } from './types';
+import { authenticate } from '../middleware/auth.middleware.ts';
 
 const router = Router();
-
-const authenticate = async (req: AuthRequest, res: Response, next: () => void) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'unauthorized' });
-  }
-  try {
-    const decoded = verifyAccessToken(authHeader.split(' ')[1]) as { sub: string };
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.sub },
-      select: { id: true, isDeleted: true },
-    });
-    if (!user || user.isDeleted) return res.status(401).json({ error: 'unauthorized' });
-    req.userId = decoded.sub;
-    next();
-  } catch {
-    res.status(401).json({ error: 'unauthorized' });
-  }
-};
-
 const WEIGHT = 20;
 
 /** GET /api/profile/completion — percentage + missing items with routes */
 router.get('/completion', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
+    const userId = req.user?.id ?? req.userId!;
     const [user, goalsCount, watchlistCount] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },

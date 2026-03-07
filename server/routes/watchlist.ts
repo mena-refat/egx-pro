@@ -1,26 +1,13 @@
-import { Router, Response, NextFunction } from 'express';
+import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
-import { verifyAccessToken } from '../../src/lib/auth.ts';
 import { watchlistTickerSchema, watchlistCheckTargetsSchema } from '../../src/lib/validations.ts';
 import { AuthRequest } from './types';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { createNotification } from '../lib/createNotification.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
+import { authenticate } from '../middleware/auth.middleware.ts';
 
 const router = Router();
-
-const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: 'No token provided' });
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = verifyAccessToken(token) as { sub: string };
-    req.userId = decoded.sub;
-    next();
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-};
 
 // Get watchlist
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
@@ -45,8 +32,9 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     }
     const { ticker } = parsed.data;
 
+    const userId = req.user?.id ?? req.userId;
     const user = await prisma.user.findUnique({
-      where: { id: req.userId! },
+      where: { id: userId! },
       select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
     });
     if (!user) return res.status(401).json({ error: 'Unauthorized' });

@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { validateChangePassword, validateUsernameFormat, USERNAME_MAX_LENGTH } from '../lib/validations';
 import { OTPInput } from './OTPInput';
+import { Button } from './ui';
 
 export interface SettingsUserProfile {
   id: string;
@@ -818,9 +819,9 @@ export function SettingsTabContent({
                   <div className="flex justify-center mb-4"><CheckCircle className="w-16 h-16 text-[var(--success)]" /></div>
                   <h3 className="text-lg font-bold text-center text-[var(--text-primary)]">{t('settings.twoFaSuccessTitle')}</h3>
                   <p className="text-sm text-[var(--text-muted)] text-center mt-2">{t('settings.twoFaSuccessDesc')}</p>
-                  <button type="button" onClick={() => { setEnable2FAModalOpen(false); }} className="w-full mt-6 py-2.5 rounded-xl text-sm font-medium bg-[var(--brand)] text-white">
+                  <Button type="button" variant="primary" fullWidth onClick={() => setEnable2FAModalOpen(false)} className="mt-6">
                     {t('settings.twoFaDone')}
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <>
@@ -916,12 +917,12 @@ export function SettingsTabContent({
               <OTPInput value={disable2FAOtp} onChange={setDisable2FAOtp} className="mb-4" />
               {disable2FAError && <p className="text-xs text-[var(--danger)] mb-4">{disable2FAError}</p>}
               <div className="flex gap-2 justify-end">
-                <button type="button" onClick={() => setDisable2FAModalOpen(false)} disabled={disable2FALoading} className="px-4 py-2 rounded-xl text-sm font-medium border border-[var(--border)]">
+                <Button type="button" variant="secondary" onClick={() => setDisable2FAModalOpen(false)} disabled={disable2FALoading}>
                   {t('settings.cancel')}
-                </button>
-                <button type="button" onClick={submitDisable2FA} disabled={!disable2FAPassword || disable2FAOtp.length !== 6 || disable2FALoading} className="px-4 py-2 rounded-xl text-sm font-medium bg-[var(--danger)] text-white">
-                  {disable2FALoading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : t('settings.twoFaDisableConfirm')}
-                </button>
+                </Button>
+                <Button type="button" variant="danger" loading={disable2FALoading} onClick={submitDisable2FA} disabled={!disable2FAPassword || disable2FAOtp.length !== 6 || disable2FALoading}>
+                  {t('settings.twoFaDisableConfirm')}
+                </Button>
               </div>
             </div>
           </div>
