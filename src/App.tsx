@@ -15,8 +15,20 @@ import MarketPage from './pages/MarketPage';
 import ProfilePage from './components/ProfilePage';
 import DashboardPage from './pages/DashboardPage';
 import { ErrorPage } from './components/ErrorPage';
-import { loginSchema, registerSchema, validateRegisterPassword } from './lib/validations';
-import { Stock, PortfolioHolding } from './types';
+import { loginSchema, registerSchema, validateRegisterPassword, normalizePhone } from './lib/validations';
+import { Stock, PortfolioHolding, User } from './types';
+
+/** يضمن أن شكل المستخدم صالح لـ setAuth (يحتوي id و fullName كنص) */
+function ensureUserShape(u: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
+  if (!u || typeof u !== 'object') return null;
+  const id = u.id;
+  if (!id || typeof id !== 'string') return null;
+  return {
+    ...u,
+    id: String(id),
+    fullName: typeof u.fullName === 'string' ? u.fullName : (u.fullName ?? ''),
+  };
+}
 
 export default function App() {
   const { t, i18n } = useTranslation('common');
@@ -30,7 +42,6 @@ export default function App() {
   const [showTwoFactorInput, setShowTwoFactorInput] = useState(false);
   const [twoFactorOtp, setTwoFactorOtp] = useState('');
   const [twoFaTempToken, setTwoFaTempToken] = useState('');
-  const [twoFaCountdown, setTwoFaCountdown] = useState(30);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light' | 'system'>(() => {
@@ -411,16 +422,14 @@ export default function App() {
           throw new Error(pwCheck.message);
         }
 
-        // لو المستخدم بيسجل برقم موبايل، نطبّق قواعد رقم الموبايل المصري
+        // لو المستخدم بيسجل برقم موبايل، نطبّق قواعد رقم الموبايل المصري (بعد التطبيع)
         if (!emailOrPhone.includes('@')) {
           const digitsOnly = emailOrPhone.replace(/\D/g, '');
           if (!digitsOnly) {
             throw new Error(i18n.language === 'ar' ? 'رقم الموبايل مطلوب' : 'Phone number is required');
           }
-          if (digitsOnly.length !== 11) {
-            throw new Error(t('error.phone_11_digits'));
-          }
-          if (!/^01[0125][0-9]{8}$/.test(digitsOnly)) {
+          const normalized = normalizePhone(digitsOnly);
+          if (normalized.length !== 11 || !/^01[0125][0-9]{8}$/.test(normalized)) {
             throw new Error(t('error.invalid_phone'));
           }
         }
@@ -436,11 +445,18 @@ export default function App() {
         body: JSON.stringify(body),
       });
 
-      const data = await res.json();
+      let data: { error?: string; message?: string; accessToken?: string; user?: unknown; requires2FA?: boolean; tempToken?: string; restored?: boolean } = {};
+      try {
+        const text = await res.text();
+        if (text) data = JSON.parse(text) as typeof data;
+      } catch {
+        data = { error: res.status === 429 ? (i18n.language === 'ar' ? 'طلبات كثيرة، انتظر قليلاً ثم حاول مرة تانية' : 'Too many requests, please try again later') : (i18n.language === 'ar' ? 'حدث خطأ في الخادم' : 'Server error') };
+      }
       if (!res.ok) {
-        const msg = data.error === 'account_not_found'
-          ? (data.message || t('auth.accountNotExist'))
-          : (data.message || data.error || t('auth.authFailed'));
+        let msg = data.message || data.error || t('auth.authFailed');
+        if (data.error === 'account_not_found') msg = data.message || t('auth.accountNotExist');
+        else if (data.error === 'account_locked') msg = data.message || (i18n.language === 'ar' ? 'الحساب مقفل مؤقتاً' : 'Account temporarily locked');
+        else if (data.error === 'already_registered' || data.error === 'service_unavailable') msg = data.message || msg;
         setError(msg);
         return;
       }
@@ -449,29 +465,51 @@ export default function App() {
         if (data.requires2FA && data.tempToken) {
           setTwoFaTempToken(data.tempToken);
           setTwoFactorOtp('');
-          setTwoFaCountdown(30);
           setShowTwoFactorInput(true);
           setError('');
           return;
         }
 
-        // Fetch full profile to check onboarding
-        const profileRes = await fetch('/api/user/profile', {
-          headers: { 'Authorization': `Bearer ${data.accessToken}` }
-        });
-        const profileData = await profileRes.json();
-        useAuthStore.getState().setAuth(profileData, data.accessToken);
+        // Fetch full profile; fallback to login response user if profile fails
+        let profileData = data.user as Record<string, unknown> | undefined;
+        try {
+          const profileRes = await fetch('/api/user/profile', {
+            headers: { 'Authorization': `Bearer ${data.accessToken}` },
+            credentials: 'include',
+          });
+          if (profileRes.ok) {
+            const text = await profileRes.text();
+            if (text) profileData = JSON.parse(text) as Record<string, unknown>;
+          }
+        } catch {
+          profileData = (data.user as Record<string, unknown>) ?? profileData;
+        }
+        const userForAuth = ensureUserShape(profileData ?? (data.user as Record<string, unknown>));
+        if (userForAuth && data.accessToken) {
+          useAuthStore.getState().setAuth(userForAuth as User, data.accessToken);
+        }
         setAuthMessage({
           text: data.restored ? t('settings.welcomeBack') : (i18n.language === 'ar' ? 'تم تسجيل الدخول بنجاح!' : 'Login successful!'),
           type: 'success',
         });
       } else {
-        // Same as login: use returned token + user and optionally fetch full profile
-        const profileRes = await fetch('/api/user/profile', {
-          headers: { 'Authorization': `Bearer ${data.accessToken}` }
-        });
-        const profileData = profileRes.ok ? await profileRes.json() : data.user;
-        useAuthStore.getState().setAuth(profileData, data.accessToken);
+        let profileData = data.user as Record<string, unknown> | undefined;
+        try {
+          const profileRes = await fetch('/api/user/profile', {
+            headers: { 'Authorization': `Bearer ${data.accessToken}` },
+            credentials: 'include',
+          });
+          if (profileRes.ok) {
+            const text = await profileRes.text();
+            if (text) profileData = JSON.parse(text) as Record<string, unknown>;
+          }
+        } catch {
+          profileData = (data.user as Record<string, unknown>) ?? profileData;
+        }
+        const userForAuth = ensureUserShape(profileData ?? (data.user as Record<string, unknown>));
+        if (userForAuth && data.accessToken) {
+          useAuthStore.getState().setAuth(userForAuth as User, data.accessToken);
+        }
         setAuthMessage({ text: t('auth.registerSuccess'), type: 'success' });
       }
     } catch (err: unknown) {
@@ -482,18 +520,27 @@ export default function App() {
   const handleTwoFactorComplete = async (code: string) => {
     if (!twoFaTempToken) return;
     setError('');
+    const cleanCode = code.toString().replace(/\s/g, '');
+    if (cleanCode.length !== 6) {
+      setError(t('settings.enterFullCode'));
+      return;
+    }
+    if (!/^\d{6}$/.test(cleanCode)) {
+      setError(t('settings.codeMustBe6Digits'));
+      return;
+    }
     try {
       const res = await fetch('/api/auth/2fa/authenticate', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tempToken: twoFaTempToken, code }),
+        body: JSON.stringify({ tempToken: twoFaTempToken, code: cleanCode }),
       });
 
       const data = await res.json();
       if (!res.ok) {
         let msg = 'Verification failed';
-        if (data.error === 'invalid_code') msg = t('settings.invalidCode');
+        if (data.error === 'invalid_code') msg = t('settings.invalidCodeLong');
         else if (data.error === 'invalid_or_expired_token') msg = i18n.language === 'ar' ? 'انتهت صلاحية الرابط، سجّل الدخول من جديد' : 'Session expired, please log in again';
         else if (data.message) msg = data.message;
         else if (data.error && typeof data.error === 'string') msg = data.error;
@@ -528,14 +575,6 @@ export default function App() {
       setError(err instanceof Error ? err.message : 'Google login failed');
     }
   };
-
-  useEffect(() => {
-    if (!showTwoFactorInput) return;
-    const interval = setInterval(() => {
-      setTwoFaCountdown((c) => (c <= 1 ? 30 : c - 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [showTwoFactorInput]);
 
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
@@ -1023,11 +1062,6 @@ export default function App() {
                 onComplete={handleTwoFactorComplete}
                 error={!!error}
               />
-
-              <p className="text-xs text-[var(--text-muted)] text-center">
-                {i18n.language === 'ar' ? 'الكود يتحدث كل 30 ثانية' : 'Code refreshes every 30 seconds'}{' '}
-                <span className="font-medium text-[var(--text-secondary)]">⏱ {twoFaCountdown} {i18n.language === 'ar' ? 'ثانية' : 's'}</span>
-              </p>
 
               {error && (
                 <p className="text-[var(--danger)] text-sm bg-[var(--danger-bg)] p-3 rounded-xl border border-[var(--danger)]/20 text-center">

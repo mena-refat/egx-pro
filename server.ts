@@ -79,37 +79,50 @@ async function startServer() {
   // Static uploads (avatars, etc.)
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-  // Rate Limiting
+  // Rate Limiting — always respond with JSON so the client never gets "Too many requests" as plain text
   const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5,
-    message: { error: 'محاولات كثيرة، انتظر 15 دقيقة' },
     standardHeaders: true,
     legacyHeaders: false,
+    handler: (_req, res) => res.status(429).json({ error: 'محاولات كثيرة، انتظر 15 دقيقة' }),
   });
   const registerLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 3,
     standardHeaders: true,
     legacyHeaders: false,
+    handler: (_req, res) => res.status(429).json({ error: 'محاولات كثيرة، انتظر ساعة' }),
   });
   const refreshLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
+    handler: (_req, res) => res.status(429).json({ error: 'محاولات كثيرة، انتظر دقيقة' }),
   });
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => req.path.startsWith('/api/auth'), // لا نحسب تسجيل الدخول/التسجيل ضمن الحد العام
+    handler: (_req, res) => res.status(429).json({ error: 'طلبات كثيرة، انتظر قليلاً' }),
   });
 
   app.use('/api/auth/login', loginLimiter);
   app.use('/api/auth/register', registerLimiter);
   app.use('/api/auth/refresh', refreshLimiter);
   app.use('/api/', apiLimiter);
+
+  // Debug: server time (remove in production if not needed)
+  app.get('/api/debug/time', (_req, res) => {
+    res.json({
+      serverTime: new Date().toISOString(),
+      serverTimestamp: Date.now(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+  });
 
   // API Routes
   const authRoutes = (await import('./server/routes/auth.ts')).default;

@@ -1,8 +1,10 @@
-// ua-parser-js is CJS; in ESM it may not have default export
-import * as UAParserModule from 'ua-parser-js';
-const UAParser = (UAParserModule as { default?: typeof UAParserModule }).default ?? UAParserModule;
+// ua-parser-js can export differently in ESM/CJS; parse safely and never throw
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 
 export type DeviceType = 'desktop' | 'mobile' | 'tablet';
+
+const FALLBACK = { deviceType: 'desktop' as DeviceType, browser: 'Unknown', os: 'Unknown' };
 
 export function parseUserAgent(userAgent: string | undefined): {
   deviceType: DeviceType;
@@ -10,14 +12,24 @@ export function parseUserAgent(userAgent: string | undefined): {
   os: string;
 } {
   const ua = userAgent || '';
-  const Parser = (UAParser as unknown) as new (ua: string) => { getResult: () => { device?: { type?: string }; browser?: { name?: string }; os?: { name?: string } } };
-  const result = new Parser(ua).getResult();
-  const device = result.device?.type?.toLowerCase();
-  let deviceType: DeviceType = 'desktop';
-  if (device === 'mobile' || device === 'wearable') deviceType = 'mobile';
-  else if (device === 'tablet' || device === 'smarttv') deviceType = 'tablet';
-
-  const browser = result.browser?.name || 'Unknown';
-  const os = result.os?.name || 'Unknown';
-  return { deviceType, browser, os };
+  try {
+    const mod = require('ua-parser-js') as { default?: unknown; UAParser?: unknown };
+    const ParserCtor = mod?.default ?? mod?.UAParser ?? mod;
+    if (typeof ParserCtor !== 'function') return FALLBACK;
+    const instance = new (ParserCtor as new (ua: string) => {
+      getResult: () => { device?: { type?: string }; browser?: { name?: string }; os?: { name?: string } };
+    })(ua);
+    const result = instance.getResult();
+    const device = result.device?.type?.toLowerCase();
+    let deviceType: DeviceType = 'desktop';
+    if (device === 'mobile' || device === 'wearable') deviceType = 'mobile';
+    else if (device === 'tablet' || device === 'smarttv') deviceType = 'tablet';
+    return {
+      deviceType,
+      browser: result.browser?.name || 'Unknown',
+      os: result.os?.name || 'Unknown',
+    };
+  } catch {
+    return FALLBACK;
+  }
 }

@@ -6,13 +6,21 @@ import { z } from 'zod';
  */
 export function normalizePhone(input: string): string {
   const digits = input.replace(/\D/g, '');
-  // 01xxxxxxxxx
+  // 01xxxxxxxxx (11 digits)
   if (digits.length === 11 && digits.startsWith('01')) {
     return digits;
   }
-  // 2010xxxxxxxx (with country code) -> 010xxxxxxxx
+  // 2010xxxxxxxx (12 digits with country code) -> 010xxxxxxxx
   if (digits.length === 12 && digits.startsWith('201')) {
     return '0' + digits.slice(2);
+  }
+  // 2010123456789 (13 digits) -> 010123456789
+  if (digits.length === 13 && digits.startsWith('20')) {
+    return '0' + digits.slice(2);
+  }
+  // 10xxxxxxxx (10 digits, Egyptian without leading 0) -> 010xxxxxxxx
+  if (digits.length === 10 && digits.startsWith('1')) {
+    return '0' + digits;
   }
   return digits;
 }

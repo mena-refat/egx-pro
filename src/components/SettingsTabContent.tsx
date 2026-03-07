@@ -413,7 +413,11 @@ export function SettingsTabContent({
     try {
       const res = await fetch('/api/auth/2fa/setup', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Failed');
+      if (!res.ok) {
+        if (data?.error === '2fa_already_enabled') setEnable2FAError(t('settings.twoFaAlreadyEnabled'));
+        else setEnable2FAError(t('settings.twoFaSetupFailed'));
+        return;
+      }
       setSetupData({ qrCodeUrl: data.qrCodeUrl, manualCode: data.manualCode });
       setEnable2FAStep(2);
     } catch {
@@ -425,16 +429,31 @@ export function SettingsTabContent({
 
   const submitEnable2FA = async (code: string) => {
     if (!accessToken) return;
+    const cleanCode = code.toString().replace(/\s/g, '');
+    if (cleanCode.length !== 6) {
+      setEnable2FAError(t('settings.enterFullCode'));
+      return;
+    }
+    if (!/^\d{6}$/.test(cleanCode)) {
+      setEnable2FAError(t('settings.codeMustBe6Digits'));
+      return;
+    }
     setEnable2FALoading(true);
     setEnable2FAError(null);
     try {
       const res = await fetch('/api/auth/2fa/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code: cleanCode }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'invalid_code');
+      if (!res.ok) {
+        if (data?.error === 'invalid_code') setEnable2FAError(t('settings.invalidCodeLong'));
+        else if (data?.error === 'no_secret') setEnable2FAError(t('settings.noSecret'));
+        else if (data?.error === '2fa_already_enabled') setEnable2FAError(t('settings.twoFaAlreadyEnabled'));
+        else setEnable2FAError(data?.message || t('settings.twoFaInvalidCodeTryAgain'));
+        return;
+      }
       setTwoFactorEnabled(true);
       setEnable2FAStep('success');
       const secRes = await fetch('/api/user/security', { headers: { Authorization: `Bearer ${accessToken}` } });
@@ -443,7 +462,7 @@ export function SettingsTabContent({
         setTwoFactorEnabledAt(sec.twoFactorEnabledAt ?? null);
       }
     } catch {
-      setEnable2FAError(t('settings.twoFaInvalidCodeTryAgain'));
+      setEnable2FAError(t('settings.twoFaSetupFailed'));
     } finally {
       setEnable2FALoading(false);
     }

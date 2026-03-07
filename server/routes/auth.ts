@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
 import { hashPassword, verifyPassword, generateAccessToken, generateRefreshToken, hashRefreshToken, generate2FATempToken, verify2FATempToken, verifyAccessToken } from '../../src/lib/auth.ts';
@@ -82,13 +83,14 @@ router.post('/register', async (req: Request, res: Response) => {
     let phone: string | null = null;
     if (!isEmail) {
       const digitsOnly = raw.replace(/\D/g, '');
-      if (!isValidEgyptianPhone(digitsOnly)) {
+      const normalizedPhone = normalizePhone(digitsOnly);
+      if (!isValidEgyptianPhone(normalizedPhone)) {
         return res.status(400).json({
           error: 'invalid_phone',
           message: 'رقم الموبايل غير صحيح',
         });
       }
-      phone = normalizePhone(digitsOnly);
+      phone = normalizedPhone;
     }
 
     // Check if user exists (by email or phone)
@@ -102,7 +104,7 @@ router.post('/register', async (req: Request, res: Response) => {
     // Hash password
     const { hash, salt } = await hashPassword(password);
 
-    const referralCode = `EGX-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+    const referralCode = `EGX-${randomUUID().slice(0, 8).toUpperCase()}`;
     const firstName = fullName.trim().split(/\s+/)[0] || 'user';
     const safeBase = firstName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user';
     let username = '';
@@ -136,9 +138,14 @@ router.post('/register', async (req: Request, res: Response) => {
     const refreshHash = hashRefreshToken(refreshToken);
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
 
-    await prisma.refreshToken.create({
-      data: await getRefreshTokenData(req, user.id, refreshHash, expiresAt),
-    });
+    const refreshData = await getRefreshTokenData(req, user.id, refreshHash, expiresAt).catch(() => ({
+      token: refreshHash,
+      userId: user.id,
+      expiresAt,
+      ...getSessionDevice(req),
+      ipAddress: req.ip || null,
+    }));
+    await prisma.refreshToken.create({ data: refreshData });
 
     await prisma.user.update({
       where: { id: user.id },
@@ -151,24 +158,52 @@ router.post('/register', async (req: Request, res: Response) => {
     res.cookie('refreshToken', refreshToken, getCookieOptions());
 
     const safe = sanitizeUser(user as Record<string, unknown>);
-    res.status(201).json({
-      accessToken,
-      user: safe ?? {
-        id: user.id,
-        email: user.email ?? undefined,
-        phone: user.phone ?? undefined,
-        fullName: user.fullName,
-        username: user.username ?? undefined,
-        onboardingCompleted: user.onboardingCompleted,
-        isFirstLogin: user.isFirstLogin,
-      },
-    });
-  } catch (error) {
+    const userPayload = safe ?? {
+      id: user.id,
+      email: user.email ?? undefined,
+      phone: user.phone ?? undefined,
+      fullName: user.fullName ?? '',
+      username: user.username ?? undefined,
+      onboardingCompleted: user.onboardingCompleted,
+      isFirstLogin: user.isFirstLogin,
+    };
+    if (typeof (userPayload as Record<string, unknown>).fullName !== 'string') {
+      (userPayload as Record<string, unknown>).fullName = user.fullName ?? '';
+    }
+    res.status(201).json({ accessToken, user: userPayload });
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.issues[0].message });
+      const first = error.issues[0];
+      const msg = (first?.message && typeof first.message === 'string') ? first.message : 'Invalid input';
+      return res.status(400).json({ error: msg });
     }
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed' });
+    const isPrisma = error && typeof error === 'object' && 'code' in error;
+    const prismaCode = isPrisma ? (error as { code?: string }).code : undefined;
+    const errMessage = error instanceof Error ? error.message : String(error);
+    const errLower = errMessage.toLowerCase();
+    if (prismaCode === 'P2002' || errLower.includes('unique constraint') || errLower.includes('duplicate key')) {
+      return res.status(400).json({
+        error: 'already_registered',
+        message: 'البريد أو رقم الموبايل أو اسم المستخدم مستخدم بالفعل.',
+      });
+    }
+    if (prismaCode === 'P2003') {
+      return res.status(400).json({
+        error: 'invalid_data',
+        message: 'بيانات غير صالحة. تأكد من الحقول وحاول مرة أخرى.',
+      });
+    }
+    if (errLower.includes('connect') || errLower.includes('econnrefused') || errLower.includes('connection')) {
+      return res.status(503).json({
+        error: 'service_unavailable',
+        message: 'تعذر الاتصال بقاعدة البيانات. تأكد أن الخادم يعمل وحاول لاحقاً.',
+      });
+    }
+    res.status(500).json({
+      error: 'Registration failed',
+      message: errMessage.length <= 120 ? errMessage : errMessage.slice(0, 117) + '...',
+    });
   }
 });
 
@@ -276,30 +311,41 @@ router.post('/login', async (req: Request, res: Response) => {
     const refreshHash = hashRefreshToken(refreshToken);
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
 
-    await prisma.refreshToken.create({
-      data: await getRefreshTokenData(req, user.id, refreshHash, expiresAt),
-    });
+    const refreshData = await getRefreshTokenData(req, user.id, refreshHash, expiresAt).catch(() => ({
+      token: refreshHash,
+      userId: user.id,
+      expiresAt,
+      ...getSessionDevice(req),
+      ipAddress: req.ip || null,
+    }));
+    await prisma.refreshToken.create({ data: refreshData });
 
     res.cookie('refreshToken', refreshToken, getCookieOptions());
 
     await auditLog({ userId: user.id, action: 'LOGIN_SUCCESS', req, result: 'success' });
     const safe = sanitizeUser(user as Record<string, unknown>);
+    const userPayload = safe ?? {
+      id: user.id,
+      email: user.email ?? undefined,
+      phone: user.phone ?? undefined,
+      fullName: user.fullName ?? '',
+      username: user.username ?? undefined,
+      onboardingCompleted: user.onboardingCompleted,
+      isFirstLogin: user.isFirstLogin,
+    };
+    if (typeof (userPayload as Record<string, unknown>).fullName !== 'string') {
+      (userPayload as Record<string, unknown>).fullName = user.fullName ?? '';
+    }
     res.json({
       accessToken,
       ...(restored && { restored: true }),
-      user: safe ?? {
-        id: user.id,
-        email: user.email ?? undefined,
-        phone: user.phone ?? undefined,
-        fullName: user.fullName,
-        username: user.username ?? undefined,
-        onboardingCompleted: user.onboardingCompleted,
-        isFirstLogin: user.isFirstLogin,
-      },
+      user: userPayload,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.issues[0].message });
+      const first = error.issues[0];
+      const msg = (first?.message && typeof first.message === 'string') ? first.message : 'Invalid input';
+      return res.status(400).json({ error: msg });
     }
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed' });
@@ -310,7 +356,8 @@ router.post('/login', async (req: Request, res: Response) => {
 router.post('/2fa/authenticate', async (req: Request, res: Response) => {
   try {
     const { tempToken, code } = req.body as { tempToken?: string; code?: string };
-    if (!tempToken || !code || typeof code !== 'string' || code.length !== 6) {
+    const cleanCode = code != null ? code.toString().replace(/\s/g, '') : '';
+    if (!tempToken || !code || typeof code !== 'string' || cleanCode.length !== 6) {
       return res.status(400).json({ error: 'Invalid request' });
     }
     let userId: string;
@@ -332,8 +379,8 @@ router.post('/2fa/authenticate', async (req: Request, res: Response) => {
     const valid = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: 'base32',
-      token: code,
-      window: 1,
+      token: cleanCode,
+      window: 2,
     });
 
     if (!valid) {
@@ -369,18 +416,19 @@ router.post('/2fa/authenticate', async (req: Request, res: Response) => {
     res.cookie('refreshToken', refreshToken, getCookieOptions());
     await auditLog({ userId: user.id, action: 'LOGIN_SUCCESS', req, result: 'success', details: '2fa_verified' });
     const safe = sanitizeUser(user as Record<string, unknown>);
-    res.json({
-      accessToken,
-      user: safe ?? {
-        id: user.id,
-        email: user.email ?? undefined,
-        phone: user.phone ?? undefined,
-        fullName: user.fullName,
-        username: user.username ?? undefined,
-        onboardingCompleted: user.onboardingCompleted,
-        isFirstLogin: user.isFirstLogin,
-      },
-    });
+    const userPayload = safe ?? {
+      id: user.id,
+      email: user.email ?? undefined,
+      phone: user.phone ?? undefined,
+      fullName: user.fullName ?? '',
+      username: user.username ?? undefined,
+      onboardingCompleted: user.onboardingCompleted,
+      isFirstLogin: user.isFirstLogin,
+    };
+    if (typeof (userPayload as Record<string, unknown>).fullName !== 'string') {
+      (userPayload as Record<string, unknown>).fullName = user.fullName ?? '';
+    }
+    res.json({ accessToken, user: userPayload });
   } catch (error) {
     console.error('2FA authenticate error:', error);
     const message = error instanceof Error ? error.message : 'Verification failed';
@@ -388,7 +436,7 @@ router.post('/2fa/authenticate', async (req: Request, res: Response) => {
   }
 });
 
-// 2FA Setup (requires Bearer) — generate secret, save to DB, return QR + manual code
+// 2FA Setup (requires Bearer) — generate or reuse secret, return QR + manual code
 router.post('/2fa/setup', async (req: Request, res: Response) => {
   try {
     const userId = getAuthUserId(req);
@@ -396,24 +444,34 @@ router.post('/2fa/setup', async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true },
+      select: { id: true, email: true, twoFactorSecret: true, twoFactorEnabled: true },
     });
     if (!user) return res.status(401).json({ error: 'unauthorized' });
 
-    const secret = speakeasy.generateSecret({
-      name: `EGX Pro (${user.email || userId})`,
-      length: 20,
-    });
-    const base32 = secret.base32 ?? '';
-    const otpauthUrl = secret.otpauth_url ?? '';
+    if (user.twoFactorEnabled) {
+      return res.status(400).json({ error: '2fa_already_enabled' });
+    }
+
+    const label = user.email ?? userId;
+    let base32: string;
+
+    if (user.twoFactorSecret) {
+      base32 = user.twoFactorSecret;
+    } else {
+      const secret = speakeasy.generateSecret({
+        name: `EGX Pro (${label})`,
+        length: 20,
+      });
+      base32 = secret.base32 ?? '';
+      await prisma.user.update({
+        where: { id: userId },
+        data: { twoFactorSecret: base32, twoFactorEnabled: false },
+      });
+    }
+
+    const otpauthUrl = `otpauth://totp/EGX%20Pro:${encodeURIComponent(label)}?secret=${base32}&issuer=EGX%20Pro`;
     const qrCodeUrl = await qrcode.toDataURL(otpauthUrl);
     const manualCode = base32.replace(/(.{4})/g, '$1 ').trim();
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: { twoFactorSecret: base32, twoFactorEnabled: false },
-    });
-
     res.json({
       secret: base32,
       qrCodeUrl,
@@ -432,25 +490,31 @@ router.post('/2fa/verify', async (req: Request, res: Response) => {
     if (!userId) return res.status(401).json({ error: 'unauthorized' });
 
     const { code } = req.body as { code?: string };
-    if (!code || typeof code !== 'string' || code.length !== 6) {
-      return res.status(400).json({ error: 'invalid_code' });
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({ error: 'invalid_code', message: 'الكود مطلوب' });
+    }
+    const cleanCode = code.toString().replace(/\s/g, '');
+    if (cleanCode.length !== 6) {
+      return res.status(400).json({ error: 'invalid_code', message: 'الكود غير صحيح، تأكد من التطبيق وحاول مجدداً' });
     }
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { twoFactorSecret: true },
     });
-    if (!user?.twoFactorSecret) return res.status(400).json({ error: 'Setup 2FA first' });
+    if (!user?.twoFactorSecret) {
+      return res.status(400).json({ error: 'no_secret', message: 'ابدأ عملية الإعداد أولاً' });
+    }
 
     const valid = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: 'base32',
-      token: code,
-      window: 1,
+      token: cleanCode,
+      window: 2,
     });
 
     if (!valid) {
-      return res.status(400).json({ error: 'invalid_code' });
+      return res.status(400).json({ error: 'invalid_code', message: 'الكود غير صحيح، تأكد من التطبيق وحاول مجدداً' });
     }
 
     await prisma.user.update({
@@ -473,8 +537,12 @@ router.post('/2fa/disable', async (req: Request, res: Response) => {
     if (!userId) return res.status(401).json({ error: 'unauthorized' });
 
     const { code, password } = req.body as { code?: string; password?: string };
-    if (!code || typeof code !== 'string' || code.length !== 6 || !password) {
+    if (!code || typeof code !== 'string' || !password) {
       return res.status(400).json({ error: 'code_and_password_required' });
+    }
+    const cleanCode = code.toString().replace(/\s/g, '');
+    if (cleanCode.length !== 6) {
+      return res.status(400).json({ error: 'invalid_code' });
     }
 
     const user = await prisma.user.findUnique({
@@ -492,8 +560,8 @@ router.post('/2fa/disable', async (req: Request, res: Response) => {
     const valid = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: 'base32',
-      token: code,
-      window: 1,
+      token: cleanCode,
+      window: 2,
     });
     if (!valid) {
       return res.status(400).json({ error: 'invalid_code' });
@@ -743,18 +811,19 @@ router.get('/me', async (req: Request, res: Response) => {
     const loginId = rt.user.email ?? rt.user.phone ?? '';
     const accessToken = generateAccessToken({ id: rt.user.id, email: loginId });
     const safe = sanitizeUser(rt.user as Record<string, unknown>);
-    res.json({
-      accessToken,
-      user: safe ?? {
-        id: rt.user.id,
-        email: rt.user.email ?? undefined,
-        phone: rt.user.phone ?? undefined,
-        fullName: rt.user.fullName,
-        username: rt.user.username ?? undefined,
-        onboardingCompleted: rt.user.onboardingCompleted,
-        isFirstLogin: rt.user.isFirstLogin,
-      },
-    });
+    const userPayload = safe ?? {
+      id: rt.user.id,
+      email: rt.user.email ?? undefined,
+      phone: rt.user.phone ?? undefined,
+      fullName: rt.user.fullName ?? '',
+      username: rt.user.username ?? undefined,
+      onboardingCompleted: rt.user.onboardingCompleted,
+      isFirstLogin: rt.user.isFirstLogin,
+    };
+    if (typeof (userPayload as Record<string, unknown>).fullName !== 'string') {
+      (userPayload as Record<string, unknown>).fullName = rt.user.fullName ?? '';
+    }
+    res.json({ accessToken, user: userPayload });
   } catch (error) {
     console.error('Auth check error:', error);
     res.status(500).json({ error: 'Auth check failed' });
@@ -807,7 +876,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     // Find or create user
     let user = await prisma.user.findUnique({ where: { email: googleUser.email } });
     if (!user) {
-      const referralCode = `EGX-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      const referralCode = `EGX-${randomUUID().slice(0, 8).toUpperCase()}`;
       user = await prisma.user.create({
         data: {
           email: googleUser.email,
@@ -817,7 +886,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
         },
       });
     } else if (!user.referralCode) {
-      const referralCode = `EGX-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      const referralCode = `EGX-${randomUUID().slice(0, 8).toUpperCase()}`;
       user = await prisma.user.update({
         where: { id: user.id },
         data: { referralCode },
