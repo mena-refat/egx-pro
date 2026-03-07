@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 
@@ -9,28 +9,33 @@ interface Goal {
   targetDate: string;
 }
 
-export default function FinancialGoalsSidebar({ currentWealth }: { currentWealth: number }) {
+const FinancialGoalsSidebar = memo(function FinancialGoalsSidebar({ currentWealth }: { currentWealth: number }) {
   const { t } = useTranslation('common');
   const { accessToken } = useAuthStore();
   const [goals, setGoals] = useState<Goal[]>([]);
 
   useEffect(() => {
+    if (!accessToken) return;
+    const controller = new AbortController();
     const fetchGoals = async () => {
-      if (!accessToken) return;
       try {
-        const res = await fetch('/api/goals', { 
-          headers: { 'Authorization': `Bearer ${accessToken}` } 
+        const res = await fetch('/api/goals', {
+          headers: { 'Authorization': `Bearer ${accessToken}` },
+          signal: controller.signal,
         });
+        if (controller.signal.aborted) return;
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data?.items)) setGoals(data.items);
           else if (Array.isArray(data)) setGoals(data);
         }
       } catch (err) {
-        console.error('Fetch goals error', err);
+        if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('abort'))) return;
+        if (process.env.NODE_ENV === 'development') console.error('Fetch goals error', err);
       }
     };
     fetchGoals();
+    return () => controller.abort();
   }, [accessToken]);
 
   return (
@@ -60,4 +65,6 @@ export default function FinancialGoalsSidebar({ currentWealth }: { currentWealth
       </div>
     </div>
   );
-}
+});
+
+export default FinancialGoalsSidebar;

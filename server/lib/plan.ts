@@ -20,7 +20,7 @@ export interface UserForPlan {
 }
 
 /**
- * true if user has Pro (plan = pro | yearly, or referral Pro active).
+ * true if user has Pro (plan = pro | yearly with valid expiry, or referral Pro active).
  */
 export function isPro(user: UserForPlan | null): boolean {
   if (!user) return false;
@@ -28,5 +28,7 @@ export function isPro(user: UserForPlan | null): boolean {
   const plan = (user.plan || 'free') as string;
   const hasReferralPro = user.referralProExpiresAt != null && user.referralProExpiresAt > now;
   if (hasReferralPro) return true;
-  return plan === 'pro' || plan === 'yearly';
+  if (plan !== 'pro' && plan !== 'yearly') return false;
+  const expiresAt = user.planExpiresAt;
+  return expiresAt == null || expiresAt > now;
 }

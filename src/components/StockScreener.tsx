@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, TrendingUp, TrendingDown, Star, Plus, Circle, Timer } from 'lucide-react';
 import api from '../lib/api';
+import EmptyState from './shared/EmptyState';
 import { useLivePrices } from '../hooks/useLivePrices';
 import { useAuthStore } from '../store/authStore';
 import { searchStocks, getStockName, getStockInfo } from '../lib/egxStocks';
@@ -41,14 +42,15 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
   const isAr = i18n.language.startsWith('ar');
   const lang = isAr ? 'ar' : 'en';
 
-  const fetchData = async () => {
+  const fetchData = async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
       const [stocksRes, watchlistRes] = await Promise.all([
-        api.get('/stocks/prices'),
-        api.get('/watchlist'),
+        api.get('/stocks/prices', { signal }),
+        api.get('/watchlist', { signal }),
       ]);
+      if (signal?.aborted) return;
       const raw = Array.isArray(stocksRes.data) ? stocksRes.data : [];
       const withMeta: StockWithMeta[] = raw.map((s: Record<string, unknown>) => {
         const ticker = String(s.ticker ?? '');
@@ -74,17 +76,20 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
       setStocks(withMeta);
       setWatchlist(Array.isArray(watchlistRes.data) ? (watchlistRes.data as { ticker: string }[]).map((w) => w.ticker) : []);
     } catch (err: unknown) {
+      if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
       const msg = err && typeof err === 'object' && 'response' in err
         ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
         : null;
       setError(msg || t('stocks.loadError'));
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    const controller = new AbortController();
+    fetchData(controller.signal);
+    return () => controller.abort();
   }, []);
 
   const toggleWatchlist = async (e: React.MouseEvent, ticker: string) => {

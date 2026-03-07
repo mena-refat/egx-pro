@@ -21,9 +21,12 @@
     "skip": "Skip",
     "later": "Later",
     "retry": "Retry",
-    "updating": "Updating..."
+    "updating": "Updating...",
+    "menu": "Menu",
+    "refresh": "Refresh"
   },
   "nav": {
+    "bottomNavLabel": "Bottom navigation",
     "dashboard": "Dashboard",
     "portfolio": "Portfolio",
     "stocks": "Stocks",
@@ -136,8 +139,9 @@
     "progress": "Progress",
     "noGoals": "No goals added yet",
     "addNew": "New goal",
-    "addFirst": "Add your first goal",
-    "emptyTitle": "Start your journey to your financial goal",
+    "addFirst": "Add goal",
+    "emptyTitle": "No goals yet",
+    "emptyDescription": "Set your first financial goal and start your savings journey",
     "emptyDesc": "Set your goal and track your progress step by step until you achieve it",
     "activeCount": "active goals",
     "portfolioAvailable": "Available from portfolio",
@@ -188,6 +192,15 @@
     "yearOne": "year",
     "yearMany": "years",
     "andMonths": "and {{m}} months"
+  },
+  "notifications": {
+    "emptyTitle": "No notifications",
+    "emptyDescription": "Price alerts, goal updates and achievements will appear here"
+  },
+  "watchlist": {
+    "emptyTitle": "Watchlist is empty",
+    "emptyDescription": "Add stocks to track their prices and receive alerts",
+    "addFirst": "Browse stocks"
   },
   "dashboard": {
     "liveWatchlist": "Live Watchlist",
@@ -337,6 +350,7 @@
     "appMicrosoftAuth": "Microsoft Authenticator"
   },
   "profile": {
+    "avatarAlt": "{{name}}'s avatar",
     "loading": "Loading...",
     "loadError": "Failed to load profile",
     "avatarUpdated": "Profile picture updated successfully",
@@ -424,7 +438,8 @@
     "volume": "Vol",
     "watchlistAdd": "Watch",
     "watchlistRemove": "Unwatch",
-    "noResults": "No results",
+    "noResults": "No results found",
+    "noResultsDescription": "Try a different search term or change the filter",
     "retry": "Retry",
     "egp": "EGP",
     "targetPriceOptional": "Target price (optional)"
@@ -506,6 +521,9 @@
     "epsDesc": "Earnings per share"
   },
   "portfolio": {
+    "emptyTitle": "Your portfolio is empty",
+    "emptyDescription": "Add your first stock to start tracking your investments",
+    "addFirst": "Add stock",
     "invalidTicker": "Please enter a valid ticker",
     "sharesPositive": "Shares must be greater than zero",
     "pricePositive": "Price must be greater than zero",

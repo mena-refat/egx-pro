@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import axios from 'axios';
 import { getCache, setCache } from '../lib/redis.ts';
+import { logger } from '../lib/logger.ts';
 
 const router = Router();
 const NEWS_API_KEY = process.env.NEWS_API_KEY;
@@ -53,7 +54,7 @@ router.get('/market', async (req, res) => {
     await setCache(cacheKey, news, 1800);
     res.json(news);
   } catch (err) {
-    console.error('News API market error:', (err as Error).message);
+    logger.error('News API market error', { message: (err as Error).message });
     res.status(500).json({ error: 'Failed to fetch market news' });
   }
 });
@@ -66,7 +67,7 @@ router.get('/:ticker', async (req, res) => {
   try {
     const cachedNews = await getCache(cacheKey);
     if (cachedNews) {
-      console.log(`🗞️ Serving cached news for ${ticker}`);
+      logger.info('Serving cached news', { ticker });
       return res.json(cachedNews);
     }
 
@@ -74,7 +75,7 @@ router.get('/:ticker', async (req, res) => {
       return res.status(500).json({ error: 'News API key missing' });
     }
 
-    console.log(`🗞️ Fetching fresh news for ${ticker} (${companyName})...`);
+    logger.info('Fetching fresh news', { ticker, companyName });
     const query = encodeURIComponent(`${companyName} البورصة المصرية`);
     const response = await axios.get(
       `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=10&apiKey=${NEWS_API_KEY}`
@@ -85,7 +86,7 @@ router.get('/:ticker', async (req, res) => {
     await setCache(cacheKey, news, 1800); // 30 minutes
     res.json(news);
   } catch (err) {
-    console.error(`❌ News API Error for ${ticker}:`, (err as Error).message);
+    logger.error('News API Error', { ticker, message: (err as Error).message });
     res.status(500).json({ error: 'Failed to fetch news' });
   }
 });

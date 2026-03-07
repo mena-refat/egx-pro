@@ -4,6 +4,7 @@ import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 import { authenticate } from '../middleware/auth.middleware.ts';
 import type { AuthRequest } from './types.ts';
 import { auditLog } from '../lib/audit.ts';
+import { logger } from '../lib/logger.ts';
 
 const router = Router();
 
@@ -64,7 +65,7 @@ router.get('/plan', authenticate, async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Billing /plan error:', error);
+    logger.error('Billing /plan error', { error });
     res.status(500).json({ error: 'Failed to load plan' });
   }
 });
@@ -113,7 +114,7 @@ router.post('/discount/validate', authenticate, async (req: Request, res: Respon
       discountAmount,
     });
   } catch (error) {
-    console.error('Billing /discount/validate error:', error);
+    logger.error('Billing /discount/validate error', { error });
     res.status(500).json({ error: 'Failed to validate discount' });
   }
 });
@@ -200,7 +201,7 @@ router.post('/upgrade', authenticate, async (req: Request, res: Response) => {
       discountApplied: Boolean(appliedDiscount),
     });
   } catch (error) {
-    console.error('Billing /upgrade error:', error);
+    logger.error('Billing /upgrade error', { error });
     res.status(500).json({ error: 'Failed to upgrade plan' });
   }
 });

@@ -1,4 +1,5 @@
 import { getCache, setCache } from './redis.ts';
+import { logger } from './logger.ts';
 
 export async function getStockNews(companyName: string) {
   const cacheKey = `news:${companyName}`;
@@ -8,7 +9,7 @@ export async function getStockNews(companyName: string) {
   try {
     const apiKey = process.env.NEWS_API_KEY;
     if (!apiKey) {
-      console.warn('NEWS_API_KEY is not set. Returning mock news.');
+      logger.warn('NEWS_API_KEY is not set. Returning mock news.');
       return [];
     }
 
@@ -32,7 +33,7 @@ export async function getStockNews(companyName: string) {
     await setCache(cacheKey, articles, 1800); // Cache for 30 minutes
     return articles;
   } catch (error) {
-    console.error(`Error fetching news for ${companyName}:`, error);
+    logger.error('Error fetching news', { companyName, error });
     return [];
   }
 }

@@ -1,5 +1,6 @@
 import YahooFinance from 'yahoo-finance2';
 import { getCache, setCache } from './redis.ts';
+import { logger } from './logger.ts';
 
 const yahooFinance = new YahooFinance();
 
@@ -28,7 +29,7 @@ export async function getMarketOverview() {
         };
       }
     } catch (error) {
-      console.error('Error fetching exchange rate:', error);
+      logger.error('Error fetching exchange rate', { error });
     }
 
     // Fetch EGX Indices — EGX 30, 30 Capped, 70 EWI, 100 EWI, 33 Shariah, 35 LV
@@ -111,7 +112,7 @@ export async function getMarketOverview() {
     await setCache(cacheKey, data, 300); // Cache for 5 minutes
     return data;
   } catch (error) {
-    console.error('Error fetching market overview:', error);
+    logger.error('Error fetching market overview', { error });
     return null;
   }
 }

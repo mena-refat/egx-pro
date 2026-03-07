@@ -25,7 +25,12 @@ export function Sidebar({ activeRoute, onNavigate, collapsed, onToggle }: Sideba
 
   return (
     <aside
-      className={`w-full md:flex-shrink-0 bg-[var(--bg-sidebar)] border-r border-[var(--border)] flex flex-col gap-6 transition-[width] duration-200 ease-in-out overflow-hidden ${collapsed ? 'md:w-16' : 'md:w-60'}`}
+      className={`
+        hidden md:flex
+        w-full md:flex-shrink-0 bg-[var(--bg-sidebar)] border-r border-[var(--border)]
+        flex-col gap-6 transition-[width] duration-200 ease-in-out overflow-hidden
+        ${collapsed ? 'md:w-16' : 'md:w-60'}
+      `}
     >
       <div className="p-4 flex items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2 min-w-0 overflow-hidden">

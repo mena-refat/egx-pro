@@ -225,7 +225,7 @@ export function AccountTab({ user, accessToken, onUpdateProfile, setRequestStatu
                 {(user as { avatarUrl?: string | null }).avatarUrl ? (
                   <img
                     src={(user as { avatarUrl?: string | null }).avatarUrl!}
-                    alt={user.fullName || 'avatar'}
+                    alt={t('profile.avatarAlt', { name: user?.fullName ?? '' })}
                     className="w-full h-full object-cover"
                   />
                 ) : (

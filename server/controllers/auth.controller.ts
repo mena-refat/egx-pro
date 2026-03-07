@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma.ts';
 import { getCache, setCache } from '../lib/redis.ts';
 import { EmailService } from '../services/email.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
+import { logger } from '../lib/logger.ts';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const REFRESH_TOKEN_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -55,7 +56,7 @@ function handleError(e: unknown, res: Response, fallbackMessage = 'Request faile
     res.status(400).json({ error: msg });
     return;
   }
-  console.error('Auth controller error:', e);
+  logger.error('Auth controller error', { error: e });
   res.status(500).json({ error: fallbackMessage });
 }
 
@@ -77,7 +78,7 @@ export async function register(req: Request, res: Response): Promise<void> {
       res.status(400).json({ error: msg });
       return;
     }
-    console.error('Registration error:', e);
+    logger.error('Registration error', { error: e });
     const isPrisma = e && typeof e === 'object' && 'code' in e;
     const prismaCode = isPrisma ? (e as { code?: string }).code : undefined;
     const errMessage = e instanceof Error ? e.message : String(e);
@@ -133,7 +134,7 @@ export async function twoFaAuthenticate(req: Request, res: Response): Promise<vo
       res.status(e.status).json({ error: e.error, ...(e.message && { message: e.message }) });
       return;
     }
-    console.error('2FA authenticate error:', e);
+    logger.error('2FA authenticate error', { error: e });
     res.status(500).json({ error: 'Verification failed', message: e instanceof Error ? e.message : 'Verification failed' });
   }
 }
@@ -191,7 +192,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
       res.status(e.status).json({ error: e.error });
       return;
     }
-    console.error('Refresh token error:', e);
+    logger.error('Refresh token error', { error: e });
     res.status(401).json({ error: 'unauthorized' });
   }
 }
@@ -282,7 +283,7 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
     setRefreshCookie(res, result.refreshToken);
     res.send(result.redirectHtml);
   } catch (e) {
-    console.error('Google OAuth error', e);
+    logger.error('Google OAuth error', { error: e });
     res.status(500).send('Authentication failed');
   }
 }
@@ -311,7 +312,7 @@ export async function sendVerifyEmail(req: AuthRequest, res: Response): Promise<
     await EmailService.sendVerificationCode(user.email, code);
     res.json({ success: true });
   } catch (e) {
-    console.error('sendVerifyEmail error', e);
+    logger.error('sendVerifyEmail error', { error: e });
     res.status(500).json({ error: 'server_error' });
   }
 }
@@ -339,7 +340,7 @@ export async function confirmVerifyEmail(req: AuthRequest, res: Response): Promi
     });
     res.json({ success: true });
   } catch (e) {
-    console.error('confirmVerifyEmail error', e);
+    logger.error('confirmVerifyEmail error', { error: e });
     res.status(500).json({ error: 'server_error' });
   }
 }

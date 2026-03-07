@@ -11,9 +11,28 @@ export default defineConfig(({mode}) => {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
     test: {
-      environment: 'jsdom',
       globals: true,
+      environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'html'],
+        exclude: [
+          'node_modules/',
+          'src/test/',
+          '**/*.d.ts',
+          'prisma/',
+          'public/',
+        ],
+        thresholds: {
+          global: {
+            branches: 50,
+            functions: 50,
+            lines: 50,
+            statements: 50,
+          },
+        },
+      },
     },
     resolve: {
       alias: {

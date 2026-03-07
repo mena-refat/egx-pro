@@ -21,9 +21,12 @@
     "skip": "تخطي",
     "later": "لاحقاً",
     "retry": "إعادة المحاولة",
-    "updating": "جاري التحديث..."
+    "updating": "جاري التحديث...",
+    "menu": "القائمة",
+    "refresh": "تحديث"
   },
   "nav": {
+    "bottomNavLabel": "التنقل السريع",
     "dashboard": "الرئيسية",
     "portfolio": "محفظتي",
     "stocks": "الأسهم",
@@ -126,8 +129,9 @@
     "progress": "التقدم",
     "noGoals": "لم تضف أي أهداف بعد",
     "addNew": "هدف جديد",
-    "addFirst": "أضف هدفك الأول",
-    "emptyTitle": "ابدأ رحلتك نحو هدفك المالي",
+    "addFirst": "أضف هدف",
+    "emptyTitle": "لا توجد أهداف بعد",
+    "emptyDescription": "حدد هدفك المالي الأول وابدأ رحلة الادخار",
     "emptyDesc": "حدد هدفك وتابع تقدمك خطوة بخطوة حتى تحققه",
     "activeCount": "أهداف نشطة",
     "portfolioAvailable": "المبلغ المتوفر من المحفظة",
@@ -177,6 +181,15 @@
     "yearOne": "سنة",
     "yearMany": "سنوات",
     "andMonths": "و{{m}} أشهر"
+  },
+  "notifications": {
+    "emptyTitle": "لا توجد إشعارات",
+    "emptyDescription": "ستظهر هنا تنبيهات الأسعار والأهداف والإنجازات"
+  },
+  "watchlist": {
+    "emptyTitle": "قائمة المتابعة فارغة",
+    "emptyDescription": "أضف أسهم لمتابعة أسعارها وتلقي التنبيهات",
+    "addFirst": "تصفح الأسهم"
   },
   "dashboard": {
     "liveWatchlist": "قائمة المتابعة اللحظية",
@@ -340,6 +353,7 @@
     "appMicrosoftAuth": "Microsoft Authenticator"
   },
   "profile": {
+    "avatarAlt": "صورة {{name}}",
     "loading": "جاري التحميل...",
     "loadError": "فشل تحميل الملف الشخصي",
     "avatarUpdated": "تم تحديث صورة البروفايل بنجاح",
@@ -509,6 +523,9 @@
     "epsDesc": "ربحية السهم"
   },
   "portfolio": {
+    "emptyTitle": "محفظتك فارغة",
+    "emptyDescription": "أضف أول سهم لك وابدأ تتابع أداء استثماراتك",
+    "addFirst": "أضف سهم",
     "invalidTicker": "يرجى إدخال رمز سهم صحيح",
     "sharesPositive": "الكمية يجب أن تكون أكبر من صفر",
     "pricePositive": "السعر يجب أن يكون أكبر من صفر",

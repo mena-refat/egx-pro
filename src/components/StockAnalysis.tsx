@@ -23,14 +23,7 @@ import {
   Timer,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from 'recharts';
+import { StockPriceChart } from './features/stocks/StockPriceChart';
 import api from '../lib/api';
 import { getStockName, getStockInfo } from '../lib/egxStocks';
 import { getSector, isShariaCompliant } from '../lib/egxIndicesSectors';
@@ -145,21 +138,22 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
   const showShariaBanner = shariaMode && !isSharia && !shariaDismissed;
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
+    const signal = controller.signal;
     (async () => {
       try {
         const [priceRes, statusRes, histRes, finRes, depthRes, invRes, statsRes, newsRes, watchRes] = await Promise.all([
-          api.get(`/stocks/${stock.ticker}/price`),
-          api.get<{ egx: { status: string; label?: { ar: string; en: string } } }>('/stocks/market/status').catch(() => ({ data: null })),
-          api.get(`/stocks/${stock.ticker}/history`, { params: { range: chartRange } }),
-          api.get(`/stocks/${stock.ticker}/financials`).catch(() => ({ data: null })),
-          api.get(`/stocks/${stock.ticker}/order-depth`).catch(() => ({ data: { available: false } })),
-          api.get(`/stocks/${stock.ticker}/investor-categories`).catch(() => ({ data: { available: false } })),
-          api.get(`/stocks/${stock.ticker}/trading-stats`).catch(() => ({ data: { available: false } })),
-          api.get(`/stocks/${stock.ticker}/news`),
-          api.get('/watchlist').catch(() => ({ data: [] })),
+          api.get(`/stocks/${stock.ticker}/price`, { signal }),
+          api.get<{ egx: { status: string; label?: { ar: string; en: string } } }>('/stocks/market/status', { signal }).catch(() => ({ data: null })),
+          api.get(`/stocks/${stock.ticker}/history`, { params: { range: chartRange }, signal }),
+          api.get(`/stocks/${stock.ticker}/financials`, { signal }).catch(() => ({ data: null })),
+          api.get(`/stocks/${stock.ticker}/order-depth`, { signal }).catch(() => ({ data: { available: false } })),
+          api.get(`/stocks/${stock.ticker}/investor-categories`, { signal }).catch(() => ({ data: { available: false } })),
+          api.get(`/stocks/${stock.ticker}/trading-stats`, { signal }).catch(() => ({ data: { available: false } })),
+          api.get(`/stocks/${stock.ticker}/news`, { signal }),
+          api.get('/watchlist', { signal }).catch(() => ({ data: [] })),
         ]);
-        if (cancelled) return;
+        if (signal.aborted) return;
         setPriceDetail(priceRes.data as Record<string, unknown>);
         if (statusRes.data?.egx) setEgxStatus(statusRes.data.egx);
         setHistory(Array.isArray(histRes.data) ? histRes.data : []);
@@ -169,19 +163,28 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
         setTradingStatsAvailable((statsRes.data as { available?: boolean })?.available ?? false);
         setNews(Array.isArray(newsRes.data) ? newsRes.data : []);
         setWatchlist(Array.isArray(watchRes.data) ? (watchRes.data as { ticker: string }[]).map((w) => w.ticker) : []);
-      } catch {
-        if (!cancelled) setPriceDetail(null);
+      } catch (err: unknown) {
+        if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
+        setPriceDetail(null);
       }
     })();
-    return () => { cancelled = true; };
+    return () => controller.abort();
   }, [stock.ticker, chartRange]);
 
   useEffect(() => {
     if (activeTab !== 'ai') return;
-    api.get<{ analysis: { used: number; quota: number } }>('/billing/plan').then((res) => {
-      const a = res.data?.analysis;
-      if (a && Number.isFinite(a.quota)) setAnalysisPlan({ used: a.used, quota: a.quota });
-    }).catch(() => setAnalysisPlan(null));
+    const controller = new AbortController();
+    api.get<{ analysis: { used: number; quota: number } }>('/billing/plan', { signal: controller.signal })
+      .then((res) => {
+        if (controller.signal.aborted) return;
+        const a = res.data?.analysis;
+        if (a && Number.isFinite(a.quota)) setAnalysisPlan({ used: a.used, quota: a.quota });
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
+        setAnalysisPlan(null);
+      });
+    return () => controller.abort();
   }, [activeTab]);
 
   const getAnalysis = async () => {
@@ -379,24 +382,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               ))}
               </div>
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 overflow-hidden" style={{ height: 220 }}>
-              {history.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={history} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-                    <defs>
-                      <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgb(139 92 246)" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="rgb(139 92 246)" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#64748b" />
-                    <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10 }} stroke="#64748b" />
-                    <Tooltip formatter={(v: number) => [formatNum(v), '']} labelFormatter={(l) => l} contentStyle={{ backgroundColor: 'var(--tw-bg-slate-800)', border: '1px solid var(--tw-border-slate-700)', borderRadius: 8 }} />
-                    <Area type="monotone" dataKey="price" stroke="#8b5cf6" fill="url(#chartGrad)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)] dark:text-slate-400 text-sm">—</div>
-              )}
+              <StockPriceChart data={history} height={220} lineColor="#8b5cf6" />
             </div>
           </section>
 
@@ -677,7 +663,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{t('stockDetail.statsInfo')}</h3>
-              <button type="button" onClick={() => setStatsInfoOpen(false)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700"><X className="w-5 h-5" /></button>
+              <button type="button" onClick={() => setStatsInfoOpen(false)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700" aria-label={t('common.close')}><X className="w-5 h-5" aria-hidden="true" /></button>
             </div>
             <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-2">
               <li><strong>{t('stockDetail.open')}:</strong> {t('stockDetail.openDesc')}</li>

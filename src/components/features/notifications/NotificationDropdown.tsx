@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, Trophy, TrendingUp, UserPlus as UserPlusIcon, Target, Briefcase, Circle } from 'lucide-react';
 import { Skeleton } from '../../ui/Skeleton';
+import EmptyState from '../../shared/EmptyState';
 import type { NotificationItem } from '../../../hooks/useNotifications';
 
 type NotificationDropdownProps = {
@@ -25,9 +26,12 @@ export function NotificationDropdown({ notifications, loading, onItemClick }: No
 
   if (notifications.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-[var(--text-muted)]">
-        <Bell className="w-10 h-10 mb-2 opacity-60" />
-        <p className="text-sm">{t('settings.noNewNotifications')}</p>
+      <div className="p-4">
+        <EmptyState
+          icon={Bell}
+          title={t('notifications.emptyTitle')}
+          description={t('notifications.emptyDescription')}
+        />
       </div>
     );
   }

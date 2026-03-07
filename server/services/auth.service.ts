@@ -20,6 +20,7 @@ import {
 } from '../../src/lib/validations.ts';
 import { auditLog, type AuditReq } from '../lib/audit.ts';
 import { EmailService } from './email.service.ts';
+import { logger } from '../lib/logger.ts';
 import { sanitizeUser } from '../lib/userSanitize.ts';
 import { buildRefreshTokenData } from '../lib/refreshTokenData.ts';
 import speakeasy from 'speakeasy';
@@ -92,11 +93,17 @@ export async function register(
     phone = normalizedPhone;
   }
 
-  const existingUser = email
-    ? await prisma.user.findUnique({ where: { email } })
-    : await prisma.user.findUnique({ where: { phone } });
+  const existingUser =
+    email != null && email !== ''
+      ? await prisma.user.findFirst({ where: { email } })
+      : phone != null && phone !== ''
+        ? await prisma.user.findFirst({ where: { phone } })
+        : null;
   if (existingUser) {
     fail(400, isEmail ? 'Email already registered' : 'Phone number already registered');
+  }
+  if ((email == null || email === '') && (phone == null || phone === '')) {
+    fail(400, 'invalid_input', 'يجب إدخال بريد إلكتروني أو رقم موبايل صحيح');
   }
 
   const { hash, salt } = await hashPassword(password);
@@ -131,7 +138,7 @@ export async function register(
   // أرسل Welcome email في الخلفية (لا تنتظره)
   if (user.email) {
     EmailService.sendWelcome(user.email, user.fullName ?? 'مستخدم').catch((err) =>
-      console.error('Failed to send welcome email:', err)
+      logger.error('Failed to send welcome email', { err })
     );
   }
 
@@ -523,7 +530,7 @@ export async function changePassword(
   });
   if (user.email) {
     EmailService.sendPasswordChanged(user.email).catch((err) =>
-      console.error('Failed to send password change email:', err)
+      logger.error('Failed to send password change email', { err })
     );
   }
   if (ctx?.auditReq) await auditLog({ userId, action: 'PASSWORD_CHANGED', req: ctx.auditReq, result: 'success' });
@@ -594,7 +601,7 @@ export async function googleCallback(
       },
     });
     EmailService.sendWelcome(user.email!, user.fullName ?? 'مستخدم').catch((err) =>
-      console.error('Failed to send welcome email:', err)
+      logger.error('Failed to send welcome email', { err })
     );
   } else if (!user.referralCode) {
     const referralCode = `EGX-${randomUUID().slice(0, 8).toUpperCase()}`;

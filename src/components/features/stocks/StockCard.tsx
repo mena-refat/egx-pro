@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +12,7 @@ interface StockCardProps {
   isConnected: boolean;
 }
 
-export default function StockCard({
+const StockCard = memo(function StockCard({
   ticker,
   price = 0,
   change = 0,
@@ -77,4 +78,6 @@ export default function StockCard({
       </div>
     </motion.div>
   );
-}
+});
+
+export default StockCard;

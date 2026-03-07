@@ -11,6 +11,8 @@ import { Stock } from '../types';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Skeleton } from './ui/Skeleton';
+import EmptyState from './shared/EmptyState';
+import { BriefcaseBusiness } from 'lucide-react';
 
 export default function PortfolioTracker() {
   const { t, i18n } = useTranslation('common');
@@ -27,17 +29,20 @@ export default function PortfolioTracker() {
   const isRTL = i18n.language.startsWith('ar');
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchStocks = async () => {
       try {
-        const res = await api.get('/stocks/prices');
-        if (Array.isArray(res.data)) {
+        const res = await api.get('/stocks/prices', { signal: controller.signal });
+        if (!controller.signal.aborted && Array.isArray(res.data)) {
           setAllStocks(res.data.sort((a, b) => a.ticker.localeCompare(b.ticker)));
         }
-      } catch (err) {
-        console.error('Failed to fetch stocks for suggestions', err);
+      } catch (err: unknown) {
+        if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
+        if (process.env.NODE_ENV === 'development') console.error('Failed to fetch stocks for suggestions', err);
       }
     };
     fetchStocks();
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -189,6 +194,15 @@ export default function PortfolioTracker() {
           </div>
 
           <div className="card-base overflow-hidden">
+            {holdings.length === 0 && !isLoading ? (
+              <EmptyState
+                icon={BriefcaseBusiness}
+                title={t('portfolio.emptyTitle')}
+                description={t('portfolio.emptyDescription')}
+                actionLabel={t('portfolio.addFirst')}
+                onAction={() => setIsAdding(true)}
+              />
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-right">
                 <thead className="bg-slate-50 dark:bg-white/5 text-[var(--text-muted)] dark:text-[var(--text-secondary)] text-xs uppercase tracking-wider">
@@ -235,16 +249,10 @@ export default function PortfolioTracker() {
                       </tr>
                     );
                   })}
-                  {holdings.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-[var(--text-muted)]">
-                        {t('portfolio.noHoldings')}
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         </div>
 

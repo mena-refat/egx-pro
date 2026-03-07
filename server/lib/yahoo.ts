@@ -1,6 +1,7 @@
 import YahooFinance from 'yahoo-finance2';
 import { getCache, setCache } from './redis.ts';
 import { EGX_TICKERS } from './egxTickers.ts';
+import { logger } from './logger.ts';
 
 const yahooFinance = new YahooFinance();
 
@@ -48,7 +49,7 @@ export async function getStockPrice(ticker: string): Promise<(StockPriceData & {
     await setCache(cacheKey, data, 60);
     return data;
   } catch (error) {
-    console.error(`Error fetching price for ${ticker}:`, error);
+    logger.error('Error fetching price', { ticker, error });
     return null;
   }
 }
@@ -130,7 +131,7 @@ export async function getStockHistory(ticker: string, range: string = '1mo') {
     await setCache(cacheKey, data, 300); // Cache for 5 minutes
     return data;
   } catch (error) {
-    console.error(`Error fetching history for ${ticker}:`, error);
+    logger.error('Error fetching history', { ticker, error });
     return [];
   }
 }
@@ -164,7 +165,7 @@ export async function getFinancials(ticker: string) {
     await setCache(cacheKey, data, 86400); // Cache for 24 hours
     return data;
   } catch (error) {
-    console.error(`Error fetching financials for ${ticker}:`, error);
+    logger.error('Error fetching financials', { ticker, error });
     return null;
   }
 }
@@ -195,7 +196,7 @@ export async function searchEgxStocks(query: string) {
         description: '',
       }));
   } catch (error) {
-    console.error('Error searching EGX stocks:', error);
+    logger.error('Error searching EGX stocks', { error });
     return [];
   }
 }

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { NotificationService } from '../services/notification.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
+import { logger } from '../lib/logger.ts';
 
 export const NotificationsController = {
   getAll: async (req: AuthRequest, res: Response) => {
@@ -12,7 +13,7 @@ export const NotificationsController = {
       const data = await NotificationService.getList(userId, page, limit);
       res.json(data);
     } catch (err) {
-      console.error('Notifications list error:', err);
+      logger.error('Notifications list error', { err });
       res.status(500).json({ error: 'Failed to load notifications' });
     }
   },
@@ -24,7 +25,7 @@ export const NotificationsController = {
       await NotificationService.markAllRead(userId);
       res.json({ success: true });
     } catch (err) {
-      console.error('Mark read error:', err);
+      logger.error('Mark read error', { err });
       res.status(500).json({ error: 'Failed to mark as read' });
     }
   },
@@ -36,7 +37,7 @@ export const NotificationsController = {
       await NotificationService.markAllRead(userId);
       res.json({ success: true });
     } catch (err) {
-      console.error('Mark read all error:', err);
+      logger.error('Mark read all error', { err });
       res.status(500).json({ error: 'Failed to mark as read' });
     }
   },
@@ -49,7 +50,7 @@ export const NotificationsController = {
       await NotificationService.markOneRead(userId, id);
       res.json({ success: true });
     } catch (err) {
-      console.error('Mark one read error:', err);
+      logger.error('Mark one read error', { err });
       res.status(500).json({ error: 'Failed to mark as read' });
     }
   },
@@ -61,7 +62,7 @@ export const NotificationsController = {
       await NotificationService.clearAll(userId);
       res.status(204).send();
     } catch (err) {
-      console.error('Clear all notifications error:', err);
+      logger.error('Clear all notifications error', { err });
       res.status(500).json({ error: 'Failed to clear' });
     }
   },
@@ -75,7 +76,7 @@ export const NotificationsController = {
       if (!deleted) return res.status(404).json({ error: 'Not found' });
       res.status(204).send();
     } catch (err) {
-      console.error('Delete notification error:', err);
+      logger.error('Delete notification error', { err });
       res.status(500).json({ error: 'Failed to delete' });
     }
   },

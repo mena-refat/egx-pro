@@ -17,8 +17,10 @@ import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 
 import { createServer } from 'http';
+import * as Sentry from '@sentry/node';
 import { setupWebSocket } from './server/websocket.ts';
 import { validateEnv } from './server/lib/env.ts';
+import { logger } from './server/lib/logger.ts';
 import { sanitizeInput } from './server/lib/sanitize.ts';
 import authRoutes from './server/routes/auth.ts';
 import portfolioRoutes from './server/routes/portfolio.ts';
@@ -31,8 +33,19 @@ import goalsRoutes from './server/routes/goals.ts';
 import notificationsRoutes from './server/routes/notifications.ts';
 import billingRoutes from './server/routes/billing.ts';
 import newsRoutes from './server/routes/news.ts';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerDocument } from './server/lib/swagger.ts';
 
 async function startServer() {
+  if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV,
+      integrations: [Sentry.expressIntegration()],
+      tracesSampleRate: 0.1,
+    });
+  }
+
   validateEnv();
 
   const app = express();
@@ -170,10 +183,22 @@ async function startServer() {
     }
   });
 
+  if (process.env.NODE_ENV !== 'production') {
+    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'EGX Pro API Docs',
+    }));
+    logger.info('📚 API Docs available at http://localhost:3000/api/docs');
+  }
+
   // 404 for unknown API routes (before static so /api/foo returns JSON not HTML)
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'not_found' });
   });
+
+  if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
+    Sentry.setupExpressErrorHandler(app);
+  }
 
   // Global Error Handler
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -194,7 +219,7 @@ async function startServer() {
         // لو حصل خطأ في اللوج، منظهرش أي تفاصيل للـ client
       }
     } else {
-      console.error('Unhandled Error:', reqId, err);
+      logger.error('Unhandled Error:', { reqId, err });
     }
 
     res.status(500).json({ error: 'server_error' });
@@ -215,7 +240,7 @@ async function startServer() {
   }
 
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 EGX Pro Server running on http://localhost:${PORT}`);
+    logger.info(`🚀 EGX Pro Server running on http://localhost:${PORT}`);
     setupWebSocket(server);
   });
 
@@ -257,14 +282,14 @@ async function startServer() {
           });
           await prisma.user.delete({ where: { id: u.id } });
         } catch (e) {
-          console.error('Archive user error:', u.id, e);
+          logger.error('Archive user error', { userId: u.id, error: e });
         }
       }
       await prismaWithArchive.refreshToken.deleteMany({
         where: { expiresAt: { lt: now } },
       });
     } catch (err) {
-      console.error('Cleanup job error:', err);
+      logger.error('Cleanup job error', { error: err });
     }
   }, ONE_DAY_MS);
 
@@ -282,7 +307,7 @@ async function startServer() {
         data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: nextReset },
       });
     } catch (err) {
-      console.error('AI usage reset job error:', err);
+      logger.error('AI usage reset job error', { error: err });
     }
   }, 60 * 60 * 1000);
 
@@ -332,7 +357,7 @@ async function startServer() {
         }
       }
     } catch (err) {
-      console.error('Delayed prices refresh error:', err);
+      logger.error('Delayed prices refresh error', { error: err });
     }
   }, TEN_MIN_MS);
 
@@ -345,5 +370,5 @@ async function startServer() {
 }
 
 startServer().catch(err => {
-  console.error('Failed to start server:', err);
+  logger.error('Failed to start server', { error: err });
 });

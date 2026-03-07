@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { getStockPrice, getStockHistory, getFinancials } from '../lib/yahoo.ts';
 import { getStockNews } from '../lib/news.ts';
 import { prisma } from '../lib/prisma.ts';
+import { logger } from '../lib/logger.ts';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
@@ -194,7 +195,7 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
 
     if (!claudeResponse.ok) {
       const errorData = await claudeResponse.text();
-      console.error('Claude API Error:', errorData);
+      logger.error('Claude API Error', { errorData });
       throw new Error('Failed to generate analysis from AI');
     }
 
@@ -207,7 +208,7 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
       const cleaned = rawText.replace(/```json|```/g, '').trim();
       analysisJson = JSON.parse(cleaned);
     } catch (parseError) {
-      console.error('Failed to parse Claude JSON response:', parseError);
+      logger.error('Failed to parse Claude JSON response', { parseError });
       throw new Error('AI returned invalid format', { cause: parseError });
     }
 
@@ -233,7 +234,7 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
     res.json({ analysis: analysisJson, id: savedAnalysis.id, newUnseenAchievements: newAchievements });
 
   } catch (error) {
-    console.error('Analysis error:', error);
+    logger.error('Analysis error', { error });
     res.status(500).json({ error: 'Failed to generate analysis' });
   }
 });

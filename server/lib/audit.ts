@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { prisma } from './prisma.ts';
+import { logger } from './logger.ts';
 
 function hash(value: string): string {
   return crypto.createHash('sha256').update(value, 'utf8').digest('hex').slice(0, 32);
@@ -31,6 +32,6 @@ export async function auditLog(params: {
       },
     });
   } catch (e) {
-    console.error('Audit log write failed:', e);
+    logger.error('Audit log write failed', { error: e });
   }
 }

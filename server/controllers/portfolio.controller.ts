@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { PortfolioService } from '../services/portfolio.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
+import { logger } from '../lib/logger.ts';
 
 export const PortfolioController = {
   getAll: async (req: AuthRequest, res: Response) => {
@@ -12,7 +13,7 @@ export const PortfolioController = {
       const data = await PortfolioService.getPortfolio(userId, page, limit);
       res.json(data);
     } catch (error) {
-      console.error('Error fetching portfolio:', error);
+      logger.error('Error fetching portfolio', { error });
       res.status(500).json({ error: 'Failed to fetch portfolio' });
     }
   },
@@ -34,7 +35,7 @@ export const PortfolioController = {
           limit: e.limit,
         });
       }
-      console.error('Error adding holding:', err);
+      logger.error('Error adding holding', { err });
       res.status(400).json({ error: e.message ?? 'Failed to add holding' });
     }
   },
@@ -48,7 +49,7 @@ export const PortfolioController = {
       if (!updated) return res.status(404).json({ error: 'Holding not found or unauthorized' });
       res.json({ message: 'Holding updated successfully' });
     } catch (error) {
-      console.error('Error updating holding:', error);
+      logger.error('Error updating holding', { error });
       res.status(500).json({ error: 'Failed to update holding' });
     }
   },
@@ -62,7 +63,7 @@ export const PortfolioController = {
       if (!deleted) return res.status(404).json({ error: 'Holding not found or unauthorized' });
       res.json({ message: 'Holding deleted successfully' });
     } catch (error) {
-      console.error('Error deleting holding:', error);
+      logger.error('Error deleting holding', { error });
       res.status(500).json({ error: 'Failed to delete holding' });
     }
   },

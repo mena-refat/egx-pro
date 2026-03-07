@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Calendar, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
@@ -11,7 +11,7 @@ interface Goal {
   type: string;
 }
 
-export default function GoalTracker({ currentWealth }: { currentWealth: number }) {
+const GoalTracker = memo(function GoalTracker({ currentWealth }: { currentWealth: number }) {
   const { t, i18n } = useTranslation('common');
   const { accessToken } = useAuthStore();
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -23,27 +23,29 @@ export default function GoalTracker({ currentWealth }: { currentWealth: number }
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
+    if (!accessToken) return;
+    const controller = new AbortController();
     const fetchGoals = async () => {
-      if (!accessToken) return;
       setIsLoading(true);
       try {
-        const res = await fetch('/api/goals', { 
-          headers: { 'Authorization': `Bearer ${accessToken}` } 
+        const res = await fetch('/api/goals', {
+          headers: { 'Authorization': `Bearer ${accessToken}` },
+          signal: controller.signal,
         });
-        if (!res.ok) {
-          console.error('Fetch goals failed');
-          return;
-        }
+        if (controller.signal.aborted) return;
+        if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data?.items)) setGoals(data.items);
         else if (Array.isArray(data)) setGoals(data);
       } catch (err) {
-        console.error('Fetch goals error', err);
+        if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('abort'))) return;
+        if (process.env.NODE_ENV === 'development') console.error('Fetch goals error', err);
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     };
     fetchGoals();
+    return () => controller.abort();
   }, [accessToken, refreshTrigger]);
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -244,4 +246,6 @@ export default function GoalTracker({ currentWealth }: { currentWealth: number }
       )}
     </div>
   );
-}
+});
+
+export default GoalTracker;

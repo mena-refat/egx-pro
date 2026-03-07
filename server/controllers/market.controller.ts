@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { MarketService } from '../services/market.service.ts';
 import { isPro } from '../lib/plan.ts';
 import type { AuthRequest } from '../routes/types.ts';
+import { logger } from '../lib/logger.ts';
 
 export const MarketController = {
   getStatus: (_req: AuthRequest, res: Response) => {
@@ -28,7 +29,7 @@ export const MarketController = {
       const payload = await MarketService.getOverview(delayed);
       res.json(payload);
     } catch (error) {
-      console.error('Stocks /market/overview error:', error);
+      logger.error('Stocks /market/overview error', { error });
       const { getMarketStatus, getGoldMarketStatus } = await import('../lib/marketHours.ts');
       const fallback = {
         usdEgp: { value: 0, change: 0, changePercent: 0 },

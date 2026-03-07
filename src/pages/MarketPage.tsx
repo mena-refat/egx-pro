@@ -97,47 +97,51 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
   const [silverExpanded, setSilverExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOverview = async () => {
+  const fetchOverview = async (signal?: AbortSignal) => {
     setLoadingOverview(true);
     setError(null);
     try {
-      const res = await api.get<MarketOverview>('/stocks/market/overview');
-      setOverview(res.data);
-    } catch {
-      setError(t('market.loadError'));
+      const res = await api.get<MarketOverview>('/stocks/market/overview', { signal });
+      if (!signal?.aborted) setOverview(res.data);
+    } catch (err: unknown) {
+      if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
+      if (!signal?.aborted) setError(t('market.loadError'));
     } finally {
-      setLoadingOverview(false);
+      if (!signal?.aborted) setLoadingOverview(false);
     }
   };
 
-  const fetchStocks = async () => {
+  const fetchStocks = async (signal?: AbortSignal) => {
     setLoadingStocks(true);
     try {
-      const res = await api.get<Stock[]>('/stocks/prices');
-      setStocks(Array.isArray(res.data) ? res.data : []);
-    } catch {
-      setStocks([]);
+      const res = await api.get<Stock[]>('/stocks/prices', { signal });
+      if (!signal?.aborted) setStocks(Array.isArray(res.data) ? res.data : []);
+    } catch (err: unknown) {
+      if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
+      if (!signal?.aborted) setStocks([]);
     } finally {
-      setLoadingStocks(false);
+      if (!signal?.aborted) setLoadingStocks(false);
     }
   };
 
-  const fetchNews = async () => {
+  const fetchNews = async (signal?: AbortSignal) => {
     setLoadingNews(true);
     try {
-      const res = await api.get<NewsItem[]>('/news/market');
-      setNews(Array.isArray(res.data) ? res.data : []);
+      const res = await api.get<NewsItem[]>('/news/market', { signal });
+      if (!signal?.aborted) setNews(Array.isArray(res.data) ? res.data : []);
     } catch {
-      setNews([]);
+      if (!signal?.aborted) setNews([]);
     } finally {
-      setLoadingNews(false);
+      if (!signal?.aborted) setLoadingNews(false);
     }
   };
 
   useEffect(() => {
-    fetchOverview();
-    fetchStocks();
-    fetchNews();
+    const controller = new AbortController();
+    fetchOverview(controller.signal);
+    fetchStocks(controller.signal);
+    fetchNews(controller.signal);
+    return () => controller.abort();
   }, []);
 
   const refreshAll = async () => {

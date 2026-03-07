@@ -13,6 +13,7 @@ import DashboardPage from './pages/DashboardPage';
 import AuthPage from './pages/AuthPage';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import BottomNav from './components/layout/BottomNav';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import PageLoader from './components/shared/PageLoader';
 import { SubscriptionTab, ReferralTab, AchievementsTab, AccountOverviewTab } from './components/features/settings';
@@ -129,6 +130,7 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
       </main>
+      <BottomNav />
     </div>
   );
 }

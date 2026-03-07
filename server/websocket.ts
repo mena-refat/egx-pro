@@ -3,20 +3,21 @@ import { Server } from 'http';
 import { getBulkPrices } from './lib/yahoo.ts';
 import { getCache } from './lib/redis.ts';
 import { EGX_TICKERS } from './lib/egxTickers.ts';
+import { logger } from './lib/logger.ts';
 
 const UPDATE_INTERVAL = 60000;
 const PING_INTERVAL = 30000;
 
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ server });
-  console.log('✅ WebSocket Server initialized');
+  logger.info('✅ WebSocket Server initialized');
 
   // Ping كل 30 ثانية للتأكد إن الـ clients لسه متصلين
   const pingInterval = setInterval(() => {
     wss.clients.forEach((ws) => {
       const extWs = ws as WebSocket & { isAlive?: boolean };
       if (extWs.isAlive === false) {
-        console.log('🔌 Terminating dead WebSocket connection');
+        logger.info('🔌 Terminating dead WebSocket connection');
         return extWs.terminate();
       }
       extWs.isAlive = false;
@@ -50,7 +51,7 @@ export function setupWebSocket(server: Server) {
     // ── End Auth Check ──────────────────────────────────────
 
     extWs.isAlive = true;
-    console.log('🔌 New client connected. Total:', wss.clients.size);
+    logger.info('🔌 New client connected', { total: wss.clients.size });
 
     // Pong handler
     extWs.on('pong', () => { extWs.isAlive = true; });
@@ -62,15 +63,15 @@ export function setupWebSocket(server: Server) {
         safeSend(ws, { type: 'INITIAL_PRICES', data: initialData });
       }
     } catch (err) {
-      console.error('Failed to send initial prices:', err);
+      logger.error('Failed to send initial prices', { error: err });
     }
 
     ws.on('close', () => {
-      console.log('🔌 Client disconnected. Remaining:', wss.clients.size);
+      logger.info('🔌 Client disconnected', { remaining: wss.clients.size });
     });
 
     ws.on('error', (err) => {
-      console.error('WebSocket client error:', err.message);
+      logger.error('WebSocket client error', { message: err.message });
     });
   });
 
@@ -81,7 +82,7 @@ export function setupWebSocket(server: Server) {
     try {
       const data = await fetchAndCachePrices();
       if (!data || data.length === 0) {
-        console.warn('⚠️ No price data available for broadcast');
+        logger.warn('⚠️ No price data available for broadcast');
         return;
       }
 
@@ -92,9 +93,9 @@ export function setupWebSocket(server: Server) {
           sentCount++;
         }
       });
-      console.log(`📡 Prices broadcast to ${sentCount} clients`);
+      logger.info(`📡 Prices broadcast to ${sentCount} clients`);
     } catch (err) {
-      console.error('❌ WebSocket broadcast error:', err);
+      logger.error('❌ WebSocket broadcast error', { error: err });
     }
   }, UPDATE_INTERVAL);
 }
@@ -106,7 +107,7 @@ function safeSend(ws: WebSocket, data: unknown) {
       ws.send(JSON.stringify(data));
     }
   } catch (err) {
-    console.error('Failed to send WebSocket message:', err);
+    logger.error('Failed to send WebSocket message', { error: err });
   }
 }
 
@@ -115,7 +116,7 @@ async function fetchAndCachePrices() {
     const prices = await getBulkPrices(EGX_TICKERS);
     return prices;
   } catch (error) {
-    console.error('Yahoo Finance fetch error, using cache:', error);
+    logger.error('Yahoo Finance fetch error, using cache', { error });
     const cachedPrices = await Promise.all(
       EGX_TICKERS.map(ticker => getCache(`stock:price:${ticker}`))
     );

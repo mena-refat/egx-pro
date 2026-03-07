@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '../components/ui/Skeleton';
+import EmptyState from '../components/shared/EmptyState';
 
 export interface GoalRecord {
   id: string;
@@ -96,24 +97,28 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
   const [completedOpen, setCompletedOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchGoals = useCallback(async () => {
+  const fetchGoals = useCallback(async (signal?: AbortSignal) => {
     if (!accessToken) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/goals', { headers: { Authorization: `Bearer ${accessToken}` } });
+      const res = await fetch('/api/goals', { headers: { Authorization: `Bearer ${accessToken}` }, signal });
+      if (signal?.aborted) return;
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
-      setGoals(Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []);
-    } catch {
+      if (!signal?.aborted) setGoals(Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []);
+    } catch (err) {
+      if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('abort'))) return;
       setError(t('goals.errorAdd'));
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [accessToken, t]);
 
   useEffect(() => {
-    fetchGoals();
+    const controller = new AbortController();
+    fetchGoals(controller.signal);
+    return () => controller.abort();
   }, [fetchGoals]);
 
   const activeGoals = goals.filter((g) => g.status !== 'completed');
@@ -163,20 +168,14 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       )}
 
       {/* Empty state */}
-      {goals.length === 0 && (
-        <div className="card-base p-10 flex flex-col items-center justify-center text-center max-w-lg mx-auto">
-          <Target className="w-16 h-16 text-violet-500 mb-4" />
-          <h3 className="text-xl font-bold text-slate-100 mb-2">{t('goals.emptyTitle')}</h3>
-          <p className="text-slate-400 text-sm mb-6">{t('goals.emptyDesc')}</p>
-          <button
-            type="button"
-            onClick={() => setAddModalOpen(true)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            {t('goals.addFirst')}
-          </button>
-        </div>
+      {goals.length === 0 && !loading && (
+        <EmptyState
+          icon={Target}
+          title={t('goals.emptyTitle')}
+          description={t('goals.emptyDescription')}
+          actionLabel={t('goals.addFirst')}
+          onAction={() => setAddModalOpen(true)}
+        />
       )}
 
       {/* Active goal cards */}

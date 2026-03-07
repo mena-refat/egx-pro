@@ -1,4 +1,5 @@
 import { prisma } from './prisma.ts';
+import { logger } from './logger.ts';
 
 export type NotificationType = 'achievement' | 'stock_target' | 'referral' | 'goal' | 'portfolio';
 
@@ -14,6 +15,6 @@ export async function createNotification(
       data: { userId, type, title, body, route: options?.route ?? undefined },
     });
   } catch (err) {
-    console.error('Create notification error:', err);
+    logger.error('Create notification error', { err });
   }
 }

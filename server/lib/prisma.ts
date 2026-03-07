@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { logger } from './logger.ts';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
@@ -19,7 +20,7 @@ export const prisma =
       }
       // Mask password for logging
       const maskedUrl = url.replace(/:[^:@]+@/, ':****@');
-      console.log('Initializing Prisma with URL:', maskedUrl);
+      logger.info('Initializing Prisma with URL', { url: maskedUrl });
     }
 
     return new PrismaClient({
@@ -34,7 +35,7 @@ export const prisma =
 
 // Test connection on startup
 prisma.$connect()
-  .then(() => console.log('✅ Database connected successfully'))
-  .catch((e) => console.error('❌ Failed to connect to database:', e.message));
+  .then(() => logger.info('✅ Database connected successfully'))
+  .catch((e) => logger.error('❌ Failed to connect to database', { message: (e as Error).message }));
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

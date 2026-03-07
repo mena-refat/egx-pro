@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { StocksService } from '../services/stocks.service.ts';
 import { isPro } from '../lib/plan.ts';
 import type { AuthRequest } from '../routes/types.ts';
+import { logger } from '../lib/logger.ts';
 
 async function useDelayed(req: AuthRequest): Promise<boolean> {
   const userId = req.user?.id ?? req.userId;
@@ -35,7 +36,7 @@ export const StocksController = {
       const results = await StocksService.search(q);
       res.json(results);
     } catch (error) {
-      console.error('Error in /stocks/search:', error);
+      logger.error('Error in /stocks/search', { error });
       res.status(500).json({ error: 'Failed to search stocks' });
     }
   },

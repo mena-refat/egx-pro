@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis';
+import { logger } from './logger.ts';
 
 const redisUrl = process.env.UPSTASH_REDIS_URL;
 const redisToken = process.env.UPSTASH_REDIS_TOKEN;
@@ -11,7 +12,7 @@ export const redis = redisUrl && redisToken
   : null;
 
 if (!redis) {
-  console.warn('⚠️ Upstash Redis credentials missing. Caching will be disabled.');
+  logger.warn('⚠️ Upstash Redis credentials missing. Caching will be disabled.');
 }
 
 // In-memory fallback
@@ -24,7 +25,7 @@ export const getCache = async <T>(key: string): Promise<T | null> => {
     try {
       return await redis.get<T>(key);
     } catch (err) {
-      console.warn(`Redis Get Error [${key}]:`, err);
+      logger.warn('Redis Get Error', { key, err });
       // Fallback to local cache on error
     }
   }
@@ -56,10 +57,10 @@ export const setCache = async (key: string, value: unknown, expireSeconds: numbe
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes('NOPERM')) {
-      console.warn('⚠️ Redis write permission denied. Disabling Redis writes for this session.');
+      logger.warn('⚠️ Redis write permission denied. Disabling Redis writes for this session.');
       redisWriteDisabled = true;
     } else {
-      console.warn(`Redis Set Error [${key}]:`, err);
+      logger.warn('Redis Set Error', { key, err });
     }
   }
 };

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { memo, useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const generateMockData = (range: string) => {
@@ -81,7 +81,7 @@ const generateMockData = (range: string) => {
 
 const ranges = ['1D', '1W', '1M', '6M', '1Y', '3Y', '5Y'];
 
-export default function PortfolioPerformanceChart() {
+const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart() {
   const [selectedRange, setSelectedRange] = useState('1M');
   const data = useMemo(() => generateMockData(selectedRange), [selectedRange]);
 
@@ -146,4 +146,6 @@ export default function PortfolioPerformanceChart() {
       </div>
     </div>
   );
-}
+});
+
+export default PortfolioPerformanceChart;

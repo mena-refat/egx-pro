@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import StockCard from '../components/features/stocks/StockCard';
 import PortfolioPerformanceChart from '../components/PortfolioPerformanceChart';
 import { Skeleton } from '../components/ui/Skeleton';
+import EmptyState from '../components/shared/EmptyState';
+import { Star } from 'lucide-react';
 import { useLivePrices } from '../hooks/useLivePrices';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { getStockName, getStockInfo } from '../lib/egxStocks';
@@ -11,6 +14,7 @@ import { Stock } from '../types';
 
 export default function DashboardPage() {
   const { t, i18n } = useTranslation('common');
+  const navigate = useNavigate();
   const { prices: livePrices, isConnected } = useLivePrices();
   const { holdings, stats, isLoading: portfolioLoading, error: portfolioError } = usePortfolio(livePrices);
 
@@ -31,39 +35,41 @@ export default function DashboardPage() {
   const [watchlist, setWatchlist] = useState<Stock[]>([]);
   const [watchlistLoading, setWatchlistLoading] = useState(true);
 
-  const fetchMarketOverview = async () => {
-    setMarketLoading(true);
-    setMarketError(null);
-    try {
-      const res = await api.get('/stocks/market/overview');
-      setMarketOverview(res.data);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setMarketError(err.message);
-      } else {
-        setMarketError('Failed to fetch market overview');
-      }
-    } finally {
-      setMarketLoading(false);
-    }
-  };
-
-  const fetchWatchlist = async () => {
-    setWatchlistLoading(true);
-    try {
-      const res = await api.get('/watchlist');
-      setWatchlist(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      console.error('Failed to fetch watchlist', err);
-      setWatchlist([]);
-    } finally {
-      setWatchlistLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchMarketOverview = async () => {
+      setMarketLoading(true);
+      setMarketError(null);
+      try {
+        const res = await api.get('/stocks/market/overview', { signal: controller.signal });
+        if (!controller.signal.aborted) setMarketOverview(res.data);
+      } catch (err: unknown) {
+        if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
+        if (err instanceof Error) setMarketError(err.message);
+        else setMarketError('Failed to fetch market overview');
+      } finally {
+        if (!controller.signal.aborted) setMarketLoading(false);
+      }
+    };
+
+    const fetchWatchlist = async () => {
+      setWatchlistLoading(true);
+      try {
+        const res = await api.get('/watchlist', { signal: controller.signal });
+        if (!controller.signal.aborted) setWatchlist(Array.isArray(res.data) ? res.data : []);
+      } catch (err: unknown) {
+        if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
+        if (process.env.NODE_ENV === 'development') console.error('Failed to fetch watchlist', err);
+        if (!controller.signal.aborted) setWatchlist([]);
+      } finally {
+        if (!controller.signal.aborted) setWatchlistLoading(false);
+      }
+    };
+
     fetchMarketOverview();
     fetchWatchlist();
+    return () => controller.abort();
   }, []);
 
   // Notify when a watchlist item reaches its target price
@@ -213,9 +219,15 @@ export default function DashboardPage() {
                 />
               </div>
             ))}
-            {liveWatchlistStocks.length === 0 && (
-              <div className="col-span-full text-center p-8 text-slate-500 border border-dashed border-slate-700 rounded-xl">
-                {t('dashboard.watchlistEmpty')}
+            {liveWatchlistStocks.length === 0 && !watchlistLoading && (
+              <div className="col-span-full">
+                <EmptyState
+                  icon={Star}
+                  title={t('watchlist.emptyTitle')}
+                  description={t('watchlist.emptyDescription')}
+                  actionLabel={t('watchlist.addFirst')}
+                  onAction={() => navigate('/stocks')}
+                />
               </div>
             )}
           </div>
@@ -266,6 +278,14 @@ export default function DashboardPage() {
                   <div key={i} className="h-16 bg-slate-800/50 animate-pulse rounded-2xl" />
                 ))}
               </div>
+            ) : watchlist.length === 0 ? (
+              <EmptyState
+                icon={Star}
+                title={t('watchlist.emptyTitle')}
+                description={t('watchlist.emptyDescription')}
+                actionLabel={t('watchlist.addFirst')}
+                onAction={() => navigate('/stocks')}
+              />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {watchlist.map(w => {
@@ -288,9 +308,6 @@ export default function DashboardPage() {
                     </div>
                   );
                 })}
-                {watchlist.length === 0 && (
-                  <p className="text-slate-500 text-sm italic col-span-2">{t('dashboard.watchlistEmpty')}</p>
-                )}
               </div>
             )}
           </div>

@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
 import { AuthRequest } from './types';
 import { authenticate } from '../middleware/auth.middleware.ts';
+import { logger } from '../lib/logger.ts';
 
 const router = Router();
 const WEIGHT = 20;
@@ -45,7 +46,7 @@ router.get('/completion', authenticate, async (req: AuthRequest, res: Response) 
 
     res.json({ percentage, missing });
   } catch (err) {
-    console.error('Profile completion error:', err);
+    logger.error('Profile completion error', { err });
     res.status(500).json({ error: 'Failed to load completion' });
   }
 });

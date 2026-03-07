@@ -33,11 +33,11 @@ export const useLiveStockPrices = () => {
     const targetPort = port === '5173' ? '3000' : (port || '3000');
     const wsUrl = `${protocol}//${hostname}:${targetPort}?token=${encodeURIComponent(token)}`;
 
-    console.log(`🔌 Connecting to WebSocket: ${wsUrl}`);
+    if (process.env.NODE_ENV === 'development') console.log(`🔌 Connecting to WebSocket: ${wsUrl}`);
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
-      console.log('✅ WebSocket Connected');
+      if (process.env.NODE_ENV === 'development') console.log('✅ WebSocket Connected');
       setIsConnected(true);
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
@@ -58,7 +58,7 @@ export const useLiveStockPrices = () => {
     };
 
     socket.onclose = () => {
-      console.log('🔌 WebSocket Disconnected. Retrying in 5s...');
+      if (process.env.NODE_ENV === 'development') console.log('🔌 WebSocket Disconnected. Retrying in 5s...');
       setIsConnected(false);
       socketRef.current = null;
       reconnectTimeoutRef.current = setTimeout(() => {

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { UserService } from '../services/user.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
+import { logger } from '../lib/logger.ts';
 
 function userId(req: AuthRequest): string | null {
   return req.user?.id ?? req.userId ?? null;
@@ -36,7 +37,7 @@ export const UserController = {
         return res.status(400).json({ error: `يمكنك تغيير اسم المستخدم مرة أخرى بعد ${remaining} يوم` });
       }
       if (e.message === 'USER_NOT_FOUND') return res.status(404).json({ error: 'User not found' });
-      console.error('Update profile error:', err);
+      logger.error('Update profile error', { err });
       res.status(500).json({ error: 'Failed to update profile' });
     }
   },
@@ -64,7 +65,7 @@ export const UserController = {
       if (!stats) return res.status(404).json({ error: 'User not found' });
       res.json(stats);
     } catch (err) {
-      console.error('Profile stats error:', err);
+      logger.error('Profile stats error', { err });
       res.status(500).json({ error: 'Failed to load profile stats' });
     }
   },
@@ -76,7 +77,7 @@ export const UserController = {
       const list = await UserService.getUnseenAchievements(id);
       res.json(list);
     } catch (err) {
-      console.error('Unseen achievements error:', err);
+      logger.error('Unseen achievements error', { err });
       res.status(500).json({ error: 'Failed to load unseen achievements' });
     }
   },
@@ -88,7 +89,7 @@ export const UserController = {
       await UserService.markAchievementsSeen(id);
       res.json({ success: true });
     } catch (err) {
-      console.error('Mark achievements seen error:', err);
+      logger.error('Mark achievements seen error:', err);
       res.status(500).json({ error: 'Failed to mark as seen' });
     }
   },
@@ -100,7 +101,7 @@ export const UserController = {
       const achievements = await UserService.getAchievements(id);
       res.json(achievements);
     } catch (err) {
-      console.error('Achievements error:', err);
+      logger.error('Achievements error', { err });
       res.status(500).json({ error: 'Failed to load achievements' });
     }
   },
@@ -113,7 +114,7 @@ export const UserController = {
       if (!data) return res.status(404).json({ error: 'User not found' });
       res.json(data);
     } catch (err) {
-      console.error('Referral summary error:', err);
+      logger.error('Referral summary error', { err });
       res.status(500).json({ error: 'Failed to load referral data' });
     }
   },
@@ -128,7 +129,7 @@ export const UserController = {
       if (result.error === 'Not enough referrals yet') return res.status(400).json({ error: 'Not enough referrals yet' });
       res.json((result as { data: unknown }).data);
     } catch (err) {
-      console.error('Referral redeem error:', err);
+      logger.error('Referral redeem error:', err);
       res.status(500).json({ error: 'Failed to redeem referral reward' });
     }
   },
@@ -146,7 +147,7 @@ export const UserController = {
       if (result.error === 'You cannot use your own referral code') return res.status(400).json({ error: result.error });
       res.json({ success: true, referrerName: (result as { referrerName: string }).referrerName });
     } catch (err) {
-      console.error('Referral use error:', err);
+      logger.error('Referral use error', { err });
       res.status(500).json({ error: 'Failed to apply referral code' });
     }
   },
@@ -159,7 +160,7 @@ export const UserController = {
       if (!data) return res.status(404).json({ error: 'User not found' });
       res.json(data);
     } catch (err) {
-      console.error('Security info error:', err);
+      logger.error('Security info error', { err });
       res.status(500).json({ error: 'Failed to load security info' });
     }
   },
@@ -171,7 +172,7 @@ export const UserController = {
       const list = await UserService.getSessions(id);
       res.json(list);
     } catch (err) {
-      console.error('Sessions list error:', err);
+      logger.error('Sessions list error:', err);
       res.status(500).json({ error: 'Failed to load sessions' });
     }
   },
@@ -184,7 +185,7 @@ export const UserController = {
       await UserService.revokeSession(id, sessionId);
       res.status(204).send();
     } catch (err) {
-      console.error('End session error:', err);
+      logger.error('End session error', { err });
       res.status(500).json({ error: 'Failed to end session' });
     }
   },
@@ -196,7 +197,7 @@ export const UserController = {
       await UserService.revokeAllOtherSessions(id);
       res.status(200).json({ message: 'All other sessions ended' });
     } catch (err) {
-      console.error('Revoke all sessions error:', err);
+      logger.error('Revoke all sessions error', { err });
       res.status(500).json({ error: 'Failed to end sessions' });
     }
   },
@@ -211,7 +212,7 @@ export const UserController = {
       if (result.error === 'Invalid image format') return res.status(400).json({ error: result.error });
       res.json({ avatarUrl: (result as { avatarUrl: string }).avatarUrl });
     } catch (err) {
-      console.error('Avatar upload error:', err);
+      logger.error('Avatar upload error', { err });
       res.status(500).json({ error: 'Failed to upload avatar' });
     }
   },
@@ -233,7 +234,7 @@ export const UserController = {
         deletionScheduledFor: success.deletionScheduledFor,
       });
     } catch (err) {
-      console.error('Delete account error:', err);
+      logger.error('Delete account error', { err });
       res.status(500).json({ error: 'Failed to delete account' });
     }
   },

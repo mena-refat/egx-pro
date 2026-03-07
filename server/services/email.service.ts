@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { logger } from '../lib/logger.ts';
 
 /** يُنشأ فقط في الإنتاج عند وجود المفتاح حتى لا يرمي Resend خطأ في الـ dev */
 function getResend(): Resend | null {
@@ -12,7 +13,7 @@ export const EmailService = {
 
   async sendVerificationCode(email: string, code: string): Promise<void> {
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[EmailService DEV] Verification code for ${email}: ${code}`);
+      logger.info('[EmailService DEV] Verification code', { email, code });
       return;
     }
     const resend = getResend();

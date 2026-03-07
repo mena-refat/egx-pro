@@ -6,6 +6,7 @@ import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib
 import { createNotification } from '../lib/createNotification.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 import { authenticate } from '../middleware/auth.middleware.ts';
+import { logger } from '../lib/logger.ts';
 
 const router = Router();
 
@@ -132,7 +133,7 @@ router.post('/check-targets', authenticate, async (req: AuthRequest, res: Respon
     }
     res.json({ success: true });
   } catch (err) {
-    console.error('Check targets error:', err);
+    logger.error('Check targets error', { err });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

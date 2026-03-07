@@ -2,18 +2,27 @@ import { describe, it, expect } from 'vitest';
 import { isPro } from '../../server/lib/plan';
 
 describe('isPro', () => {
-  it('returns false for free plan', () => {
-    expect(isPro({ plan: 'free' })).toBe(false);
+  it('يرجع true لـ pro plan غير منتهي', () => {
+    const future = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+    expect(isPro({ plan: 'pro', planExpiresAt: future, referralProExpiresAt: null })).toBe(true);
   });
-  it('returns true for pro plan', () => {
-    expect(isPro({ plan: 'pro' })).toBe(true);
+
+  it('يرجع false لـ pro plan منتهي', () => {
+    const past = new Date(Date.now() - 1000);
+    expect(isPro({ plan: 'pro', planExpiresAt: past, referralProExpiresAt: null })).toBe(false);
   });
-  it('returns true for active referral pro', () => {
-    const future = new Date(Date.now() + 86400000);
-    expect(isPro({ plan: 'free', referralProExpiresAt: future })).toBe(true);
+
+  it('يرجع false لـ free plan', () => {
+    expect(isPro({ plan: 'free', planExpiresAt: null, referralProExpiresAt: null })).toBe(false);
   });
-  it('returns false for expired referral pro', () => {
-    const past = new Date(Date.now() - 86400000);
-    expect(isPro({ plan: 'free', referralProExpiresAt: past })).toBe(false);
+
+  it('يرجع true لـ yearly plan نشط', () => {
+    const future = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365);
+    expect(isPro({ plan: 'yearly', planExpiresAt: future, referralProExpiresAt: null })).toBe(true);
+  });
+
+  it('يرجع true لو referralProExpiresAt لسه ما انتهاش', () => {
+    const future = new Date(Date.now() + 1000 * 60 * 60 * 24);
+    expect(isPro({ plan: 'free', planExpiresAt: null, referralProExpiresAt: future })).toBe(true);
   });
 });
