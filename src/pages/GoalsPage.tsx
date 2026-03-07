@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import {
@@ -172,7 +172,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
             <GoalCard
               key={goal.id}
               goal={goal}
-              t={t}
+              t={t as (key: string, opts?: object) => string}
               locale={i18n.language}
               menuOpen={menuOpenId === goal.id}
               onMenuToggle={() => setMenuOpenId(menuOpenId === goal.id ? null : goal.id)}
@@ -256,7 +256,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
                     <GoalCard
                       key={goal.id}
                       goal={goal}
-                      t={t}
+                      t={t as (key: string, opts?: object) => string}
                       locale={i18n.language}
                       completed
                       menuOpen={false}
@@ -287,7 +287,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
           fetchGoals();
         }}
         accessToken={accessToken}
-        t={t}
+        t={t as (key: string, opts?: object) => string}
         mode="add"
       />
 
@@ -304,7 +304,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
           fetchGoals();
         }}
         accessToken={accessToken}
-        t={t}
+        t={t as (key: string, opts?: object) => string}
         mode="edit"
         goalId={editGoalId}
         initialGoal={editGoalId ? goals.find((g) => g.id === editGoalId) ?? undefined : undefined}
@@ -324,7 +324,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
           fetchGoals();
         }}
         accessToken={accessToken}
-        t={t}
+        t={t as (key: string, opts?: object) => string}
         locale={i18n.language}
       />
     </div>
@@ -353,6 +353,7 @@ function GoalCard({
   onEdit: () => void;
   onDelete: () => void;
   onMarkComplete: () => void;
+  key?: string;
 }) {
   const percent = goal.targetAmount > 0 ? Math.min(100, (goal.currentAmount / goal.targetAmount) * 100) : 0;
   const remaining = Math.max(0, goal.targetAmount - goal.currentAmount);

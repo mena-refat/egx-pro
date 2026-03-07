@@ -35,7 +35,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id ?? req.userId;
     const user = await prisma.user.findUnique({
       where: { id: userId! },
-      select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
+      select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
     });
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     if (!isPro(user)) {
@@ -80,7 +80,7 @@ router.patch('/:ticker', authenticate, async (req: AuthRequest, res: Response) =
     if (targetPrice != null) {
       const user = await prisma.user.findUnique({
         where: { id: req.userId! },
-        select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
+        select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
       });
       if (!user || !isPro(user)) {
         return res.status(403).json({

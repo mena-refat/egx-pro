@@ -20,7 +20,7 @@ export const GoalsService = {
     if (!user?.id) throw new Error('Unauthorized');
     const planUser = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
+      select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
     });
     if (!planUser) throw new Error('Unauthorized');
     if (!isPro(planUser)) {

@@ -21,7 +21,7 @@ export const MarketController = {
         const { prisma } = await import('../lib/prisma.ts');
         const u = await prisma.user.findUnique({
           where: { id: user.id },
-          select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
+          select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
         });
         delayed = u ? !isPro(u) : false;
       }

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '../types';
+import { setAccessToken, clearTokens } from '../lib/auth/tokens';
 
 interface AuthState {
   user: User | null;
@@ -22,7 +23,10 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       isAuthenticated: false,
       unseenAchievementsCount: 0,
-      setAuth: (user, accessToken) => set({ user, accessToken, isAuthenticated: true }),
+      setAuth: (user, accessToken) => {
+        setAccessToken(accessToken);
+        set({ user, accessToken, isAuthenticated: true });
+      },
       setUser: (user) => set({ user }),
       updateUser: (updatedFields) => set((state) => ({
         user: state.user ? { ...state.user, ...updatedFields } : null
@@ -35,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (err) {
           console.error('Logout failed', err);
         }
+        clearTokens();
         set({ user: null, accessToken: null, isAuthenticated: false, unseenAchievementsCount: 0 });
       },
     }),
@@ -42,7 +47,6 @@ export const useAuthStore = create<AuthState>()(
       name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
         isAuthenticated: state.isAuthenticated,
       }),
     }

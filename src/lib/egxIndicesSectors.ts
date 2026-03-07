@@ -21,7 +21,7 @@ export const INDEX_EGX70 = [
 
 export const INDEX_EGX100 = [
   ...INDEX_EGX30,
-  ...INDEX_EGX70.filter(t => !INDEX_EGX30.includes(t)),
+  ...INDEX_EGX70.filter(t => !(INDEX_EGX30 as readonly string[]).includes(t)),
 ] as const;
 
 /** EGX 33 Sharia-compliant index (subset; used for Sharia badge) */

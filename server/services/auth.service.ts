@@ -77,7 +77,7 @@ export async function register(
   const parsed = registerSchema.parse(body);
   const { fullName, emailOrPhone: raw, password } = parsed;
   const pwCheck = validateRegisterPassword(password, raw);
-  if (!pwCheck.ok) fail(400, pwCheck.message);
+  if (!pwCheck.ok) fail(400, (pwCheck as { ok: false; message: string }).message);
 
   const isEmail = isEmailInput(raw);
   const email = isEmail ? raw.toLowerCase().trim() : null;
@@ -506,7 +506,7 @@ export async function changePassword(
   if (!valid) fail(400, 'كلمة المرور الحالية غير صحيحة');
 
   const pwCheck = validateChangePassword(body.newPassword, { email: user.email ?? undefined, username: user.username ?? undefined });
-  if (!pwCheck.ok) fail(400, pwCheck.message);
+  if (!pwCheck.ok) fail(400, (pwCheck as { ok: false; message: string }).message);
 
   const { hash, salt } = await hashPassword(body.newPassword);
   await prisma.user.update({
@@ -596,12 +596,13 @@ export async function googleCallback(
   );
   await prisma.refreshToken.create({ data: refreshData });
 
+  const origin = process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
   const redirectHtml = `
     <html>
       <body>
         <script>
           if (window.opener) {
-            window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+            window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, ${JSON.stringify(origin)});
             window.close();
           } else {
             window.location.href = '/';

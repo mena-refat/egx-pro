@@ -24,16 +24,12 @@ model User {
   investmentHorizon Int?      @default(5)
   monthlyBudget     Float?    @default(0)
   shariaMode        Boolean   @default(false)
-  islamicMode       Boolean   @default(false)
   onboardingCompleted Boolean @default(false)
   interestedSectors   String?   @default("[]")
   language          String    @default("system")
   theme             String    @default("system")
-  subscriptionPlan  String    @default("free") // free, pro, annual
-  subscriptionEndsAt DateTime?
   plan              String    @default("free") // "free" | "pro" | "yearly"
-  analysisUsageMonth String?   // e.g. "2026-03"
-  analysisUsageCount Int       @default(0)
+  planExpiresAt     DateTime?
   aiAnalysisUsedThisMonth Int  @default(0)
   aiAnalysisResetDate    DateTime?
   referralCode      String?   @unique
@@ -192,6 +188,7 @@ model Notification {
   type      String   // achievement | stock_target | referral | goal | portfolio
   title     String
   body      String
+  route     String?  // frontend route to navigate to when clicked e.g. /goals /stocks/COMI
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 }

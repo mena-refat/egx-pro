@@ -83,7 +83,7 @@ function MiniSparkline({ changePercent }: { changePercent: number }) {
 export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stock) => void }) {
   const { t, i18n } = useTranslation('common');
   const user = useAuthStore((s) => s.user);
-  const isPro = user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'annual' || user?.plan === 'pro' || user?.plan === 'yearly';
+  const isPro = user?.plan === 'pro' || user?.plan === 'yearly';
   const isAr = i18n.language === 'ar';
   const [overview, setOverview] = useState<MarketOverview | null>(null);
   const [stocks, setStocks] = useState<Stock[]>([]);

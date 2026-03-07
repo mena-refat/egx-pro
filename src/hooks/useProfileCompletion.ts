@@ -1,60 +1,39 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-const WEIGHTS = {
-  hasEmail: 20,
-  hasUsername: 20,
-  hasPhone: 20,
-  hasGoal: 20,
-  hasWatchlist: 20,
-} as const;
+export type ProfileCompletion = { percentage: number; missing: { field: string; route: string }[] } | null;
 
-export function useProfileCompletion(accessToken: string | null, user: { email?: string | null; username?: string | null; phone?: string | null } | null) {
-  const [goalsCount, setGoalsCount] = useState(0);
-  const [watchlistCount, setWatchlistCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+export function useProfileCompletion(isAuthenticated: boolean, accessToken: string | null) {
+  const [profileCompletion, setProfileCompletion] = useState<ProfileCompletion>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const fetchCounts = useCallback(async () => {
-    if (!accessToken) {
-      setGoalsCount(0);
-      setWatchlistCount(0);
-      setLoading(false);
-      return;
-    }
+  const fetchProfileCompletion = useCallback(async () => {
+    if (!isAuthenticated || !accessToken) { setProfileCompletion(null); return; }
     try {
-      const [goalsRes, watchlistRes] = await Promise.all([
-        fetch('/api/goals', { headers: { Authorization: `Bearer ${accessToken}` } }),
-        fetch('/api/watchlist', { headers: { Authorization: `Bearer ${accessToken}` } }),
-      ]);
-      const goals = goalsRes.ok ? await goalsRes.json() : [];
-      const watchlist = watchlistRes.ok ? await watchlistRes.json() : [];
-      setGoalsCount(Array.isArray(goals) ? goals.length : 0);
-      setWatchlistCount(Array.isArray(watchlist) ? watchlist.length : 0);
+      const res = await fetch('/api/profile/completion', { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setProfileCompletion({ percentage: data.percentage ?? 0, missing: data.missing ?? [] });
+      } else setProfileCompletion(null);
     } catch {
-      setGoalsCount(0);
-      setWatchlistCount(0);
-    } finally {
-      setLoading(false);
+      setProfileCompletion(null);
     }
-  }, [accessToken]);
+  }, [isAuthenticated, accessToken]);
+
+  useEffect(() => { fetchProfileCompletion(); }, [fetchProfileCompletion]);
+  useEffect(() => { if (location.pathname === '/settings') fetchProfileCompletion(); }, [location.pathname, fetchProfileCompletion]);
+  useEffect(() => {
+    const handler = () => fetchProfileCompletion();
+    window.addEventListener('profile-completion-changed', handler);
+    return () => window.removeEventListener('profile-completion-changed', handler);
+  }, [fetchProfileCompletion]);
 
   useEffect(() => {
-    fetchCounts();
-  }, [fetchCounts]);
+    const handler = () => navigate('/settings?tab=subscription');
+    window.addEventListener('navigate-to-subscription', handler);
+    return () => window.removeEventListener('navigate-to-subscription', handler);
+  }, [navigate]);
 
-  const hasEmail = Boolean(user?.email?.trim());
-  const hasUsername = Boolean(user?.username?.trim());
-  const hasPhone = Boolean(user?.phone?.trim());
-  const hasGoal = goalsCount >= 1;
-  const hasWatchlist = watchlistCount >= 1;
-
-  const percentage =
-    (hasEmail ? WEIGHTS.hasEmail : 0) +
-    (hasUsername ? WEIGHTS.hasUsername : 0) +
-    (hasPhone ? WEIGHTS.hasPhone : 0) +
-    (hasGoal ? WEIGHTS.hasGoal : 0) +
-    (hasWatchlist ? WEIGHTS.hasWatchlist : 0);
-
-  const isComplete = percentage >= 100;
-
-  return { percentage, isComplete, loading, refetch: fetchCounts };
+  return { profileCompletion, fetchProfileCompletion };
 }

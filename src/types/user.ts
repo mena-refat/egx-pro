@@ -27,16 +27,12 @@ export interface User {
   investmentHorizon?: number | null;
   monthlyBudget?: number | null;
   shariaMode?: boolean;
-  islamicMode?: boolean;
   onboardingCompleted?: boolean;
   interestedSectors?: string | null;
   language: string;
   theme: string;
-  subscriptionPlan: string;
-  subscriptionEndsAt?: string | null;
   plan: Plan;
-  analysisUsageMonth?: string | null;
-  analysisUsageCount?: number;
+  planExpiresAt?: string | null;
   aiAnalysisUsedThisMonth?: number;
   aiAnalysisResetDate?: string | null;
   referralCode?: string | null;

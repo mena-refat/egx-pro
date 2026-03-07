@@ -23,7 +23,7 @@ export async function authenticate(
         email: true,
         isDeleted: true,
         plan: true,
-        subscriptionPlan: true,
+        planExpiresAt: true,
         referralProExpiresAt: true,
       },
     });
@@ -59,7 +59,7 @@ export async function optionalAuth(
         email: true,
         isDeleted: true,
         plan: true,
-        subscriptionPlan: true,
+        planExpiresAt: true,
         referralProExpiresAt: true,
       },
     });

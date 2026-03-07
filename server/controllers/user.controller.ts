@@ -126,7 +126,7 @@ export const UserController = {
       if (result.error === 'User not found') return res.status(404).json({ error: 'User not found' });
       if (result.error === 'Reward already claimed') return res.status(400).json({ error: 'Reward already claimed' });
       if (result.error === 'Not enough referrals yet') return res.status(400).json({ error: 'Not enough referrals yet' });
-      res.json(result.data);
+      res.json((result as { data: unknown }).data);
     } catch (err) {
       console.error('Referral redeem error:', err);
       res.status(500).json({ error: 'Failed to redeem referral reward' });
@@ -144,7 +144,7 @@ export const UserController = {
       if (result.error === 'Referral code already used') return res.status(400).json({ error: result.error });
       if (result.error === 'Invalid referral code') return res.status(400).json({ error: result.error });
       if (result.error === 'You cannot use your own referral code') return res.status(400).json({ error: result.error });
-      res.json({ success: true, referrerName: result.referrerName });
+      res.json({ success: true, referrerName: (result as { referrerName: string }).referrerName });
     } catch (err) {
       console.error('Referral use error:', err);
       res.status(500).json({ error: 'Failed to apply referral code' });
@@ -209,7 +209,7 @@ export const UserController = {
       if (!image || typeof image !== 'string') return res.status(400).json({ error: 'Image is required' });
       const result = await UserService.uploadAvatar(id, image);
       if (result.error === 'Invalid image format') return res.status(400).json({ error: result.error });
-      res.json({ avatarUrl: result.avatarUrl });
+      res.json({ avatarUrl: (result as { avatarUrl: string }).avatarUrl });
     } catch (err) {
       console.error('Avatar upload error:', err);
       res.status(500).json({ error: 'Failed to upload avatar' });
@@ -226,10 +226,11 @@ export const UserController = {
       if (result.error === 'password_required') return res.status(400).json({ error: result.error, message: result.message });
       if (result.error === 'invalid_account') return res.status(400).json({ error: result.error, message: result.message });
       if (result.error === 'wrong_password') return res.status(400).json({ error: result.error, message: result.message });
+      const success = result as { deletedAt: Date; deletionScheduledFor: Date };
       res.status(200).json({
         success: true,
-        deletedAt: result.deletedAt,
-        deletionScheduledFor: result.deletionScheduledFor,
+        deletedAt: success.deletedAt,
+        deletionScheduledFor: success.deletionScheduledFor,
       });
     } catch (err) {
       console.error('Delete account error:', err);

@@ -90,13 +90,24 @@
     "backToLogin": "العودة لتسجيل الدخول",
     "twoFactorTitle": "المصادقة الثنائية",
     "twoFactorDesc": "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة",
+    "enterVerificationCode": "أدخل كود التحقق",
     "continueGoogle": "التسجيل بواسطة جوجل",
     "or": "أو",
     "placeholderEmailPhone": "name@example.com أو 01xxxxxxxxx",
     "accountNotExist": "الحساب ده مش موجود. تقدر تسجّل حساب جديد.",
     "authFailed": "فشل تسجيل الدخول",
     "loginSuccess": "تم تسجيل الدخول بنجاح!",
-    "registerSuccess": "تم إنشاء الحساب بنجاح!"
+    "registerSuccess": "تم إنشاء الحساب بنجاح!",
+    "errors": {
+      "invalidEmail": "بريد إلكتروني غير صحيح",
+      "invalidPhone": "رقم الموبايل غير صحيح",
+      "weakPassword": "كلمة المرور ضعيفة",
+      "accountLocked": "الحساب مقفل مؤقتاً بسبب كثرة المحاولات",
+      "accountNotFound": "الحساب غير موجود",
+      "wrongPassword": "كلمة المرور غير صحيحة",
+      "alreadyRegistered": "البريد الإلكتروني أو رقم الموبايل مسجل مسبقاً",
+      "invalidCode": "الكود غير صحيح، تأكد من التطبيق"
+    }
   },
   "goals": {
     "title": "أهدافي المالية",

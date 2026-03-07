@@ -24,7 +24,10 @@ export async function hashPassword(password: string) {
 export async function verifyPassword(password: string, hash: string, salt: string) {
   const pepperedPwd = crypto.createHmac('sha256', PEPPER).update(password).digest('hex');
   const derivedKey = (await scrypt(pepperedPwd + salt, salt, 64)) as Buffer;
-  return derivedKey.toString('hex') === hash;
+  const a = Buffer.from(derivedKey.toString('hex'), 'utf8');
+  const b = Buffer.from(hash, 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 export function generateAccessToken(user: { id: string; email: string }) {
@@ -36,11 +39,10 @@ export function generateAccessToken(user: { id: string; email: string }) {
     ? rawKey.replace(/\\n/g, '\n')
     : process.env.JWT_ACCESS_TOKEN_SECRET;
 
-  if (!secret && !isDev) {
-    throw new Error('JWT configuration error: JWT_PRIVATE_KEY or JWT_ACCESS_TOKEN_SECRET must be set in non-development environments');
+  if (!secret) {
+    throw new Error('JWT_PRIVATE_KEY or JWT_ACCESS_TOKEN_SECRET must be set.');
   }
-
-  const effectiveSecret = secret || 'temp-secret-key-123';
+  const effectiveSecret = secret;
 
   const algorithm = isRealKey ? 'RS256' : 'HS256';
 
@@ -65,11 +67,10 @@ export function verifyAccessToken(token: string) {
     ? (rawPublicKey || '').replace(/\\n/g, '\n')
     : process.env.JWT_ACCESS_TOKEN_SECRET;
 
-  if (!secret && !isDev) {
-    throw new Error('JWT configuration error: JWT_PUBLIC_KEY or JWT_ACCESS_TOKEN_SECRET must be set in non-development environments');
+  if (!secret) {
+    throw new Error('JWT_PRIVATE_KEY or JWT_ACCESS_TOKEN_SECRET must be set.');
   }
-
-  const effectiveSecret = secret || 'temp-secret-key-123';
+  const effectiveSecret = secret;
 
   return jwt.verify(token, effectiveSecret, {
     algorithms: isRealKey ? ['RS256'] : ['HS256']
@@ -80,9 +81,11 @@ export function verifyAccessToken(token: string) {
 export function generate2FATempToken(userId: string): string {
   const rawKey = process.env.JWT_PRIVATE_KEY;
   const isRealKey = rawKey && rawKey.includes('BEGIN RSA PRIVATE KEY') && !rawKey.includes('...');
-  const isDev = process.env.NODE_ENV === 'development';
   const secret = isRealKey ? rawKey.replace(/\\n/g, '\n') : process.env.JWT_ACCESS_TOKEN_SECRET;
-  const effectiveSecret = secret || 'temp-secret-key-123';
+  if (!secret) {
+    throw new Error('JWT_PRIVATE_KEY or JWT_ACCESS_TOKEN_SECRET must be set.');
+  }
+  const effectiveSecret = secret;
   const algorithm = isRealKey ? 'RS256' : 'HS256';
   return jwt.sign(
     { sub: userId, purpose: '2fa_pending' },

@@ -27,8 +27,9 @@ import {
   Copy,
 } from 'lucide-react';
 import { validateChangePassword, validateUsernameFormat, USERNAME_MAX_LENGTH } from '../lib/validations';
-import { OTPInput } from './OTPInput';
-import { Button } from './ui';
+import { OTPInput } from './ui/OTPInput';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 export interface SettingsUserProfile {
   id: string;
@@ -373,7 +374,7 @@ export function SettingsTabContent({
     }
     const pwCheck = validateChangePassword(newPassword, { email: user.email ?? undefined, username: user.username ?? undefined });
     if (!pwCheck.ok) {
-      setPasswordMessage(pwCheck.message);
+      setPasswordMessage((pwCheck as { ok: false; message: string }).message);
       return;
     }
     setChangingPassword(true);
@@ -757,7 +758,7 @@ export function SettingsTabContent({
                       type="button"
                       onClick={handleChangePassword}
                       disabled={changingPassword}
-                      className="px-3 py-2 rounded-xl text-sm font-medium bg-[var(--brand)] text-white hover:opacity-90 disabled:opacity-50"
+                      className="px-3 py-2 rounded-xl text-sm font-medium bg-[var(--brand)] text-[var(--text-inverse)] hover:opacity-90 disabled:opacity-50"
                     >
                       {changingPassword ? <Loader2 className="w-4 h-4 animate-spin inline" /> : t('settings.update')}
                     </button>
@@ -802,7 +803,7 @@ export function SettingsTabContent({
               <button
                 type="button"
                 onClick={openEnable2FAModal}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--brand)] text-white hover:opacity-90"
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--brand)] text-[var(--text-inverse)] hover:opacity-90"
               >
                 {t('settings.enable')}
               </button>
@@ -843,7 +844,7 @@ export function SettingsTabContent({
                         ))}
                       </div>
                       <div className="flex justify-end">
-                        <button type="button" onClick={fetch2FASetup} disabled={enable2FALoading} className="px-4 py-2 rounded-xl text-sm font-medium bg-[var(--brand)] text-white">
+                        <button type="button" onClick={fetch2FASetup} disabled={enable2FALoading} className="px-4 py-2 rounded-xl text-sm font-medium bg-[var(--brand)] text-[var(--text-inverse)]">
                           {enable2FALoading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : `${t('settings.twoFaNext')} ←`}
                         </button>
                       </div>
@@ -869,7 +870,7 @@ export function SettingsTabContent({
                         <button type="button" onClick={() => setEnable2FAStep(1)} className="px-4 py-2 rounded-xl text-sm font-medium border border-[var(--border)]">
                           ← {t('settings.twoFaPrev')}
                         </button>
-                        <button type="button" onClick={() => setEnable2FAStep(3)} className="px-4 py-2 rounded-xl text-sm font-medium bg-[var(--brand)] text-white">
+                        <button type="button" onClick={() => setEnable2FAStep(3)} className="px-4 py-2 rounded-xl text-sm font-medium bg-[var(--brand)] text-[var(--text-inverse)]">
                           {t('settings.twoFaNext')} ←
                         </button>
                       </div>
@@ -885,7 +886,7 @@ export function SettingsTabContent({
                         <button type="button" onClick={() => setEnable2FAStep(2)} disabled={enable2FALoading} className="px-4 py-2 rounded-xl text-sm font-medium border border-[var(--border)]">
                           ← {t('settings.twoFaPrev')}
                         </button>
-                        <button type="button" onClick={() => enable2FAOtp.length === 6 && submitEnable2FA(enable2FAOtp)} disabled={enable2FAOtp.length !== 6 || enable2FALoading} className="px-4 py-2 rounded-xl text-sm font-medium bg-[var(--brand)] text-white">
+                        <button type="button" onClick={() => enable2FAOtp.length === 6 && submitEnable2FA(enable2FAOtp)} disabled={enable2FAOtp.length !== 6 || enable2FALoading} className="px-4 py-2 rounded-xl text-sm font-medium bg-[var(--brand)] text-[var(--text-inverse)]">
                           {enable2FALoading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : `✓ ${t('settings.enable')}`}
                         </button>
                       </div>
@@ -1035,14 +1036,14 @@ export function SettingsTabContent({
           <button
             type="button"
             onClick={() => onUpdateProfile({ language: 'ar' }, { success: '' })}
-            className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${user.language === 'ar' || !user.language ? 'bg-[var(--brand)] text-white' : 'border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'}`}
+            className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${user.language === 'ar' || !user.language ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : 'border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'}`}
           >
             {t('settings.arabic')}
           </button>
           <button
             type="button"
             onClick={() => onUpdateProfile({ language: 'en' }, { success: '' })}
-            className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${user.language === 'en' ? 'bg-[var(--brand)] text-white' : 'border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'}`}
+            className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${user.language === 'en' ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : 'border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'}`}
           >
             {t('settings.english')}
           </button>
@@ -1088,7 +1089,7 @@ export function SettingsTabContent({
             { key: 'notifyAchievements', label: t('settings.notifyAchievements'), desc: t('settings.notifyAchievementsDesc') },
             { key: 'notifyGoals', label: t('settings.notifyGoals'), desc: t('settings.notifyGoalsDesc') },
           ].map(({ key, label, desc }) => {
-            const value = (user as Record<string, unknown>)[key] ?? true;
+            const value = (user as unknown as Record<string, unknown>)[key] ?? true;
             return (
               <div key={key} className="flex items-center justify-between gap-4 py-4 first:pt-0">
                 <div className="min-w-0">
@@ -1127,33 +1128,16 @@ export function SettingsTabContent({
             <h3 className="text-lg font-bold text-center text-[var(--text-primary)]">{t('settings.deleteTitle')}</h3>
             <p className="text-sm font-medium text-[var(--text-secondary)] mt-2">{t('settings.deleteReadFirst')}</p>
             <p className="text-xs text-[var(--text-muted)] text-center">{t('settings.deleteWarning')}</p>
-            <input
-              type="text"
-              value={deleteConfirmText}
-              onChange={(e) => setDeleteConfirmText(e.target.value)}
-              placeholder={t('settings.deleteConfirmPlaceholder')}
-              className={`${inputBase} border-[var(--border)]`}
-            />
-            <input
-              type="password"
-              value={deletePassword}
-              onChange={(e) => setDeletePassword(e.target.value)}
-              placeholder={t('settings.password')}
-              className={`${inputBase} border-[var(--border)]`}
-            />
+            <Input type="text" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder={t('settings.deleteConfirmPlaceholder')} />
+            <Input type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} placeholder={t('settings.password')} />
             {deleteError && <p className="text-xs text-[var(--danger)]">{deleteError}</p>}
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleDeleteAccount}
-                disabled={!deleteConfirmValid || !deletePassword || deleteSubmitting}
-                className="flex-1 py-2 rounded-xl text-sm font-medium bg-[var(--danger)] text-white hover:opacity-90 disabled:opacity-50"
-              >
-                {deleteSubmitting ? <Loader2 className="w-4 h-4 animate-spin inline" /> : t('settings.confirmDelete')}
-              </button>
-              <button type="button" onClick={() => setDeleteDialogOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium border border-[var(--border)] text-[var(--text-secondary)]">
+              <Button type="button" variant="danger" size="md" fullWidth onClick={handleDeleteAccount} disabled={!deleteConfirmValid || !deletePassword || deleteSubmitting} loading={deleteSubmitting}>
+                {t('settings.confirmDelete')}
+              </Button>
+              <Button type="button" variant="secondary" size="md" onClick={() => setDeleteDialogOpen(false)}>
                 {t('settings.cancel')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

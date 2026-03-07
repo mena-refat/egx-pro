@@ -15,8 +15,8 @@ export type AchievementContext = {
     onboardingCompleted: boolean;
     loginStreak: number;
     totalReferrals: number;
-    subscriptionPlan: string | null;
-    subscriptionEndsAt: Date | null;
+    plan: string | null;
+    planExpiresAt: Date | null;
   } | null;
   firstAnalysis: { createdAt: Date } | null;
   analysesCount: number;
@@ -59,8 +59,8 @@ export async function getAchievementContext(userId: string): Promise<Achievement
         onboardingCompleted: true,
         loginStreak: true,
         totalReferrals: true,
-        subscriptionPlan: true,
-        subscriptionEndsAt: true,
+        plan: true,
+        planExpiresAt: true,
       },
     }),
     prisma.analysis.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } }),
@@ -136,7 +136,7 @@ function buildOne(
       completed = completedReferrals >= 1;
       break;
     case 'subscriber':
-      completed = user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'annual' || false;
+      completed = user?.plan === 'pro' || user?.plan === 'yearly' || false;
       break;
     case 'week-with-us':
       completed = (user?.loginStreak ?? 0) >= 7;
@@ -196,7 +196,7 @@ function buildOne(
       completed = distinctTickersCount >= 10;
       break;
     case 'annual-subscriber':
-      completed = user?.subscriptionPlan === 'annual' ?? false;
+      completed = user?.plan === 'yearly';
       break;
     case 'leader':
       completed = (user?.loginStreak ?? 0) >= 60;

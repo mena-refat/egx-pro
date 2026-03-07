@@ -39,7 +39,9 @@ async function startServer() {
   });
 
   // Body parser (before sanitization)
-  app.use(express.json({ limit: '6mb' }));
+  app.use(express.json({ limit: '100kb' }));
+  app.use('/api/profile/avatar', express.json({ limit: '2mb' }));
+  app.use('/api/user/avatar', express.json({ limit: '2mb' }));
   app.use(cookieParser());
 
   const { sanitizeInput } = await import('./server/lib/sanitize.ts');
@@ -115,41 +117,19 @@ async function startServer() {
   app.use('/api/auth/refresh', refreshLimiter);
   app.use('/api/', apiLimiter);
 
-  // Debug: server time (remove in production if not needed)
-  app.get('/api/debug/time', (_req, res) => {
-    res.json({
-      serverTime: new Date().toISOString(),
-      serverTimestamp: Date.now(),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  if (process.env.NODE_ENV !== 'production') {
+    app.get('/api/debug/time', (_req, res) => {
+      res.json({
+        serverTime: new Date().toISOString(),
+        serverTimestamp: Date.now(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
     });
-  });
+  }
 
   // API Routes
   const authRoutes = (await import('./server/routes/auth.ts')).default;
   app.use('/api/auth', authRoutes);
-
-  // Real auth middleware to inject user id for other routes (no 401 here; routes that require auth check req.user)
-  app.use('/api', async (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      try {
-        const { verifyAccessToken } = await import('./src/lib/auth.ts');
-        const decoded = verifyAccessToken(token) as { sub: string; email: string };
-        const { prisma } = await import('./server/lib/prisma.ts');
-        const user = await prisma.user.findUnique({
-          where: { id: decoded.sub },
-          select: { id: true, email: true, isDeleted: true },
-        });
-        if (user && !user.isDeleted) {
-          Object.assign(req, { user: { id: user.id, email: user.email ?? decoded.email } });
-        }
-      } catch {
-        // Invalid token or deleted user: do not attach user; protected routes will return 401/403
-      }
-    }
-    next();
-  });
 
   const portfolioRoutes = (await import('./server/routes/portfolio.ts')).default;
   app.use('/api/portfolio', portfolioRoutes);
@@ -246,7 +226,7 @@ async function startServer() {
 
   // أرشفة الحسابات المحذوفة بعد 30 يوم + انتهاء الـ refresh tokens (يومي)
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-  setInterval(async () => {
+  const archiveInterval = setInterval(async () => {
     try {
       const { prisma } = await import('./server/lib/prisma.ts');
       const now = new Date();
@@ -295,7 +275,7 @@ async function startServer() {
 
   // كل أول الشهر: إعادة تعيين عداد تحليلات الذكاء الاصطناعي للمجانيين
   let lastAiResetMonth = '';
-  setInterval(async () => {
+  const aiResetInterval = setInterval(async () => {
     try {
       const now = new Date();
       const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -313,7 +293,7 @@ async function startServer() {
 
   // كل 10 دقائق: تحديث كاش الأسعار المتأخرة للمجانيين
   const TEN_MIN_MS = 10 * 60 * 1000;
-  setInterval(async () => {
+  const pricesInterval = setInterval(async () => {
     try {
       const { getStockPrice } = await import('./server/lib/yahoo.ts');
       const { setCache } = await import('./server/lib/redis.ts');
@@ -329,6 +309,13 @@ async function startServer() {
       console.error('Delayed prices refresh error:', err);
     }
   }, TEN_MIN_MS);
+
+  process.on('SIGTERM', () => {
+    clearInterval(archiveInterval);
+    clearInterval(aiResetInterval);
+    clearInterval(pricesInterval);
+    server.close();
+  });
 }
 
 startServer().catch(err => {

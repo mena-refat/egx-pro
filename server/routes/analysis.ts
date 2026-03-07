@@ -8,13 +8,6 @@ import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 
 const router = Router();
 
-type Plan = 'free' | 'pro' | 'annual';
-
-function getCurrentMonthKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
-
 function getFirstDayOfNextMonth(): Date {
   const d = new Date();
   d.setMonth(d.getMonth() + 1);
@@ -54,10 +47,9 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
-        subscriptionPlan: true,
-        subscriptionEndsAt: true,
-        referralProExpiresAt: true,
         plan: true,
+        planExpiresAt: true,
+        referralProExpiresAt: true,
         aiAnalysisUsedThisMonth: true,
         aiAnalysisResetDate: true,
       },
@@ -94,6 +86,8 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
         },
       });
     }
+
+    const completedBefore = await getCompletedAchievementIds(userId);
 
     // 1. Gather all required data
     const [priceData, , financials, news] = await Promise.all([
@@ -230,11 +224,7 @@ router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => 
     const updatedUsed = usedThisMonth + 1;
     await prisma.user.update({
       where: { id: userId },
-      data: {
-        aiAnalysisUsedThisMonth: updatedUsed,
-        analysisUsageMonth: getCurrentMonthKey(),
-        analysisUsageCount: updatedUsed,
-      },
+      data: { aiAnalysisUsedThisMonth: updatedUsed },
     });
 
     const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);

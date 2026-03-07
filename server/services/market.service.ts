@@ -28,13 +28,15 @@ export const MarketService = {
         goldMarketStatus: goldStatus,
       };
     }
-    const payload = { ...overview, egxStatus, goldMarketStatus: goldStatus } as typeof overview & {
+    const overviewObj = overview as Record<string, unknown>;
+    const payload = { ...overviewObj, egxStatus, goldMarketStatus: goldStatus } as typeof overviewObj & {
       egxStatus: ReturnType<typeof getMarketStatus>;
       goldMarketStatus: ReturnType<typeof getGoldMarketStatus>;
     };
     if (delayed && goldStatus.isOpen) {
-      (payload as Record<string, unknown>).gold = { ...overview.gold, isDelayed: true };
-      (payload as Record<string, unknown>).silver = { ...overview.silver, isDelayed: true };
+      const o = overview as { gold: Record<string, unknown>; silver: Record<string, unknown> };
+      (payload as Record<string, unknown>).gold = { ...o.gold, isDelayed: true };
+      (payload as Record<string, unknown>).silver = { ...o.silver, isDelayed: true };
     }
     return payload;
   },

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
-import StockCard from '../components/StockCard.tsx';
+import StockCard from '../components/features/stocks/StockCard';
 import PortfolioPerformanceChart from '../components/PortfolioPerformanceChart';
 import { useLivePrices } from '../hooks/useLivePrices';
 import { usePortfolio } from '../hooks/usePortfolio';
@@ -113,7 +113,7 @@ export default function DashboardPage() {
         <button
           type="button"
           onClick={() => setShowMarketOverview(!showMarketOverview)}
-          className="text-sm text-slate-500 hover:text-slate-400 transition-colors"
+          className="text-sm text-slate-500 hover:text-[var(--text-secondary)] transition-colors"
         >
           {showMarketOverview ? (isRTL ? 'إخفاء المؤشرات' : 'Hide Indicators') : (isRTL ? 'إظهار المؤشرات' : 'Show Indicators')}
         </button>
@@ -213,7 +213,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-3 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="card-base p-6">
-              <h4 className="text-sm text-slate-400 mb-2">{i18n.language === 'ar' ? 'إجمالي القيمة' : 'Total Value'}</h4>
+              <h4 className="text-sm text-[var(--text-secondary)] mb-2">{i18n.language === 'ar' ? 'إجمالي القيمة' : 'Total Value'}</h4>
               {portfolioLoading ? (
                 <div className="h-10 w-32 bg-slate-800 animate-pulse rounded" />
               ) : portfolioError ? (
@@ -223,7 +223,7 @@ export default function DashboardPage() {
               )}
             </div>
             <div className="card-base p-6">
-              <h4 className="text-sm text-slate-400 mb-2">{t('dashboard.topPerformer')}</h4>
+              <h4 className="text-sm text-[var(--text-secondary)] mb-2">{t('dashboard.topPerformer')}</h4>
               {portfolioLoading ? (
                 <div className="h-10 w-32 bg-slate-800 animate-pulse rounded" />
               ) : (
@@ -258,12 +258,12 @@ export default function DashboardPage() {
                 {watchlist.map(w => {
                   const stock = livePrices[w.ticker] || w;
                   return (
-                    <div key={stock.ticker} className="flex justify-between items-center p-4 bg-slate-800/50 dark:bg-slate-800/50 bg-slate-50 rounded-2xl border border-white/5 dark:border-white/5 border-slate-200">
+                    <div key={stock.ticker} className="flex justify-between items-center p-4 bg-slate-800/50 dark:bg-slate-800/50 bg-slate-50 rounded-2xl border border-[var(--border)] dark:border-[var(--border)] border-slate-200">
                       <div>
                         <p className="font-bold">{getStockName(stock.ticker, i18n.language === 'ar' ? 'ar' : 'en')}</p>
                         <p className="text-xs text-slate-500">{stock.ticker}</p>
                         {getStockInfo(stock.ticker)?.nameEn && (
-                          <p className="text-xs text-slate-400 mt-0.5">{getStockInfo(stock.ticker)!.nameEn}</p>
+                          <p className="text-xs text-[var(--text-secondary)] mt-0.5">{getStockInfo(stock.ticker)!.nameEn}</p>
                         )}
                       </div>
                       <div className="text-right">

@@ -19,6 +19,8 @@ import {
   Plus,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 const steps = [
   { id: 'goal', icon: Wallet },
@@ -72,7 +74,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
     // step 4
     budgetBand: '' as BudgetBand | '',
     // step 5
-    islamicMode: false,
+    shariaMode: false,
     // step 6
     sectors: [] as string[],
     // step 7
@@ -187,7 +189,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
     timeline: formData.timeline,
     reaction30: formData.reaction30,
     budgetBand: formData.budgetBand,
-    islamicMode: formData.islamicMode,
+    shariaMode: formData.shariaMode,
     sectors: formData.sectors,
     level: formData.level,
     hearAboutUs: formData.hearAboutUs || null,
@@ -207,8 +209,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           riskTolerance: mapRiskTolerance(formData.reaction30),
           investmentHorizon: mapTimelineToYears(formData.timeline || '3_7'),
           monthlyBudget: mapBudgetToNumber(formData.budgetBand || '1_5k'),
-          shariaMode: formData.islamicMode,
-          islamicMode: formData.islamicMode,
+          shariaMode: formData.shariaMode,
           interestedSectors: formData.sectors,
           hearAboutUs: formData.hearAboutUs || null,
           investorProfile: buildInvestorProfile(),
@@ -268,7 +269,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">إيه اللي بتستثمر عشانه؟</h2>
-              <p className="text-slate-400 text-sm">اختر الهدف الأقرب لحلمك</p>
+              <p className="text-[var(--text-secondary)] text-sm">اختر الهدف الأقرب لحلمك</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
@@ -320,17 +321,17 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                       goToStep(1);
                     }
                   }}
-                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                     formData.goal === opt.id
                       ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
-                      : 'border-white/5'
+                      : 'border-[var(--border)]'
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-1">
                     {opt.icon && <opt.icon className="w-5 h-5 text-violet-400" />}
                     <div className="font-semibold">{opt.title}</div>
                   </div>
-                  <p className="text-xs text-slate-400">{opt.desc}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{opt.desc}</p>
                 </button>
               ))}
             </div>
@@ -343,7 +344,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">إمتى عايز تحقق هدفك؟</h2>
-              <p className="text-slate-400 text-sm">الأفق الزمني بيحدد استراتيجيتك</p>
+              <p className="text-[var(--text-secondary)] text-sm">الأفق الزمني بيحدد استراتيجيتك</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
@@ -378,14 +379,14 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                       goToStep(2);
                     }
                   }}
-                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                     formData.timeline === opt.id
                       ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
-                      : 'border-white/5'
+                      : 'border-[var(--border)]'
                   }`}
                 >
                   <div className="font-semibold mb-1">{opt.title}</div>
-                  <p className="text-xs text-slate-400">{opt.desc}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{opt.desc}</p>
                 </button>
               ))}
             </div>
@@ -398,7 +399,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">لو السهم اللي اشتريته نزل 30%...</h2>
-              <p className="text-slate-400 text-sm">جاوب بصدق — ده بيحدد مستوى مخاطرتك الحقيقي</p>
+              <p className="text-[var(--text-secondary)] text-sm">جاوب بصدق — ده بيحدد مستوى مخاطرتك الحقيقي</p>
             </div>
             <div className="grid grid-cols-1 gap-4">
               {[
@@ -433,14 +434,14 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                       goToStep(3);
                     }
                   }}
-                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                     formData.reaction30 === opt.id
                       ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
-                      : 'border-white/5'
+                      : 'border-[var(--border)]'
                   }`}
                 >
                   <div className="font-semibold mb-1">{opt.title}</div>
-                  <p className="text-xs text-slate-400">{opt.desc}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{opt.desc}</p>
                 </button>
               ))}
             </div>
@@ -453,7 +454,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">قدر تخصص كام جنيه للاستثمار شهرياً؟</h2>
-              <p className="text-slate-400 text-sm">مش لازم يبقى كتير — المهم الانتظام</p>
+              <p className="text-[var(--text-secondary)] text-sm">مش لازم يبقى كتير — المهم الانتظام</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
@@ -488,14 +489,14 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                       goToStep(4);
                     }
                   }}
-                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                     formData.budgetBand === opt.id
                       ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
-                      : 'border-white/5'
+                      : 'border-[var(--border)]'
                   }`}
                 >
                   <div className="font-semibold mb-1">{opt.title}</div>
-                  <p className="text-xs text-slate-400">{opt.desc}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{opt.desc}</p>
                 </button>
               ))}
             </div>
@@ -508,7 +509,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">هل تفضل استثماراً متوافقاً مع الشريعة؟</h2>
-              <p className="text-slate-400 text-sm">
+              <p className="text-[var(--text-secondary)] text-sm">
                 لو فعّلت هذا الوضع، سنُنبّهك تلقائياً عند اختيار أي سهم قد لا يكون متوافقاً مع أحكام الشريعة
                 الإسلامية
               </p>
@@ -516,31 +517,31 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
             <div className="grid grid-cols-1 gap-4">
               <button
                 onClick={() => {
-                  setFormData({ ...formData, islamicMode: true });
+                  setFormData({ ...formData, shariaMode: true });
                   setValidationError(null);
                 }}
-                className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
-                  formData.islamicMode
+                className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
+                  formData.shariaMode
                     ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
-                    : 'border-white/5'
+                    : 'border-[var(--border)]'
                 }`}
               >
                 <div className="font-semibold mb-1">☑️ نعم، أفضل الاستثمار الحلال</div>
-                <p className="text-xs text-slate-400">سنُنبّهك قبل أي قرار غير متوافق</p>
+                <p className="text-xs text-[var(--text-secondary)]">سنُنبّهك قبل أي قرار غير متوافق</p>
               </button>
               <button
                 onClick={() => {
-                  setFormData({ ...formData, islamicMode: false });
+                  setFormData({ ...formData, shariaMode: false });
                   setValidationError(null);
                 }}
-                className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
-                  !formData.islamicMode
+                className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
+                  !formData.shariaMode
                     ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
-                    : 'border-white/5'
+                    : 'border-[var(--border)]'
                 }`}
               >
                 <div className="font-semibold mb-1">⬜ لا، سأختار بنفسي</div>
-                <p className="text-xs text-slate-400">ستظهر لك جميع الأسهم بدون قيود</p>
+                <p className="text-xs text-[var(--text-secondary)]">ستظهر لك جميع الأسهم بدون قيود</p>
               </button>
             </div>
           </div>
@@ -552,9 +553,9 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">إيه القطاعات اللي تهمك؟</h2>
-              <p className="text-slate-400 text-sm">اختر واحد أو أكتر — هنخصص تجربتك</p>
+              <p className="text-[var(--text-secondary)] text-sm">اختر واحد أو أكتر — هنخصص تجربتك</p>
             </div>
-            <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto p-3 bg-slate-900/60 rounded-2xl">
+            <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto p-3 bg-[var(--bg-card)]/60 rounded-2xl">
               {SECTORS.map((sector) => {
                 const selected = formData.sectors.includes(sector.id);
                 return (
@@ -570,8 +571,8 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                     }}
                     className={`px-4 py-2 rounded-full text-xs border transition-all ${
                       selected
-                        ? 'bg-violet-500 border-violet-500 text-white'
-                        : 'bg-slate-800 border-white/10 text-slate-300 hover:border-white/30'
+                        ? 'bg-violet-500 border-violet-500 text-[var(--text-primary)]'
+                        : 'bg-[var(--bg-secondary)] border-white/10 text-slate-300 hover:border-white/30'
                     }`}
                   >
                     {sector.label}
@@ -588,7 +589,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">بعد كل اللي قلته... إيه مستواك الحقيقي؟</h2>
-              <p className="text-slate-400 text-sm">خلّيك صريح مع نفسك</p>
+              <p className="text-[var(--text-secondary)] text-sm">خلّيك صريح مع نفسك</p>
             </div>
             <div className="grid grid-cols-1 gap-4">
               {[
@@ -623,14 +624,14 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                       goToStep(7);
                     }
                   }}
-                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                     formData.level === opt.id
                       ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
-                      : 'border-white/5'
+                      : 'border-[var(--border)]'
                   }`}
                 >
                   <div className="font-semibold mb-1">{opt.title}</div>
-                  <p className="text-xs text-slate-400">{opt.desc}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{opt.desc}</p>
                 </button>
               ))}
             </div>
@@ -643,7 +644,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">كيف سمعت عن EGX Pro؟</h2>
-              <p className="text-slate-400 text-sm">اختر المصدر الأقرب (اختياري)</p>
+              <p className="text-[var(--text-secondary)] text-sm">اختر المصدر الأقرب (اختياري)</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
@@ -660,10 +661,10 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                     setFormData({ ...formData, hearAboutUs: option });
                     setValidationError(null);
                   }}
-                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-slate-900/60 hover:bg-slate-800/70 ${
+                  className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                     formData.hearAboutUs === option
                       ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
-                      : 'border-white/5'
+                      : 'border-[var(--border)]'
                   }`}
                 >
                   {option}
@@ -679,12 +680,12 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">هل دعاك أحد للانضمام؟</h2>
-              <p className="text-slate-400 text-sm">
+              <p className="text-[var(--text-secondary)] text-sm">
                 اكتب كود الدعوة إن وجد — اختياري
               </p>
             </div>
             <div className="space-y-4">
-              <input
+              <Input
                 type="text"
                 value={formData.referralCode}
                 onChange={(e) => {
@@ -692,7 +693,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                   setReferralState({ checking: false });
                 }}
                 placeholder="مثال: EGX-A7K2M"
-                className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-4 text-center text-lg tracking-[0.2em] focus:outline-none focus:ring-2 focus:ring-violet-500"
+                inputClassName="text-center text-lg tracking-[0.2em]"
               />
               {referralState.successName && (
                 <p className="text-sm text-emerald-400 text-center">
@@ -703,21 +704,12 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                 <p className="text-sm text-red-400 text-center">{referralState.error}</p>
               )}
               <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                <button
-                  type="button"
-                  onClick={handleReferralApply}
-                  disabled={referralState.checking}
-                  className="flex-1 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-2xl shadow-lg shadow-violet-600/20 transition-all active:scale-95"
-                >
+                <Button type="button" variant="primary" size="lg" fullWidth onClick={handleReferralApply} disabled={referralState.checking}>
                   {referralState.checking ? 'جاري التحقق...' : 'تأكيد وابدأ'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleFinish}
-                  className="flex-1 border border-white/10 text-slate-300 hover:bg-white/5 rounded-2xl py-3 text-sm"
-                >
+                </Button>
+                <Button type="button" variant="secondary" size="lg" fullWidth onClick={handleFinish}>
                   تخطي وابدأ
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -728,7 +720,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-white font-sans">
+    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center p-4 text-[var(--text-primary)] font-sans">
       <div className="w-full max-w-xl">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
@@ -743,7 +735,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
             <div
               key={step.id}
               className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-                index <= currentStep ? 'bg-violet-500' : 'bg-slate-800'
+                index <= currentStep ? 'bg-violet-500' : 'bg-[var(--bg-secondary)]'
               }`}
             />
           ))}
@@ -754,7 +746,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
           initial={{ opacity: 0, x: direction === 1 ? (isRTL ? -40 : 40) : (isRTL ? 40 : -40) }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: direction === 1 ? (isRTL ? 40 : -40) : (isRTL ? -40 : 40) }}
-          className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl min-h-[460px] flex flex-col"
+          className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-8 shadow-2xl min-h-[460px] flex flex-col"
         >
           <div className="flex-1">
             <div className="flex justify-center mb-6">
@@ -768,43 +760,21 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
             {renderStep()}
           </div>
 
-          <div className="flex justify-between mt-10 pt-6 border-t border-white/5">
-            <button
-              onClick={handleBack}
-              disabled={currentStep === 0}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all ${
-                currentStep === 0
-                  ? 'opacity-0 pointer-events-none'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              {isRTL ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-              <span>{isRTL ? 'السابق' : 'Back'}</span>
-            </button>
-
+          <div className="flex justify-between mt-10 pt-6 border-t border-[var(--border)]">
+            <Button variant="ghost" size="md" onClick={handleBack} disabled={currentStep === 0} icon={isRTL ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />} iconPosition="left" className={currentStep === 0 ? 'opacity-0 pointer-events-none' : ''}>
+              {isRTL ? 'السابق' : 'Back'}
+            </Button>
             <div className="flex flex-col items-end gap-2">
               {validationError && <p className="text-red-500 text-xs">{validationError}</p>}
               {currentStep < steps.length - 1 && (
-                <button
-                  onClick={handleNext}
-                  className="flex items-center gap-2 px-7 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl font-bold shadow-lg shadow-violet-600/20 transition-all active:scale-95 text-sm"
-                >
-                  <span>{isRTL ? 'التالي' : 'Next'}</span>
-                  {isRTL ? (
-                    <ChevronLeft className="w-5 h-5" />
-                  ) : (
-                    <ChevronRight className="w-5 h-5" />
-                  )}
-                </button>
+                <Button variant="primary" size="md" onClick={handleNext} icon={isRTL ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />} iconPosition="right">
+                  {isRTL ? 'التالي' : 'Next'}
+                </Button>
               )}
               {currentStep === steps.length - 1 && (
-                <button
-                  disabled={saving}
-                  onClick={handleFinish}
-                  className="flex items-center gap-2 px-7 py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold shadow-lg shadow-violet-600/20 transition-all active:scale-95 text-sm"
-                >
+                <Button variant="primary" size="md" disabled={saving} onClick={handleFinish}>
                   {saving ? 'جارٍ الحفظ...' : 'تخطي وابدأ'}
-                </button>
+                </Button>
               )}
             </div>
           </div>

@@ -106,11 +106,12 @@ export async function login(req: Request, res: Response): Promise<void> {
       res.json({ requires2FA: true, tempToken: result.tempToken });
       return;
     }
-    setRefreshCookie(res, result.refreshToken);
+    const success = result as { refreshToken: string; accessToken: string; user: unknown; restored?: boolean };
+    setRefreshCookie(res, success.refreshToken);
     res.json({
-      accessToken: result.accessToken,
-      ...(result.restored && { restored: true }),
-      user: result.user,
+      accessToken: success.accessToken,
+      ...(success.restored && { restored: true }),
+      user: success.user,
     });
   } catch (e) {
     handleError(e, res, 'Login failed');

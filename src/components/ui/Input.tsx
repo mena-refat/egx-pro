@@ -28,7 +28,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
   },
   ref
 ) {
-  const id = idProp ?? `input-${Math.random().toString(36).slice(2, 9)}`;
+  const generatedId = React.useId();
+  const id = idProp ?? generatedId;
 
   return (
     <div className={`block ${wrapperClassName}`.trim()}>

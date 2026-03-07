@@ -15,7 +15,7 @@ export type Plan = 'free' | 'pro' | 'yearly';
 
 export interface UserForPlan {
   plan?: string | null;
-  subscriptionPlan?: string | null;
+  planExpiresAt?: Date | null;
   referralProExpiresAt?: Date | null;
 }
 
@@ -25,8 +25,8 @@ export interface UserForPlan {
 export function isPro(user: UserForPlan | null): boolean {
   if (!user) return false;
   const now = new Date();
-  const plan = (user.plan || user.subscriptionPlan || 'free') as string;
+  const plan = (user.plan || 'free') as string;
   const hasReferralPro = user.referralProExpiresAt != null && user.referralProExpiresAt > now;
   if (hasReferralPro) return true;
-  return plan === 'pro' || plan === 'yearly' || plan === 'annual';
+  return plan === 'pro' || plan === 'yearly';
 }

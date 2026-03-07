@@ -101,13 +101,24 @@
     "backToLogin": "Back to Login",
     "twoFactorTitle": "Two-Factor Authentication",
     "twoFactorDesc": "Enter the 6-digit code from your authenticator app",
+    "enterVerificationCode": "Enter verification code",
     "continueGoogle": "Continue with Google",
     "or": "Or",
     "placeholderEmailPhone": "name@example.com or 01xxxxxxxxx",
     "accountNotExist": "This account does not exist. You can register as new.",
     "authFailed": "Auth failed",
     "loginSuccess": "Login successful!",
-    "registerSuccess": "Account created successfully!"
+    "registerSuccess": "Account created successfully!",
+    "errors": {
+      "invalidEmail": "Invalid email",
+      "invalidPhone": "Invalid phone number",
+      "weakPassword": "Password is too weak",
+      "accountLocked": "Account temporarily locked due to too many attempts",
+      "accountNotFound": "Account not found",
+      "wrongPassword": "Wrong password",
+      "alreadyRegistered": "Email or phone already registered",
+      "invalidCode": "Invalid code, check your authenticator app"
+    }
   },
   "goals": {
     "title": "Financial Goals",

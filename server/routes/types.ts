@@ -5,7 +5,7 @@ export interface AuthUser {
   id: string;
   email: string | null;
   plan?: string | null;
-  subscriptionPlan?: string | null;
+  planExpiresAt?: Date | null;
   referralProExpiresAt?: Date | null;
   isDeleted?: boolean;
 }

@@ -9,7 +9,7 @@ async function useDelayed(req: AuthRequest): Promise<boolean> {
   const { prisma } = await import('../lib/prisma.ts');
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
+    select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
   });
   return user ? !isPro(user) : false;
 }

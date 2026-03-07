@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma.ts';
-import { getStockPrice, getStockPriceDelayed } from '../lib/yahoo.ts';
+import { getBulkPrices, getBulkPricesDelayed } from '../lib/yahoo.ts';
 import { addHoldingSchema } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
@@ -9,43 +9,41 @@ export const PortfolioService = {
   async getPortfolio(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
+      select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
     });
     const delayed = user ? !isPro(user) : false;
     const holdings = await prisma.portfolio.findMany({ where: { userId } });
 
+    const tickers = holdings.map((h) => h.ticker);
+    const priceMap = new Map<string, { price: number; isDelayed?: boolean; priceTime?: string }>();
+    const prices = delayed ? await getBulkPricesDelayed(tickers) : await getBulkPrices(tickers);
+    if (Array.isArray(prices)) {
+      prices.forEach((p: { ticker: string; price: number; isDelayed?: boolean; priceTime?: string }) =>
+        priceMap.set(p.ticker, { price: p.price, ...(p.isDelayed != null && { isDelayed: p.isDelayed }), ...(p.priceTime && { priceTime: p.priceTime }) })
+      );
+    }
+
     let totalValue = 0;
     let totalCost = 0;
-    const getPrice = delayed ? getStockPriceDelayed : getStockPrice;
-
-    const enrichedHoldings = await Promise.all(
-      holdings.map(async (holding) => {
-        const currentPriceData = (await getPrice(holding.ticker)) as {
-          price: number;
-          isDelayed?: boolean;
-          priceTime?: string;
-        } | null;
-        const currentPrice = currentPriceData?.price ?? holding.avgPrice;
-        const currentValue = currentPrice * holding.shares;
-        const costBasis = holding.avgPrice * holding.shares;
-        const gainLoss = currentValue - costBasis;
-        const gainLossPercent = costBasis > 0 ? (gainLoss / costBasis) * 100 : 0;
-        totalValue += currentValue;
-        totalCost += costBasis;
-        return {
-          ...holding,
-          currentPrice,
-          currentValue,
-          gainLoss,
-          gainLossPercent,
-          ...(currentPriceData &&
-            'isDelayed' in currentPriceData && {
-              isDelayed: currentPriceData.isDelayed,
-              priceTime: currentPriceData.priceTime,
-            }),
-        };
-      })
-    );
+    const enrichedHoldings = holdings.map((holding) => {
+      const currentPriceData = priceMap.get(holding.ticker);
+      const currentPrice = currentPriceData?.price ?? holding.avgPrice;
+      const currentValue = currentPrice * holding.shares;
+      const costBasis = holding.avgPrice * holding.shares;
+      const gainLoss = currentValue - costBasis;
+      const gainLossPercent = costBasis > 0 ? (gainLoss / costBasis) * 100 : 0;
+      totalValue += currentValue;
+      totalCost += costBasis;
+      return {
+        ...holding,
+        currentPrice,
+        currentValue,
+        gainLoss,
+        gainLossPercent,
+        ...(currentPriceData?.isDelayed != null && { isDelayed: currentPriceData.isDelayed }),
+        ...(currentPriceData?.priceTime && { priceTime: currentPriceData.priceTime }),
+      };
+    });
 
     const totalGainLoss = totalValue - totalCost;
     const totalGainLossPercent = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
@@ -63,7 +61,7 @@ export const PortfolioService = {
 
     const planUser = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { plan: true, subscriptionPlan: true, referralProExpiresAt: true },
+      select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
     });
     if (!planUser) throw new Error('Unauthorized');
     if (!isPro(planUser)) {

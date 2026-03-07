@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, TrendingUp, TrendingDown, Star, Plus, Circle, Timer } from 'lucide-react';
 import api from '../lib/api';
@@ -24,7 +24,7 @@ interface StockScreenerProps {
 export default function StockScreener({ onSelectStock }: StockScreenerProps) {
   const { t, i18n } = useTranslation('common');
   const user = useAuthStore((s) => s.user);
-  const isPro = user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'annual' || user?.plan === 'pro' || user?.plan === 'yearly';
+  const isPro = user?.plan === 'pro' || user?.plan === 'yearly';
   const [stocks, setStocks] = useState<StockWithMeta[]>([]);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [search, setSearch] = useState('');

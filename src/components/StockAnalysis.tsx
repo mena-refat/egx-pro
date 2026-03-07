@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   BrainCircuit, 
@@ -119,7 +119,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
   const [showAnalysisLimitModal, setShowAnalysisLimitModal] = useState(false);
   const [showWatchlistLimitModal, setShowWatchlistLimitModal] = useState(false);
   const [egxStatus, setEgxStatus] = useState<{ status: string; label?: { ar: string; en: string } } | null>(null);
-  const isPro = user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'annual' || user?.plan === 'pro' || user?.plan === 'yearly';
+  const isPro = user?.plan === 'pro' || user?.plan === 'yearly';
 
   const open = (priceDetail?.open as number) ?? stock.open ?? 0;
   const previousClose = (priceDetail?.previousClose as number) ?? stock.previousClose ?? 0;
@@ -147,7 +147,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
     let cancelled = false;
     (async () => {
       try {
-        const [priceRes, histRes, finRes, depthRes, invRes, statsRes, newsRes, watchRes] = await Promise.all([
+        const [priceRes, statusRes, histRes, finRes, depthRes, invRes, statsRes, newsRes, watchRes] = await Promise.all([
           api.get(`/stocks/${stock.ticker}/price`),
           api.get<{ egx: { status: string; label?: { ar: string; en: string } } }>('/stocks/market/status').catch(() => ({ data: null })),
           api.get(`/stocks/${stock.ticker}/history`, { params: { range: chartRange } }),
@@ -254,7 +254,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
   return (
     <div className="space-y-0 pb-20" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Fixed Header */}
-      <div className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 py-4 -mx-4 mb-6">
+      <div className="sticky top-0 z-10 bg-slate-50 dark:bg-[var(--bg-card)] border-b border-slate-200 dark:border-slate-700 px-4 py-4 -mx-4 mb-6">
         <div className="flex items-center justify-between gap-2 mb-2">
         <button 
             type="button"
@@ -269,7 +269,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             <button
               type="button"
               onClick={toggleWatchlist}
-              className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg ${watchlist.includes(stock.ticker) ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+              className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg ${watchlist.includes(stock.ticker) ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'text-[var(--text-muted)] hover:bg-slate-200 dark:hover:bg-slate-700'}`}
             >
               {watchlist.includes(stock.ticker) ? <Star className="w-3.5 h-3.5 fill-amber-500" /> : <Plus className="w-3.5 h-3.5" />}
               {watchlist.includes(stock.ticker) ? t('stockDetail.watchlistRemove') : t('stockDetail.watchlistAdd')}
@@ -292,11 +292,11 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           </span>
                 </div>
         {/* Price status: Live / delayed 10 min / market closed / pre-market */}
-        <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+        <div className="flex items-center gap-2 mt-1 text-xs text-[var(--text-muted)] dark:text-slate-400 flex-wrap">
           {egxStatus?.status === 'closed' && (
             <>
               <span className="inline-flex items-center gap-1">
-                <Circle className="w-3 h-3 text-slate-500 fill-slate-500" aria-hidden />
+                <Circle className="w-3 h-3 text-[var(--text-muted)] fill-slate-500" aria-hidden />
                 {t('delay.marketClosed')}
               </span>
               <span>{t('delay.lastCloseAt', { time: '14:30' })}</span>
@@ -312,7 +312,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             <>
               {priceDetail?.isDelayed ? (
                 <>
-                  <span className="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                  <span className="inline-flex items-center gap-1 text-[var(--text-muted)] dark:text-slate-400">
                     <Timer className="w-3 h-3" aria-hidden />
                     {t('delay.delayedBadge')}
                   </span>
@@ -353,7 +353,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? 'border-violet-600 text-violet-600 dark:text-violet-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
+            className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? 'border-violet-600 text-violet-600 dark:text-violet-400' : 'border-transparent text-[var(--text-muted)] dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
           >
             {t(tab.labelKey)}
           </button>
@@ -394,7 +394,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-500 dark:text-slate-400 text-sm">—</div>
+                <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)] dark:text-slate-400 text-sm">—</div>
               )}
             </div>
           </section>
@@ -412,7 +412,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 [t('stockDetail.turnover'), volume && price ? formatBig(volume * price) + ' EGP' : '—'],
               ].map(([label, val], i) => (
                 <div key={i} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-3">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+                  <p className="text-xs text-[var(--text-muted)] dark:text-slate-400">{label}</p>
                   <p className="font-semibold text-slate-900 dark:text-slate-100">{val}</p>
                 </div>
               ))}
@@ -423,18 +423,18 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           <section>
             <div className="flex items-center gap-2 mb-3">
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">{t('stockDetail.extendedStats')}</h3>
-              <button type="button" onClick={() => setStatsInfoOpen(true)} className="p-1 rounded text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700" aria-label="Info">
+              <button type="button" onClick={() => setStatsInfoOpen(true)} className="p-1 rounded text-[var(--text-muted)] hover:bg-slate-200 dark:hover:bg-slate-700" aria-label="Info">
                 <Info className="w-4 h-4" />
               </button>
                     </div>
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">{t('stockDetail.high52w')}</span><span>{formatNum(high52w)} ج</span></div>
-              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">{t('stockDetail.low52w')}</span><span>{formatNum(low52w)} ج</span></div>
-              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">{t('stockDetail.marketCap')}</span><span>{formatBig(stock.marketCap)}</span></div>
-              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">{t('stockDetail.dividendYield')}</span><span>{(financials as { dividendYield?: number })?.dividendYield != null ? `${((financials as { dividendYield?: number }).dividendYield * 100).toFixed(2)}%` : '—'}</span></div>
-              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">{t('stockDetail.eps')}</span><span>{formatNum((financials as { eps?: number })?.eps)}</span></div>
-              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">{t('stockDetail.pe')}</span><span>{(financials as { pe?: number })?.pe != null ? `${Number((financials as { pe?: number }).pe).toFixed(1)}x` : '—'}</span></div>
-              <div className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">{t('stockDetail.avgDailyVolume')}</span><span>{formatBig(volume)} ج</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.high52w')}</span><span>{formatNum(high52w)} ج</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.low52w')}</span><span>{formatNum(low52w)} ج</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.marketCap')}</span><span>{formatBig(stock.marketCap)}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.dividendYield')}</span><span>{(financials as { dividendYield?: number })?.dividendYield != null ? `${((financials as { dividendYield?: number }).dividendYield * 100).toFixed(2)}%` : '—'}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.eps')}</span><span>{formatNum((financials as { eps?: number })?.eps)}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.pe')}</span><span>{(financials as { pe?: number })?.pe != null ? `${Number((financials as { pe?: number }).pe).toFixed(1)}x` : '—'}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.avgDailyVolume')}</span><span>{formatBig(volume)} ج</span></div>
                   </div>
           </section>
 
@@ -442,12 +442,12 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           <section className="relative">
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">{t('stockDetail.orderDepth')} {!isPro && <Lock className="w-4 h-4 text-slate-400" />}</h3>
             {orderDepthAvailable ? (
-              <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-slate-500 dark:text-slate-400 text-sm">—</div>
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-[var(--text-muted)] dark:text-slate-400 text-sm">—</div>
             ) : (
-              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 text-slate-500 dark:text-slate-400 text-sm">{t('stockDetail.orderDepthUnavailable')}</div>
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 text-[var(--text-muted)] dark:text-slate-400 text-sm">{t('stockDetail.orderDepthUnavailable')}</div>
             )}
             {!isPro && (
-              <div className="absolute inset-0 top-8 rounded-xl bg-slate-900/70 dark:bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
+              <div className="absolute inset-0 top-8 rounded-xl bg-[var(--bg-card)]/70 dark:bg-[var(--bg-primary)]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
                 <Crown className="w-8 h-8 text-violet-400" />
                 <p className="text-sm font-medium text-slate-200">{t('plan.availableInPro')}</p>
                 <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-violet-400 hover:text-violet-300 font-medium">{t('plan.subscribeToAccess')}</button>
@@ -460,9 +460,9 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             <section>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">{t('stockDetail.supportResistance')}</h3>
               <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 space-y-2 text-sm">
-                <p className="text-slate-500 dark:text-slate-400">{t('stockDetail.resistance')}: R3: {formatNum(pivots.r3)} &nbsp; R2: {formatNum(pivots.r2)} &nbsp; R1: {formatNum(pivots.r1)}</p>
+                <p className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.resistance')}: R3: {formatNum(pivots.r3)} &nbsp; R2: {formatNum(pivots.r2)} &nbsp; R1: {formatNum(pivots.r1)}</p>
                 <p className="font-medium text-slate-900 dark:text-slate-100 border-t border-b border-slate-200 dark:border-slate-700 py-2 my-2">{t('stockDetail.currentPrice')}: {formatNum(price)}</p>
-                <p className="text-slate-500 dark:text-slate-400">{t('stockDetail.support')}: S1: {formatNum(pivots.s1)} &nbsp; S2: {formatNum(pivots.s2)} &nbsp; S3: {formatNum(pivots.s3)}</p>
+                <p className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.support')}: S1: {formatNum(pivots.s1)} &nbsp; S2: {formatNum(pivots.s2)} &nbsp; S3: {formatNum(pivots.s3)}</p>
               </div>
             </section>
           )}
@@ -488,16 +488,16 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">{t('stockDetail.aboutCompany')}</h3>
             <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
               <p className="font-medium text-slate-900 dark:text-slate-100">{getStockName(stock.ticker, lang)}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{info?.nameEn}</p>
+              <p className="text-sm text-[var(--text-muted)] dark:text-slate-400 mt-1">{info?.nameEn}</p>
               <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">{stock.description || (isRTL ? 'شركة مدرجة في البورصة المصرية.' : 'Listed company on EGX.')}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{t('stockDetail.listedIn')}: EGX30 | {sector}</p>
+              <p className="text-xs text-[var(--text-muted)] dark:text-slate-400 mt-2">{t('stockDetail.listedIn')}: EGX30 | {sector}</p>
             </div>
           </section>
 
           {/* Similar sector - placeholder scroll */}
           <section>
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">{t('stockDetail.similarSector')}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{sector || '—'}</p>
+            <p className="text-sm text-[var(--text-muted)] dark:text-slate-400">{sector || '—'}</p>
           </section>
         </div>
       )}
@@ -507,14 +507,14 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
         <div className="space-y-6">
           <section className="relative">
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-2">{t('stockDetail.investorCategories')} {!isPro && <Lock className="w-4 h-4 text-slate-400" />}</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t('stockDetail.investorCategoriesDesc')}</p>
+            <p className="text-xs text-[var(--text-muted)] dark:text-slate-400 mb-3">{t('stockDetail.investorCategoriesDesc')}</p>
             {investorCategoriesAvailable ? (
               <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-sm">—</div>
             ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-400 rounded-xl border border-slate-200 dark:border-slate-700 p-4">{t('stockDetail.investorCategoriesUnavailable')}</p>
+              <p className="text-sm text-[var(--text-muted)] dark:text-slate-400 rounded-xl border border-slate-200 dark:border-slate-700 p-4">{t('stockDetail.investorCategoriesUnavailable')}</p>
             )}
             {!isPro && (
-              <div className="absolute inset-0 top-14 rounded-xl bg-slate-900/70 dark:bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
+              <div className="absolute inset-0 top-14 rounded-xl bg-[var(--bg-card)]/70 dark:bg-[var(--bg-primary)]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
                 <Crown className="w-8 h-8 text-violet-400" />
                 <p className="text-sm font-medium text-slate-200">{t('plan.availableInPro')}</p>
                 <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-violet-400 hover:text-violet-300 font-medium">{t('plan.subscribeToAccess')}</button>
@@ -526,10 +526,10 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             {tradingStatsAvailable ? (
               <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-sm">—</div>
             ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-400 rounded-xl border border-slate-200 dark:border-slate-700 p-4">{t('stockDetail.tradingStatsUnavailable')}</p>
+              <p className="text-sm text-[var(--text-muted)] dark:text-slate-400 rounded-xl border border-slate-200 dark:border-slate-700 p-4">{t('stockDetail.tradingStatsUnavailable')}</p>
             )}
             {!isPro && (
-              <div className="absolute inset-0 top-12 rounded-xl bg-slate-900/70 dark:bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
+              <div className="absolute inset-0 top-12 rounded-xl bg-[var(--bg-card)]/70 dark:bg-[var(--bg-primary)]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
                 <Crown className="w-8 h-8 text-violet-400" />
                 <p className="text-sm font-medium text-slate-200">{t('plan.availableInPro')}</p>
                 <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-violet-400 hover:text-violet-300 font-medium">{t('plan.subscribeToAccess')}</button>
@@ -555,9 +555,9 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           )}
           {!analysis && !loadingAnalysis && !errorAnalysis && (
             <div className="text-center py-12 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
-              <BrainCircuit className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+              <BrainCircuit className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-2">{isRTL ? 'تحليل الذكاء الاصطناعي' : 'AI Analysis'}</h3>
-              <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">{isRTL ? 'احصل على تحليل شامل للسهم باستخدام أحدث نماذج الذكاء الاصطناعي.' : 'Get a comprehensive analysis using state-of-the-art AI models.'}</p>
+              <p className="text-[var(--text-muted)] dark:text-slate-400 mb-6 max-w-md mx-auto">{isRTL ? 'احصل على تحليل شامل للسهم باستخدام أحدث نماذج الذكاء الاصطناعي.' : 'Get a comprehensive analysis using state-of-the-art AI models.'}</p>
               <button type="button" onClick={getAnalysis} className="px-6 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold flex items-center gap-2 mx-auto">
                 <Zap className="w-4 h-4" /> {isRTL ? 'توليد التحليل' : 'Generate Analysis'}
               </button>
@@ -568,7 +568,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
                 <BrainCircuit className="w-12 h-12 text-violet-500" />
               </motion.div>
-              <p className="text-slate-500">{isRTL ? 'جاري التحليل...' : 'Analyzing...'}</p>
+              <p className="text-[var(--text-muted)]">{isRTL ? 'جاري التحليل...' : 'Analyzing...'}</p>
             </div>
           )}
           {errorAnalysis && (
@@ -588,7 +588,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-violet-500 font-bold"><BarChart3 className="w-5 h-5" /> {isRTL ? 'التحليل الأساسي' : 'Fundamental'}</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400 space-y-2">
+                  <div className="text-sm text-[var(--text-muted)] dark:text-slate-400 space-y-2">
                     <p><span className="text-slate-900 dark:text-slate-200 font-medium">Outlook:</span> {analysis.fundamental?.outlook}</p>
                     <p><span className="text-slate-900 dark:text-slate-200 font-medium">Ratios:</span> {analysis.fundamental?.ratios}</p>
                     <p className="text-emerald-500 font-bold">Verdict: {analysis.fundamental?.verdict}</p>
@@ -596,7 +596,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-blue-500 font-bold"><TrendingUp className="w-5 h-5" /> {isRTL ? 'التحليل الفني' : 'Technical'}</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400 space-y-2">
+                  <div className="text-sm text-[var(--text-muted)] dark:text-slate-400 space-y-2">
                     <p><span className="text-slate-900 dark:text-slate-200 font-medium">Signal:</span> {analysis.technical?.signal}</p>
                     <p><span className="text-slate-900 dark:text-slate-200 font-medium">Levels:</span> {analysis.technical?.levels}</p>
                   </div>
@@ -613,7 +613,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               </div>
               <div className="p-6 bg-red-500/5 border border-red-500/10 rounded-2xl">
                 <div className="flex items-center gap-2 text-red-400 font-bold mb-2"><ShieldAlert className="w-4 h-4" /> {isRTL ? 'إخلاء مسؤولية' : 'Disclaimer'}</div>
-                <p className="text-xs text-slate-500">{analysis.disclaimer}</p>
+                <p className="text-xs text-[var(--text-muted)]">{analysis.disclaimer}</p>
               </div>
             </motion.div>
           )}
@@ -624,11 +624,11 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       {activeTab === 'news' && (
         <div className="space-y-4">
           {news.length === 0 ? (
-            <p className="text-center py-12 text-slate-500 dark:text-slate-400">{t('stockDetail.noNews')}</p>
+            <p className="text-center py-12 text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.noNews')}</p>
           ) : (
             news.map((item, idx) => (
               <a key={idx} href={item.url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 hover:border-violet-400 dark:hover:border-violet-500/50 transition-colors">
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
+                <div className="flex items-center justify-between text-xs text-[var(--text-muted)] dark:text-slate-400 mb-2">
                   <span>{item.source}</span>
                   <span>{new Date(item.publishedAt).toLocaleString(i18n.language)}</span>
             </div>

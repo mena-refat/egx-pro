@@ -20,10 +20,7 @@ router.get('/plan', async (req: Request, res: Response) => {
       where: { id: userId },
       select: {
         plan: true,
-        subscriptionPlan: true,
-        subscriptionEndsAt: true,
-        analysisUsageMonth: true,
-        analysisUsageCount: true,
+        planExpiresAt: true,
         aiAnalysisUsedThisMonth: true,
         aiAnalysisResetDate: true,
         referralProDaysRemaining: true,
@@ -38,13 +35,12 @@ router.get('/plan', async (req: Request, res: Response) => {
     const monthKey = getCurrentMonthKey();
     const resetDate = user.aiAnalysisResetDate;
     const inCurrentPeriod = resetDate != null && now < resetDate;
-    const usedLegacy = user.analysisUsageMonth === monthKey ? user.analysisUsageCount : 0;
     const usedNew = user.aiAnalysisUsedThisMonth ?? 0;
-    const usedThisMonth = inCurrentPeriod ? usedNew : (resetDate != null && now >= resetDate ? 0 : usedLegacy);
+    const usedThisMonth = inCurrentPeriod ? usedNew : 0;
 
     const effectivePlan: Plan =
       effectivePro
-        ? ((user.subscriptionPlan as Plan) === 'annual' ? 'annual' : 'pro')
+        ? (user.plan === 'yearly' ? 'annual' : 'pro')
         : 'free';
 
     const quota =
@@ -52,7 +48,7 @@ router.get('/plan', async (req: Request, res: Response) => {
 
     res.json({
       plan: effectivePlan,
-      subscriptionEndsAt: user.subscriptionEndsAt,
+      planExpiresAt: user.planExpiresAt,
       analysis: {
         month: monthKey,
         used: usedThisMonth,
@@ -162,15 +158,16 @@ router.post('/upgrade', async (req: Request, res: Response) => {
       endsAt.setFullYear(endsAt.getFullYear() + 1);
     }
 
+    const planValue = plan === 'annual' ? 'yearly' : plan;
     const updated = await prisma.user.update({
       where: { id: userId },
       data: {
-        subscriptionPlan: plan,
-        subscriptionEndsAt: endsAt,
+        plan: planValue,
+        planExpiresAt: endsAt,
       },
       select: {
-        subscriptionPlan: true,
-        subscriptionEndsAt: true,
+        plan: true,
+        planExpiresAt: true,
       },
     });
 

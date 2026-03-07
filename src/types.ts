@@ -27,7 +27,6 @@ export interface User {
   investmentHorizon?: number;
   monthlyBudget?: number;
   shariaMode?: boolean;
-  islamicMode?: boolean;
   onboardingCompleted?: boolean;
   isFirstLogin?: boolean;
   interestedSectors?: string[];
@@ -35,9 +34,8 @@ export interface User {
   language?: string;
   theme?: string;
   avatarUrl?: string | null;
-  subscriptionPlan?: 'free' | 'pro' | 'annual';
-  subscriptionEndsAt?: string | null;
   plan?: 'free' | 'pro' | 'yearly';
+  planExpiresAt?: string | null;
   aiAnalysisUsedThisMonth?: number;
   aiAnalysisResetDate?: string | null;
   notifySignals?: boolean;

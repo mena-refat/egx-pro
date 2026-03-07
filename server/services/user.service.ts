@@ -22,15 +22,14 @@ const profileSelect = {
   investmentHorizon: true,
   monthlyBudget: true,
   shariaMode: true,
-  islamicMode: true,
   onboardingCompleted: true,
   isFirstLogin: true,
   interestedSectors: true,
   twoFactorEnabled: true,
   language: true,
   theme: true,
-  subscriptionPlan: true,
-  subscriptionEndsAt: true,
+  plan: true,
+  planExpiresAt: true,
   hearAboutUs: true,
   investorProfile: true,
   userTitle: true,
@@ -77,7 +76,6 @@ export const UserService = {
       investmentHorizon,
       monthlyBudget,
       shariaMode,
-      islamicMode,
       onboardingCompleted,
       interestedSectors,
       twoFactorEnabled,
@@ -99,7 +97,6 @@ export const UserService = {
       investmentHorizon,
       monthlyBudget,
       shariaMode,
-      islamicMode,
       onboardingCompleted,
       isFirstLogin,
       interestedSectors: Array.isArray(interestedSectors) ? JSON.stringify(interestedSectors) : interestedSectors,
@@ -291,8 +288,8 @@ export const UserService = {
           onboardingCompleted: true,
           loginStreak: true,
           totalReferrals: true,
-          subscriptionPlan: true,
-          subscriptionEndsAt: true,
+          plan: true,
+          planExpiresAt: true,
         },
       }),
       prisma.analysis.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } }),
@@ -364,8 +361,8 @@ export const UserService = {
           date = completedReferrals >= 1 ? now : null;
           break;
         case 'subscriber':
-          completed = user?.subscriptionPlan === 'pro' || user?.subscriptionPlan === 'annual' || false;
-          date = user?.subscriptionEndsAt ?? null;
+          completed = user?.plan === 'pro' || user?.plan === 'yearly' || false;
+          date = user?.planExpiresAt ?? null;
           break;
         case 'week-with-us':
           target = 7;
@@ -480,8 +477,8 @@ export const UserService = {
           date = completed ? firstAnalysis?.createdAt ?? null : null;
           break;
         case 'annual-subscriber':
-          completed = user?.subscriptionPlan === 'annual' ?? false;
-          date = user?.subscriptionEndsAt ?? null;
+          completed = user?.plan === 'yearly';
+          date = user?.planExpiresAt ?? null;
           break;
         case 'leader':
           target = 60;
@@ -662,7 +659,7 @@ export const UserService = {
   async redeemReferralReward(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { freeReferralRewarded: true, subscriptionPlan: true, subscriptionEndsAt: true },
+      select: { freeReferralRewarded: true, plan: true, planExpiresAt: true },
     });
     if (!user) return { error: 'User not found' as const };
     if (user.freeReferralRewarded) return { error: 'Reward already claimed' as const };
@@ -672,13 +669,13 @@ export const UserService = {
     if (completedCount < 5) return { error: 'Not enough referrals yet' as const };
     const now = new Date();
     let startsFrom = now;
-    if (user.subscriptionEndsAt && user.subscriptionEndsAt > now) startsFrom = user.subscriptionEndsAt;
+    if (user.planExpiresAt && user.planExpiresAt > now) startsFrom = user.planExpiresAt;
     const newEndsAt = new Date(startsFrom);
     newEndsAt.setMonth(newEndsAt.getMonth() + 1);
     const updated = await prisma.user.update({
       where: { id: userId },
-      data: { subscriptionPlan: 'pro', subscriptionEndsAt: newEndsAt, freeReferralRewarded: true },
-      select: { subscriptionPlan: true, subscriptionEndsAt: true, freeReferralRewarded: true },
+      data: { plan: 'pro', planExpiresAt: newEndsAt, freeReferralRewarded: true },
+      select: { plan: true, planExpiresAt: true, freeReferralRewarded: true },
     });
     return { data: updated };
   },

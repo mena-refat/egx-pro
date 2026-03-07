@@ -31,15 +31,19 @@ import api from '../lib/api';
 import { validateChangePassword } from '../lib/validations';
 import { AchievementCongratsCard } from './AchievementCongratsCard';
 import { SettingsTabContent } from './SettingsTabContent';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 // --- Sub-components ---
 
 const Toggle = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
   <button
     type="button"
+    role="switch"
+    aria-checked={checked}
     onClick={onChange}
     className={`relative w-11 h-6 rounded-full px-1 transition-colors overflow-hidden flex items-center ${
-      checked ? 'bg-[#7c3aed]' : 'bg-[#1f2937]'
+      checked ? 'bg-[var(--brand)]' : 'bg-[var(--bg-secondary)]'
     }`}
   >
     <motion.div
@@ -312,7 +316,7 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
             >
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="font-bold text-lg text-white">{selected.title}</h3>
+                  <h3 className="font-bold text-lg text-[var(--text-primary)]">{selected.title}</h3>
                   <p className="text-xs text-[#9ca3af]">
                     المستوى:{' '}
                     {selected.level === 'beginner'
@@ -324,7 +328,7 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
                           : 'الأسطورة'}
                   </p>
                 </div>
-                <button type="button" onClick={() => setSelected(null)} className="text-[#9ca3af] hover:text-white">
+                <button type="button" onClick={() => setSelected(null)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                   <ChevronLeft size={18} />
                 </button>
               </div>
@@ -360,7 +364,7 @@ function AchievementsSection({ accessToken }: { accessToken: string | null }) {
                 {selected.route && !selected.completed && (
                   <a
                     href={selected.route}
-                    className="px-4 py-2 rounded-xl text-sm font-medium bg-[#7c3aed] hover:bg-[#6d28d9] text-white"
+                    className="px-4 py-2 rounded-xl text-sm font-medium bg-[#7c3aed] hover:bg-[#6d28d9] text-[var(--text-primary)]"
                   >
                     اذهب وحقق التحدي
                   </a>
@@ -613,7 +617,7 @@ function SecuritySection({ accessToken }: { accessToken: string | null }) {
                   type="button"
                   onClick={handleChangePassword}
                   disabled={changingPassword}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#7c3aed] hover:bg-[#6d28d9] text-white disabled:opacity-60"
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#7c3aed] hover:bg-[#6d28d9] text-[var(--text-primary)] disabled:opacity-60"
                 >
                   {changingPassword ? 'جارٍ التغيير...' : 'تحديث كلمة المرور'}
                 </button>
@@ -646,7 +650,7 @@ function SecuritySection({ accessToken }: { accessToken: string | null }) {
                     type="button"
                     onClick={handleTwoFaSetup}
                     disabled={twoFaLoading}
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-[#7c3aed] hover:bg-[#6d28d9] text-white disabled:opacity-60"
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-[#7c3aed] hover:bg-[#6d28d9] text-[var(--text-primary)] disabled:opacity-60"
                   >
                     {twoFaLoading ? 'جارٍ التهيئة...' : 'بدء تفعيل 2FA'}
                   </button>
@@ -678,7 +682,7 @@ function SecuritySection({ accessToken }: { accessToken: string | null }) {
                       type="button"
                       onClick={handleTwoFaVerify}
                       disabled={twoFaLoading || twoFaToken.length !== 6}
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-[#10b981] hover:bg-[#059669] text-white disabled:opacity-60"
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-[#10b981] hover:bg-[#059669] text-[var(--text-primary)] disabled:opacity-60"
                     >
                       {twoFaLoading ? 'جارٍ التفعيل...' : 'تأكيد التفعيل'}
                     </button>
@@ -716,7 +720,7 @@ type Plan = 'free' | 'pro' | 'annual';
 
 interface PlanInfo {
   plan: Plan;
-  subscriptionEndsAt: string | null;
+  planExpiresAt: string | null;
   analysis: {
     month: string;
     used: number;
@@ -784,8 +788,8 @@ function SubscriptionSection() {
         prev
           ? {
               ...prev,
-              plan: updated.subscriptionPlan as Plan,
-              subscriptionEndsAt: updated.subscriptionEndsAt,
+              plan: (updated.plan === 'yearly' ? 'annual' : updated.plan) as Plan,
+              planExpiresAt: updated.planExpiresAt ?? null,
             }
           : prev,
       );
@@ -854,7 +858,7 @@ function SubscriptionSection() {
     );
   }
 
-  const { plan, analysis, subscriptionEndsAt } = info;
+  const { plan, analysis, planExpiresAt } = info;
   const isFree = plan === 'free';
   const quota = Number.isFinite(analysis.quota) ? analysis.quota : null;
   const referralPro = info.referralPro;
@@ -878,10 +882,10 @@ function SubscriptionSection() {
             {plan === 'free' ? 'مجانية' : plan === 'pro' ? 'Pro شهرية' : 'Pro سنوية'}
           </span>
         </h3>
-        {subscriptionEndsAt && !isFree && (
+        {planExpiresAt && !isFree && (
           <p className="text-xs text-[#9ca3af] mb-2">
             يتجدد في{' '}
-            {new Date(subscriptionEndsAt).toLocaleDateString('ar-EG')}
+            {new Date(planExpiresAt).toLocaleDateString('ar-EG')}
           </p>
         )}
         <div className="mt-4">
@@ -917,7 +921,7 @@ function SubscriptionSection() {
         <div className="p-4 rounded-2xl border border-[#1f2937] bg-[#020617] flex items-center gap-3">
           <Gift className="w-5 h-5 text-[#fbbf24]" />
           <div>
-            <p className="text-sm font-semibold text-white">شهر Pro مجاني من الدعوات</p>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">شهر Pro مجاني من الدعوات</p>
             <p className="text-xs text-[#9ca3af]">
               ينتهي بعد {referralPro.daysRemaining} يوم
             </p>
@@ -935,7 +939,7 @@ function SubscriptionSection() {
                 className="p-5 rounded-2xl border border-[#1f2937] bg-[#020617] text-right space-y-3 opacity-90"
               >
                 <h4 className="font-bold text-sm text-[#e5e7eb]">ابدأ مجاناً</h4>
-                <p className="text-2xl font-extrabold text-white">
+                <p className="text-2xl font-extrabold text-[var(--text-primary)]">
                   0 <span className="text-xs text-[#9ca3af]">جنيه</span>
                 </p>
                 <ul className="space-y-1 mt-1 text-[11px] text-[#9ca3af]">
@@ -974,7 +978,7 @@ function SubscriptionSection() {
                     : 'border-[#1f2937] bg-[#020617] hover:border-[#4b5563]'
                 }`}
               >
-                <span className="absolute -top-3 left-3 text-[10px] px-2 py-0.5 rounded-full bg-[#7c3aed] text-white font-bold shadow">
+                <span className="absolute -top-3 left-3 text-[10px] px-2 py-0.5 rounded-full bg-[#7c3aed] text-[var(--text-primary)] font-bold shadow">
                   الأكثر شعبية
                 </span>
                 <div className="flex items-center justify-between mb-1">
@@ -985,7 +989,7 @@ function SubscriptionSection() {
                     </span>
                   )}
                 </div>
-                <p className="text-2xl font-extrabold text-white">
+                <p className="text-2xl font-extrabold text-[var(--text-primary)]">
                   {proPrice.toLocaleString(locale)}{' '}
                   <span className="text-xs text-[#9ca3af]">جنيه / شهر</span>
                 </p>
@@ -1017,7 +1021,7 @@ function SubscriptionSection() {
                   className={`mt-3 w-full text-xs font-bold rounded-xl py-2 ${
                     isCurrent || plan === 'annual'
                       ? 'bg-[#111827] text-[#9ca3af] border border-[#374151] cursor-not-allowed'
-                      : 'bg-[#7c3aed] hover:bg-[#6d28d9] text-white shadow shadow-[#7c3aed]/40'
+                      : 'bg-[#7c3aed] hover:bg-[#6d28d9] text-[var(--text-primary)] shadow shadow-[#7c3aed]/40'
                   } disabled:opacity-60`}
                 >
                   {isCurrent
@@ -1049,14 +1053,14 @@ function SubscriptionSection() {
                 الأوفر
               </span>
               <div className="flex items-center justify-between mb-1">
-                <h4 className="font-bold text-sm text-white">EGX Pro سنوي</h4>
+                <h4 className="font-bold text-sm text-[var(--text-primary)]">EGX Pro سنوي</h4>
                 {isCurrentAnnual && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                     الخطة الحالية
                   </span>
                 )}
               </div>
-              <p className="text-2xl font-extrabold text-white">
+              <p className="text-2xl font-extrabold text-[var(--text-primary)]">
                 {annualPrice.toLocaleString(locale)}{' '}
                 <span className="text-xs text-[#e5e7eb]">جنيه / سنة</span>
               </p>
@@ -1139,7 +1143,7 @@ function SubscriptionSection() {
             type="button"
             onClick={handleValidateDiscount}
             disabled={validatingCode}
-            className="px-4 py-2 rounded-xl text-xs font-bold bg-[#7c3aed] hover:bg-[#6d28d9] text-white disabled:opacity-60"
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-[#7c3aed] hover:bg-[#6d28d9] text-[var(--text-primary)] disabled:opacity-60"
           >
             {validatingCode ? 'جاري التحقق...' : 'تطبيق الكود'}
           </button>
@@ -1166,14 +1170,13 @@ interface UserProfile {
   investmentHorizon: number;
   monthlyBudget: number;
   shariaMode: boolean;
-  islamicMode?: boolean;
   onboardingCompleted: boolean;
   interestedSectors: string[];
   twoFactorEnabled: boolean;
   language: string;
   theme: string;
-  subscriptionPlan?: 'free' | 'pro' | 'annual';
-  subscriptionEndsAt?: string | null;
+  plan?: 'free' | 'pro' | 'yearly';
+  planExpiresAt?: string | null;
   avatarUrl?: string | null;
   notifySignals?: boolean;
   notifyPortfolio?: boolean;
@@ -1456,7 +1459,7 @@ export default function ProfilePage() {
             onClick={() => setActiveTab(tab.id)}
             className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
               activeTab === tab.id 
-                ? 'bg-[#7c3aed] text-white shadow-lg scale-105' 
+                ? 'bg-[#7c3aed] text-[var(--text-primary)] shadow-lg scale-105' 
                 : 'bg-[#111827] text-[#9ca3af] hover:bg-[#1f2937]'
             }`}
           >
@@ -1501,14 +1504,14 @@ export default function ProfilePage() {
                     {user.username && <p className="text-[#9ca3af] text-sm mt-0.5">@{user.username}</p>}
                     <div className="mt-2">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                        user.subscriptionPlan === 'annual' || user.plan === 'yearly'
+                        user.plan === 'yearly'
                           ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                          : user.subscriptionPlan === 'pro' || user.subscriptionPlan === 'annual' || user.plan === 'pro'
+                          : user.plan === 'pro'
                             ? 'bg-violet-500/20 text-violet-400 border-violet-500/30'
                             : 'bg-[#1f2937] text-[#e5e7eb] border-[#374151]'
                       }`}>
-                        {(user.subscriptionPlan === 'pro' || user.subscriptionPlan === 'annual' || user.plan === 'pro' || user.plan === 'yearly') && <Crown className="w-3.5 h-3.5" />}
-                        {user.subscriptionPlan === 'annual' || user.plan === 'yearly' ? t('overview.planYearly') : user.subscriptionPlan === 'pro' || user.plan === 'pro' ? t('overview.planPro') : t('overview.planFree')}
+                        {(user.plan === 'pro' || user.plan === 'yearly') && <Crown className="w-3.5 h-3.5" />}
+                        {user.plan === 'yearly' ? t('overview.planYearly') : user.plan === 'pro' ? t('overview.planPro') : t('overview.planFree')}
                       </span>
                   </div>
                   </div>
@@ -1775,7 +1778,7 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
   }
 
   return (
-    <div className="p-6 rounded-2xl bg-gradient-to-br from-[#020617] via-[#111827] to-[#1f2937] shadow-md text-white relative overflow-hidden">
+    <div className="p-6 rounded-2xl bg-gradient-to-br from-[#020617] via-[#111827] to-[#1f2937] shadow-md text-[var(--text-primary)] relative overflow-hidden">
       <div
         className="absolute inset-0 opacity-10"
         style={{
@@ -1794,7 +1797,7 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
 
         {/* Code card */}
         <div className="space-y-2">
-          <p className="text-[11px] text-slate-300">كودك الشخصي الخاص بك</p>
+          <p className="text-[11px] text-[var(--text-muted)]">كودك الشخصي الخاص بك</p>
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between bg-white/10 p-4 rounded-xl border border-dashed border-white/20 gap-4">
             <span className="font-mono font-bold tracking-[0.3em] text-lg text-center md:text-right bg-black/30 px-4 py-3 rounded-xl">
               {code}
@@ -1820,7 +1823,7 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
 
         {/* Progress steps */}
         <div className="space-y-3">
-          <p className="text-xs text-slate-300">
+          <p className="text-xs text-[var(--text-muted)]">
             إجمالي دعواتك: {totalReferrals} دعوة ناجحة
           </p>
           <p className="text-sm font-medium">
@@ -1841,7 +1844,7 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
                     <div
                       className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border ${
                         isCompleted
-                          ? 'bg-[#7c3aed] border-[#7c3aed] text-white'
+                          ? 'bg-[#7c3aed] border-[#7c3aed] text-[var(--text-primary)]'
                           : isNext
                           ? 'bg-[#1f2937] border-[#7c3aed] text-[#e5e7eb] animate-pulse'
                           : 'bg-[#020617] border-[#4b5563] text-[#6b7280]'
@@ -1875,19 +1878,19 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
           className={`mt-2 p-4 rounded-2xl border text-sm ${
             completedCount >= goal && rewardClaimed
               ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-200'
-              : 'bg-black/40 border-[#1f2937] text-slate-100'
+              : 'bg-black/40 border-[#1f2937] text-[var(--text-primary)]'
           }`}
         >
           <div className="flex items-center gap-3 mb-2">
             <Award className="w-5 h-5 text-[#fbbf24]" />
             <div>
               <p className="font-bold text-sm">مكافأتك عند اكتمال 5 دعوات</p>
-              <p className="text-[11px] text-slate-300">
+              <p className="text-[11px] text-[var(--text-muted)]">
                 شهر Pro مجاني — قيمته 149 جنيه
               </p>
                   </div>
                   </div>
-          <p className="text-[11px] text-slate-300 mb-2">
+          <p className="text-[11px] text-[var(--text-muted)] mb-2">
             {Math.min(completedCount, goal)} من {goal} مكتملة
           </p>
           {completedCount >= goal ? (
@@ -1911,14 +1914,14 @@ function ReferralSection({ copied, onCopy }: { copied: boolean; onCopy: () => vo
               </div>
             )
           ) : (
-            <p className="text-[11px] text-slate-300">
+            <p className="text-[11px] text-[var(--text-muted)]">
               ادعو مزيداً من الأصدقاء لتحصل على شهر كامل من EGX Pro مجاناً.
             </p>
           )}
                   </div>
 
         {/* Social proof */}
-        <div className="pt-2 text-[11px] text-slate-300">
+        <div className="pt-2 text-[11px] text-[var(--text-muted)]">
           {weeklyJoinedCount > 0 && (
             <p>
               انضم {weeklyJoinedCount} مستخدم هذا الأسبوع عن طريق الدعوات.
@@ -2003,7 +2006,7 @@ function AvatarWithUpload({
     }
   };
 
-  const isPro = user.subscriptionPlan === 'pro' || user.subscriptionPlan === 'annual';
+  const isPro = user.plan === 'pro' || user.plan === 'yearly';
 
   const frameClass = isPro
     ? 'p-[2px] rounded-full bg-gradient-to-br from-amber-300 via-orange-400 to-yellow-500'
