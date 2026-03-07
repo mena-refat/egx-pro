@@ -6,11 +6,12 @@ export async function createNotification(
   userId: string,
   type: NotificationType,
   title: string,
-  body: string
+  body: string,
+  options?: { route?: string }
 ): Promise<void> {
   try {
     await prisma.notification.create({
-      data: { userId, type, title, body },
+      data: { userId, type, title, body, route: options?.route ?? undefined },
     });
   } catch (err) {
     console.error('Create notification error:', err);

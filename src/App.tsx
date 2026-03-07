@@ -11,23 +11,21 @@ import OnboardingWizard from './components/OnboardingWizard';
 import PortfolioTracker from './components/PortfolioTracker';
 import StockScreener from './components/StockScreener';
 import InvestmentCalculator from './components/InvestmentCalculator';
-import StockAnalysis from './components/StockAnalysis';
 import DelayNotice from './components/DelayNotice';
 import GoalsPage from './pages/GoalsPage';
 import MarketPage from './pages/MarketPage';
+import StockDetailPage from './pages/StockDetailPage';
 import ProfilePage from './components/ProfilePage';
 import DashboardPage from './pages/DashboardPage';
 import AuthPage from './pages/AuthPage';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
-import { SubscriptionTab, ReferralTab, AchievementsTab } from './components/features/settings';
-import { Stock } from './types';
+import { SubscriptionTab, ReferralTab, AchievementsTab, AccountOverviewTab } from './components/features/settings';
 
 export default function App() {
   const { i18n } = useTranslation('common');
   const { isAuthenticated, user, logout, updateUser, accessToken } = useAuthStore();
-  const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [theme, setTheme] = useTheme(user);
   const { profileCompletion } = useProfileCompletion(isAuthenticated, accessToken);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => (typeof window !== 'undefined' && localStorage.getItem('sidebarCollapsed') === 'true'));
@@ -74,7 +72,7 @@ export default function App() {
     checkAuth();
   }, [isAuthenticated, logout]);
 
-  useEffect(() => { document.documentElement.dir = i18n.language === 'ar' ? 'rtl' : 'ltr'; document.documentElement.lang = i18n.language; }, [i18n.language]);
+  useEffect(() => { document.documentElement.dir = i18n.language.startsWith('ar') ? 'rtl' : 'ltr'; document.documentElement.lang = i18n.language; }, [i18n.language]);
 
   if (isAuthenticated && user?.isFirstLogin) {
     return <OnboardingWizard onComplete={() => updateUser({ isFirstLogin: false, onboardingCompleted: true })} />;
@@ -84,7 +82,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row">
-      <Sidebar activeRoute={pathname} onNavigate={(path) => { navigate(path); setSelectedStock(null); }} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
+      <Sidebar activeRoute={pathname} onNavigate={navigate} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
       <main className="flex-1 p-8 overflow-y-auto">
         <Header
           user={user ?? null}
@@ -99,23 +97,25 @@ export default function App() {
           theme={theme}
           onThemeChange={handleThemeChange}
           profileCompletion={profileCompletion}
-          onNavigate={(path) => { if (path === '/stocks') setSelectedStock(null); navigate(path); }}
+          onNavigate={navigate}
         />
         <AnimatePresence mode="wait">
-          <motion.div key={pathname + (selectedStock ? `-${selectedStock.ticker}` : '')} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <DelayNotice showWhenStockPage={pathname === '/market' || pathname === '/stocks' || pathname.startsWith('/stocks/') || !!selectedStock} isPro={user?.plan === 'pro' || user?.plan === 'yearly' || false} />
+          <motion.div key={pathname} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <DelayNotice showWhenStockPage={pathname === '/market' || pathname === '/stocks' || pathname.startsWith('/stocks/')} isPro={user?.plan === 'pro' || user?.plan === 'yearly' || false} />
             <Routes>
               <Route path="/" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
               <Route path="/dashboard" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
               <Route path="/portfolio" element={<ErrorBoundary><PortfolioTracker /></ErrorBoundary>} />
-              <Route path="/stocks" element={<ErrorBoundary>{selectedStock ? <StockAnalysis stock={selectedStock} onBack={() => setSelectedStock(null)} /> : <StockScreener onSelectStock={(s) => setSelectedStock(s)} />}</ErrorBoundary>} />
-              <Route path="/market" element={<ErrorBoundary><MarketPage onSelectStock={(s) => setSelectedStock(s)} /></ErrorBoundary>} />
+              <Route path="/stocks" element={<ErrorBoundary><StockScreener onSelectStock={(s) => navigate(`/stocks/${s.ticker}`)} /></ErrorBoundary>} />
+              <Route path="/stocks/:ticker" element={<ErrorBoundary><StockDetailPage /></ErrorBoundary>} />
+              <Route path="/market" element={<ErrorBoundary><MarketPage onSelectStock={(s) => navigate(`/stocks/${s.ticker}`)} /></ErrorBoundary>} />
               <Route path="/calculator" element={<ErrorBoundary><InvestmentCalculator /></ErrorBoundary>} />
               <Route path="/goals" element={<ErrorBoundary><GoalsPage currentWealth={stats.totalValue} /></ErrorBoundary>} />
               <Route path="/settings" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
               <Route path="/settings/subscription" element={<ErrorBoundary><SubscriptionTab /></ErrorBoundary>} />
               <Route path="/settings/referrals" element={<ErrorBoundary><ReferralTab /></ErrorBoundary>} />
               <Route path="/settings/achievements" element={<ErrorBoundary><AchievementsTab /></ErrorBoundary>} />
+              <Route path="/settings/overview" element={<ErrorBoundary><AccountOverviewTab /></ErrorBoundary>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </motion.div>

@@ -69,7 +69,7 @@ export function Header({
   };
 
   return (
-    <header className="flex justify-between items-center mb-6 flex-wrap gap-3" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+    <header className="flex justify-between items-center mb-6 flex-wrap gap-3" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}>
       <div className="text-end">
         <h2 className="text-2xl font-bold text-[var(--text-primary)]">
           {t('header.welcomeUser', { name: user?.fullName || t('header.defaultUser') })}
@@ -88,7 +88,7 @@ export function Header({
               </div>
               <span className="text-xs font-bold text-[var(--brand-text)] whitespace-nowrap">{profileCompletion.percentage}%</span>
               <span className="text-xs font-medium text-[var(--text-secondary)] whitespace-nowrap hidden sm:inline">{t('overview.completeProfile')}</span>
-              <ChevronRight className={`w-4 h-4 text-[var(--brand-text)] shrink-0 ${profileCompletionOpen ? 'rotate-90' : ''} ${i18n.language === 'ar' ? 'rotate-180' : ''}`} />
+              <ChevronRight className={`w-4 h-4 text-[var(--brand-text)] shrink-0 ${profileCompletionOpen ? 'rotate-90' : ''} ${i18n.language.startsWith('ar') ? 'rotate-180' : ''}`} />
             </button>
             <AnimatePresence>
               {profileCompletionOpen && (
@@ -121,7 +121,7 @@ export function Header({
                               className="text-xs font-medium text-[var(--brand-text)] hover:opacity-80 flex items-center gap-0.5"
                             >
                               {t('overview.add')}
-                              <ChevronRight className={`w-3 h-3 ${i18n.language === 'ar' ? 'rotate-180' : ''}`} />
+                              <ChevronRight className={`w-3 h-3 ${i18n.language.startsWith('ar') ? 'rotate-180' : ''}`} />
                             </button>
                           </li>
                         );

@@ -69,7 +69,7 @@ export function ErrorPage({ code, onPrimaryAction }: ErrorPageProps) {
     }
   };
 
-  const isRtl = i18n.language === 'ar';
+  const isRtl = i18n.language.startsWith('ar');
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col">

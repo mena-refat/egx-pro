@@ -24,7 +24,7 @@ export default function PortfolioTracker() {
   const [addError, setAddError] = useState<string | null>(null);
   const [showPortfolioLimitModal, setShowPortfolioLimitModal] = useState(false);
 
-  const isRTL = i18n.language === 'ar';
+  const isRTL = i18n.language.startsWith('ar');
 
   useEffect(() => {
     const fetchStocks = async () => {

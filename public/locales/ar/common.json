@@ -34,6 +34,7 @@
     "subscription": "الاشتراك",
     "referrals": "الإحالات",
     "achievements": "الإنجازات",
+    "overview": "نظرة الحساب",
     "expandSidebar": "توسيع القائمة",
     "collapseSidebar": "طي القائمة"
   },
@@ -321,6 +322,10 @@
     "twoFaDisableConfirm": "تعطيل",
     "twoFaEnabledSince": "مفعّل منذ {{date}}",
     "twoFaNotEnabled": "غير مفعّل",
+    "emailNotVerified": "البريد الإلكتروني غير موثق",
+    "verifyEmail": "توثيق البريد",
+    "emailVerified": "البريد الإلكتروني موثق ✓",
+    "verificationCodeSent": "تم إرسال الكود على بريدك",
     "twoFaCopyCode": "نسخ",
     "twoFaInvalidCodeTryAgain": "الكود غير صحيح، حاول مجدداً",
     "appGoogleAuth": "Google Authenticator",
@@ -417,7 +422,8 @@
     "watchlistRemove": "إلغاء المراقبة",
     "noResults": "لا توجد نتائج",
     "retry": "إعادة المحاولة",
-    "egp": "جنيه"
+    "egp": "جنيه",
+    "targetPriceOptional": "السعر المستهدف (اختياري)"
   },
   "stockDetail": {
     "back": "رجوع",

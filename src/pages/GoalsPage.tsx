@@ -121,18 +121,12 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Skeleton height={40} className="w-full max-w-md" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-3">
-              <Skeleton height={20} className="w-3/4" />
-              <Skeleton height={28} className="w-1/2" />
-              <Skeleton height={16} className="w-full" />
-              <Skeleton height={16} className="w-2/3" />
-            </div>
-          ))}
-        </div>
+      <div className="space-y-3 p-4">
+        {[1, 2, 3].map((i) => (
+          <React.Fragment key={i}>
+            <Skeleton height={112} className="w-full rounded-xl" />
+          </React.Fragment>
+        ))}
       </div>
     );
   }

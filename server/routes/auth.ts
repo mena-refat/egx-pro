@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import * as AuthController from '../controllers/auth.controller.ts';
+import { authenticate } from '../middleware/auth.middleware.ts';
 
 const router = Router();
+
+router.post('/verify-email/send', authenticate, AuthController.sendVerifyEmail);
+router.post('/verify-email/confirm', authenticate, AuthController.confirmVerifyEmail);
 
 router.post('/register', AuthController.register);
 router.post('/login', AuthController.login);

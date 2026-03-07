@@ -33,9 +33,12 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showWatchlistLimitModal, setShowWatchlistLimitModal] = useState(false);
+  const [addTargetModal, setAddTargetModal] = useState<{ ticker: string } | null>(null);
+  const [addTargetPrice, setAddTargetPrice] = useState('');
+  const [addTargetSubmitting, setAddTargetSubmitting] = useState(false);
 
   const { prices: livePrices } = useLivePrices();
-  const isAr = i18n.language === 'ar';
+  const isAr = i18n.language.startsWith('ar');
   const lang = isAr ? 'ar' : 'en';
 
   const fetchData = async () => {
@@ -87,18 +90,36 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
   const toggleWatchlist = async (e: React.MouseEvent, ticker: string) => {
     e.stopPropagation();
     const isIn = watchlist.includes(ticker);
-    try {
-      if (isIn) {
+    if (isIn) {
+      try {
         await api.delete(`/watchlist/${ticker}`);
         setWatchlist((prev) => prev.filter((t) => t !== ticker));
-      } else {
-        await api.post('/watchlist', { ticker });
-        setWatchlist((prev) => [...prev, ticker]);
-        if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('profile-completion-changed'));
+      } catch {
+        // ignore
       }
+      return;
+    }
+    setAddTargetModal({ ticker });
+    setAddTargetPrice('');
+  };
+
+  const submitAddWithTarget = async () => {
+    if (!addTargetModal) return;
+    setAddTargetSubmitting(true);
+    try {
+      const targetPriceNum = addTargetPrice.trim() ? parseFloat(addTargetPrice) : undefined;
+      await api.post('/watchlist', {
+        ticker: addTargetModal.ticker,
+        ...(targetPriceNum != null && Number.isFinite(targetPriceNum) && targetPriceNum > 0 ? { targetPrice: targetPriceNum } : {}),
+      });
+      setWatchlist((prev) => [...prev, addTargetModal.ticker]);
+      setAddTargetModal(null);
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('profile-completion-changed'));
     } catch (err: unknown) {
       const data = err && typeof err === 'object' && 'response' in err ? (err as { response?: { data?: { code?: string } } }).response?.data : undefined;
       if (data?.code === 'WATCHLIST_LIMIT') setShowWatchlistLimitModal(true);
+    } finally {
+      setAddTargetSubmitting(false);
     }
   };
 
@@ -303,6 +324,34 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
             <div className="flex gap-2 justify-center">
               <button type="button" onClick={() => { setShowWatchlistLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm">{t('plan.subscribeNow')}</button>
               <button type="button" onClick={() => setShowWatchlistLimitModal(false)} className="px-4 py-2.5 border border-[var(--border)] rounded-xl font-medium text-sm">{t('plan.cancel')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {addTargetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setAddTargetModal(null)}>
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm font-medium text-[var(--text-primary)]">
+              {t('stocks.watchlistAdd')} {addTargetModal.ticker}
+            </p>
+            <div>
+              <label className="block text-xs text-[var(--text-muted)] mb-1">{t('stocks.targetPriceOptional')}</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={addTargetPrice}
+                onChange={(e) => setAddTargetPrice(e.target.value)}
+                placeholder="0"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={() => setAddTargetModal(null)} className="px-4 py-2 border border-[var(--border)] rounded-xl text-sm">{t('common.cancel')}</button>
+              <button type="button" onClick={submitAddWithTarget} disabled={addTargetSubmitting} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-medium disabled:opacity-50">
+                {addTargetSubmitting ? t('common.loading') : t('stocks.watchlistAdd')}
+              </button>
             </div>
           </div>
         </div>

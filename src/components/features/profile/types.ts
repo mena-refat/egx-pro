@@ -3,6 +3,7 @@ export interface ProfileUser {
   fullName?: string | null;
   username?: string | null;
   email?: string | null;
+  isEmailVerified?: boolean;
   phone?: string | null;
   avatarUrl?: string | null;
   lastPasswordChangeAt?: string | null;

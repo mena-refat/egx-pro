@@ -14,7 +14,7 @@ export default function SecuritySettings() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const isRTL = i18n.language === 'ar';
+  const isRTL = i18n.language.startsWith('ar');
 
   const startSetup = async () => {
     try {

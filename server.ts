@@ -19,6 +19,18 @@ import { randomUUID } from 'crypto';
 import { createServer } from 'http';
 import { setupWebSocket } from './server/websocket.ts';
 import { validateEnv } from './server/lib/env.ts';
+import { sanitizeInput } from './server/lib/sanitize.ts';
+import authRoutes from './server/routes/auth.ts';
+import portfolioRoutes from './server/routes/portfolio.ts';
+import stocksRoutes from './server/routes/stocks.ts';
+import analysisRoutes from './server/routes/analysis.ts';
+import userRoutes from './server/routes/user.ts';
+import profileRoutes from './server/routes/profile.ts';
+import watchlistRoutes from './server/routes/watchlist.ts';
+import goalsRoutes from './server/routes/goals.ts';
+import notificationsRoutes from './server/routes/notifications.ts';
+import billingRoutes from './server/routes/billing.ts';
+import newsRoutes from './server/routes/news.ts';
 
 async function startServer() {
   validateEnv();
@@ -44,7 +56,6 @@ async function startServer() {
   app.use('/api/user/avatar', express.json({ limit: '2mb' }));
   app.use(cookieParser());
 
-  const { sanitizeInput } = await import('./server/lib/sanitize.ts');
   app.use('/api', sanitizeInput);
 
   // في التطوير نعطّل CSP بالكامل عشان Vite و HMR يشتغلوا بسرعة من غير أخطاء
@@ -133,37 +144,16 @@ async function startServer() {
   }
 
   // API Routes
-  const authRoutes = (await import('./server/routes/auth.ts')).default;
   app.use('/api/auth', authRoutes);
-
-  const portfolioRoutes = (await import('./server/routes/portfolio.ts')).default;
   app.use('/api/portfolio', portfolioRoutes);
-
-  const stocksRoutes = (await import('./server/routes/stocks.ts')).default;
   app.use('/api/stocks', stocksRoutes);
-
-  const analysisRoutes = (await import('./server/routes/analysis.ts')).default;
   app.use('/api/analysis', analysisRoutes);
-
-  const userRoutes = (await import('./server/routes/user.ts')).default;
   app.use('/api/user', userRoutes);
-
-  const profileRoutes = (await import('./server/routes/profile.ts')).default;
   app.use('/api/profile', profileRoutes);
-
-  const watchlistRoutes = (await import('./server/routes/watchlist.ts')).default;
   app.use('/api/watchlist', watchlistRoutes);
-
-  const goalsRoutes = (await import('./server/routes/goals.ts')).default;
   app.use('/api/goals', goalsRoutes);
-
-  const notificationsRoutes = (await import('./server/routes/notifications.ts')).default;
   app.use('/api/notifications', notificationsRoutes);
-
-  const billingRoutes = (await import('./server/routes/billing.ts')).default;
   app.use('/api/billing', billingRoutes);
-
-  const newsRoutes = (await import('./server/routes/news.ts')).default;
   app.use('/api/news', newsRoutes);
 
   app.get('/api/health', (_req, res) => {
@@ -303,11 +293,42 @@ async function startServer() {
       const { getStockPrice } = await import('./server/lib/yahoo.ts');
       const { setCache } = await import('./server/lib/redis.ts');
       const { EGX_TICKERS } = await import('./server/lib/egxTickers.ts');
+      const { prisma } = await import('./server/lib/prisma.ts');
+      const { createNotification } = await import('./server/lib/createNotification.ts');
       const now = Date.now();
       for (const ticker of EGX_TICKERS) {
         const data = await getStockPrice(ticker);
         if (data) {
           await setCache(`stock:price:delayed:${ticker}`, { ...data, delayedAt: now }, 15 * 60);
+        }
+      }
+      const watchlistAlerts = await prisma.watchlist.findMany({
+        where: { targetPrice: { not: null } },
+        include: { user: { select: { id: true, notifySignals: true } } },
+      });
+      for (const item of watchlistAlerts) {
+        const priceData = await getStockPrice(item.ticker);
+        if (!priceData || item.targetPrice == null) continue;
+        const hit = priceData.price >= item.targetPrice;
+        const alreadyNotified = item.targetReachedNotifiedAt != null;
+        if (hit && !alreadyNotified && item.user.notifySignals) {
+          await createNotification(
+            item.user.id,
+            'stock_target',
+            `${item.ticker} وصل للسعر المستهدف`,
+            `السعر الحالي ${priceData.price} ج.م — وصل للهدف ${item.targetPrice} ج.م`,
+            { route: `/stocks/${item.ticker}` }
+          );
+          await prisma.watchlist.update({
+            where: { id: item.id },
+            data: { targetReachedNotifiedAt: new Date() },
+          });
+        }
+        if (!hit && alreadyNotified) {
+          await prisma.watchlist.update({
+            where: { id: item.id },
+            data: { targetReachedNotifiedAt: null },
+          });
         }
       }
     } catch (err) {

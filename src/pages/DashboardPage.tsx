@@ -99,7 +99,7 @@ export default function DashboardPage() {
     return { ticker: best.ticker, change: bestChange === -Infinity ? 0 : bestChange };
   }, [holdings, livePrices]);
 
-  const isRTL = i18n.language === 'ar';
+  const isRTL = i18n.language.startsWith('ar');
 
   if (portfolioLoading) {
     return (
@@ -273,7 +273,7 @@ export default function DashboardPage() {
                   return (
                     <div key={stock.ticker} className="flex justify-between items-center p-4 bg-slate-800/50 dark:bg-slate-800/50 bg-slate-50 rounded-2xl border border-[var(--border)] dark:border-[var(--border)] border-slate-200">
                       <div>
-                        <p className="font-bold">{getStockName(stock.ticker, i18n.language === 'ar' ? 'ar' : 'en')}</p>
+                        <p className="font-bold">{getStockName(stock.ticker, i18n.language.startsWith('ar') ? 'ar' : 'en')}</p>
                         <p className="text-xs text-slate-500">{stock.ticker}</p>
                         {getStockInfo(stock.ticker)?.nameEn && (
                           <p className="text-xs text-[var(--text-secondary)] mt-0.5">{getStockInfo(stock.ticker)!.nameEn}</p>

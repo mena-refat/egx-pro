@@ -85,7 +85,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
     referralCode: '',
   });
 
-  const isRTL = i18n.language === 'ar';
+  const isRTL = i18n.language.startsWith('ar');
 
   const goToStep = (nextStep: number) => {
     setDirection(nextStep > currentStep ? 1 : -1);

@@ -335,7 +335,7 @@ export function SecurityTab({ user, accessToken, onUpdateProfile, setRequestStat
               </button>
             </div>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
-              {t('settings.lastChange')}: {lastPasswordChangeAt ? new Date(lastPasswordChangeAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) : t('settings.passwordNeverChanged')}
+              {t('settings.lastChange')}: {lastPasswordChangeAt ? new Date(lastPasswordChangeAt).toLocaleDateString(i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) : t('settings.passwordNeverChanged')}
             </p>
             <AnimatePresence>
               {showPasswordForm && (
@@ -377,7 +377,7 @@ export function SecurityTab({ user, accessToken, onUpdateProfile, setRequestStat
               </p>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
                 {twoFactorEnabled && twoFactorEnabledAt
-                  ? t('settings.twoFaEnabledSince', { date: new Date(twoFactorEnabledAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) })
+                  ? t('settings.twoFaEnabledSince', { date: new Date(twoFactorEnabledAt).toLocaleDateString(i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) })
                   : t('settings.twoFaDesc')}
               </p>
             </div>

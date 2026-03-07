@@ -62,7 +62,7 @@ export function AchievementsTab() {
                 <span className="font-medium text-[var(--text-primary)]">{a.title}</span>
                 {a.completed && a.date && (
                   <span className="text-xs text-[var(--text-muted)]">
-                    {new Date(a.date).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-GB')}
+                    {new Date(a.date).toLocaleDateString(i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB')}
                   </span>
                 )}
               </div>

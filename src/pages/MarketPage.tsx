@@ -85,7 +85,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
   const { t, i18n } = useTranslation('common');
   const user = useAuthStore((s) => s.user);
   const isPro = user?.plan === 'pro' || user?.plan === 'yearly';
-  const isAr = i18n.language === 'ar';
+  const isAr = i18n.language.startsWith('ar');
   const [overview, setOverview] = useState<MarketOverview | null>(null);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -219,6 +219,19 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
   ], [overview, t]);
 
   const dir = isAr ? 'rtl' : 'ltr';
+  const loading = loadingOverview;
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 gap-3 p-4">
+        {[1, 2, 3, 4].map((i) => (
+          <React.Fragment key={i}>
+            <Skeleton height={96} className="w-full rounded-xl" />
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8" dir={dir}>
@@ -267,7 +280,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
         <div className="rounded-xl border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-red-700 dark:text-red-400 text-sm flex items-center justify-between">
           <span>{error}</span>
           <button type="button" onClick={fetchOverview} className="text-red-600 dark:text-red-300 hover:underline">
-            {isAr ? 'إعادة المحاولة' : 'Retry'}
+            {t('common.retry')}
           </button>
         </div>
       )}

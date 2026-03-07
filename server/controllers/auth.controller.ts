@@ -2,6 +2,10 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { verifyAccessToken } from '../../src/lib/auth.ts';
 import * as AuthService from '../services/auth.service.ts';
+import { prisma } from '../lib/prisma.ts';
+import { getCache, setCache } from '../lib/redis.ts';
+import { EmailService } from '../services/email.service.ts';
+import type { AuthRequest } from '../routes/types.ts';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const REFRESH_TOKEN_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -280,5 +284,62 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
   } catch (e) {
     console.error('Google OAuth error', e);
     res.status(500).send('Authentication failed');
+  }
+}
+
+export async function sendVerifyEmail(req: AuthRequest, res: Response): Promise<void> {
+  const userId = req.userId ?? req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, isEmailVerified: true },
+    });
+    if (!user?.email) {
+      res.status(400).json({ error: 'no_email' });
+      return;
+    }
+    if (user.isEmailVerified) {
+      res.status(400).json({ error: 'already_verified' });
+      return;
+    }
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    await setCache(`email_verify:${userId}`, code, 15 * 60);
+    await EmailService.sendVerificationCode(user.email, code);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('sendVerifyEmail error', e);
+    res.status(500).json({ error: 'server_error' });
+  }
+}
+
+export async function confirmVerifyEmail(req: AuthRequest, res: Response): Promise<void> {
+  const userId = req.userId ?? req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+  const { code } = (req.body as { code?: string }) ?? {};
+  if (!code || typeof code !== 'string') {
+    res.status(400).json({ error: 'code_required' });
+    return;
+  }
+  try {
+    const stored = await getCache<string>(`email_verify:${userId}`);
+    if (!stored || stored !== code.trim()) {
+      res.status(400).json({ error: 'invalid_code' });
+      return;
+    }
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isEmailVerified: true },
+    });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('confirmVerifyEmail error', e);
+    res.status(500).json({ error: 'server_error' });
   }
 }

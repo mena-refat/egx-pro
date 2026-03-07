@@ -20,7 +20,7 @@ export default function StockCard({
 }: StockCardProps) {
   const { t, i18n } = useTranslation('common');
   const isPositive = change >= 0;
-  const isRTL = i18n.language === 'ar';
+  const isRTL = i18n.language.startsWith('ar');
   const lang = isRTL ? 'ar' : 'en';
   const info = getStockInfo(ticker);
 

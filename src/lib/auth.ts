@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { promisify } from 'util';
 
 const scrypt = promisify(crypto.scrypt);
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined;
 const rawPepper = process.env.AUTH_PEPPER;
 if (!rawPepper?.trim() && !isDev) {
   throw new Error('AUTH_PEPPER must be set in non-development environments.');

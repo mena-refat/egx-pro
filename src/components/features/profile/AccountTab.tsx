@@ -26,6 +26,31 @@ export function AccountTab({ user, accessToken, onUpdateProfile, setRequestStatu
   const [usernameMessage, setUsernameMessage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [verifySending, setVerifySending] = useState(false);
+  const [verifySent, setVerifySent] = useState(false);
+
+  const sendVerification = async () => {
+    if (!accessToken || verifySending) return;
+    setVerifySending(true);
+    setRequestStatus(null);
+    try {
+      const res = await fetch('/api/auth/verify-email/send', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setVerifySent(true);
+        setRequestStatus({ type: 'success', message: t('settings.verificationCodeSent') });
+      } else {
+        setRequestStatus({ type: 'error', message: data.error === 'already_verified' ? t('settings.emailVerified') : data.error === 'no_email' ? t('settings.emailNotVerified') : t('common.error') });
+      }
+    } catch {
+      setRequestStatus({ type: 'error', message: t('common.error') });
+    } finally {
+      setVerifySending(false);
+    }
+  };
 
   useEffect(() => {
     setFullNameVal(user.fullName ?? '');
@@ -167,7 +192,7 @@ export function AccountTab({ user, accessToken, onUpdateProfile, setRequestStatu
     }
   };
 
-  const isRtl = i18n.language === 'ar';
+  const isRtl = i18n.language.startsWith('ar');
   const inputBase = 'w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none transition-colors';
 
   return (
@@ -177,6 +202,17 @@ export function AccountTab({ user, accessToken, onUpdateProfile, setRequestStatu
           <User className="w-5 h-5 text-[var(--text-muted)]" />
           {t('settings.accountData')}
         </h3>
+
+        {user?.email && !user.isEmailVerified && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--warning-bg)] border border-[var(--warning)] mb-4">
+            <span className="text-sm text-[var(--warning-text)]">
+              {t('settings.emailNotVerified')}
+            </span>
+            <Button variant="secondary" size="sm" onClick={sendVerification} disabled={verifySending} loading={verifySending}>
+              {t('settings.verifyEmail')}
+            </Button>
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-6">
           <div className="flex flex-col items-center gap-2">

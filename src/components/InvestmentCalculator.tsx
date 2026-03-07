@@ -130,8 +130,8 @@ function getMotivationalMessage(
 
 export default function InvestmentCalculator() {
   const { t, i18n } = useTranslation('common');
-  const locale = i18n.language === 'ar' ? 'ar-EG' : 'en';
-  const isRTL = i18n.language === 'ar';
+  const locale = i18n.language.startsWith('ar') ? 'ar-EG' : 'en';
+  const isRTL = i18n.language.startsWith('ar');
 
   const [monthly, setMonthly] = useState(5000);
   const [initial, setInitial] = useState(0);

@@ -34,6 +34,7 @@
     "subscription": "Subscription",
     "referrals": "Referrals",
     "achievements": "Achievements",
+    "overview": "Account overview",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar"
   },
@@ -318,6 +319,10 @@
     "twoFaDisableConfirm": "Disable",
     "twoFaEnabledSince": "Enabled since {{date}}",
     "twoFaNotEnabled": "Not enabled",
+    "emailNotVerified": "Email is not verified",
+    "verifyEmail": "Verify email",
+    "emailVerified": "Email verified ✓",
+    "verificationCodeSent": "Verification code sent to your email",
     "twoFaCopyCode": "Copy",
     "twoFaInvalidCodeTryAgain": "Invalid code, please try again",
     "appGoogleAuth": "Google Authenticator",
@@ -414,7 +419,8 @@
     "watchlistRemove": "Unwatch",
     "noResults": "No results",
     "retry": "Retry",
-    "egp": "EGP"
+    "egp": "EGP",
+    "targetPriceOptional": "Target price (optional)"
   },
   "stockDetail": {
     "back": "Back",

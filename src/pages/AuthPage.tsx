@@ -238,7 +238,7 @@ export default function AuthPage() {
           )}
 
           <div className="mt-8 pt-8 border-t border-[var(--border)] flex justify-center gap-4">
-            <Button variant="link" size="sm" onClick={() => i18n.changeLanguage('ar')} className={i18n.language === 'ar' ? 'font-bold' : ''}>العربية</Button>
+            <Button variant="link" size="sm" onClick={() => i18n.changeLanguage('ar')} className={i18n.language.startsWith('ar') ? 'font-bold' : ''}>العربية</Button>
             <Button variant="link" size="sm" onClick={() => i18n.changeLanguage('en')} className={i18n.language === 'en' ? 'font-bold' : ''}>English</Button>
           </div>
         </motion.div>

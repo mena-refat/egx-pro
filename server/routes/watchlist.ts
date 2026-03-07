@@ -30,7 +30,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       const msg = parsed.error.issues[0]?.message ?? 'Invalid ticker';
       return res.status(400).json({ error: msg });
     }
-    const { ticker } = parsed.data;
+    const { ticker, targetPrice: bodyTargetPrice } = parsed.data;
 
     const userId = req.user?.id ?? req.userId;
     const user = await prisma.user.findUnique({
@@ -49,6 +49,13 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
         });
       }
     }
+    if (bodyTargetPrice != null && !isPro(user)) {
+      return res.status(403).json({
+        error: 'pro_required',
+        code: 'PRICE_ALERTS_PRO',
+        message: 'هذه الميزة متاحة في Pro',
+      });
+    }
 
     // Check if already exists
     const existing = await prisma.watchlist.findFirst({
@@ -62,6 +69,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       data: {
         userId: req.userId!,
         ticker,
+        targetPrice: bodyTargetPrice ?? undefined,
       },
     });
     const newAchievements = await addNewlyUnlockedAchievements(req.userId!, completedBefore);

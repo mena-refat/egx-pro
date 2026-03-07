@@ -65,7 +65,7 @@ export default function ProfilePage() {
   );
 
   return (
-    <div className="p-6 space-y-6 bg-[var(--bg-primary)] text-[var(--text-primary)] min-h-screen" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="p-6 space-y-6 bg-[var(--bg-primary)] text-[var(--text-primary)] min-h-screen" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}>
       <div className="flex gap-2 overflow-x-auto pb-2 mb-6">
         {TABS.map((tab) => (
           <button

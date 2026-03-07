@@ -16,7 +16,7 @@ export function SettingsTabContent() {
   const [activeTab, setActiveTab] = useState<string>('overview');
 
   return (
-    <div className="space-y-6" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="space-y-6" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}>
       <div className="flex gap-2 overflow-x-auto pb-2">
         {TABS.map((tab) => (
           <button

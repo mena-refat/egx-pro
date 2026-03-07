@@ -98,7 +98,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
   const { t, i18n } = useTranslation('common');
   const user = useAuthStore((s) => s.user);
   const shariaMode = user?.shariaMode ?? false;
-  const isRTL = i18n.language === 'ar';
+  const isRTL = i18n.language.startsWith('ar');
   const lang = isRTL ? 'ar' : 'en';
 
   const [activeTab, setActiveTab] = useState<TabId>('details');
@@ -565,12 +565,10 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             </div>
           )}
           {loadingAnalysis && (
-            <div className="flex flex-col py-12 space-y-4 max-w-md mx-auto">
-              <Skeleton height={32} className="w-full" />
-              <Skeleton height={20} className="w-4/5" />
-              <Skeleton height={20} className="w-3/4" />
-              <Skeleton height={20} className="w-5/6" />
-              <Skeleton height={80} className="w-full rounded-xl mt-4" />
+            <div className="space-y-4 p-4">
+              <Skeleton height={48} className="w-48 rounded-lg" />
+              <Skeleton height={256} className="w-full rounded-xl" />
+              <Skeleton height={128} className="w-full rounded-xl" />
             </div>
           )}
           {errorAnalysis && (
