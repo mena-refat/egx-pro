@@ -323,12 +323,12 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                   }}
                   className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                     formData.goal === opt.id
-                      ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                      ? 'border-[var(--brand)] bg-[var(--brand)]/10 shadow-lg shadow-[var(--brand)]/20'
                       : 'border-[var(--border)]'
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-1">
-                    {opt.icon && <opt.icon className="w-5 h-5 text-violet-400" />}
+                    {opt.icon && <opt.icon className="w-5 h-5 text-[var(--brand)]" />}
                     <div className="font-semibold">{opt.title}</div>
                   </div>
                   <p className="text-xs text-[var(--text-secondary)]">{opt.desc}</p>
@@ -381,7 +381,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                   }}
                   className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                     formData.timeline === opt.id
-                      ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                      ? 'border-[var(--brand)] bg-[var(--brand)]/10 shadow-lg shadow-[var(--brand)]/20'
                       : 'border-[var(--border)]'
                   }`}
                 >
@@ -436,7 +436,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                   }}
                   className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                     formData.reaction30 === opt.id
-                      ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                      ? 'border-[var(--brand)] bg-[var(--brand)]/10 shadow-lg shadow-[var(--brand)]/20'
                       : 'border-[var(--border)]'
                   }`}
                 >
@@ -491,7 +491,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                   }}
                   className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                     formData.budgetBand === opt.id
-                      ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                      ? 'border-[var(--brand)] bg-[var(--brand)]/10 shadow-lg shadow-[var(--brand)]/20'
                       : 'border-[var(--border)]'
                   }`}
                 >
@@ -522,7 +522,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                 }}
                 className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                   formData.shariaMode
-                    ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                    ? 'border-[var(--brand)] bg-[var(--brand)]/10 shadow-lg shadow-[var(--brand)]/20'
                     : 'border-[var(--border)]'
                 }`}
               >
@@ -536,7 +536,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                 }}
                 className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                   !formData.shariaMode
-                    ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                    ? 'border-[var(--brand)] bg-[var(--brand)]/10 shadow-lg shadow-[var(--brand)]/20'
                     : 'border-[var(--border)]'
                 }`}
               >
@@ -571,8 +571,8 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                     }}
                     className={`px-4 py-2 rounded-full text-xs border transition-all ${
                       selected
-                        ? 'bg-violet-500 border-violet-500 text-[var(--text-primary)]'
-                        : 'bg-[var(--bg-secondary)] border-white/10 text-slate-300 hover:border-white/30'
+                        ? 'bg-[var(--brand)] border-[var(--brand)] text-[var(--text-primary)]'
+                        : 'bg-[var(--bg-secondary)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-muted)]'
                     }`}
                   >
                     {sector.label}
@@ -626,7 +626,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                   }}
                   className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                     formData.level === opt.id
-                      ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                      ? 'border-[var(--brand)] bg-[var(--brand)]/10 shadow-lg shadow-[var(--brand)]/20'
                       : 'border-[var(--border)]'
                   }`}
                 >
@@ -663,7 +663,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                   }}
                   className={`text-right p-4 rounded-2xl border-2 transition-all bg-[var(--bg-card)]/60 hover:bg-[var(--bg-secondary)]/70 ${
                     formData.hearAboutUs === option
-                      ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20'
+                      ? 'border-[var(--brand)] bg-[var(--brand)]/10 shadow-lg shadow-[var(--brand)]/20'
                       : 'border-[var(--border)]'
                   }`}
                 >
@@ -724,7 +724,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
       <div className="w-full max-w-xl">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
-            <TrendingUp className="text-violet-500 w-6 h-6" />
+            <TrendingUp className="text-[var(--brand)] w-6 h-6" />
             <span className="font-bold text-lg">EGX Pro</span>
           </div>
         </div>
@@ -735,7 +735,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
             <div
               key={step.id}
               className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-                index <= currentStep ? 'bg-violet-500' : 'bg-[var(--bg-secondary)]'
+                index <= currentStep ? 'bg-[var(--brand)]' : 'bg-[var(--bg-secondary)]'
               }`}
             />
           ))}
@@ -750,10 +750,10 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
         >
           <div className="flex-1">
             <div className="flex justify-center mb-6">
-              <div className="p-4 bg-violet-500/10 rounded-2xl">
+              <div className="p-4 bg-[var(--brand)]/10 rounded-2xl">
                 {(() => {
                   const Icon = steps[currentStep].icon;
-                  return <Icon className="w-8 h-8 text-violet-500" />;
+                  return <Icon className="w-8 h-8 text-[var(--brand)]" />;
                 })()}
               </div>
             </div>

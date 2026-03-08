@@ -29,6 +29,7 @@ import { getStockName, getStockInfo } from '../lib/egxStocks';
 import { getSector, isShariaCompliant } from '../lib/egxIndicesSectors';
 import { useAuthStore } from '../store/authStore';
 import { Skeleton } from './ui/Skeleton';
+import { Button } from './ui/Button';
 import { Stock, AnalysisResult } from '../types';
 
 interface NewsItem {
@@ -258,22 +259,22 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
   return (
     <div className="space-y-0 pb-20" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Fixed Header */}
-      <div className="sticky top-0 z-10 bg-slate-50 dark:bg-[var(--bg-card)] border-b border-slate-200 dark:border-slate-700 px-4 py-4 -mx-4 mb-6">
+      <div className="sticky top-0 z-10 bg-[var(--bg-secondary)] border-b border-[var(--border)] px-4 py-4 -mx-4 mb-6">
         <div className="flex items-center justify-between gap-2 mb-2">
         <button 
             type="button"
           onClick={onBack}
-            className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+            className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
         >
           <ChevronLeft className={`w-5 h-5 ${isRTL ? 'rotate-180' : ''}`} />
             {t('stockDetail.back')}
           </button>
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-900 dark:text-slate-100">{stock.ticker}</span>
+            <span className="font-bold text-[var(--text-primary)]">{stock.ticker}</span>
             <button
               type="button"
               onClick={toggleWatchlist}
-              className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg ${watchlist.includes(stock.ticker) ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'text-[var(--text-muted)] hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+              className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg ${watchlist.includes(stock.ticker) ? 'bg-[var(--warning-bg)] text-[var(--warning)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'}`}
             >
               {watchlist.includes(stock.ticker) ? <Star className="w-3.5 h-3.5 fill-amber-500" /> : <Plus className="w-3.5 h-3.5" />}
               {watchlist.includes(stock.ticker) ? t('stockDetail.watchlistRemove') : t('stockDetail.watchlistAdd')}
@@ -281,22 +282,22 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{getStockName(stock.ticker, lang)}</h1>
+          <h1 className="text-xl font-bold text-[var(--text-primary)]">{getStockName(stock.ticker, lang)}</h1>
           {isSharia && (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--success-bg)] text-[var(--success)]">
               {t('stockDetail.shariaBadge')}
             </span>
                 )}
               </div>
         <div className="flex items-center gap-3 mt-2">
-          <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{formatNum(price)} ج.م</span>
-          <span className={`text-sm font-semibold flex items-center gap-0.5 ${(stock.changePercent ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+          <span className="text-2xl font-bold text-[var(--text-primary)]">{formatNum(price)} ج.م</span>
+          <span className={`text-sm font-semibold flex items-center gap-0.5 ${(stock.changePercent ?? 0) >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
             {(stock.changePercent ?? 0) >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
             {(stock.changePercent ?? 0) >= 0 ? '+' : ''}{(stock.changePercent ?? 0).toFixed(2)}% {(stock.change ?? 0) >= 0 ? '+' : ''}{formatNum(stock.change)} ج
           </span>
                 </div>
         {/* Price status: Live / delayed 10 min / market closed / pre-market */}
-        <div className="flex items-center gap-2 mt-1 text-xs text-[var(--text-muted)] dark:text-slate-400 flex-wrap">
+        <div className="flex items-center gap-2 mt-1 text-xs text-[var(--text-muted)]  flex-wrap">
           {egxStatus?.status === 'closed' && (
             <>
               <span className="inline-flex items-center gap-1">
@@ -308,7 +309,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           )}
           {egxStatus?.status === 'pre' && (
             <span className="inline-flex items-center gap-1">
-              <Circle className="w-3 h-3 text-amber-500 fill-amber-500" aria-hidden />
+              <Circle className="w-3 h-3 text-[var(--warning)] fill-[var(--warning)]" aria-hidden />
               {t('delay.preSession')}
             </span>
           )}
@@ -316,7 +317,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             <>
               {priceDetail?.isDelayed ? (
                 <>
-                  <span className="inline-flex items-center gap-1 text-[var(--text-muted)] dark:text-slate-400">
+                  <span className="inline-flex items-center gap-1 text-[var(--text-muted)] ">
                     <Timer className="w-3 h-3" aria-hidden />
                     {t('delay.delayedBadge')}
                   </span>
@@ -326,7 +327,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 </>
               ) : (
                 <>
-                  <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                  <span className="inline-flex items-center gap-1 text-[var(--success)]">
                     <Circle className="w-3 h-3 fill-emerald-500" aria-hidden />
                     {t('delay.liveBadge')}
                   </span>
@@ -341,7 +342,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             </div>
             
         {showShariaBanner && (
-          <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 dark:text-amber-200 text-sm">
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-[var(--warning)]/30 bg-[var(--warning-bg)] px-3 py-2 text-[var(--warning)] text-sm">
             <span>{t('stockDetail.shariaWarning')}</span>
             <button type="button" onClick={() => setShariaDismissed(true)} className="font-medium underline">
               {t('stockDetail.shariaIgnore')}
@@ -351,13 +352,13 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700 mb-6 overflow-x-auto">
+      <div className="flex gap-1 border-b border-[var(--border)] mb-6 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? 'border-violet-600 text-violet-600 dark:text-violet-400' : 'border-transparent text-[var(--text-muted)] dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
+            className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? 'border-[var(--brand)] text-[var(--brand)]' : 'border-transparent text-[var(--text-muted)]  hover:text-[var(--text-secondary)]'}`}
           >
             {t(tab.labelKey)}
           </button>
@@ -375,20 +376,20 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                   key={r.id}
                   type="button"
                   onClick={() => setChartRange(r.id)}
-                  className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium ${chartRange === r.id ? 'bg-violet-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}
+                  className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium ${chartRange === r.id ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]'}`}
                 >
                   {t(r.labelKey)}
                 </button>
               ))}
               </div>
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 overflow-hidden" style={{ height: 220 }}>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden" style={{ height: 220 }}>
               <StockPriceChart data={history} height={220} lineColor="#8b5cf6" />
             </div>
           </section>
 
           {/* Today stats 2x3 */}
           <section>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">{t('stockDetail.todayStats')}</h3>
+            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.todayStats')}</h3>
             <div className="grid grid-cols-2 gap-3">
               {[
                 [t('stockDetail.open'), formatNum(open)],
@@ -398,9 +399,9 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 [t('stockDetail.volume'), formatBig(volume)],
                 [t('stockDetail.turnover'), volume && price ? formatBig(volume * price) + ' EGP' : '—'],
               ].map(([label, val], i) => (
-                <div key={i} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-3">
-                  <p className="text-xs text-[var(--text-muted)] dark:text-slate-400">{label}</p>
-                  <p className="font-semibold text-slate-900 dark:text-slate-100">{val}</p>
+                <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
+                  <p className="text-xs text-[var(--text-muted)] ">{label}</p>
+                  <p className="font-semibold text-[var(--text-primary)]">{val}</p>
                 </div>
               ))}
                     </div>
@@ -409,35 +410,35 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           {/* Extended stats + info modal */}
           <section>
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">{t('stockDetail.extendedStats')}</h3>
-              <button type="button" onClick={() => setStatsInfoOpen(true)} className="p-1 rounded text-[var(--text-muted)] hover:bg-slate-200 dark:hover:bg-slate-700" aria-label="Info">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('stockDetail.extendedStats')}</h3>
+              <button type="button" onClick={() => setStatsInfoOpen(true)} className="p-1 rounded text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]" aria-label="Info">
                 <Info className="w-4 h-4" />
               </button>
                     </div>
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.high52w')}</span><span>{formatNum(high52w)} ج</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.low52w')}</span><span>{formatNum(low52w)} ج</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.marketCap')}</span><span>{formatBig(stock.marketCap)}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.dividendYield')}</span><span>{(financials as { dividendYield?: number })?.dividendYield != null ? `${((financials as { dividendYield?: number }).dividendYield * 100).toFixed(2)}%` : '—'}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.eps')}</span><span>{formatNum((financials as { eps?: number })?.eps)}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.pe')}</span><span>{(financials as { pe?: number })?.pe != null ? `${Number((financials as { pe?: number }).pe).toFixed(1)}x` : '—'}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.avgDailyVolume')}</span><span>{formatBig(volume)} ج</span></div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.high52w')}</span><span>{formatNum(high52w)} ج</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.low52w')}</span><span>{formatNum(low52w)} ج</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.marketCap')}</span><span>{formatBig(stock.marketCap)}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.dividendYield')}</span><span>{(financials as { dividendYield?: number })?.dividendYield != null ? `${((financials as { dividendYield?: number }).dividendYield * 100).toFixed(2)}%` : '—'}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.eps')}</span><span>{formatNum((financials as { eps?: number })?.eps)}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.pe')}</span><span>{(financials as { pe?: number })?.pe != null ? `${Number((financials as { pe?: number }).pe).toFixed(1)}x` : '—'}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.avgDailyVolume')}</span><span>{formatBig(volume)} ج</span></div>
                   </div>
           </section>
 
           {/* Order depth — Pro for full data */}
           <section className="relative">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">{t('stockDetail.orderDepth')} {!isPro && <Lock className="w-4 h-4 text-slate-400" />}</h3>
+            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">{t('stockDetail.orderDepth')} {!isPro && <Lock className="w-4 h-4 text-[var(--text-muted)]" />}</h3>
             {orderDepthAvailable ? (
-              <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-[var(--text-muted)] dark:text-slate-400 text-sm">—</div>
+              <div className="rounded-xl border border-[var(--border)] p-4 text-[var(--text-muted)]  text-sm">—</div>
             ) : (
-              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 text-[var(--text-muted)] dark:text-slate-400 text-sm">{t('stockDetail.orderDepthUnavailable')}</div>
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4 text-[var(--text-muted)]  text-sm">{t('stockDetail.orderDepthUnavailable')}</div>
             )}
             {!isPro && (
               <div className="absolute inset-0 top-8 rounded-xl bg-[var(--bg-card)]/70 dark:bg-[var(--bg-primary)]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
-                <Crown className="w-8 h-8 text-violet-400" />
-                <p className="text-sm font-medium text-slate-200">{t('plan.availableInPro')}</p>
-                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-violet-400 hover:text-violet-300 font-medium">{t('plan.subscribeToAccess')}</button>
+                <Crown className="w-8 h-8 text-[var(--brand)]" />
+                <p className="text-sm font-medium text-[var(--text-primary)]">{t('plan.availableInPro')}</p>
+                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-[var(--brand)] hover:text-[var(--brand-hover)] font-medium">{t('plan.subscribeToAccess')}</button>
                 </div>
             )}
           </section>
@@ -445,11 +446,11 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           {/* Support & Resistance */}
           {pivots && (
             <section>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">{t('stockDetail.supportResistance')}</h3>
-              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 space-y-2 text-sm">
-                <p className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.resistance')}: R3: {formatNum(pivots.r3)} &nbsp; R2: {formatNum(pivots.r2)} &nbsp; R1: {formatNum(pivots.r1)}</p>
-                <p className="font-medium text-slate-900 dark:text-slate-100 border-t border-b border-slate-200 dark:border-slate-700 py-2 my-2">{t('stockDetail.currentPrice')}: {formatNum(price)}</p>
-                <p className="text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.support')}: S1: {formatNum(pivots.s1)} &nbsp; S2: {formatNum(pivots.s2)} &nbsp; S3: {formatNum(pivots.s3)}</p>
+              <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.supportResistance')}</h3>
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-2 text-sm">
+                <p className="text-[var(--text-muted)] ">{t('stockDetail.resistance')}: R3: {formatNum(pivots.r3)} &nbsp; R2: {formatNum(pivots.r2)} &nbsp; R1: {formatNum(pivots.r1)}</p>
+                <p className="font-medium text-[var(--text-primary)] border-t border-b border-[var(--border)] py-2 my-2">{t('stockDetail.currentPrice')}: {formatNum(price)}</p>
+                <p className="text-[var(--text-muted)] ">{t('stockDetail.support')}: S1: {formatNum(pivots.s1)} &nbsp; S2: {formatNum(pivots.s2)} &nbsp; S3: {formatNum(pivots.s3)}</p>
               </div>
             </section>
           )}
@@ -457,8 +458,8 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           {/* Fibonacci */}
           {fibLevels && (
             <section>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">{t('stockDetail.fibonacci')}</h3>
-              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 space-y-1 text-sm font-mono">
+              <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.fibonacci')}</h3>
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-1 text-sm font-mono">
                 <p>100%: {formatNum(fibLevels.p100)}</p>
                 <p>78.6%: {formatNum(fibLevels.p786)}</p>
                 <p>61.8%: {formatNum(fibLevels.p618)}</p>
@@ -472,19 +473,19 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
 
           {/* About company */}
           <section>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">{t('stockDetail.aboutCompany')}</h3>
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
-              <p className="font-medium text-slate-900 dark:text-slate-100">{getStockName(stock.ticker, lang)}</p>
-              <p className="text-sm text-[var(--text-muted)] dark:text-slate-400 mt-1">{info?.nameEn}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">{stock.description || t('stockDetail.defaultDescription')}</p>
-              <p className="text-xs text-[var(--text-muted)] dark:text-slate-400 mt-2">{t('stockDetail.listedIn')}: EGX30 | {sector}</p>
+            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.aboutCompany')}</h3>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
+              <p className="font-medium text-[var(--text-primary)]">{getStockName(stock.ticker, lang)}</p>
+              <p className="text-sm text-[var(--text-muted)]  mt-1">{info?.nameEn}</p>
+              <p className="text-sm text-[var(--text-secondary)] mt-2">{stock.description || t('stockDetail.defaultDescription')}</p>
+              <p className="text-xs text-[var(--text-muted)]  mt-2">{t('stockDetail.listedIn')}: EGX30 | {sector}</p>
             </div>
           </section>
 
           {/* Similar sector - placeholder scroll */}
           <section>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">{t('stockDetail.similarSector')}</h3>
-            <p className="text-sm text-[var(--text-muted)] dark:text-slate-400">{sector || '—'}</p>
+            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.similarSector')}</h3>
+            <p className="text-sm text-[var(--text-muted)] ">{sector || '—'}</p>
           </section>
         </div>
       )}
@@ -493,33 +494,33 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       {activeTab === 'stats' && (
         <div className="space-y-6">
           <section className="relative">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-2">{t('stockDetail.investorCategories')} {!isPro && <Lock className="w-4 h-4 text-slate-400" />}</h3>
-            <p className="text-xs text-[var(--text-muted)] dark:text-slate-400 mb-3">{t('stockDetail.investorCategoriesDesc')}</p>
+            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-1 flex items-center gap-2">{t('stockDetail.investorCategories')} {!isPro && <Lock className="w-4 h-4 text-[var(--text-muted)]" />}</h3>
+            <p className="text-xs text-[var(--text-muted)]  mb-3">{t('stockDetail.investorCategoriesDesc')}</p>
             {investorCategoriesAvailable ? (
-              <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-sm">—</div>
+              <div className="rounded-xl border border-[var(--border)] p-4 text-sm">—</div>
             ) : (
-              <p className="text-sm text-[var(--text-muted)] dark:text-slate-400 rounded-xl border border-slate-200 dark:border-slate-700 p-4">{t('stockDetail.investorCategoriesUnavailable')}</p>
+              <p className="text-sm text-[var(--text-muted)]  rounded-xl border border-[var(--border)] p-4">{t('stockDetail.investorCategoriesUnavailable')}</p>
             )}
             {!isPro && (
               <div className="absolute inset-0 top-14 rounded-xl bg-[var(--bg-card)]/70 dark:bg-[var(--bg-primary)]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
-                <Crown className="w-8 h-8 text-violet-400" />
-                <p className="text-sm font-medium text-slate-200">{t('plan.availableInPro')}</p>
-                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-violet-400 hover:text-violet-300 font-medium">{t('plan.subscribeToAccess')}</button>
+                <Crown className="w-8 h-8 text-[var(--brand)]" />
+                <p className="text-sm font-medium text-[var(--text-primary)]">{t('plan.availableInPro')}</p>
+                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-[var(--brand)] hover:text-[var(--brand-hover)] font-medium">{t('plan.subscribeToAccess')}</button>
                   </div>
             )}
           </section>
           <section className="relative">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">{t('stockDetail.tradingStats')} {!isPro && <Lock className="w-4 h-4 text-slate-400" />}</h3>
+            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">{t('stockDetail.tradingStats')} {!isPro && <Lock className="w-4 h-4 text-[var(--text-muted)]" />}</h3>
             {tradingStatsAvailable ? (
-              <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-sm">—</div>
+              <div className="rounded-xl border border-[var(--border)] p-4 text-sm">—</div>
             ) : (
-              <p className="text-sm text-[var(--text-muted)] dark:text-slate-400 rounded-xl border border-slate-200 dark:border-slate-700 p-4">{t('stockDetail.tradingStatsUnavailable')}</p>
+              <p className="text-sm text-[var(--text-muted)]  rounded-xl border border-[var(--border)] p-4">{t('stockDetail.tradingStatsUnavailable')}</p>
             )}
             {!isPro && (
               <div className="absolute inset-0 top-12 rounded-xl bg-[var(--bg-card)]/70 dark:bg-[var(--bg-primary)]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
-                <Crown className="w-8 h-8 text-violet-400" />
-                <p className="text-sm font-medium text-slate-200">{t('plan.availableInPro')}</p>
-                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-violet-400 hover:text-violet-300 font-medium">{t('plan.subscribeToAccess')}</button>
+                <Crown className="w-8 h-8 text-[var(--brand)]" />
+                <p className="text-sm font-medium text-[var(--text-primary)]">{t('plan.availableInPro')}</p>
+                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-[var(--brand)] hover:text-[var(--brand-hover)] font-medium">{t('plan.subscribeToAccess')}</button>
               </div>
             )}
           </section>
@@ -530,22 +531,22 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       {activeTab === 'ai' && (
         <div className="space-y-8">
           {!isPro && analysisPlan != null && Number.isFinite(analysisPlan.quota) && (
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
-              <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">{t('plan.usedAnalysisThisMonth', { used: analysisPlan.used, quota: analysisPlan.quota })}</p>
-              <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
+              <p className="text-sm text-[var(--text-secondary)] mb-2">{t('plan.usedAnalysisThisMonth', { used: analysisPlan.used, quota: analysisPlan.quota })}</p>
+              <div className="w-full h-2 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-[width] ${analysisPlan.used >= analysisPlan.quota ? 'bg-red-500' : analysisPlan.used >= 2 ? 'bg-amber-500' : 'bg-violet-500'}`}
+                  className={`h-full transition-[width] ${analysisPlan.used >= analysisPlan.quota ? 'bg-red-500' : analysisPlan.used >= 2 ? 'bg-[var(--warning)]' : 'bg-violet-500'}`}
                   style={{ width: `${Math.min((analysisPlan.used / analysisPlan.quota) * 100, 100)}%` }}
                 />
               </div>
             </div>
           )}
           {!analysis && !loadingAnalysis && !errorAnalysis && (
-            <div className="text-center py-12 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
+            <div className="text-center py-12 border border-dashed border-[var(--border)] rounded-2xl">
               <BrainCircuit className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-2">{t('stockDetail.aiAnalysis')}</h3>
-              <p className="text-[var(--text-muted)] dark:text-slate-400 mb-6 max-w-md mx-auto">{t('stockDetail.aiAnalysisDesc')}</p>
-              <button type="button" onClick={getAnalysis} className="px-6 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold flex items-center gap-2 mx-auto">
+              <p className="text-[var(--text-muted)]  mb-6 max-w-md mx-auto">{t('stockDetail.aiAnalysisDesc')}</p>
+              <button type="button" onClick={getAnalysis} className="px-6 py-3 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-[var(--text-inverse)] rounded-xl font-bold flex items-center gap-2 mx-auto">
                 <Zap className="w-4 h-4" /> {t('stockDetail.generateAnalysis')}
               </button>
             </div>
@@ -558,47 +559,47 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             </div>
           )}
           {errorAnalysis && (
-            <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-center">
-              <ShieldAlert className="w-8 h-8 text-red-500 mx-auto mb-2" />
-              <p className="text-red-500 mb-4">{errorAnalysis}</p>
-              <button type="button" onClick={getAnalysis} className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-bold flex items-center gap-2 mx-auto">
+            <div className="p-6 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-2xl text-center">
+              <ShieldAlert className="w-8 h-8 text-[var(--danger)] mx-auto mb-2" />
+              <p className="text-[var(--danger)] mb-4">{errorAnalysis}</p>
+              <Button type="button" variant="secondary" onClick={getAnalysis} className="mx-auto border-[var(--danger)] text-[var(--danger)]">
                 <RefreshCw className="w-4 h-4" /> {t('stockDetail.retry')}
-              </button>
+              </Button>
             </div>
           )}
           {analysis && !loadingAnalysis && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
-                <p className="text-slate-600 dark:text-slate-300 leading-relaxed italic">"{analysis.summary}"</p>
+              <div className="p-6 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border)]">
+                <p className="text-[var(--text-secondary)] leading-relaxed italic">"{analysis.summary}"</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-violet-500 font-bold"><BarChart3 className="w-5 h-5" /> {t('stockDetail.fundamental')}</div>
-                  <div className="text-sm text-[var(--text-muted)] dark:text-slate-400 space-y-2">
-                    <p><span className="text-slate-900 dark:text-slate-200 font-medium">Outlook:</span> {analysis.fundamental?.outlook}</p>
-                    <p><span className="text-slate-900 dark:text-slate-200 font-medium">Ratios:</span> {analysis.fundamental?.ratios}</p>
-                    <p className="text-emerald-500 font-bold">Verdict: {analysis.fundamental?.verdict}</p>
+                  <div className="flex items-center gap-2 text-[var(--brand)] font-bold"><BarChart3 className="w-5 h-5" /> {t('stockDetail.fundamental')}</div>
+                  <div className="text-sm text-[var(--text-muted)]  space-y-2">
+                    <p><span className="text-[var(--text-primary)] font-medium">Outlook:</span> {analysis.fundamental?.outlook}</p>
+                    <p><span className="text-[var(--text-primary)] font-medium">Ratios:</span> {analysis.fundamental?.ratios}</p>
+                    <p className="text-[var(--success)] font-bold">Verdict: {analysis.fundamental?.verdict}</p>
                 </div>
                 </div>
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-blue-500 font-bold"><TrendingUp className="w-5 h-5" /> {t('stockDetail.technical')}</div>
-                  <div className="text-sm text-[var(--text-muted)] dark:text-slate-400 space-y-2">
-                    <p><span className="text-slate-900 dark:text-slate-200 font-medium">Signal:</span> {analysis.technical?.signal}</p>
-                    <p><span className="text-slate-900 dark:text-slate-200 font-medium">Levels:</span> {analysis.technical?.levels}</p>
+                  <div className="flex items-center gap-2 text-[var(--brand)] font-bold"><TrendingUp className="w-5 h-5" /> {t('stockDetail.technical')}</div>
+                  <div className="text-sm text-[var(--text-muted)]  space-y-2">
+                    <p><span className="text-[var(--text-primary)] font-medium">Signal:</span> {analysis.technical?.signal}</p>
+                    <p><span className="text-[var(--text-primary)] font-medium">Levels:</span> {analysis.technical?.levels}</p>
                   </div>
                 </div>
               </div>
-              <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
-                <p className="text-slate-600 dark:text-slate-300 mb-4">{analysis.sentiment}</p>
-                <div className={`text-2xl font-black ${analysis.verdict?.includes('Buy') ? 'text-emerald-500' : analysis.verdict?.includes('Sell') ? 'text-red-500' : 'text-amber-500'}`}>{analysis.verdict}</div>
+              <div className="p-6 bg-[var(--bg-secondary)] rounded-2xl">
+                <p className="text-[var(--text-secondary)] mb-4">{analysis.sentiment}</p>
+                <div className={`text-2xl font-black ${analysis.verdict?.includes('Buy') ? 'text-[var(--success)]' : analysis.verdict?.includes('Sell') ? 'text-[var(--danger)]' : 'text-[var(--warning)]'}`}>{analysis.verdict}</div>
                 <div className="flex justify-between mt-4 text-sm">
-                  <span className="text-red-500 font-bold">{analysis.priceTarget?.low}</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">{analysis.priceTarget?.base}</span>
-                  <span className="text-emerald-500 font-bold">{analysis.priceTarget?.high}</span>
+                  <span className="text-[var(--danger)] font-bold">{analysis.priceTarget?.low}</span>
+                  <span className="font-bold text-[var(--text-primary)]">{analysis.priceTarget?.base}</span>
+                  <span className="text-[var(--success)] font-bold">{analysis.priceTarget?.high}</span>
                 </div>
               </div>
-              <div className="p-6 bg-red-500/5 border border-red-500/10 rounded-2xl">
-                <div className="flex items-center gap-2 text-red-400 font-bold mb-2"><ShieldAlert className="w-4 h-4" /> {t('stockDetail.disclaimer')}</div>
+              <div className="p-6 bg-[var(--danger-bg)] border border-[var(--danger)]/10 rounded-2xl">
+                <div className="flex items-center gap-2 text-[var(--danger)] font-bold mb-2"><ShieldAlert className="w-4 h-4" /> {t('stockDetail.disclaimer')}</div>
                 <p className="text-xs text-[var(--text-muted)]">{analysis.disclaimer}</p>
               </div>
             </motion.div>
@@ -610,16 +611,16 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       {activeTab === 'news' && (
         <div className="space-y-4">
           {news.length === 0 ? (
-            <p className="text-center py-12 text-[var(--text-muted)] dark:text-slate-400">{t('stockDetail.noNews')}</p>
+            <p className="text-center py-12 text-[var(--text-muted)] ">{t('stockDetail.noNews')}</p>
           ) : (
             news.map((item, idx) => (
-              <a key={idx} href={item.url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 hover:border-violet-400 dark:hover:border-violet-500/50 transition-colors">
-                <div className="flex items-center justify-between text-xs text-[var(--text-muted)] dark:text-slate-400 mb-2">
+              <a key={idx} href={item.url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 hover:border-[var(--brand)] transition-colors">
+                <div className="flex items-center justify-between text-xs text-[var(--text-muted)]  mb-2">
                   <span>{item.source}</span>
                   <span>{new Date(item.publishedAt).toLocaleString(i18n.language)}</span>
             </div>
-                <h4 className="font-medium text-slate-900 dark:text-slate-100 mb-2">{item.title}</h4>
-                <span className="text-sm text-violet-600 dark:text-violet-400 font-medium inline-flex items-center gap-1">{t('stockDetail.readMore')} <ExternalLink className="w-4 h-4" /></span>
+                <h4 className="font-medium text-[var(--text-primary)] mb-2">{item.title}</h4>
+                <span className="text-sm text-[var(--brand)] font-medium inline-flex items-center gap-1">{t('stockDetail.readMore')} <ExternalLink className="w-4 h-4" /></span>
               </a>
             ))
           )}
@@ -629,15 +630,15 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       {/* Analysis limit reached — Pro upsell modal */}
       {showAnalysisLimitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowAnalysisLimitModal(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
-            <BrainCircuit className="w-12 h-12 text-violet-500 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">{t('plan.analysisLimitTitle')}</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">{t('plan.analysisLimitBody')}</p>
+          <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+            <BrainCircuit className="w-12 h-12 text-[var(--brand)] mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">{t('plan.analysisLimitTitle')}</h3>
+            <p className="text-sm text-[var(--text-secondary)] mb-6">{t('plan.analysisLimitBody')}</p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              <button type="button" onClick={() => { setShowAnalysisLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm">
+              <button type="button" onClick={() => { setShowAnalysisLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-[var(--text-inverse)] rounded-xl font-bold text-sm">
                 {t('plan.subscribeNow')}
               </button>
-              <button type="button" onClick={() => setShowAnalysisLimitModal(false)} className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium text-sm hover:bg-slate-100 dark:hover:bg-slate-700">
+              <button type="button" onClick={() => setShowAnalysisLimitModal(false)} className="px-4 py-2.5 border border-[var(--border)] text-[var(--text-secondary)] rounded-xl font-medium text-sm hover:bg-[var(--bg-card-hover)]">
                 {t('plan.waitNextMonth')}
               </button>
             </div>
@@ -647,11 +648,11 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
 
       {showWatchlistLimitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowWatchlistLimitModal(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">{t('plan.watchlistLimitMessage')}</p>
+          <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-[var(--text-secondary)] mb-6">{t('plan.watchlistLimitMessage')}</p>
             <div className="flex gap-2 justify-center">
-              <button type="button" onClick={() => { setShowWatchlistLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm">{t('plan.subscribeNow')}</button>
-              <button type="button" onClick={() => setShowWatchlistLimitModal(false)} className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl font-medium text-sm">{t('plan.cancel')}</button>
+              <button type="button" onClick={() => { setShowWatchlistLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-[var(--text-inverse)] rounded-xl font-bold text-sm">{t('plan.subscribeNow')}</button>
+              <button type="button" onClick={() => setShowWatchlistLimitModal(false)} className="px-4 py-2.5 border border-[var(--border)] rounded-xl font-medium text-sm">{t('plan.cancel')}</button>
             </div>
           </div>
         </div>
@@ -660,12 +661,12 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       {/* Stats glossary modal */}
       {statsInfoOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setStatsInfoOpen(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{t('stockDetail.statsInfo')}</h3>
-              <button type="button" onClick={() => setStatsInfoOpen(false)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700" aria-label={t('common.close')}><X className="w-5 h-5" aria-hidden="true" /></button>
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">{t('stockDetail.statsInfo')}</h3>
+              <button type="button" onClick={() => setStatsInfoOpen(false)} className="p-1 rounded hover:bg-[var(--bg-card-hover)]" aria-label={t('common.close')}><X className="w-5 h-5" aria-hidden="true" /></button>
             </div>
-            <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-2">
+            <ul className="text-sm text-[var(--text-secondary)] space-y-2">
               <li><strong>{t('stockDetail.open')}:</strong> {t('stockDetail.openDesc')}</li>
               <li><strong>P/E:</strong> {t('stockDetail.peDesc')}</li>
               <li><strong>EPS:</strong> {t('stockDetail.epsDesc')}</li>

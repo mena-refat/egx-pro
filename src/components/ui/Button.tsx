@@ -50,7 +50,7 @@ export function Button({
   children,
 }: ButtonProps) {
   const base =
-    'inline-flex items-center justify-center font-medium rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] disabled:opacity-50 disabled:pointer-events-none';
+    'inline-flex items-center justify-center font-medium rounded-xl border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--brand)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] disabled:opacity-50 disabled:pointer-events-none btn-press';
   const variantClass = variantClasses[variant];
   const sizeClass = sizeClasses[size];
 

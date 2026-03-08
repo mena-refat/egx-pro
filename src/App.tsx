@@ -87,7 +87,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row">
       <Sidebar activeRoute={pathname} onNavigate={navigate} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto">
         <Header
           user={user ?? null}
           notifications={notifications}

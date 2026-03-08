@@ -18,6 +18,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '../components/ui/Skeleton';
 import EmptyState from '../components/shared/EmptyState';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 
 export interface GoalRecord {
   id: string;
@@ -55,10 +57,10 @@ function formatWithCommas(value: string): string {
 }
 
 function getProgressColor(percent: number): string {
-  if (percent >= 100) return 'bg-emerald-500';
-  if (percent >= 61) return 'bg-blue-500';
-  if (percent >= 31) return 'bg-amber-500';
-  return 'bg-rose-500';
+  if (percent >= 100) return 'bg-[var(--success)]';
+  if (percent >= 61) return 'bg-[var(--brand)]';
+  if (percent >= 31) return 'bg-[var(--warning)]';
+  return 'bg-[var(--danger)]';
 }
 
 function formatTimeLeft(deadline: string | null, t: (key: string, opts?: object) => string, locale: string): string {
@@ -140,9 +142,9 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
     <div className="space-y-6">
       {/* Portfolio value - always show when we have a value so goals stay in sync */}
       {currentWealth > 0 && (
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3">
-          <p className="text-sm text-slate-400">
-            {t('goals.portfolioAvailable')}: <span className="font-semibold text-slate-200">{formatMoney(currentWealth, i18n.language)} ج.م</span>
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
+          <p className="text-body text-[var(--text-secondary)]">
+            {t('goals.portfolioAvailable')}: <span className="font-semibold text-[var(--text-primary)]">{formatMoney(currentWealth, i18n.language)} ج.م</span>
           </p>
         </div>
       )}
@@ -151,19 +153,15 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       {goals.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-slate-100">{t('goals.title')}</h2>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <h2 className="text-title font-bold text-[var(--text-primary)]">{t('goals.title')}</h2>
+            <p className="text-body text-[var(--text-muted)] mt-0.5">
               {activeGoals.length} {t('goals.activeCount')}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setAddModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-medium transition-colors"
-          >
+          <Button type="button" onClick={() => setAddModalOpen(true)} className="flex items-center gap-2" variant="primary">
             <Plus className="w-4 h-4" />
             {t('goals.addNew')}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -232,37 +230,34 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       {/* Add goal button when we have goals but no header button visible on mobile */}
       {activeGoals.length > 0 && (
         <div className="flex justify-center lg:hidden">
-          <button
-            type="button"
-            onClick={() => setAddModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-medium"
-          >
+          <Button type="button" onClick={() => setAddModalOpen(true)} variant="primary" className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             {t('goals.addNew')}
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Completed section */}
       {completedGoals.length > 0 && (
-        <div className="border border-slate-700 rounded-xl overflow-hidden bg-slate-800/30">
-          <button
+        <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--bg-secondary)]">
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => setCompletedOpen(!completedOpen)}
-            className="w-full flex items-center justify-between px-4 py-3 text-slate-300 hover:bg-slate-800/50 transition-colors"
+            className="w-full flex items-center justify-between px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] transition-colors"
           >
             <span className="font-medium">
               {t('goals.completedSection')} ({completedGoals.length})
             </span>
             {completedOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-          </button>
+          </Button>
           <AnimatePresence>
             {completedOpen && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="border-t border-slate-700"
+                className="border-t border-[var(--border)]"
               >
                 <div className="p-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {completedGoals.map((goal) => (
@@ -288,7 +283,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       )}
 
       {error && (
-        <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3">{error}</p>
+        <p className="text-body text-[var(--danger)] bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-lg p-3">{error}</p>
       )}
 
       {/* Add goal modal */}
@@ -377,13 +372,13 @@ function GoalCard({
     <div
       className={`rounded-xl border p-4 ${
         completed
-          ? 'border-slate-600 bg-slate-800/50 text-slate-400'
-          : 'border-slate-700 bg-slate-800/50 text-slate-200'
+          ? 'border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-muted)]'
+          : 'border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-primary)]'
       }`}
     >
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
-          <CategoryIcon className="w-5 h-5 text-violet-400 shrink-0" />
+          <CategoryIcon className="w-5 h-5 text-[var(--brand)] shrink-0" />
           <span className="font-semibold truncate">{goal.title}</span>
         </div>
         {!completed && (
@@ -391,7 +386,7 @@ function GoalCard({
             <button
               type="button"
               onClick={onMenuToggle}
-              className="p-1 rounded-lg hover:bg-slate-700 text-slate-400"
+              className="p-1 rounded-lg hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)]"
               aria-label="Menu"
             >
               <MoreVertical className="w-5 h-5" />
@@ -399,32 +394,32 @@ function GoalCard({
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-10" aria-hidden onClick={onMenuToggle} />
-                <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-slate-700 bg-slate-900 shadow-xl z-20 py-1">
+                <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] shadow-xl z-20 py-1">
                   <button
                     type="button"
                     onClick={onUpdateAmount}
-                    className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
+                    className="w-full text-left px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]"
                   >
                     {t('goals.menuUpdateAmount')}
                   </button>
                   <button
                     type="button"
                     onClick={onEdit}
-                    className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
+                    className="w-full text-left px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]"
                   >
                     {t('goals.menuEdit')}
                   </button>
                   <button
                     type="button"
                     onClick={onMarkComplete}
-                    className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
+                    className="w-full text-left px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]"
                   >
                     {t('goals.menuMarkComplete')}
                   </button>
                   <button
                     type="button"
                     onClick={onDelete}
-                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-slate-800"
+                    className="w-full text-left px-3 py-2 text-sm text-[var(--danger)] hover:bg-[var(--bg-card-hover)]"
                   >
                     {t('goals.menuDelete')}
                   </button>
@@ -434,7 +429,7 @@ function GoalCard({
           </div>
         )}
         {completed && (
-          <span className="flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/20 px-2 py-1 rounded-full">
+          <span className="flex items-center gap-1 text-label font-medium text-[var(--success)] bg-[var(--success-bg)] px-2 py-1 rounded-full">
             <Check className="w-3 h-3" />
             {t('goals.completedBadge')}
           </span>
@@ -443,11 +438,11 @@ function GoalCard({
 
       <div className="space-y-1 text-sm">
         <div className="flex justify-between">
-          <span className="text-slate-500">{t('goals.targetAmount')}:</span>
+          <span className="text-[var(--text-muted)]">{t('goals.targetAmount')}:</span>
           <span>{formatMoney(goal.targetAmount, locale)} {t('goals.currency')}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">{t('goals.saved')}:</span>
+          <span className="text-[var(--text-muted)]">{t('goals.saved')}:</span>
           <span>{formatMoney(goal.currentAmount, locale)} {t('goals.currency')}</span>
         </div>
       </div>
@@ -457,15 +452,15 @@ function GoalCard({
           <span />
           <span className="font-medium">{percent.toFixed(0)}%</span>
         </div>
-        <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+        <div className="w-full h-2 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
           <div
-            className={`h-full transition-all duration-500 ${getProgressColor(percent)}`}
-            style={{ width: `${Math.min(100, percent)}%` }}
+            className={`h-full w-progress transition-all duration-500 ${getProgressColor(percent)}`}
+            style={{ ['--progress-width']: `${Math.min(100, percent)}%` } as React.CSSProperties}
           />
         </div>
       </div>
 
-      <div className="mt-3 space-y-1 text-xs text-slate-500">
+      <div className="mt-3 space-y-1 text-label text-[var(--text-muted)]">
         <div className="flex justify-between">
           <span>{t('goals.remaining')}:</span>
           <span>{formatMoney(remaining, locale)} {t('goals.currency')}</span>
@@ -619,104 +614,83 @@ function AddEditGoalModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
-      <div className="relative w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 shadow-xl p-6">
+      <div className="relative w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] shadow-xl p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-slate-100">
+          <h3 className="text-header font-bold text-[var(--text-primary)]">
             {mode === 'add' ? t('goals.newGoalTitle') : t('goals.editGoalTitle')}
           </h3>
-          <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-slate-800 text-slate-400">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} className="p-1 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]">
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label={`${t('goals.name')} *`}
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={t('goals.namePlaceholder')}
+          />
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">{t('goals.name')} *</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('goals.namePlaceholder')}
-              className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-violet-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">{t('goals.category')} *</label>
+            <label className="block text-body font-medium text-[var(--text-secondary)] mb-2">{t('goals.category')} *</label>
             <div className="grid grid-cols-3 gap-2">
               {CATEGORIES.map((c) => {
                 const Icon = c.icon;
                 return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setCategory(c.id)}
-                    className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-sm transition-colors ${
-                      category === c.id
-                        ? 'border-violet-500 bg-violet-500/20 text-violet-300'
-                        : 'border-slate-600 bg-slate-800 text-slate-400 hover:border-slate-500'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {categoryLabel(c.id)}
-                  </button>
+                  <React.Fragment key={c.id}>
+                    <Button
+                      type="button"
+                      variant={category === c.id ? 'primary' : 'secondary'}
+                      size="sm"
+                      onClick={() => setCategory(c.id)}
+                      className="flex flex-col items-center gap-1 p-2 rounded-lg text-sm"
+                    >
+                      <Icon className="w-5 h-5" />
+                      {categoryLabel(c.id)}
+                    </Button>
+                  </React.Fragment>
                 );
               })}
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">{t('goals.targetAmountLabel')} *</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={formatWithCommas(targetAmount)}
-              onChange={(e) => setTargetAmount(e.target.value.replace(/\D/g, ''))}
-              className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-100 focus:ring-2 focus:ring-violet-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">{t('goals.currentAmountLabel')}</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={formatWithCommas(currentAmount)}
-              onChange={(e) => setCurrentAmount(e.target.value.replace(/\D/g, ''))}
-              className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-100 focus:ring-2 focus:ring-violet-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">{t('goals.deadlineLabel')}</label>
-            <input
-              type="date"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-100 focus:ring-2 focus:ring-violet-500"
-            />
-          </div>
-          {err && <p className="text-sm text-red-400">{err}</p>}
+          <Input
+            label={`${t('goals.targetAmountLabel')} *`}
+            type="text"
+            inputMode="numeric"
+            value={formatWithCommas(targetAmount)}
+            onChange={(e) => setTargetAmount(e.target.value.replace(/\D/g, ''))}
+          />
+          <Input
+            label={t('goals.currentAmountLabel')}
+            type="text"
+            inputMode="numeric"
+            value={formatWithCommas(currentAmount)}
+            onChange={(e) => setCurrentAmount(e.target.value.replace(/\D/g, ''))}
+          />
+          <Input
+            label={t('goals.deadlineLabel')}
+            type="date"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+          />
+          {err && <p className="text-body text-[var(--danger)]">{err}</p>}
           <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-800"
-            >
+            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
               {t('goals.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || addButtonDisabled}
-              className="flex-1 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-medium disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" variant="primary" disabled={submitting || addButtonDisabled} className="flex-1">
               {submitting ? t('common.loading') : mode === 'add' ? t('goals.addGoal') : t('goals.save')}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
       {showGoalsLimitModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowGoalsLimitModal(false)}>
-          <div className="bg-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-6 text-center border border-slate-700" onClick={(e) => e.stopPropagation()}>
-            <p className="text-sm text-slate-300 mb-6">{t('plan.goalsLimitMessage')}</p>
+          <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-sm w-full p-6 text-center border border-[var(--border)]" onClick={(e) => e.stopPropagation()}>
+            <p className="text-body text-[var(--text-secondary)] mb-6">{t('plan.goalsLimitMessage')}</p>
             <div className="flex gap-2 justify-center">
-              <button type="button" onClick={() => { setShowGoalsLimitModal(false); onClose(); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm">{t('plan.subscribeNow')}</button>
-              <button type="button" onClick={() => setShowGoalsLimitModal(false)} className="px-4 py-2.5 border border-slate-600 rounded-xl font-medium text-sm text-slate-300">{t('plan.cancel')}</button>
+              <Button type="button" variant="primary" onClick={() => { setShowGoalsLimitModal(false); onClose(); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }}>{t('plan.subscribeNow')}</Button>
+              <Button type="button" variant="secondary" onClick={() => setShowGoalsLimitModal(false)}>{t('plan.cancel')}</Button>
             </div>
           </div>
         </div>
@@ -775,43 +749,28 @@ function UpdateAmountModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} aria-hidden />
-      <div className="relative w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 shadow-xl p-6">
+      <div className="relative w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] shadow-xl p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-100">{t('goals.updateAmountTitle')}</h3>
-          <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-slate-800 text-slate-400">
+          <h3 className="text-header font-bold text-[var(--text-primary)]">{t('goals.updateAmountTitle')}</h3>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} className="p-1 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]">
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-slate-500 mb-1">{t('goals.currentAmount')}</label>
-            <p className="text-slate-200 font-medium">{formatMoney(goal.currentAmount, locale)} {t('goals.currency')}</p>
+            <label className="block text-body text-[var(--text-muted)] mb-1">{t('goals.currentAmount')}</label>
+            <p className="text-[var(--text-primary)] font-medium">{formatMoney(goal.currentAmount, locale)} {t('goals.currency')}</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">{t('goals.newAmount')}</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={formatWithCommas(value)}
-              onChange={(e) => setValue(e.target.value.replace(/\D/g, ''))}
-              className="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-100 focus:ring-2 focus:ring-violet-500"
-            />
-          </div>
+          <Input
+            label={t('goals.newAmount')}
+            type="text"
+            inputMode="numeric"
+            value={formatWithCommas(value)}
+            onChange={(e) => setValue(e.target.value.replace(/\D/g, ''))}
+          />
           <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-800"
-            >
-              {t('goals.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-medium disabled:opacity-50"
-            >
-              {submitting ? t('common.loading') : t('goals.save')}
-            </button>
+            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">{t('goals.cancel')}</Button>
+            <Button type="submit" variant="primary" disabled={submitting} className="flex-1">{submitting ? t('common.loading') : t('goals.save')}</Button>
           </div>
         </form>
       </div>

@@ -208,7 +208,7 @@ export default function AuthPage() {
           <p className="text-[var(--text-muted)]">Egyptian Stock Market Intelligence</p>
         </div>
 
-        <motion.div layout className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-8 shadow-[var(--shadow-lg)]">
+        <motion.div layout className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-8 shadow-[var(--shadow-xl)] card-elevated">
           <div className="flex gap-4 mb-8 p-1 bg-[var(--bg-secondary)] rounded-2xl">
             <Button fullWidth variant={isLogin ? 'primary' : 'ghost'} size="md" onClick={() => { setIsLogin(true); setShowTwoFactorInput(false); setAuthError(''); reset(); }}>
               {t('auth.login')}
@@ -250,8 +250,8 @@ export default function AuthPage() {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </Button>
                 </div>
-                {authMessage && <p className={`text-sm p-3 rounded-xl border text-center ${authMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>{authMessage.text}</p>}
-                {authError && <p className="text-red-500 text-sm bg-red-500/10 p-3 rounded-xl border border-red-500/20">{authError}</p>}
+                {authMessage && <p className={`text-body p-3 rounded-xl border text-center ${authMessage.type === 'success' ? 'bg-[var(--success-bg)] text-[var(--success)] border-[var(--success)]/20' : 'bg-[var(--danger-bg)] text-[var(--danger)] border-[var(--danger)]/20'}`}>{authMessage.text}</p>}
+                {authError && <p className="text-[var(--danger)] text-body bg-[var(--danger-bg)] p-3 rounded-xl border border-[var(--danger)]/20">{authError}</p>}
                 <Button type="submit" fullWidth size="lg" disabled={isSubmitting} loading={isSubmitting} icon={isSubmitting ? undefined : (isLogin ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />)} iconPosition="left"
                   className="flex items-center justify-center gap-2">
                   {isSubmitting ? t('auth.loading') : (isLogin ? t('auth.login') : t('auth.register'))}

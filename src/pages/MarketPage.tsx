@@ -76,7 +76,7 @@ function MiniSparkline({ changePercent }: { changePercent: number }) {
   const path = ys.map((y, i) => `${i === 0 ? 'M' : 'L'} ${(i / (points - 1)) * (w - pad * 2) + pad} ${y}`).join(' ');
   return (
     <svg width={w} height={h} className="shrink-0 opacity-70" aria-hidden>
-      <path d={path} fill="none" stroke={up ? 'currentColor' : 'currentColor'} strokeWidth={1.5} className={up ? 'text-emerald-500' : 'text-red-500'} />
+      <path d={path} fill="none" stroke={up ? 'currentColor' : 'currentColor'} strokeWidth={1.5} className={up ? 'text-[var(--success)]' : 'text-[var(--danger)]'} />
     </svg>
   );
 }
@@ -242,13 +242,13 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
       {/* Top: title + subtitle (Live vs delayed) + refresh */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
             {t('market.title')}
           </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[var(--text-muted)]">
             {isPro ? (
-              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                <Circle className="w-3.5 h-3.5 fill-emerald-500" aria-hidden />
+              <span className="inline-flex items-center gap-1 text-[var(--success)]">
+                <Circle className="w-3.5 h-3.5 fill-[var(--success)]" aria-hidden />
                 {t('market.allPricesLive')}
               </span>
             ) : (
@@ -260,7 +260,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))}
-                  className="inline-flex items-center gap-0.5 text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                  className="inline-flex items-center gap-0.5 text-[var(--brand)] hover:underline font-medium"
                 >
                   {t('market.upgradeToLivePrices')}
                   <ChevronLeft className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} aria-hidden />
@@ -273,7 +273,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
           type="button"
           onClick={refreshAll}
           disabled={refreshing}
-          className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 self-start sm:self-center"
+          className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] transition-colors disabled:opacity-50 self-start sm:self-center"
           aria-label={t('market.refresh')}
         >
           <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -281,9 +281,9 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3 text-red-700 dark:text-red-400 text-sm flex items-center justify-between">
+        <div className="rounded-xl border border-[var(--danger)]/30 bg-[var(--danger-bg)] px-4 py-3 text-[var(--danger)] text-sm flex items-center justify-between">
           <span>{error}</span>
-          <button type="button" onClick={fetchOverview} className="text-red-600 dark:text-red-300 hover:underline">
+          <button type="button" onClick={fetchOverview} className="text-[var(--danger)] hover:underline">
             {t('common.retry')}
           </button>
         </div>
@@ -292,10 +292,10 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
       {/* [1] المؤشرات المصرية */}
       <section>
         <div className="flex items-center justify-between gap-4 mb-4">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+          <h2 className="text-lg font-bold text-[var(--text-primary)]">
             {t('market.egyptIndices')}
           </h2>
-          <span className="text-xs text-slate-500 dark:text-slate-400">
+          <span className="text-xs text-[var(--text-muted)]">
             {t('market.lastUpdated')}: {updatedLabel}
           </span>
         </div>
@@ -319,15 +319,15 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
               return (
                 <div
                   key={key}
-                  className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 shadow-sm"
+                  className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-sm"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    {Icon && <Icon className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
-                    <span className="font-medium text-slate-700 dark:text-slate-300">{label}</span>
+                    {Icon && <Icon className="w-4 h-4 text-[var(--text-muted)]" />}
+                    <span className="font-medium text-[var(--text-secondary)]">{label}</span>
                   </div>
                   <div className="flex items-end justify-between gap-2">
-                    <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{formatValue(val, 0)}</span>
-                    <span className={`text-xs font-semibold flex items-center gap-0.5 ${isUp ? 'text-emerald-600 dark:text-emerald-400' : isDown ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                    <span className="text-lg font-bold text-[var(--text-primary)]">{formatValue(val, 0)}</span>
+                    <span className={`text-xs font-semibold flex items-center gap-0.5 ${isUp ? 'text-[var(--success)]' : isDown ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
                       {formatChange(changeP)}
                       {isUp && <TrendingUp className="w-3.5 h-3.5" />}
                       {isDown && <TrendingDown className="w-3.5 h-3.5" />}
@@ -345,7 +345,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
 
       {/* [2] العملات والسلع — تفاصيل فقط (بدون تكرار الأرقام الكبيرة) */}
       <section>
-        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">
+        <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">
           {t('market.forexCommodities')}
         </h2>
         {loadingOverview ? (
@@ -357,42 +357,42 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
         ) : (
           <div className="space-y-4">
             {/* USD/EGP */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 shadow-sm">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-sm">
               <div className="flex items-center justify-between gap-2 mb-1">
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">$ USD / EGP</p>
-                <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  <Circle className="w-3 h-3 fill-emerald-500" aria-hidden /> {t('delay.liveBadge')}
+                <p className="text-sm font-medium text-[var(--text-secondary)]">$ USD / EGP</p>
+                <span className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--success)]">
+                  <Circle className="w-3 h-3 fill-[var(--success)]" aria-hidden /> {t('delay.liveBadge')}
                 </span>
               </div>
-              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{formatValue(usdVal, 2)} ج.م</p>
-              <p className={`text-sm font-semibold mt-1 ${(overview?.usdEgp?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.usdEgp?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+              <p className="text-xl font-bold text-[var(--text-primary)]">{formatValue(usdVal, 2)} ج.م</p>
+              <p className={`text-sm font-semibold mt-1 ${(overview?.usdEgp?.changePercent ?? 0) > 0 ? 'text-[var(--success)]' : (overview?.usdEgp?.changePercent ?? 0) < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
                 {formatChange(overview?.usdEgp?.changePercent ?? 0)}
               </p>
-              <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
+              <p className="text-sm text-[var(--text-secondary)] mt-2">
                 {t('market.buy')}: {formatValue(buyRate, 2)} &nbsp; {t('market.sell')}: {formatValue(sellRate, 2)}
               </p>
             </div>
 
             {/* Gold expandable */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 overflow-hidden shadow-sm">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden shadow-sm">
               <button
                 type="button"
                 onClick={() => setGoldExpanded(!goldExpanded)}
-                className="w-full flex items-center justify-between gap-2 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                className="w-full flex items-center justify-between gap-2 p-4 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
               >
-                <span className="font-medium text-slate-700 dark:text-slate-300">{t('market.gold24k')} <ChevronDown className={`w-4 h-4 inline-block align-middle transition-transform ${goldExpanded ? 'rotate-180' : ''}`} /></span>
+                <span className="font-medium text-[var(--text-secondary)]">{t('market.gold24k')} <ChevronDown className={`w-4 h-4 inline-block align-middle transition-transform ${goldExpanded ? 'rotate-180' : ''}`} /></span>
                 <span className="flex items-center gap-3 flex-wrap justify-end">
                   {overview?.goldMarketStatus?.isOpen === false ? (
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('delay.lastPrice')} · {t('delay.goldClosedUntil')}</span>
+                    <span className="text-xs font-medium text-[var(--text-muted)]">{t('delay.lastPrice')} · {t('delay.goldClosedUntil')}</span>
                   ) : overview?.gold?.isDelayed ? (
-                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-slate-500 dark:text-slate-400"><Timer className="w-3 h-3" aria-hidden /> {t('delay.delayedBadge')}</span>
+                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--text-muted)]"><Timer className="w-3 h-3" aria-hidden /> {t('delay.delayedBadge')}</span>
                   ) : (
-                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"><Circle className="w-3 h-3 fill-emerald-500" aria-hidden /> {t('delay.liveBadge')}</span>
+                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--success)]"><Circle className="w-3 h-3 fill-[var(--success)]" aria-hidden /> {t('delay.liveBadge')}</span>
                   )}
-                  <span className={`text-xs font-semibold ${(overview?.gold?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.gold?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                  <span className={`text-xs font-semibold ${(overview?.gold?.changePercent ?? 0) > 0 ? 'text-[var(--success)]' : (overview?.gold?.changePercent ?? 0) < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
                     {formatChange(overview?.gold?.changePercent ?? 0)}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">{t('market.perGram')}: {formatValue(gold24, 0)} ج.م</span>
+                  <span className="text-xs text-[var(--text-muted)]">{t('market.perGram')}: {formatValue(gold24, 0)} ج.م</span>
                 </span>
               </button>
               <AnimatePresence>
@@ -402,21 +402,21 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="border-t border-slate-200 dark:border-slate-700 overflow-hidden"
+                    className="border-t border-[var(--border)] overflow-hidden"
                   >
                     <ul className="p-4 space-y-2">
                       {(['24', '21', '18', '14'] as const).map((k, i) => (
                         <li key={k} className="flex items-center justify-between text-sm">
                           <span className="flex items-center gap-2">
-                            {i === 0 && <span className="text-emerald-500">✓</span>}
-                            <span className={i === 0 ? 'font-medium text-slate-700 dark:text-slate-300' : 'text-slate-600 dark:text-slate-400'}>
+                            {i === 0 && <span className="text-[var(--success)]">✓</span>}
+                            <span className={i === 0 ? 'font-medium text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}>
                               {t(`market.karat${k}` as 'market.karat24')}
                             </span>
                           </span>
-                          <span className="text-slate-700 dark:text-slate-300">
-                            {t('market.buy')}: <span className="font-medium text-slate-900 dark:text-slate-100">{formatValue(goldRatesBuy[k], 0)}</span>
+                          <span className="text-[var(--text-secondary)]">
+                            {t('market.buy')}: <span className="font-medium text-[var(--text-primary)]">{formatValue(goldRatesBuy[k], 0)}</span>
                             {' · '}
-                            {t('market.sell')}: <span className="font-medium text-slate-900 dark:text-slate-100">{formatValue(goldRatesSell[k], 0)}</span> {t('market.perGram')}
+                            {t('market.sell')}: <span className="font-medium text-[var(--text-primary)]">{formatValue(goldRatesSell[k], 0)}</span> {t('market.perGram')}
                           </span>
                         </li>
                       ))}
@@ -427,25 +427,25 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
             </div>
 
             {/* Silver expandable */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 overflow-hidden shadow-sm">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden shadow-sm">
               <button
                 type="button"
                 onClick={() => setSilverExpanded(!silverExpanded)}
-                className="w-full flex items-center justify-between gap-2 p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                className="w-full flex items-center justify-between gap-2 p-4 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
               >
-                <span className="font-medium text-slate-700 dark:text-slate-300">{t('market.silver999')} <ChevronDown className={`w-4 h-4 inline-block align-middle transition-transform ${silverExpanded ? 'rotate-180' : ''}`} /></span>
+                <span className="font-medium text-[var(--text-secondary)]">{t('market.silver999')} <ChevronDown className={`w-4 h-4 inline-block align-middle transition-transform ${silverExpanded ? 'rotate-180' : ''}`} /></span>
                 <span className="flex items-center gap-3 flex-wrap justify-end">
                   {overview?.goldMarketStatus?.isOpen === false ? (
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('delay.lastPrice')} · {t('delay.goldClosedUntil')}</span>
+                    <span className="text-xs font-medium text-[var(--text-muted)]">{t('delay.lastPrice')} · {t('delay.goldClosedUntil')}</span>
                   ) : overview?.silver?.isDelayed ? (
-                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-slate-500 dark:text-slate-400"><Timer className="w-3 h-3" aria-hidden /> {t('delay.delayedBadge')}</span>
+                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--text-muted)]"><Timer className="w-3 h-3" aria-hidden /> {t('delay.delayedBadge')}</span>
                   ) : (
-                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"><Circle className="w-3 h-3 fill-emerald-500" aria-hidden /> {t('delay.liveBadge')}</span>
+                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--success)]"><Circle className="w-3 h-3 fill-[var(--success)]" aria-hidden /> {t('delay.liveBadge')}</span>
                   )}
-                  <span className={`text-xs font-semibold ${(overview?.silver?.changePercent ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (overview?.silver?.changePercent ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                  <span className={`text-xs font-semibold ${(overview?.silver?.changePercent ?? 0) > 0 ? 'text-[var(--success)]' : (overview?.silver?.changePercent ?? 0) < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
                     {formatChange(overview?.silver?.changePercent ?? 0)}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">{t('market.perGram')}: {formatValue(silver999, 2)} ج.م</span>
+                  <span className="text-xs text-[var(--text-muted)]">{t('market.perGram')}: {formatValue(silver999, 2)} ج.م</span>
                 </span>
               </button>
               <AnimatePresence>
@@ -455,21 +455,21 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="border-t border-slate-200 dark:border-slate-700 overflow-hidden"
+                    className="border-t border-[var(--border)] overflow-hidden"
                   >
                     <ul className="p-4 space-y-2">
                       {(['999', '925', '800'] as const).map((k, i) => (
                         <li key={k} className="flex items-center justify-between text-sm">
                           <span className="flex items-center gap-2">
-                            {i === 0 && <span className="text-emerald-500">✓</span>}
-                            <span className={i === 0 ? 'font-medium text-slate-700 dark:text-slate-300' : 'text-slate-600 dark:text-slate-400'}>
+                            {i === 0 && <span className="text-[var(--success)]">✓</span>}
+                            <span className={i === 0 ? 'font-medium text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}>
                               {t(`market.purity${k}` as 'market.purity999')}
                             </span>
                           </span>
-                          <span className="text-slate-700 dark:text-slate-300">
-                            {t('market.buy')}: <span className="font-medium text-slate-900 dark:text-slate-100">{formatValue(silverRatesBuy[k], 2)}</span>
+                          <span className="text-[var(--text-secondary)]">
+                            {t('market.buy')}: <span className="font-medium text-[var(--text-primary)]">{formatValue(silverRatesBuy[k], 2)}</span>
                             {' · '}
-                            {t('market.sell')}: <span className="font-medium text-slate-900 dark:text-slate-100">{formatValue(silverRatesSell[k], 2)}</span> {t('market.perGram')}
+                            {t('market.sell')}: <span className="font-medium text-[var(--text-primary)]">{formatValue(silverRatesSell[k], 2)}</span> {t('market.perGram')}
                           </span>
                         </li>
                       ))}
@@ -484,7 +484,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
 
       {/* [3] أكثر الأسهم ارتفاعاً وانخفاضاً */}
       <section>
-        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">
+        <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">
           {t('market.gainersLosers')}
         </h2>
         {loadingStocks ? (
@@ -506,29 +506,29 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 overflow-hidden shadow-sm">
-              <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2 text-[var(--success)]">
                 <TrendingUp className="w-4 h-4" />
                 <span className="font-semibold text-sm">{t('market.topGainers')}</span>
               </div>
               <ul className="divide-y divide-slate-200 dark:divide-slate-700">
                 {topGainers.length === 0 ? (
-                  <li className="px-4 py-6 text-center text-slate-500 dark:text-slate-400 text-sm">{t('market.noData')}</li>
+                  <li className="px-4 py-6 text-center text-[var(--text-muted)] text-sm">{t('market.noData')}</li>
                 ) : (
                   topGainers.map((s) => (
                     <li key={s.ticker}>
                       <button
                         type="button"
                         onClick={() => onSelectStock?.(s)}
-                        className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                        className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
                       >
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-900 dark:text-slate-100 truncate">{getStockName(s.ticker, isAr ? 'ar' : 'en')}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{s.ticker}</p>
+                          <p className="font-medium text-[var(--text-primary)] truncate">{getStockName(s.ticker, isAr ? 'ar' : 'en')}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{s.ticker}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="font-medium text-slate-700 dark:text-slate-300">{formatValue(s.price ?? 0, 2)}</span>
-                          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                          <span className="font-medium text-[var(--text-secondary)]">{formatValue(s.price ?? 0, 2)}</span>
+                          <span className="text-xs font-semibold text-[var(--success)] flex items-center gap-0.5">
                             {formatChange(s.changePercent ?? 0)}
                             <TrendingUp className="w-3.5 h-3.5" />
                           </span>
@@ -539,29 +539,29 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
                 )}
               </ul>
             </div>
-            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 overflow-hidden shadow-sm">
-              <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2 text-red-600 dark:text-red-400">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2 text-[var(--danger)]">
                 <TrendingDown className="w-4 h-4" />
                 <span className="font-semibold text-sm">{t('market.topLosers')}</span>
               </div>
               <ul className="divide-y divide-slate-200 dark:divide-slate-700">
                 {topLosers.length === 0 ? (
-                  <li className="px-4 py-6 text-center text-slate-500 dark:text-slate-400 text-sm">{t('market.noData')}</li>
+                  <li className="px-4 py-6 text-center text-[var(--text-muted)] text-sm">{t('market.noData')}</li>
                 ) : (
                   topLosers.map((s) => (
                     <li key={s.ticker}>
                       <button
                         type="button"
                         onClick={() => onSelectStock?.(s)}
-                        className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                        className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
                       >
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-900 dark:text-slate-100 truncate">{getStockName(s.ticker, isAr ? 'ar' : 'en')}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{s.ticker}</p>
+                          <p className="font-medium text-[var(--text-primary)] truncate">{getStockName(s.ticker, isAr ? 'ar' : 'en')}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{s.ticker}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="font-medium text-slate-700 dark:text-slate-300">{formatValue(s.price ?? 0, 2)}</span>
-                          <span className="text-xs font-semibold text-red-600 dark:text-red-400 flex items-center gap-0.5">
+                          <span className="font-medium text-[var(--text-secondary)]">{formatValue(s.price ?? 0, 2)}</span>
+                          <span className="text-xs font-semibold text-[var(--danger)] flex items-center gap-0.5">
                             {formatChange(s.changePercent ?? 0)}
                             <TrendingDown className="w-3.5 h-3.5" />
                           </span>
@@ -578,7 +578,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
 
       {/* [4] أخبار السوق */}
       <section>
-        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">
+        <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">
           {t('market.newsTitle')}
         </h2>
         {loadingNews ? (
@@ -592,10 +592,10 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
             ))}
           </div>
         ) : news.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30 p-12 text-center">
-            <Newspaper className="w-12 h-12 mx-auto text-slate-400 dark:text-slate-500 mb-4" />
-            <p className="font-medium text-slate-700 dark:text-slate-300">{t('market.newsEmptyTitle')}</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('market.newsEmptyDesc')}</p>
+          <div className="rounded-xl border border-[var(--border)] bg-white dark:bg-slate-800/30 p-12 text-center">
+            <Newspaper className="w-12 h-12 mx-auto text-[var(--text-muted)] mb-4" />
+            <p className="font-medium text-[var(--text-secondary)]">{t('market.newsEmptyTitle')}</p>
+            <p className="text-sm text-[var(--text-muted)] mt-1">{t('market.newsEmptyDesc')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -605,14 +605,14 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4 shadow-sm hover:border-violet-400 dark:hover:border-violet-500/50 hover:shadow-md transition-all"
+                className="block rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-sm hover:border-[var(--brand)] hover:shadow-md transition-all"
               >
-                <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 mb-2">
+                <div className="flex items-center justify-between gap-2 text-xs text-[var(--text-muted)] mb-2">
                   <span>{item.source}</span>
                   <span>{item.publishedAt ? new Date(item.publishedAt).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' }) : ''}</span>
                 </div>
-                <h3 className="font-medium text-slate-900 dark:text-slate-100 line-clamp-2 mb-2">{item.title}</h3>
-                <span className="text-sm text-violet-600 dark:text-violet-400 font-medium inline-flex items-center gap-1">
+                <h3 className="font-medium text-[var(--text-primary)] line-clamp-2 mb-2">{item.title}</h3>
+                <span className="text-sm text-[var(--brand)] font-medium inline-flex items-center gap-1">
                   {t('market.readMore')}
                   <ChevronRight className="w-4 h-4" />
                 </span>

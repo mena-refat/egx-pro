@@ -205,7 +205,7 @@ export default function PortfolioTracker() {
             ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-right">
-                <thead className="bg-slate-50 dark:bg-white/5 text-[var(--text-muted)] dark:text-[var(--text-secondary)] text-xs uppercase tracking-wider">
+                <thead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] text-label uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-4 font-medium">{t('portfolio.stock')}</th>
                     <th className="px-6 py-4 font-medium">{t('portfolio.shares')}</th>
@@ -224,7 +224,7 @@ export default function PortfolioTracker() {
                     const info = getStockInfo(h.ticker);
 
                     return (
-                      <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                      <tr key={h.id} className="hover:bg-[var(--bg-card-hover)] transition-colors">
                         <td className="px-6 py-4">
                           <div className="font-bold">{getStockName(h.ticker, lang)}</div>
                           <div className="text-xs text-[var(--text-muted)]">{h.ticker}</div>
@@ -326,7 +326,7 @@ export default function PortfolioTracker() {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto bg-white dark:bg-[var(--bg-card)] border border-slate-200 dark:border-white/10 rounded-xl shadow-xl"
+                        className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-xl"
                       >
                         {(() => {
                           const lang = isRTL ? 'ar' : 'en';
@@ -347,7 +347,7 @@ export default function PortfolioTracker() {
                                       });
                                       setShowSuggestions(false);
                                     }}
-                                    className="w-full text-right px-4 py-3 justify-between border-b border-slate-100 dark:border-white/5 last:border-0 rounded-none"
+                                    className="w-full text-right px-4 py-3 justify-between border-b border-[var(--border-subtle)] last:border-0 rounded-none"
                                   >
                                     <span className="text-xs text-[var(--text-muted)] truncate max-w-[150px]">{getStockName(eg.ticker, lang)}</span>
                                     <span className="font-bold text-sm">{eg.ticker}</span>
@@ -393,7 +393,7 @@ export default function PortfolioTracker() {
 
       {showPortfolioLimitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowPortfolioLimitModal(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
             <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">{t('plan.portfolioLimitMessage')}</p>
             <div className="flex gap-2 justify-center">
               <Button type="button" variant="primary" size="md" onClick={() => { setShowPortfolioLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }}>{t('plan.subscribeNow')}</Button>

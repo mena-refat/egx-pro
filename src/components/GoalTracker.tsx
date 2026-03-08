@@ -2,6 +2,8 @@ import React, { memo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Calendar, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface Goal {
   id: string;
@@ -125,7 +127,7 @@ const GoalTracker = memo(function GoalTracker({ currentWealth }: { currentWealth
         <h3 className="text-xl font-bold">{t('goals.title')}</h3>
         <button 
           onClick={() => { setIsAdding(true); setError(''); }}
-          className="p-2 bg-violet-600 hover:bg-violet-500 rounded-xl transition-all"
+          className="p-2 bg-[var(--brand)] hover:bg-[var(--brand-hover)] rounded-xl transition-all"
           title={t('goals.addNew')}
         >
           <Plus className="w-4 h-4" />
@@ -135,7 +137,7 @@ const GoalTracker = memo(function GoalTracker({ currentWealth }: { currentWealth
       <div className="grid grid-cols-1 gap-4">
         {isLoading ? (
           <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--brand)]" />
           </div>
         ) : (
           <>
@@ -145,7 +147,7 @@ const GoalTracker = memo(function GoalTracker({ currentWealth }: { currentWealth
                 <div key={goal.id} className="card-base p-6 relative group">
                   <button 
                     onClick={() => handleDelete(goal.id)}
-                    className="absolute top-4 right-4 p-2 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute top-4 right-4 p-2 text-[var(--text-muted)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 transition-all"
                     title={t('goals.delete')}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -153,26 +155,26 @@ const GoalTracker = memo(function GoalTracker({ currentWealth }: { currentWealth
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h4 className="font-bold text-lg">{goal.name}</h4>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                      <div className="flex items-center gap-2 text-label text-[var(--text-muted)] mt-1">
                         <Calendar className="w-3 h-3" />
                         <span>{new Date(goal.targetDate).toLocaleDateString(i18n.language)}</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-violet-500">{goal.targetAmount.toLocaleString()} EGP</p>
-                      <p className="text-xs text-slate-500">{t('goals.targetAmount')}</p>
+                      <p className="font-bold text-[var(--brand)]">{goal.targetAmount.toLocaleString()} EGP</p>
+                      <p className="text-label text-[var(--text-muted)]">{t('goals.targetAmount')}</p>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-400">{t('goals.progress')}</span>
-                      <span className="font-bold text-violet-500">{progress.toFixed(1)}%</span>
+                      <span className="text-[var(--text-muted)]">{t('goals.progress')}</span>
+                      <span className="font-bold text-[var(--brand)]">{progress.toFixed(1)}%</span>
                     </div>
-                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-violet-500 transition-all duration-1000" 
-                        style={{ width: `${progress}%` }}
+                    <div className="w-full h-2 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
+                      <div
+                        className="h-full w-progress bg-[var(--brand)] transition-all duration-1000"
+                        style={{ ['--progress-width']: `${progress}%` } as React.CSSProperties}
                       />
                     </div>
                   </div>
@@ -180,7 +182,7 @@ const GoalTracker = memo(function GoalTracker({ currentWealth }: { currentWealth
               );
             })}
             {goals.length === 0 && !isAdding && (
-              <div className="text-center py-8 text-slate-500 text-sm italic border border-dashed border-white/10 rounded-3xl">
+              <div className="text-center py-8 text-[var(--text-muted)] text-body italic border border-dashed border-[var(--border)] rounded-3xl">
                 {t('goals.noGoals')}
               </div>
             )}
@@ -193,52 +195,42 @@ const GoalTracker = memo(function GoalTracker({ currentWealth }: { currentWealth
           <div className="card-base p-8 w-full max-w-md shadow-2xl">
             <h3 className="text-2xl font-bold mb-6">{t('goals.addNew')}</h3>
             <form onSubmit={handleAdd} className="space-y-4">
-              <div>
-                <label className="block text-sm text-slate-400 mb-1">{t('goals.name')}</label>
-                <input 
-                  type="text" required
-                  value={newGoal.name}
-                  onChange={e => setNewGoal({ ...newGoal, name: e.target.value })}
-                  className="input-base"
-                  placeholder={t('goals.placeholder')}
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-slate-400 mb-1">{t('goals.targetAmount')}</label>
-                <input 
-                  type="number" required
-                  value={newGoal.targetAmount}
-                  onChange={e => setNewGoal({ ...newGoal, targetAmount: e.target.value })}
-                  className="input-base"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-slate-400 mb-1">{t('goals.targetDate')}</label>
-                <input 
-                  type="date" required
-                  value={newGoal.targetDate}
-                  onChange={e => setNewGoal({ ...newGoal, targetDate: e.target.value })}
-                  className="input-base"
-                />
-              </div>
+              <Input
+                label={t('goals.name')}
+                type="text"
+                required
+                value={newGoal.name}
+                onChange={e => setNewGoal({ ...newGoal, name: e.target.value })}
+                placeholder={t('goals.placeholder')}
+              />
+              <Input
+                label={t('goals.targetAmount')}
+                type="number"
+                required
+                value={newGoal.targetAmount}
+                onChange={e => setNewGoal({ ...newGoal, targetAmount: e.target.value })}
+              />
+              <Input
+                label={t('goals.targetDate')}
+                type="date"
+                required
+                value={newGoal.targetDate}
+                onChange={e => setNewGoal({ ...newGoal, targetDate: e.target.value })}
+              />
 
               {error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm">
+                <div className="p-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-xl text-[var(--danger)] text-body">
                   {error}
                 </div>
               )}
 
               <div className="flex gap-4 mt-8">
-                <button type="button" onClick={() => setIsAdding(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold transition-all">
+                <Button type="button" variant="secondary" onClick={() => setIsAdding(false)} className="flex-1">
                   {t('goals.cancel')}
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="flex-1 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl font-bold disabled:opacity-50 text-white shadow-lg shadow-violet-600/20"
-                >
+                </Button>
+                <Button type="submit" variant="primary" disabled={isSubmitting} className="flex-1">
                   {isSubmitting ? t('common.loading') : t('goals.save')}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

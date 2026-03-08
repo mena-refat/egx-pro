@@ -84,7 +84,7 @@ export function Header({
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--brand-subtle)] hover:opacity-90 transition-colors"
             >
               <div className="w-12 h-1.5 bg-[var(--border)] rounded-full overflow-hidden shrink-0">
-                <div className="h-full bg-[var(--brand)] rounded-full" style={{ width: `${profileCompletion.percentage}%` }} />
+                <div className="h-full w-progress bg-[var(--brand)] rounded-full" style={{ ['--progress-width']: `${profileCompletion.percentage}%` } as React.CSSProperties} />
               </div>
               <span className="text-xs font-bold text-[var(--brand-text)] whitespace-nowrap">{profileCompletion.percentage}%</span>
               <span className="text-xs font-medium text-[var(--text-secondary)] whitespace-nowrap hidden sm:inline">{t('overview.completeProfile')}</span>
@@ -101,7 +101,7 @@ export function Header({
                   <div className="p-3 border-b border-[var(--border-subtle)]">
                     <p className="text-sm font-medium text-[var(--text-secondary)]">{t('overview.profileCompletePercent', { p: profileCompletion.percentage })}</p>
                     <div className="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden mt-2">
-                      <div className="h-full bg-[var(--brand)] rounded-full transition-[width]" style={{ width: `${profileCompletion.percentage}%` }} />
+                      <div className="h-full w-progress bg-[var(--brand)] rounded-full transition-[width]" style={{ ['--progress-width']: `${profileCompletion.percentage}%` } as React.CSSProperties} />
                     </div>
                   </div>
                   <div className="p-3">
@@ -143,7 +143,7 @@ export function Header({
         <div className="relative" ref={notificationsRef}>
           <button type="button" onClick={() => { setNotificationsOpen((o) => !o); if (!notificationsOpen) fetchNotifications(); }} className="relative p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]" aria-label={t('settings.notifications')}>
             <Bell className="w-5 h-5" />
-            {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" aria-hidden />}
+            {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--danger)]" aria-hidden />}
           </button>
           <AnimatePresence>
             {notificationsOpen && (

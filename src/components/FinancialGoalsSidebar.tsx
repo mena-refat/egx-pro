@@ -1,4 +1,4 @@
-import { memo, useState, useEffect } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 
@@ -48,19 +48,19 @@ const FinancialGoalsSidebar = memo(function FinancialGoalsSidebar({ currentWealt
             <div key={goal.id} className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="font-medium">{goal.name}</span>
-                <span className="text-violet-500 font-bold">{progress.toFixed(0)}%</span>
+                <span className="text-[var(--brand)] font-bold">{progress.toFixed(0)}%</span>
               </div>
-              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-violet-500 transition-all duration-1000" 
-                  style={{ width: `${progress}%` }}
+              <div className="w-full h-2 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
+                <div
+                  className="h-full w-progress bg-[var(--brand)] transition-all duration-1000"
+                  style={{ ['--progress-width']: `${progress}%` } as React.CSSProperties}
                 />
               </div>
             </div>
           );
         })}
         {goals.length === 0 && (
-          <p className="text-slate-500 text-sm italic">{t('goals.noGoalsSet')}</p>
+          <p className="text-[var(--text-muted)] text-body italic">{t('goals.noGoalsSet')}</p>
         )}
       </div>
     </div>

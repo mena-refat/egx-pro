@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Search, TrendingUp, TrendingDown, Star, Plus, Circle, Timer } from 'lucide-react';
 import api from '../lib/api';
 import EmptyState from './shared/EmptyState';
+import { Button } from './ui/Button';
 import { useLivePrices } from '../hooks/useLivePrices';
 import { useAuthStore } from '../store/authStore';
 import { searchStocks, getStockName, getStockInfo } from '../lib/egxStocks';
@@ -200,9 +201,9 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
     return (
       <div className="rounded-xl border border-[var(--danger)] bg-[var(--danger-bg)] p-6 text-center" dir={isAr ? 'rtl' : 'ltr'}>
         <p className="text-[var(--danger-text)]">{error}</p>
-        <button type="button" onClick={fetchData} className="mt-4 px-4 py-2 bg-violet-600 text-white rounded-xl hover:bg-violet-500">
+        <Button type="button" variant="primary" onClick={fetchData} className="mt-4">
           {t('stocks.retry')}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -213,12 +214,12 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">{t('stocks.title')}</h1>
           {isPro ? (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10">
-              <Circle className="w-3 h-3 fill-emerald-500" aria-hidden />
+            <span className="inline-flex items-center gap-1 text-label font-medium text-[var(--success)] px-2 py-0.5 rounded-full bg-[var(--success-bg)]">
+              <Circle className="w-3 h-3 fill-[var(--success)]" aria-hidden />
               {t('delay.liveBadge')}
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full bg-[var(--bg-secondary)]">
+            <span className="inline-flex items-center gap-1 text-label font-medium text-[var(--text-muted)] px-2 py-0.5 rounded-full bg-[var(--bg-secondary)]">
               <Timer className="w-3 h-3" aria-hidden />
               {t('delay.delayedBadge')}
             </span>
@@ -244,8 +245,8 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
             onClick={() => setFilter(f.id)}
             className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
               filter === f.id
-                ? 'bg-violet-600 text-white'
-                : 'bg-slate-100 dark:bg-slate-800 text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
+                ? 'bg-[var(--brand)] text-[var(--text-inverse)]'
+                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
             }`}
           >
             {t(f.labelKey)}
@@ -279,24 +280,26 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
               tabIndex={0}
               onClick={() => onSelectStock(stock)}
               onKeyDown={(e) => e.key === 'Enter' && onSelectStock(stock)}
-              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-[var(--bg-card)]/50 p-4 hover:border-violet-400 dark:hover:border-violet-500/50 hover:shadow-md transition-all cursor-pointer"
+              className={`rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-4 border-l-4 cursor-pointer
+                transition-all duration-200 hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5
+                ${isUp ? 'border-l-[var(--positive)]' : 'border-l-[var(--negative)]'}`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">{stock.ticker}</p>
-                  <p className="font-medium text-[var(--text-primary)] truncate">{getStockName(stock.ticker, lang)}</p>
+                  <p className="text-label uppercase tracking-wider">{stock.ticker}</p>
+                  <p className="font-medium text-body text-[var(--text-primary)] truncate">{getStockName(stock.ticker, lang)}</p>
                 </div>
                 <div className="text-left ltr:text-right shrink-0">
-                  <p className="text-lg font-bold text-[var(--text-primary)]">
+                  <p className="text-body font-bold font-number tabular-nums text-[var(--text-primary)]">
                     {(stock.price ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {t('stocks.egp')}
                   </p>
-                  <p className={`text-sm font-semibold flex items-center justify-end gap-0.5 ${isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--danger-text)]'}`}>
-                    {isUp ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-bold tabular-nums ${isUp ? 'bg-[var(--success-bg)] text-[var(--positive)]' : 'bg-[var(--danger-bg)] text-[var(--negative)]'}`}>
+                    {isUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                     {isUp ? '+' : ''}{(changeP).toFixed(2)}%
-                  </p>
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]">
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                   {t('stocks.volume')}: {formatVol(stock.volume ?? 0)}
                 </span>
@@ -304,7 +307,7 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
                   type="button"
                   onClick={(e) => toggleWatchlist(e, stock.ticker)}
                   className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${
-                    inWatch ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400 hover:bg-[var(--bg-card-hover)]'
+                    inWatch ? 'bg-[var(--warning-bg)] text-[var(--warning)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'
                   }`}
                 >
                   {inWatch ? <Star className="w-3.5 h-3.5 fill-amber-500" /> : <Plus className="w-3.5 h-3.5" />}
@@ -329,8 +332,8 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
           <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
             <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">{t('plan.watchlistLimitMessage')}</p>
             <div className="flex gap-2 justify-center">
-              <button type="button" onClick={() => { setShowWatchlistLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold text-sm">{t('plan.subscribeNow')}</button>
-              <button type="button" onClick={() => setShowWatchlistLimitModal(false)} className="px-4 py-2.5 border border-[var(--border)] rounded-xl font-medium text-sm">{t('plan.cancel')}</button>
+              <Button type="button" variant="primary" onClick={() => { setShowWatchlistLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }}>{t('plan.subscribeNow')}</Button>
+              <Button type="button" variant="secondary" onClick={() => setShowWatchlistLimitModal(false)}>{t('plan.cancel')}</Button>
             </div>
           </div>
         </div>
@@ -355,10 +358,10 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
               />
             </div>
             <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setAddTargetModal(null)} className="px-4 py-2 border border-[var(--border)] rounded-xl text-sm">{t('common.cancel')}</button>
-              <button type="button" onClick={submitAddWithTarget} disabled={addTargetSubmitting} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-medium disabled:opacity-50">
+              <Button type="button" variant="secondary" onClick={() => setAddTargetModal(null)} size="sm">{t('common.cancel')}</Button>
+              <Button type="button" variant="primary" onClick={submitAddWithTarget} disabled={addTargetSubmitting} size="sm">
                 {addTargetSubmitting ? t('common.loading') : t('stocks.watchlistAdd')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

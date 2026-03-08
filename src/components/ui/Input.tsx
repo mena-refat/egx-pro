@@ -41,7 +41,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
           {label}
         </label>
       )}
-      <div className="relative">
+      <div className={`relative ${error ? 'animate-shake' : ''}`}>
         {icon && iconPosition === 'left' && (
           <span className="absolute inset-y-0 start-0 flex items-center ps-3 text-[var(--text-muted)] pointer-events-none">
             {icon}
@@ -55,13 +55,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
           className={`
-            w-full rounded-xl border bg-[var(--bg-input)] text-[var(--text-primary)]
+            w-full rounded-xl border bg-[var(--bg-input)] text-[var(--text-primary)] text-body
             placeholder:text-[var(--text-muted)]
-            focus:outline-none focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent
+            focus:outline-none focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent input-focus-glow
             disabled:opacity-50 disabled:cursor-not-allowed
             ${icon && iconPosition === 'left' ? 'ps-10' : 'ps-3'}
             ${icon && iconPosition === 'right' ? 'pe-10' : 'pe-3'}
-            py-2.5 text-sm
+            py-2.5
             ${error ? 'border-[var(--danger)]' : 'border-[var(--border)]'}
             ${inputClassName}
           `.trim()}

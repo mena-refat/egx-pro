@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from './ui/Button';
 
 const STORAGE_KEY = 'delayNoticeShown';
 
@@ -44,32 +45,24 @@ export default function DelayNotice({
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}
-        className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+        className="mb-4 rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-bg)] p-4 flex flex-col sm:flex-row sm:items-center gap-3"
       >
         <div className="flex gap-3 flex-1 min-w-0">
           <div className="shrink-0 w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-            <Clock className="w-5 h-5 text-amber-500" aria-hidden />
+            <Clock className="w-5 h-5 text-[var(--warning)]" aria-hidden />
           </div>
           <div className="min-w-0">
             <p className="font-medium text-slate-200">{t('delay.noticeTitle')}</p>
-            <p className="text-sm text-slate-400 mt-0.5">{t('delay.noticeBody')}</p>
+            <p className="text-sm text-[var(--text-muted)] mt-0.5">{t('delay.noticeBody')}</p>
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleUpgrade}
-            className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium"
-          >
+          <Button type="button" onClick={handleUpgrade} size="sm">
             {t('delay.upgradeToPro')}
-          </button>
-          <button
-            type="button"
-            onClick={handleGotIt}
-            className="px-4 py-2 rounded-lg border border-slate-500 text-slate-300 hover:text-white hover:bg-white/5 text-sm font-medium"
-          >
+          </Button>
+          <Button type="button" variant="secondary" onClick={handleGotIt} size="sm">
             {t('delay.gotIt')}
-          </button>
+          </Button>
         </div>
       </motion.div>
     </AnimatePresence>

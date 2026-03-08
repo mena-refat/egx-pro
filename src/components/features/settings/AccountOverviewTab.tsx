@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, BarChart2, TrendingUp, CalendarCheck, Wallet } from 'lucide-react';
 import api from '../../../lib/api';
@@ -58,7 +58,7 @@ export function AccountOverviewTab() {
               {t('overview.completeProfile')}: {completion.percentage}%
             </p>
             <div className="w-full h-2 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
-              <div className="h-full bg-[var(--brand)]" style={{ width: `${completion.percentage}%` }} />
+              <div className="h-full w-progress bg-[var(--brand)]" style={{ ['--progress-width']: `${completion.percentage}%` } as React.CSSProperties} />
             </div>
           </div>
         )}

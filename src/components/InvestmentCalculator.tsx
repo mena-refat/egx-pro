@@ -172,35 +172,35 @@ export default function InvestmentCalculator() {
       <div className={`space-y-6 min-w-0 ${isRTL ? 'lg:col-start-2' : 'lg:col-start-1'}`}>
         {/* Result cards — same size, full numbers visible (no truncation) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 flex items-center gap-3 h-[88px]">
-            <div className="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center shrink-0">
-              <Wallet className="w-5 h-5 text-slate-400" />
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 flex items-center gap-3 h-[88px]">
+            <div className="w-10 h-10 rounded-lg bg-[var(--bg-secondary)] flex items-center justify-center shrink-0">
+              <Wallet className="w-5 h-5 text-[var(--text-muted)]" />
             </div>
             <div className="min-w-0 flex-1 overflow-hidden">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">{t('calculator.totalInvested')}</p>
-              <p className="text-base font-bold text-slate-200 break-all leading-tight">
+              <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">{t('calculator.totalInvested')}</p>
+              <p className="text-base font-bold text-[var(--text-primary)] break-all leading-tight">
                 <AnimatedNumber value={result.invested} suffix={` ${currencyShort}`} />
               </p>
             </div>
           </div>
-          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 flex items-center gap-3 h-[88px]">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 flex items-center gap-3 h-[88px]">
+            <div className="w-10 h-10 rounded-lg bg-[var(--success-bg)] flex items-center justify-center shrink-0">
               <TrendingUp className="w-5 h-5 text-emerald-400" />
             </div>
             <div className="min-w-0 flex-1 overflow-hidden">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">{t('calculator.netProfit')}</p>
+              <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">{t('calculator.netProfit')}</p>
               <p className="text-base font-bold text-emerald-400 break-all leading-tight">
                 <AnimatedNumber value={result.profit} prefix="+ " suffix={` ${currencyShort}`} />
               </p>
             </div>
           </div>
-          <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-4 flex items-center gap-3 h-[88px]">
-            <div className="w-10 h-10 rounded-lg bg-violet-500/30 flex items-center justify-center shrink-0">
-              <Crown className="w-5 h-5 text-violet-400" />
+          <div className="rounded-xl border border-[var(--brand)]/30 bg-[var(--brand)]/10 p-4 flex items-center gap-3 h-[88px]">
+            <div className="w-10 h-10 rounded-lg bg-[var(--brand)]/30 flex items-center justify-center shrink-0">
+              <Crown className="w-5 h-5 text-[var(--brand)]" />
             </div>
             <div className="min-w-0 flex-1 overflow-hidden">
-              <p className="text-xs text-violet-300/80 uppercase tracking-wider">{t('calculator.finalWealth')}</p>
-              <p className="text-base font-bold text-violet-400 break-all leading-tight">
+              <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">{t('calculator.finalWealth')}</p>
+              <p className="text-base font-bold text-[var(--brand)] break-all leading-tight">
                 <AnimatedNumber value={result.total} suffix={` ${currencyShort}`} />
               </p>
             </div>
@@ -215,14 +215,14 @@ export default function InvestmentCalculator() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="text-center text-slate-400 text-sm py-1"
+            className="text-center text-[var(--text-muted)] text-sm py-1"
           >
             {message}
           </motion.p>
         </AnimatePresence>
 
         {/* Chart — 400px height, full width */}
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 h-[400px] w-full">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={data}
@@ -253,14 +253,14 @@ export default function InvestmentCalculator() {
                   if (!active || !payload?.length || label == null) return null;
                   const d = payload[0].payload;
                   return (
-                    <div className="rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 shadow-xl text-sm">
-                      <p className="text-slate-300 font-medium mb-2">
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3 shadow-xl text-sm">
+                      <p className="text-[var(--text-secondary)] font-medium mb-2">
                         {t('calculator.tooltipAfter', { n: d.year })}
                       </p>
-                      <p className="text-slate-400">
+                      <p className="text-[var(--text-muted)]">
                         {t('calculator.tooltipWealth')}: {formatMoney(d.total, locale)}
                       </p>
-                      <p className="text-slate-400">
+                      <p className="text-[var(--text-muted)]">
                         {t('calculator.tooltipPrincipal')}: {formatMoney(d.principal, locale)}
                       </p>
                       <p className="text-emerald-400">
@@ -299,29 +299,29 @@ export default function InvestmentCalculator() {
 
         {/* Comparison */}
         <div>
-          <h4 className="text-sm font-medium text-slate-400 mb-3">{t('calculator.compareTitle')}</h4>
+          <h4 className="text-sm font-medium text-[var(--text-muted)] mb-3">{t('calculator.compareTitle')}</h4>
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
-              <p className="text-xs text-slate-500 mb-1">{t('calculator.compareBank')}</p>
-              <p className="text-sm text-slate-400">~8%</p>
-              <p className="text-lg font-bold text-slate-200 mt-1">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-center">
+              <p className="text-xs text-[var(--text-muted)] mb-1">{t('calculator.compareBank')}</p>
+              <p className="text-sm text-[var(--text-muted)]">~8%</p>
+              <p className="text-lg font-bold text-[var(--text-primary)] mt-1">
                 {formatMoney(compareBank.total, locale)} {currencyShort}
               </p>
             </div>
-            <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4 text-center">
-              <p className="text-xs text-slate-500 mb-1">{t('calculator.compareGold')}</p>
-              <p className="text-sm text-slate-400">~12%</p>
-              <p className="text-lg font-bold text-slate-200 mt-1">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-center">
+              <p className="text-xs text-[var(--text-muted)] mb-1">{t('calculator.compareGold')}</p>
+              <p className="text-sm text-[var(--text-muted)]">~12%</p>
+              <p className="text-lg font-bold text-[var(--text-primary)] mt-1">
                 {formatMoney(compareGold.total, locale)} {currencyShort}
               </p>
             </div>
-            <div className="rounded-xl border border-violet-500/40 bg-violet-500/15 p-4 text-center relative">
-              <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-violet-500 text-white text-xs font-medium">
+            <div className="rounded-xl border border-[var(--brand)]/40 bg-[var(--brand)]/15 p-4 text-center relative">
+              <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-[var(--brand)] text-[var(--text-inverse)] text-xs font-medium">
                 {t('calculator.best')}
               </span>
-              <p className="text-xs text-violet-300/90 mb-1">{t('calculator.compareEGX')}</p>
-              <p className="text-sm text-violet-400">~{annualRate}%</p>
-              <p className="text-lg font-bold text-violet-400 mt-1">
+              <p className="text-xs text-[var(--text-muted)] mb-1">{t('calculator.compareEGX')}</p>
+              <p className="text-sm text-[var(--brand)]">~{annualRate}%</p>
+              <p className="text-lg font-bold text-[var(--brand)] mt-1">
                 {formatMoney(result.total, locale)} {currencyShort}
               </p>
             </div>
@@ -329,19 +329,19 @@ export default function InvestmentCalculator() {
         </div>
 
         {/* Disclaimer */}
-        <p className="text-xs text-slate-500 leading-relaxed">{t('calculator.disclaimer')}</p>
+        <p className="text-xs text-[var(--text-muted)] leading-relaxed">{t('calculator.disclaimer')}</p>
       </div>
 
       {/* 40% column: Controls (right in LTR, right in RTL) */}
       <div className={`space-y-8 min-w-0 ${isRTL ? 'lg:col-start-1' : 'lg:col-start-2'}`}>
         <div>
-          <h2 className="text-2xl font-bold text-slate-100">{t('calculator.title')}</h2>
-          <p className="text-slate-400 text-sm mt-1">{t('calculator.subtitle')}</p>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)]">{t('calculator.title')}</h2>
+          <p className="text-[var(--text-muted)] text-sm mt-1">{t('calculator.subtitle')}</p>
         </div>
 
         {/* [1] Monthly — slider + numeric input */}
         <div>
-          <label className="block text-sm text-slate-400 mb-2">{t('calculator.monthly')}</label>
+          <label className="block text-sm text-[var(--text-muted)] mb-2">{t('calculator.monthly')}</label>
           <div className="flex items-center gap-3">
             <input
               type="range"
@@ -350,7 +350,7 @@ export default function InvestmentCalculator() {
               step={MONTHLY_STEP}
               value={Math.min(MONTHLY_MAX, Math.max(MONTHLY_MIN, monthly))}
               onChange={(e) => setMonthly(Number(e.target.value))}
-              className="flex-1 min-w-0 h-2.5 rounded-full appearance-none cursor-pointer bg-slate-700 accent-violet-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-violet-500 [&::-webkit-slider-thumb]:cursor-pointer"
+              className="flex-1 min-w-0 h-2.5 rounded-full appearance-none cursor-pointer bg-[var(--bg-secondary)] accent-[var(--brand)] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--brand)] [&::-webkit-slider-thumb]:cursor-pointer"
             />
             <input
               type="number"
@@ -361,11 +361,11 @@ export default function InvestmentCalculator() {
                 const v = Number(e.target.value);
                 if (!Number.isNaN(v) && v >= 0) setMonthly(v);
               }}
-              className="w-28 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 text-sm font-medium text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-28 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] text-sm font-medium text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <span className="text-slate-500 text-sm w-6 shrink-0">{currencyShort}</span>
+            <span className="text-[var(--text-muted)] text-sm w-6 shrink-0">{currencyShort}</span>
           </div>
-          <div className="flex justify-between mt-1 text-xs text-slate-500">
+          <div className="flex justify-between mt-1 text-xs text-[var(--text-muted)]">
             <span>{MONTHLY_MIN.toLocaleString()} {currencyShort}</span>
             <span>{MONTHLY_MAX.toLocaleString()} {currencyShort}</span>
           </div>
@@ -373,7 +373,7 @@ export default function InvestmentCalculator() {
 
         {/* [2] Initial — 0 left, 500,000 right (dir=ltr so slider never reversed) */}
         <div dir="ltr">
-          <label className="block text-sm text-slate-400 mb-2">{t('calculator.initialLabel')}</label>
+          <label className="block text-sm text-[var(--text-muted)] mb-2">{t('calculator.initialLabel')}</label>
           <div className="flex items-center gap-3">
             <input
               type="range"
@@ -382,7 +382,7 @@ export default function InvestmentCalculator() {
               step={INITIAL_STEP}
               value={Math.min(INITIAL_MAX, Math.max(INITIAL_MIN, initial))}
               onChange={(e) => setInitial(Number(e.target.value))}
-              className="flex-1 min-w-0 h-2.5 rounded-full appearance-none cursor-pointer bg-slate-700 accent-violet-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-violet-500 [&::-webkit-slider-thumb]:cursor-pointer"
+              className="flex-1 min-w-0 h-2.5 rounded-full appearance-none cursor-pointer bg-[var(--bg-secondary)] accent-[var(--brand)] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--brand)] [&::-webkit-slider-thumb]:cursor-pointer"
             />
             <input
               type="number"
@@ -393,11 +393,11 @@ export default function InvestmentCalculator() {
                 const v = Number(e.target.value);
                 if (!Number.isNaN(v) && v >= 0) setInitial(v);
               }}
-              className="w-28 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 text-sm font-medium text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-28 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] text-sm font-medium text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <span className="text-slate-500 text-sm w-6 shrink-0">{currencyShort}</span>
+            <span className="text-[var(--text-muted)] text-sm w-6 shrink-0">{currencyShort}</span>
           </div>
-          <div className="flex justify-between mt-1 text-xs text-slate-500">
+          <div className="flex justify-between mt-1 text-xs text-[var(--text-muted)]">
             <span>{INITIAL_MIN.toLocaleString()} {currencyShort}</span>
             <span>{INITIAL_MAX.toLocaleString()} {currencyShort}</span>
           </div>
@@ -405,7 +405,7 @@ export default function InvestmentCalculator() {
 
         {/* [3] Years — slider + numeric input */}
         <div>
-          <label className="block text-sm text-slate-400 mb-2">{t('calculator.years')}</label>
+          <label className="block text-sm text-[var(--text-muted)] mb-2">{t('calculator.years')}</label>
           <div className="flex items-center gap-3">
             <input
               type="range"
@@ -413,7 +413,7 @@ export default function InvestmentCalculator() {
               max={YEARS_MAX}
               value={Math.min(YEARS_MAX, Math.max(YEARS_MIN, years))}
               onChange={(e) => setYears(Number(e.target.value))}
-              className="flex-1 min-w-0 h-2.5 rounded-full appearance-none cursor-pointer bg-slate-700 accent-violet-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-violet-500 [&::-webkit-slider-thumb]:cursor-pointer"
+              className="flex-1 min-w-0 h-2.5 rounded-full appearance-none cursor-pointer bg-[var(--bg-secondary)] accent-[var(--brand)] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--brand)] [&::-webkit-slider-thumb]:cursor-pointer"
             />
             <input
               type="number"
@@ -424,9 +424,9 @@ export default function InvestmentCalculator() {
                 const v = Number(e.target.value);
                 if (!Number.isNaN(v) && v >= 1) setYears(Math.floor(v));
               }}
-              className="w-20 px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 text-sm font-medium text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-20 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] text-sm font-medium text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <span className="text-slate-500 text-sm shrink-0">{t('calculator.yearsShort')}</span>
+            <span className="text-[var(--text-muted)] text-sm shrink-0">{t('calculator.yearsShort')}</span>
           </div>
           <div className="flex flex-wrap gap-2 mt-2">
             {[5, 10, 20, 30].map((y) => (
@@ -436,8 +436,8 @@ export default function InvestmentCalculator() {
                 onClick={() => setYears(y)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   years === y
-                    ? 'bg-violet-500 text-white'
-                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                    ? 'bg-[var(--brand)] text-[var(--text-inverse)]'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'
                 }`}
               >
                 {y} {t('calculator.yearsShort')}
@@ -448,7 +448,7 @@ export default function InvestmentCalculator() {
 
         {/* [4] Return toggle */}
         <div>
-          <label className="block text-sm text-slate-400 mb-2">{t('calculator.return')}</label>
+          <label className="block text-sm text-[var(--text-muted)] mb-2">{t('calculator.return')}</label>
           <div className="grid grid-cols-3 gap-2">
             {RETURN_OPTIONS.map((opt) => (
               <button
@@ -457,8 +457,8 @@ export default function InvestmentCalculator() {
                 onClick={() => setReturnId(opt.id)}
                 className={`py-3 px-2 rounded-xl border text-center transition-colors ${
                   returnId === opt.id
-                    ? 'border-violet-500 bg-violet-500 text-white'
-                    : 'border-slate-600 bg-slate-800/50 text-slate-400 hover:border-slate-500'
+                    ? 'border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]'
+                    : 'border-[var(--border)] bg-[var(--bg-card)]/50 text-[var(--text-muted)] hover:border-[var(--text-muted)]'
                 }`}
               >
                 <p className="text-sm font-medium">{t(`calculator.${opt.id}`)}</p>
@@ -466,7 +466,7 @@ export default function InvestmentCalculator() {
               </button>
             ))}
           </div>
-          <p className="text-xs text-slate-500 mt-2">{t('calculator.returnNote')}</p>
+          <p className="text-xs text-[var(--text-muted)] mt-2">{t('calculator.returnNote')}</p>
         </div>
       </div>
     </div>

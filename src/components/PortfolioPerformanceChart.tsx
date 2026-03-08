@@ -107,38 +107,39 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart() {
           <AreaChart data={data}>
             <defs>
               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.4}/>
+                <stop offset="100%" stopColor="#7c3aed" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-            <XAxis 
-              dataKey="date" 
-              stroke="#64748b" 
-              fontSize={12} 
-              tickLine={false} 
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <XAxis
+              dataKey="date"
+              stroke="var(--text-muted)"
+              fontSize={12}
+              tickLine={false}
               axisLine={false}
               tickFormatter={(value, index) => index === 0 ? '' : value}
             />
-            <YAxis 
-              stroke="#64748b" 
-              fontSize={12} 
-              tickLine={false} 
-              axisLine={false} 
-              tickFormatter={(value) => `${(value/1000).toFixed(0)}k`}
+            <YAxis
+              stroke="var(--text-muted)"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
               domain={['auto', 'auto']}
               dx={-20}
             />
-            <Tooltip 
-              contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px', color: '#fff' }}
-              itemStyle={{ color: '#fff' }}
+            <Tooltip
+              contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}
+              itemStyle={{ color: 'var(--text-primary)' }}
+              formatter={(value: unknown) => [typeof value === 'number' ? value.toLocaleString('ar-EG', { maximumFractionDigits: 0 }) : value, '']}
             />
-            <Area 
-              type="monotone" 
-              dataKey="value" 
-              stroke="#8b5cf6" 
-              fillOpacity={1} 
-              fill="url(#colorValue)" 
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke="#7c3aed"
+              fillOpacity={1}
+              fill="url(#colorValue)"
               strokeWidth={3}
             />
           </AreaChart>

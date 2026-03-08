@@ -36,20 +36,24 @@
   --brand-text: #7c3aed;
 
   /* Status */
-  --success: #16a34a;
+  --success: #22c55e;
   --success-bg: #f0fdf4;
   --success-text: #15803d;
-  --danger: #dc2626;
+  --danger: #ef4444;
   --danger-bg: #fef2f2;
   --danger-text: #b91c1c;
   --warning: #d97706;
   --warning-bg: #fffbeb;
   --warning-text: #b45309;
+  --positive: #22c55e;
+  --negative: #ef4444;
 
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.14);
+  --shadow-glow: 0 0 0 3px rgba(124, 58, 237, 0.25);
 }
 
 /* ─── Design Tokens (Dark) ─── */
@@ -86,10 +90,14 @@
   --warning: #f59e0b;
   --warning-bg: #2d2006;
   --warning-text: #fbbf24;
+  --positive: #22c55e;
+  --negative: #ef4444;
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 0 0 3px rgba(139, 92, 246, 0.35);
 }
 
 /* ─── Theme transition ─── */
@@ -122,16 +130,35 @@
 }
 
 @layer components {
+  /* Typography — fintech scale */
+  .text-title { font-size: 32px; font-weight: 700; }
+  .text-header { font-size: 18px; font-weight: 600; }
+  .text-body { font-size: 14px; }
+  .text-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+  .font-number { font-weight: 700; font-variant-numeric: tabular-nums; }
+  [lang="ar"], .rtl-text { line-height: 1.8; }
+
   .card-base {
     border-radius: 1.5rem;
     border-width: 1px;
     border-color: var(--border);
     background-color: var(--bg-card);
     box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
   }
 
   .card-base:hover {
     background-color: var(--bg-card-hover);
+    box-shadow: var(--shadow-md);
+  }
+
+  .card-elevated {
+    box-shadow: var(--shadow-md);
+  }
+  .card-elevated:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
   }
 
   @keyframes shake {
@@ -141,6 +168,34 @@
   }
   .animate-shake {
     animation: shake 0.4s ease-in-out;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--border-subtle) 0%,
+      var(--bg-card-hover) 50%,
+      var(--border-subtle) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  .btn-press:active {
+    transform: scale(0.97);
+  }
+
+  .input-focus-glow:focus {
+    box-shadow: var(--shadow-glow);
+  }
+
+  /* Dynamic width progress (set --progress-width in style) */
+  .w-progress {
+    width: var(--progress-width, 0);
   }
 }
 

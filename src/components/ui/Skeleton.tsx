@@ -18,7 +18,7 @@ export function Skeleton({
 
   return (
     <span
-      className={`block rounded-lg bg-[var(--border-subtle)] animate-pulse ${className}`.trim()}
+      className={`block rounded-lg skeleton-shimmer ${className}`.trim()}
       style={Object.keys(style).length ? style : undefined}
     />
   );

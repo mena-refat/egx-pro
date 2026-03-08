@@ -13,8 +13,8 @@ const NAV_ITEMS = [
   { path: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { path: '/portfolio', labelKey: 'nav.portfolio', icon: BriefcaseBusiness },
   { path: '/market', labelKey: 'nav.market', icon: TrendingUp },
-  { path: '/goals', labelKey: 'nav.goals', icon: Target },
   { path: '/stocks', labelKey: 'nav.stocks', icon: BarChart2 },
+  { path: '/goals', labelKey: 'nav.goals', icon: Target },
 ];
 
 const BottomNav = memo(function BottomNav() {

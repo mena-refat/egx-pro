@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, FileQuestion, ShieldOff, ServerCrash, LockKeyhole, ArrowRight, RefreshCw, LogIn } from 'lucide-react';
+import { Button } from './ui/Button';
 
 type ErrorCode = 401 | 403 | 404 | 500;
 
@@ -72,11 +73,11 @@ export function ErrorPage({ code, onPrimaryAction }: ErrorPageProps) {
   const isRtl = i18n.language.startsWith('ar');
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col">
       {/* Header */}
-      <header className="w-full border-b border-white/10 px-6 py-4 flex items-center justify-between">
+      <header className="w-full border-b border-[var(--border)] px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <TrendingUp className="text-violet-500 w-7 h-7" />
+          <TrendingUp className="text-[var(--brand)] w-7 h-7" />
           <span className="text-xl font-bold tracking-tight">EGX Pro</span>
         </div>
       </header>
@@ -84,33 +85,34 @@ export function ErrorPage({ code, onPrimaryAction }: ErrorPageProps) {
       {/* Content */}
       <main className="flex-1 flex items-center justify-center px-4">
         <div className="max-w-lg w-full text-center space-y-6">
-          <div className="inline-flex items-center justify-center rounded-full border border-violet-500/40 bg-violet-500/10 px-4 py-1 text-xs font-semibold text-violet-200 mb-2">
+          <div className="inline-flex items-center justify-center rounded-full border border-[var(--brand)]/40 bg-[var(--brand-subtle)] px-4 py-1 text-label font-semibold text-[var(--brand-text)] mb-2">
             {t('error.label', 'حدث خطأ')}
           </div>
 
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
-              <div className="w-20 h-20 rounded-3xl bg-violet-500/10 border border-violet-500/40 flex items-center justify-center">
-                <Icon className="w-10 h-10 text-violet-300" />
+              <div className="w-20 h-20 rounded-3xl bg-[var(--brand-subtle)] border border-[var(--brand)]/40 flex items-center justify-center">
+                <Icon className="w-10 h-10 text-[var(--brand)]" />
               </div>
-              <span className="absolute -bottom-3 inset-x-0 text-xs text-slate-400">
+              <span className="absolute -bottom-3 inset-x-0 text-label text-[var(--text-muted)]">
                 {t('error.codeLabel', { code })}
               </span>
             </div>
 
             <div>
-              <p className="text-6xl font-extrabold tracking-tight text-violet-500 mb-2">
+              <p className="text-6xl font-extrabold tracking-tight text-[var(--brand)] mb-2">
                 {code}
               </p>
-              <h1 className="text-2xl font-bold mb-2">{t(titleKey)}</h1>
-              <p className="text-slate-300 text-sm leading-relaxed">{t(descriptionKey)}</p>
+              <h1 className="text-title font-bold mb-2">{t(titleKey)}</h1>
+              <p className="text-[var(--text-secondary)] text-body leading-relaxed">{t(descriptionKey)}</p>
             </div>
 
             <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
+              <Button
                 type="button"
                 onClick={handlePrimary}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-500 hover:bg-violet-400 text-white px-6 py-3 text-sm font-semibold shadow-lg shadow-violet-500/30 transition-colors"
+                variant="primary"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 text-body font-semibold"
               >
                 {isRtl ? (
                   <>
@@ -123,7 +125,7 @@ export function ErrorPage({ code, onPrimaryAction }: ErrorPageProps) {
                     <span>{t(buttonKey)}</span>
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

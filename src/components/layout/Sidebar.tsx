@@ -12,10 +12,10 @@ export type SidebarProps = {
 const NAV_ITEMS = [
   { id: 'dashboard', path: '/', icon: LayoutDashboard },
   { id: 'portfolio', path: '/portfolio', icon: PieChart },
-  { id: 'stocks', path: '/stocks', icon: Search },
   { id: 'market', path: '/market', icon: BarChart3 },
-  { id: 'calculator', path: '/calculator', icon: Calculator },
+  { id: 'stocks', path: '/stocks', icon: Search },
   { id: 'goals', path: '/goals', icon: Target },
+  { id: 'calculator', path: '/calculator', icon: Calculator },
   { id: 'profile', path: '/profile', icon: UserIcon },
   { id: 'settings', path: '/settings/account', icon: Settings },
 ] as const;
@@ -28,14 +28,16 @@ export function Sidebar({ activeRoute, onNavigate, collapsed, onToggle }: Sideba
       className={`
         hidden md:flex
         w-full md:flex-shrink-0 bg-[var(--bg-sidebar)] border-r border-[var(--border)]
-        flex-col gap-6 transition-[width] duration-200 ease-in-out overflow-hidden
+        flex-col gap-6 transition-[width] duration-300 ease-in-out overflow-hidden
         ${collapsed ? 'md:w-16' : 'md:w-60'}
       `}
     >
-      <div className="p-4 flex items-center justify-between gap-2 min-w-0">
+      <div className="p-4 flex items-center justify-between gap-2 min-w-0 bg-gradient-to-br from-[var(--brand)]/10 to-transparent rounded-br-xl">
         <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-          <TrendingUp className="text-[var(--brand)] w-8 h-8 shrink-0" />
-          <h1 className={`text-xl font-bold tracking-tight truncate transition-opacity duration-200 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>EGX Pro</h1>
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--brand)] to-[var(--brand-hover)] flex items-center justify-center shrink-0">
+            <TrendingUp className="text-[var(--text-inverse)] w-5 h-5" />
+          </div>
+          <h1 className={`text-xl font-bold tracking-tight truncate transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>EGX Pro</h1>
         </div>
         <button
           type="button"
@@ -56,7 +58,7 @@ export function Sidebar({ activeRoute, onNavigate, collapsed, onToggle }: Sideba
               key={item.id}
               title={collapsed ? label : undefined}
               onClick={() => onNavigate(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${collapsed ? 'justify-center' : ''} ${isActive ? 'bg-[var(--brand)] text-[var(--text-inverse)] shadow-lg shadow-violet-600/20' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'}`}
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 ${collapsed ? 'justify-center' : ''} ${isActive ? 'bg-[var(--brand)] text-[var(--text-inverse)] shadow-md' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'}`}
             >
               <item.icon className="w-5 h-5 shrink-0" />
               <span className={`font-medium truncate transition-opacity duration-200 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>{label}</span>
