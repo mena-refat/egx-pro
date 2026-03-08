@@ -24,7 +24,7 @@
 | 14 | React.lazy للصفحات الثقيلة | ✅ | |
 | 15 | Zustand + عدم prop drilling | ✅ | |
 | 16 | i18n عبر t() | ✅ | |
-| 17 | توحيد FREE_LIMITS (مصدر واحد أو متطابق) | ❌ | الفرونت: portfolio: 5, watchlist: 10. السيرفر: portfolioStocks: 10, watchlistStocks: 20. **يجب توحيد**. |
+| 17 | توحيد FREE_LIMITS (مصدر واحد أو متطابق) | ✅ | تم: الفرونت `src/lib/constants.ts` يطابق السيرفر `server/lib/plan.ts` (goals, portfolioStocks, watchlistStocks, aiAnalysisPerMonth). |
 
 ---
 
@@ -52,7 +52,7 @@
 | 4 | Custom hook ≤ 80 سطر | ❌ | useStockScreener، useStockAnalysis، usePortfolio، useNotifications تتجاوز. |
 | 5 | أي function ≤ 40 سطر | ⚠️ | غير مفحوص بشكل منهجي. |
 | 6 | استخدام مكونات Design System (Button, Input, إلخ) | ⚠️ جزئي | تم استبدال كثير من الأزرار؛ متبقي أزرار أيقونات/ثيم. |
-| 7 | ممنوع ألوان hardcoded — CSS variables فقط | ⚠️ | **ناقص**: InvestmentCalculator (stroke-slate-700)، StockAnalysis (fill-amber-500, fill-slate-500)، MarketPage (divide-slate-200/700). |
+| 7 | ممنوع ألوان hardcoded — CSS variables فقط | ✅ | تم: استبدال كل الألوان المذكورة بـ var(--border), var(--border-strong), var(--warning), var(--text-muted), var(--brand). |
 | 8 | useEffect + fetch مع AbortController و cleanup | ✅ | في أغلب الأماكن. |
 | 9 | تنظيف event listeners و timers | ✅ | |
 | 10 | react-hook-form + Zod للنماذج | ✅ | |

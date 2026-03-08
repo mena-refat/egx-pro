@@ -234,7 +234,10 @@ async function startServer() {
     const reqId = (req as express.Request & { id?: string }).id;
 
     if (err instanceof AppError) {
-      return res.status(err.status).json({ error: err.code });
+      const body: Record<string, unknown> = { error: err.code };
+      if (err.message && err.message !== err.code) body.message = err.message;
+      if (err.details) body.details = err.details;
+      return res.status(err.status).json(body);
     }
     if (err && typeof err === 'object' && (err as { name?: string }).name === 'ZodError') {
       return res.status(400).json({ error: 'VALIDATION_ERROR' });

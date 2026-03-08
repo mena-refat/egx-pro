@@ -1,11 +1,12 @@
 /** Plan prices (EGP) */
 export const PLAN_PRICES = { pro: 149, yearly: 999 } as const;
 
-/** Free tier limits */
+/** Free tier limits — must match server/lib/plan.ts */
 export const FREE_LIMITS = {
+  aiAnalysisPerMonth: 3,
+  portfolioStocks: 10,
+  watchlistStocks: 20,
   goals: 3,
-  portfolio: 5,
-  watchlist: 10,
 } as const;
 
 /** UI/timeouts (ms) */

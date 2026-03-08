@@ -22,6 +22,11 @@
 14. **توحيد استجابة APIs (stocks, market, analysis, auth, billing, news)** — جميعها تعيد `{ data }` للنجاح وأكواد أخطاء (NOT_FOUND, INTERNAL_ERROR, UNAUTHORIZED, ANALYSIS_LIMIT_REACHED, RATE_LIMIT_EXCEEDED, NEWS_API_MISSING, DISCOUNT_INVALID، إلخ). Stocks/Market: Controller مع run().catch(next). News: NewsService + NewsController. Billing: BillingService + BillingController. Analysis: رسالة rate limit RATE_LIMIT_EXCEEDED واستجابة { data: { analysis, id, newUnseenAchievements } }. Auth: كل استجابات النجاح داخل { data }. تم تحديث الفرونت لقراءة payload من response.data?.data ?? response.data.
 15. **توسيع طبقة Repository** — إضافة PortfolioRepository، NotificationsRepository، UserRepository (getPlanUser، getForBillingPlan). PortfolioService و NotificationService و BillingService تستخدمها.
 16. **تقسيم الملفات الطويلة** — استخراج مكوّن MarketIndicesGrid من MarketPage لتقليل حجم الصفحة؛ باقي الصفحات/المكوّنات الطويلة يمكن تقسيمها لاحقاً لتحقيق Page≤100، Feature≤200، Hook≤80.
+17. **Analysis: Controller + Service** — تم نقل كل منطق التحليل من `server/routes/analysis.ts` إلى `AnalysisService` و `AnalysisController`؛ الـ route = authenticate + analysisLimiter + AnalysisController.create فقط. دعم AppError مع details (402 ANALYSIS_LIMIT_REACHED).
+18. **توحيد FREE_LIMITS** — الفرونت `src/lib/constants.ts` يطابق السيرفر `server/lib/plan.ts` (goals: 3، portfolioStocks: 10، watchlistStocks: 20، aiAnalysisPerMonth: 3).
+19. **إزالة ألوان hardcoded المتبقية** — InvestmentCalculator (stroke، tick fill، gradient، area stroke)، StockAnalysis (fill-amber، fill-slate)، MarketPage (divide-slate) استُبدلت كلها بـ CSS variables (--border-strong، --text-muted، --brand، --warning).
+
+قائمة تحقق تفصيلية: **RULES-CHECKLIST.md**.
 
 ---
 
@@ -30,8 +35,8 @@
 | الملف | مطبّق بالكامل؟ | ملاحظات |
 |-------|-----------------|----------|
 | **engineering.mdc** | جزئي | ✅ AppError، constants، auth، ownership، Zod، rate limit، Repository لـ watchlist، goals، portfolio، notifications، user (جزئي). ❌ حدود أسطر الصفحات/Hooks غير مطبّقة بالكامل. |
-| **components.mdc** | جزئي | ✅ CSS variables، Design system، AbortController، Button في أماكن إضافية (Header، MarketPage). بدء تقسيم الصفحات (MarketIndicesGrid). ❌ بعض raw `<button>`؛ حدود أسطر الملفات ما زالت تتطلب مزيد تقسيم. |
-| **api.mdc** | جزئي | ✅ استجابة موحّدة لـ watchlist, goals, profile, notifications, user, portfolio، **stocks, market, news, billing, analysis, auth**؛ Repository موسّع؛ Billing و News ب controller + service. |
+| **components.mdc** | جزئي | ✅ **ألوان hardcoded مُستبدلة كلها بـ CSS variables**؛ Design system، AbortController، Button في أماكن إضافية. بدء تقسيم الصفحات (MarketIndicesGrid). ❌ بعض raw `<button>` (أيقونات/ثيم)； حدود أسطر الملفات ما زالت تتطلب مزيد تقسيم. |
+| **api.mdc** | جزئي | ✅ استجابة موحّدة؛ **Analysis = route + controller فقط** (AnalysisService يحوي المنطق)؛ Repository موسّع. User/Auth ما زالا يستدعيان prisma مباشرة في أماكن. |
 
 ---
 
@@ -63,14 +68,14 @@
 3. **AppError + معالجة أخطاء مركّزة (قسم 6)** — **مطبّق**  
    تم: `server/lib/errors.ts`، global error handler في server.ts، استخدام AppError في WatchlistService و GoalsService.
 
-4. **Route بدون منطق أعمال (api.mdc)** — **مطبّق لـ watchlist و goals**  
-   watchlist و goals: الـ route = middleware + controller فقط؛ المنطق في Service.
+4. **Route بدون منطق أعمال (api.mdc)** — **مطبّق**  
+   watchlist، goals، **analysis**، portfolio، news، billing: الـ route = middleware + controller فقط؛ المنطق في Service.
 
 5. **RATE_LIMITS في server.ts** — **مطبّق**  
    تم استيراد RATE_LIMITS و ONE_MINUTE_MS من constants؛ رسالة rate limit: `RATE_LIMIT_EXCEEDED`.
 
-6. **ثوابت FREE_LIMITS موحّدة**  
-   السيرفر: `server/lib/plan.ts` (portfolioStocks, watchlistStocks, goals). الفرونت: `src/lib/constants.ts` قد تختلف أرقاماً. **الإجراء**: توحيد المصدر إن لزم.
+6. **ثوابت FREE_LIMITS موحّدة** — **مطبّق**  
+   الفرونت `src/lib/constants.ts` يطابق السيرفر (portfolioStocks: 10، watchlistStocks: 20، goals: 3، aiAnalysisPerMonth: 3).
 
 ---
 

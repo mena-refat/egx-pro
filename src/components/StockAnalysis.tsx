@@ -116,7 +116,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               onClick={toggleWatchlist}
               className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg ${watchlist.includes(stock.ticker) ? 'bg-[var(--warning-bg)] text-[var(--warning)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'}`}
             >
-              {watchlist.includes(stock.ticker) ? <Star className="w-3.5 h-3.5 fill-amber-500" /> : <Plus className="w-3.5 h-3.5" />}
+              {watchlist.includes(stock.ticker) ? <Star className="w-3.5 h-3.5 fill-[var(--warning)]" /> : <Plus className="w-3.5 h-3.5" />}
               {watchlist.includes(stock.ticker) ? t('stockDetail.watchlistRemove') : t('stockDetail.watchlistAdd')}
         </button>
           </div>
@@ -141,7 +141,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           {egxStatus?.status === 'closed' && (
             <>
               <span className="inline-flex items-center gap-1">
-                <Circle className="w-3 h-3 text-[var(--text-muted)] fill-slate-500" aria-hidden />
+                <Circle className="w-3 h-3 text-[var(--text-muted)] fill-[var(--text-muted)]" aria-hidden />
                 {t('delay.marketClosed')}
               </span>
               <span>{t('delay.lastCloseAt', { time: '14:30' })}</span>

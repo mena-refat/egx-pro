@@ -230,20 +230,20 @@ export default function InvestmentCalculator() {
             >
               <defs>
                 <linearGradient id="wealthFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                  <stop offset="0%" stopColor="var(--brand)" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="var(--brand)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-slate-700" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-[var(--border-strong)]" vertical={false} />
               <XAxis
                 dataKey="year"
-                tick={{ fill: '#94a3b8', fontSize: 12 }}
+                tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v) => (locale.startsWith('ar') ? `${v} س` : `${v}y`)}
               />
               <YAxis
-                tick={{ fill: '#94a3b8', fontSize: 12 }}
+                tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={formatAxis}
@@ -274,7 +274,7 @@ export default function InvestmentCalculator() {
                 type="monotone"
                 dataKey="total"
                 name={t('calculator.chartWealth')}
-                stroke="#8b5cf6"
+                stroke="var(--brand)"
                 strokeWidth={2.5}
                 fill="url(#wealthFill)"
                 isAnimationActive
@@ -285,7 +285,7 @@ export default function InvestmentCalculator() {
                 type="monotone"
                 dataKey="principal"
                 name={t('calculator.chartPrincipal')}
-                stroke="#64748b"
+                stroke="var(--text-muted)"
                 strokeWidth={2}
                 strokeDasharray="6 4"
                 fill="transparent"

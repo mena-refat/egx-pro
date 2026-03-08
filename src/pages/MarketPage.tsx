@@ -456,7 +456,7 @@ export default function MarketPage() {
                 <TrendingUp className="w-4 h-4" />
                 <span className="font-semibold text-sm">{t('market.topGainers')}</span>
               </div>
-              <ul className="divide-y divide-slate-200 dark:divide-slate-700">
+              <ul className="divide-y divide-[var(--border)]">
                 {topGainers.length === 0 ? (
                   <li className="px-4 py-6 text-center text-[var(--text-muted)] text-sm">{t('market.noData')}</li>
                 ) : (
@@ -489,7 +489,7 @@ export default function MarketPage() {
                 <TrendingDown className="w-4 h-4" />
                 <span className="font-semibold text-sm">{t('market.topLosers')}</span>
               </div>
-              <ul className="divide-y divide-slate-200 dark:divide-slate-700">
+              <ul className="divide-y divide-[var(--border)]">
                 {topLosers.length === 0 ? (
                   <li className="px-4 py-6 text-center text-[var(--text-muted)] text-sm">{t('market.noData')}</li>
                 ) : (
