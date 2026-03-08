@@ -1,260 +1,100 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { 
-  BrainCircuit, 
-  TrendingUp, 
+import React from 'react';
+import {
+  BrainCircuit,
+  TrendingUp,
   TrendingDown,
-  ShieldAlert, 
-  Target, 
-  BarChart3, 
-  Newspaper,
   ChevronLeft,
   Star,
-  Zap,
-  ExternalLink,
-  MessageSquare,
-  RefreshCw,
-  Info,
   Plus,
+  ExternalLink,
+  Info,
   X,
   Lock,
   Crown,
   Circle,
   Timer,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { StockPriceChart } from './features/stocks/StockPriceChart';
-import api from '../lib/api';
 import { getStockName, getStockInfo } from '../lib/egxStocks';
-import { getSector, isShariaCompliant } from '../lib/egxIndicesSectors';
-import { useAuthStore } from '../store/authStore';
-import { Skeleton } from './ui/Skeleton';
+import { getSector } from '../lib/egxIndicesSectors';
 import { Button } from './ui/Button';
-import { Stock, AnalysisResult } from '../types';
+import { Stock } from '../types';
+import { useStockAnalysis } from '../hooks/useStockAnalysis';
+import { AnalysisForm } from './analysis/AnalysisForm';
+import { AnalysisResult } from './analysis/AnalysisResult';
+import { formatNum, formatBig } from './analysis/analysisUtils';
+import type { TabId, ChartRange } from '../hooks/useStockAnalysis';
 
-interface NewsItem {
-  title: string;
-  summary?: string;
-  source: string;
-  publishedAt: string;
-  sentiment?: 'positive' | 'negative' | 'neutral';
-  url: string;
-}
-
-type TabId = 'details' | 'stats' | 'ai' | 'news';
-type ChartRange = '1d' | '1w' | '1mo' | '6mo' | '1y' | '5y';
-
-interface StockAnalysisProps {
+export interface StockAnalysisProps {
   stock: Stock;
   onBack: () => void;
 }
 
-function formatNum(n: number | undefined | null): string {
-  if (n == null || !Number.isFinite(n)) return '—';
-  return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
-}
-function formatBig(n: number | undefined | null): string {
-  if (n == null || !Number.isFinite(n)) return '—';
-  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
-  return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
-}
+const TABS: { id: TabId; labelKey: string }[] = [
+  { id: 'details', labelKey: 'stockDetail.tabDetails' },
+  { id: 'stats', labelKey: 'stockDetail.tabStats' },
+  { id: 'ai', labelKey: 'stockDetail.tabAI' },
+  { id: 'news', labelKey: 'stockDetail.tabNews' },
+];
 
-/** Pivot points: P = (H+L+C)/3, R1 = 2*P-L, R2 = P+(H-L), R3 = H+2*(P-L), S1 = 2*P-H, S2 = P-(H-L), S3 = L-2*(H-P) */
-function pivotPoints(high: number, low: number, close: number) {
-  const p = (high + low + close) / 3;
-  return {
-    pivot: p,
-    r1: 2 * p - low,
-    r2: p + (high - low),
-    r3: high + 2 * (p - low),
-    s1: 2 * p - high,
-    s2: p - (high - low),
-    s3: low - 2 * (high - p),
-  };
-}
-
-/** Fibonacci from 52w high to low */
-function fibonacciLevels(high: number, low: number) {
-  const d = high - low;
-  return {
-    p100: high,
-    p786: low + 0.786 * d,
-    p618: low + 0.618 * d,
-    p50: low + 0.5 * d,
-    p382: low + 0.382 * d,
-    p236: low + 0.236 * d,
-    p0: low,
-  };
-}
-
-export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
-  const { t, i18n } = useTranslation('common');
-  const user = useAuthStore((s) => s.user);
-  const shariaMode = user?.shariaMode ?? false;
-  const isRTL = i18n.language.startsWith('ar');
-  const lang = isRTL ? 'ar' : 'en';
-
-  const [activeTab, setActiveTab] = useState<TabId>('details');
-  const [priceDetail, setPriceDetail] = useState<Record<string, unknown> | null>(null);
-  const [history, setHistory] = useState<{ date: string; price: number }[]>([]);
-  const [chartRange, setChartRange] = useState<ChartRange>('1mo');
-  const [financials, setFinancials] = useState<Record<string, unknown> | null>(null);
-  const [orderDepthAvailable, setOrderDepthAvailable] = useState<boolean | null>(null);
-  const [investorCategoriesAvailable, setInvestorCategoriesAvailable] = useState<boolean | null>(null);
-  const [tradingStatsAvailable, setTradingStatsAvailable] = useState<boolean | null>(null);
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
-  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
-  const [errorAnalysis, setErrorAnalysis] = useState<string | null>(null);
-  const [watchlist, setWatchlist] = useState<string[]>([]);
-  const [shariaDismissed, setShariaDismissed] = useState(false);
-  const [statsInfoOpen, setStatsInfoOpen] = useState(false);
-  const [analysisPlan, setAnalysisPlan] = useState<{ used: number; quota: number } | null>(null);
-  const [showAnalysisLimitModal, setShowAnalysisLimitModal] = useState(false);
-  const [showWatchlistLimitModal, setShowWatchlistLimitModal] = useState(false);
-  const [egxStatus, setEgxStatus] = useState<{ status: string; label?: { ar: string; en: string } } | null>(null);
-  const isPro = user?.plan === 'pro' || user?.plan === 'yearly';
-
-  const open = (priceDetail?.open as number) ?? stock.open ?? 0;
-  const previousClose = (priceDetail?.previousClose as number) ?? stock.previousClose ?? 0;
-  const high = (priceDetail?.high as number) ?? stock.high ?? 0;
-  const low = (priceDetail?.low as number) ?? stock.low ?? 0;
-  const high52w = (priceDetail?.high52w as number) ?? stock.high52w ?? 0;
-  const low52w = (priceDetail?.low52w as number) ?? stock.low52w ?? 0;
-  const volume = (priceDetail?.volume as number) ?? stock.volume ?? 0;
-  const price = stock.price ?? 0;
-
-  const pivots = useMemo(() => {
-    if (high && low && price) return pivotPoints(high, low, price);
-    return null;
-  }, [high, low, price]);
-
-  const fibLevels = useMemo(() => {
-    if (high52w && low52w) return fibonacciLevels(high52w, low52w);
-    return null;
-  }, [high52w, low52w]);
-
-  const isSharia = isShariaCompliant(stock.ticker);
-  const showShariaBanner = shariaMode && !isSharia && !shariaDismissed;
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const signal = controller.signal;
-    (async () => {
-      try {
-        const [priceRes, statusRes, histRes, finRes, depthRes, invRes, statsRes, newsRes, watchRes] = await Promise.all([
-          api.get(`/stocks/${stock.ticker}/price`, { signal }),
-          api.get<{ egx: { status: string; label?: { ar: string; en: string } } }>('/stocks/market/status', { signal }).catch(() => ({ data: null })),
-          api.get(`/stocks/${stock.ticker}/history`, { params: { range: chartRange }, signal }),
-          api.get(`/stocks/${stock.ticker}/financials`, { signal }).catch(() => ({ data: null })),
-          api.get(`/stocks/${stock.ticker}/order-depth`, { signal }).catch(() => ({ data: { available: false } })),
-          api.get(`/stocks/${stock.ticker}/investor-categories`, { signal }).catch(() => ({ data: { available: false } })),
-          api.get(`/stocks/${stock.ticker}/trading-stats`, { signal }).catch(() => ({ data: { available: false } })),
-          api.get(`/stocks/${stock.ticker}/news`, { signal }),
-          api.get('/watchlist', { signal }).catch(() => ({ data: [] })),
-        ]);
-        if (signal.aborted) return;
-        setPriceDetail(priceRes.data as Record<string, unknown>);
-        if (statusRes.data?.egx) setEgxStatus(statusRes.data.egx);
-        setHistory(Array.isArray(histRes.data) ? histRes.data : []);
-        setFinancials(finRes.data as Record<string, unknown> | null);
-        setOrderDepthAvailable((depthRes.data as { available?: boolean })?.available ?? false);
-        setInvestorCategoriesAvailable((invRes.data as { available?: boolean })?.available ?? false);
-        setTradingStatsAvailable((statsRes.data as { available?: boolean })?.available ?? false);
-        setNews(Array.isArray(newsRes.data) ? newsRes.data : []);
-        setWatchlist(Array.isArray(watchRes.data) ? (watchRes.data as { ticker: string }[]).map((w) => w.ticker) : []);
-      } catch (err: unknown) {
-        if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
-        setPriceDetail(null);
-      }
-    })();
-    return () => controller.abort();
-  }, [stock.ticker, chartRange]);
-
-  useEffect(() => {
-    if (activeTab !== 'ai') return;
-    const controller = new AbortController();
-    api.get<{ analysis: { used: number; quota: number } }>('/billing/plan', { signal: controller.signal })
-      .then((res) => {
-        if (controller.signal.aborted) return;
-        const a = res.data?.analysis;
-        if (a && Number.isFinite(a.quota)) setAnalysisPlan({ used: a.used, quota: a.quota });
-      })
-      .catch((err: unknown) => {
-        if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
-        setAnalysisPlan(null);
-      });
-    return () => controller.abort();
-  }, [activeTab]);
-
-  const getAnalysis = async () => {
-    const quota = analysisPlan?.quota ?? 3;
-    const used = analysisPlan?.used ?? 0;
-    if (!isPro && used >= quota) {
-      setShowAnalysisLimitModal(true);
-      return;
-    }
-    setLoadingAnalysis(true);
-    setErrorAnalysis(null);
-    try {
-      const res = await api.post(`/analysis/${stock.ticker}`);
-      if (res.data?.analysis) {
-        setAnalysis(res.data.analysis);
-        if (analysisPlan && Number.isFinite(analysisPlan.quota)) setAnalysisPlan((p) => p ? { ...p, used: p.used + 1 } : null);
-      } else throw new Error('Invalid format');
-    } catch (err: unknown) {
-      const data = err && typeof err === 'object' && 'response' in err ? (err as { response?: { data?: { code?: string } } }).response?.data : undefined;
-      if (data?.code === 'ANALYSIS_LIMIT_REACHED') {
-        setShowAnalysisLimitModal(true);
-        setAnalysisPlan((p) => p ? { ...p, used: p.quota } : null);
-      } else {
-        const msg = err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
-          : null;
-        setErrorAnalysis(msg || t('common.error'));
-      }
-    } finally {
-      setLoadingAnalysis(false);
-    }
-  };
-
-  const toggleWatchlist = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const inList = watchlist.includes(stock.ticker);
-    try {
-      if (inList) {
-        await api.delete(`/watchlist/${stock.ticker}`);
-        setWatchlist((p) => p.filter((t) => t !== stock.ticker));
-      } else {
-        await api.post('/watchlist', { ticker: stock.ticker });
-        setWatchlist((p) => [...p, stock.ticker]);
-        if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('profile-completion-changed'));
-      }
-    } catch (err: unknown) {
-      const data = err && typeof err === 'object' && 'response' in err ? (err as { response?: { data?: { code?: string } } }).response?.data : undefined;
-      if (data?.code === 'WATCHLIST_LIMIT') setShowWatchlistLimitModal(true);
-    }
-  };
-
-  const tabs: { id: TabId; labelKey: string }[] = [
-    { id: 'details', labelKey: 'stockDetail.tabDetails' },
-    { id: 'stats', labelKey: 'stockDetail.tabStats' },
-    { id: 'ai', labelKey: 'stockDetail.tabAI' },
-    { id: 'news', labelKey: 'stockDetail.tabNews' },
-  ];
-
-  const chartRanges: { id: ChartRange; labelKey: string }[] = [
+const CHART_RANGES: { id: ChartRange; labelKey: string }[] = [
     { id: '1d', labelKey: 'stockDetail.chartRange1D' },
     { id: '1w', labelKey: 'stockDetail.chartRange1W' },
     { id: '1mo', labelKey: 'stockDetail.chartRange1M' },
     { id: '6mo', labelKey: 'stockDetail.chartRange6M' },
     { id: '1y', labelKey: 'stockDetail.chartRange1Y' },
     { id: '5y', labelKey: 'stockDetail.chartRange5Y' },
-  ];
+];
+
+export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
+  const api = useStockAnalysis(stock);
+  const {
+    activeTab,
+    setActiveTab,
+    chartRange,
+    setChartRange,
+    priceDetail,
+    watchlist,
+    price,
+    open,
+    previousClose,
+    high,
+    low,
+    high52w,
+    low52w,
+    volume,
+    financials,
+    orderDepthAvailable,
+    investorCategoriesAvailable,
+    tradingStatsAvailable,
+    news,
+    analysis,
+    loadingAnalysis,
+    errorAnalysis,
+    isSharia,
+    showShariaBanner,
+    setShariaDismissed,
+    statsInfoOpen,
+    setStatsInfoOpen,
+    analysisPlan,
+    showAnalysisLimitModal,
+    setShowAnalysisLimitModal,
+    showWatchlistLimitModal,
+    setShowWatchlistLimitModal,
+    egxStatus,
+    pivots,
+    fibLevels,
+    isRTL,
+    lang,
+    isPro,
+    t,
+    i18n,
+    getAnalysis,
+    toggleWatchlist,
+  } = api;
 
   const info = getStockInfo(stock.ticker);
-  const sector = stock.sector || (info ? getSector(stock.ticker, info.nameAr, info.nameEn, lang) : '');
+  const sector = stock.sector || (info ? getSector(stock.ticker, info.nameAr ?? '', info.nameEn ?? '', lang as 'ar' | 'en') : '');
 
   return (
     <div className="space-y-0 pb-20" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -282,7 +122,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">{getStockName(stock.ticker, lang)}</h1>
+          <h1 className="text-xl font-bold text-[var(--text-primary)]">{getStockName(stock.ticker, lang as 'ar' | 'en')}</h1>
           {isSharia && (
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--success-bg)] text-[var(--success)]">
               {t('stockDetail.shariaBadge')}
@@ -328,7 +168,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               ) : (
                 <>
                   <span className="inline-flex items-center gap-1 text-[var(--success)]">
-                    <Circle className="w-3 h-3 fill-emerald-500" aria-hidden />
+                    <Circle className="w-3 h-3 fill-[var(--success)]" aria-hidden />
                     {t('delay.liveBadge')}
                   </span>
                   <span>{t('delay.lastUpdateAt', { time: (priceDetail?.priceTime as string) || new Date().toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) })}</span>
@@ -353,7 +193,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-[var(--border)] mb-6 overflow-x-auto">
-        {tabs.map((tab) => (
+        {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -371,7 +211,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           {/* Chart */}
           <section>
             <div className="flex gap-2 mb-2 overflow-x-auto">
-              {chartRanges.map((r) => (
+              {CHART_RANGES.map((r) => (
                 <button 
                   key={r.id}
                   type="button"
@@ -383,7 +223,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               ))}
               </div>
             <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden" style={{ height: 220 }}>
-              <StockPriceChart data={history} height={220} lineColor="#8b5cf6" />
+              <StockPriceChart data={api.history} height={220} lineColor="#8b5cf6" />
             </div>
           </section>
 
@@ -475,7 +315,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           <section>
             <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.aboutCompany')}</h3>
             <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
-              <p className="font-medium text-[var(--text-primary)]">{getStockName(stock.ticker, lang)}</p>
+              <p className="font-medium text-[var(--text-primary)]">{getStockName(stock.ticker, lang as 'ar' | 'en')}</p>
               <p className="text-sm text-[var(--text-muted)]  mt-1">{info?.nameEn}</p>
               <p className="text-sm text-[var(--text-secondary)] mt-2">{stock.description || t('stockDetail.defaultDescription')}</p>
               <p className="text-xs text-[var(--text-muted)]  mt-2">{t('stockDetail.listedIn')}: EGX30 | {sector}</p>
@@ -527,82 +367,20 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
         </div>
       )}
 
-      {/* Tab: AI - keep existing content */}
+      {/* Tab: AI */}
       {activeTab === 'ai' && (
         <div className="space-y-8">
-          {!isPro && analysisPlan != null && Number.isFinite(analysisPlan.quota) && (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-              <p className="text-sm text-[var(--text-secondary)] mb-2">{t('plan.usedAnalysisThisMonth', { used: analysisPlan.used, quota: analysisPlan.quota })}</p>
-              <div className="w-full h-2 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-[width] ${analysisPlan.used >= analysisPlan.quota ? 'bg-red-500' : analysisPlan.used >= 2 ? 'bg-[var(--warning)]' : 'bg-violet-500'}`}
-                  style={{ width: `${Math.min((analysisPlan.used / analysisPlan.quota) * 100, 100)}%` }}
-                />
-              </div>
-            </div>
-          )}
-          {!analysis && !loadingAnalysis && !errorAnalysis && (
-            <div className="text-center py-12 border border-dashed border-[var(--border)] rounded-2xl">
-              <BrainCircuit className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">{t('stockDetail.aiAnalysis')}</h3>
-              <p className="text-[var(--text-muted)]  mb-6 max-w-md mx-auto">{t('stockDetail.aiAnalysisDesc')}</p>
-              <button type="button" onClick={getAnalysis} className="px-6 py-3 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-[var(--text-inverse)] rounded-xl font-bold flex items-center gap-2 mx-auto">
-                <Zap className="w-4 h-4" /> {t('stockDetail.generateAnalysis')}
-              </button>
-            </div>
-          )}
-          {loadingAnalysis && (
-            <div className="space-y-4 p-4">
-              <Skeleton height={48} className="w-48 rounded-lg" />
-              <Skeleton height={256} className="w-full rounded-xl" />
-              <Skeleton height={128} className="w-full rounded-xl" />
-            </div>
-          )}
-          {errorAnalysis && (
-            <div className="p-6 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-2xl text-center">
-              <ShieldAlert className="w-8 h-8 text-[var(--danger)] mx-auto mb-2" />
-              <p className="text-[var(--danger)] mb-4">{errorAnalysis}</p>
-              <Button type="button" variant="secondary" onClick={getAnalysis} className="mx-auto border-[var(--danger)] text-[var(--danger)]">
-                <RefreshCw className="w-4 h-4" /> {t('stockDetail.retry')}
-              </Button>
-            </div>
-          )}
+          <AnalysisForm
+            analysis={analysis}
+            loading={loadingAnalysis}
+            error={errorAnalysis}
+            onGetAnalysis={getAnalysis}
+            analysisPlan={analysisPlan}
+            isPro={isPro}
+            t={t as (key: string, opts?: object) => string}
+          />
           {analysis && !loadingAnalysis && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="p-6 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border)]">
-                <p className="text-[var(--text-secondary)] leading-relaxed italic">"{analysis.summary}"</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-[var(--brand)] font-bold"><BarChart3 className="w-5 h-5" /> {t('stockDetail.fundamental')}</div>
-                  <div className="text-sm text-[var(--text-muted)]  space-y-2">
-                    <p><span className="text-[var(--text-primary)] font-medium">Outlook:</span> {analysis.fundamental?.outlook}</p>
-                    <p><span className="text-[var(--text-primary)] font-medium">Ratios:</span> {analysis.fundamental?.ratios}</p>
-                    <p className="text-[var(--success)] font-bold">Verdict: {analysis.fundamental?.verdict}</p>
-                </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-[var(--brand)] font-bold"><TrendingUp className="w-5 h-5" /> {t('stockDetail.technical')}</div>
-                  <div className="text-sm text-[var(--text-muted)]  space-y-2">
-                    <p><span className="text-[var(--text-primary)] font-medium">Signal:</span> {analysis.technical?.signal}</p>
-                    <p><span className="text-[var(--text-primary)] font-medium">Levels:</span> {analysis.technical?.levels}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="p-6 bg-[var(--bg-secondary)] rounded-2xl">
-                <p className="text-[var(--text-secondary)] mb-4">{analysis.sentiment}</p>
-                <div className={`text-2xl font-black ${analysis.verdict?.includes('Buy') ? 'text-[var(--success)]' : analysis.verdict?.includes('Sell') ? 'text-[var(--danger)]' : 'text-[var(--warning)]'}`}>{analysis.verdict}</div>
-                <div className="flex justify-between mt-4 text-sm">
-                  <span className="text-[var(--danger)] font-bold">{analysis.priceTarget?.low}</span>
-                  <span className="font-bold text-[var(--text-primary)]">{analysis.priceTarget?.base}</span>
-                  <span className="text-[var(--success)] font-bold">{analysis.priceTarget?.high}</span>
-                </div>
-              </div>
-              <div className="p-6 bg-[var(--danger-bg)] border border-[var(--danger)]/10 rounded-2xl">
-                <div className="flex items-center gap-2 text-[var(--danger)] font-bold mb-2"><ShieldAlert className="w-4 h-4" /> {t('stockDetail.disclaimer')}</div>
-                <p className="text-xs text-[var(--text-muted)]">{analysis.disclaimer}</p>
-              </div>
-            </motion.div>
+            <AnalysisResult analysis={analysis} t={t as (key: string, opts?: object) => string} />
           )}
         </div>
       )}
