@@ -62,7 +62,10 @@ export function Button({
       className={`${base} ${variantClass} ${sizeClass} ${fullWidth ? 'w-full' : ''} ${className}`.trim()}
     >
       {loading ? (
-        <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        <>
+          <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" aria-hidden />
+          {children}
+        </>
       ) : (
         <>
           {icon && iconPosition === 'left' && <span className="shrink-0">{icon}</span>}

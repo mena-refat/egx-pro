@@ -38,7 +38,7 @@ export default function PortfolioTracker() {
         }
       } catch (err: unknown) {
         if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
-        if (process.env.NODE_ENV === 'development') console.error('Failed to fetch stocks for suggestions', err);
+        if (import.meta.env.DEV) console.error('Failed to fetch stocks for suggestions', err);
       }
     };
     fetchStocks();

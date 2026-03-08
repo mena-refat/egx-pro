@@ -252,19 +252,9 @@ export default function AuthPage() {
                 </div>
                 {authMessage && <p className={`text-sm p-3 rounded-xl border text-center ${authMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>{authMessage.text}</p>}
                 {authError && <p className="text-red-500 text-sm bg-red-500/10 p-3 rounded-xl border border-red-500/20">{authError}</p>}
-                <Button type="submit" fullWidth size="lg" disabled={isSubmitting} icon={isSubmitting ? undefined : (isLogin ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />)} iconPosition="left"
+                <Button type="submit" fullWidth size="lg" disabled={isSubmitting} loading={isSubmitting} icon={isSubmitting ? undefined : (isLogin ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />)} iconPosition="left"
                   className="flex items-center justify-center gap-2">
-                  {isSubmitting ? (
-                    <>
-                      <svg className="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden>
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V8H4v4z" />
-                      </svg>
-                      {t('auth.loading')}
-                    </>
-                  ) : (
-                    isLogin ? t('auth.login') : t('auth.register')
-                  )}
+                  {isSubmitting ? t('auth.loading') : (isLogin ? t('auth.login') : t('auth.register'))}
                 </Button>
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[var(--border)]" /></div>

@@ -39,7 +39,7 @@ const GoalTracker = memo(function GoalTracker({ currentWealth }: { currentWealth
         else if (Array.isArray(data)) setGoals(data);
       } catch (err) {
         if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('abort'))) return;
-        if (process.env.NODE_ENV === 'development') console.error('Fetch goals error', err);
+        if (import.meta.env.DEV) console.error('Fetch goals error', err);
       } finally {
         if (!controller.signal.aborted) setIsLoading(false);
       }

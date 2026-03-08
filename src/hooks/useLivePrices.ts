@@ -25,7 +25,7 @@ export function useLivePrices() {
 
       ws.onopen = () => {
         setIsConnected(true);
-        if (process.env.NODE_ENV === 'development') console.log('WebSocket connected');
+        if (import.meta.env.DEV) console.log('WebSocket connected');
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
           reconnectTimeoutRef.current = null;
@@ -49,7 +49,7 @@ export function useLivePrices() {
 
       ws.onclose = () => {
         setIsConnected(false);
-        if (process.env.NODE_ENV === 'development') console.log('WebSocket disconnected. Reconnecting in 5s...');
+        if (import.meta.env.DEV) console.log('WebSocket disconnected. Reconnecting in 5s...');
         // Auto reconnect
         reconnectTimeoutRef.current = setTimeout(connect, 5000);
       };

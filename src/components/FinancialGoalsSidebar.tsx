@@ -31,7 +31,7 @@ const FinancialGoalsSidebar = memo(function FinancialGoalsSidebar({ currentWealt
         }
       } catch (err) {
         if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('abort'))) return;
-        if (process.env.NODE_ENV === 'development') console.error('Fetch goals error', err);
+        if (import.meta.env.DEV) console.error('Fetch goals error', err);
       }
     };
     fetchGoals();

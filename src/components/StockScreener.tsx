@@ -316,10 +316,12 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
         })}
       </ul>
 
-      {sorted.length === 0 && (
-        <div className="text-center py-12 rounded-xl border border-dashed border-[var(--border)] text-slate-500 dark:text-slate-400">
-          {t('stocks.noResults')}
-        </div>
+      {sorted.length === 0 && !loading && (
+        <EmptyState
+          icon={Search}
+          title={t('stocks.noResults')}
+          description={t('stocks.noResultsDescription')}
+        />
       )}
 
       {showWatchlistLimitModal && (

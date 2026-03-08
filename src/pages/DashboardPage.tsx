@@ -36,40 +36,44 @@ export default function DashboardPage() {
   const [watchlistLoading, setWatchlistLoading] = useState(true);
 
   useEffect(() => {
-    const controller = new AbortController();
+    const marketController = new AbortController();
+    const watchlistController = new AbortController();
 
     const fetchMarketOverview = async () => {
       setMarketLoading(true);
       setMarketError(null);
       try {
-        const res = await api.get('/stocks/market/overview', { signal: controller.signal });
-        if (!controller.signal.aborted) setMarketOverview(res.data);
+        const res = await api.get('/stocks/market/overview', { signal: marketController.signal });
+        if (!marketController.signal.aborted) setMarketOverview(res.data);
       } catch (err: unknown) {
         if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
         if (err instanceof Error) setMarketError(err.message);
         else setMarketError('Failed to fetch market overview');
       } finally {
-        if (!controller.signal.aborted) setMarketLoading(false);
+        if (!marketController.signal.aborted) setMarketLoading(false);
       }
     };
 
     const fetchWatchlist = async () => {
       setWatchlistLoading(true);
       try {
-        const res = await api.get('/watchlist', { signal: controller.signal });
-        if (!controller.signal.aborted) setWatchlist(Array.isArray(res.data) ? res.data : []);
+        const res = await api.get('/watchlist', { signal: watchlistController.signal });
+        if (!watchlistController.signal.aborted) setWatchlist(Array.isArray(res.data) ? res.data : []);
       } catch (err: unknown) {
         if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
-        if (process.env.NODE_ENV === 'development') console.error('Failed to fetch watchlist', err);
-        if (!controller.signal.aborted) setWatchlist([]);
+        if (import.meta.env.DEV) console.error('Failed to fetch watchlist', err);
+        if (!watchlistController.signal.aborted) setWatchlist([]);
       } finally {
-        if (!controller.signal.aborted) setWatchlistLoading(false);
+        if (!watchlistController.signal.aborted) setWatchlistLoading(false);
       }
     };
 
     fetchMarketOverview();
     fetchWatchlist();
-    return () => controller.abort();
+    return () => {
+      marketController.abort();
+      watchlistController.abort();
+    };
   }, []);
 
   // Notify when a watchlist item reaches its target price
