@@ -56,7 +56,8 @@ export default function AuthPage() {
           const res = await fetch('/api/auth/me', { credentials: 'include' });
           if (res.ok) {
             const data = await res.json();
-            setAuth(data.user, data.accessToken);
+            const payload = data?.data ?? data;
+            setAuth(payload?.user, payload?.accessToken);
           }
         } catch (err) {
           console.error('Failed to sync after Google login', err);
@@ -107,7 +108,7 @@ export default function AuthPage() {
       const body = isLogin ? { emailOrPhone: data.emailOrPhone, password: data.password } : { emailOrPhone: data.emailOrPhone, password: data.password, fullName: data.fullName ?? '' };
       const res = await fetch(endpoint, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
-      let resData: { error?: string; message?: string; accessToken?: string; user?: unknown; requires2FA?: boolean; tempToken?: string; restored?: boolean } = {};
+      let resData: { error?: string; message?: string; data?: { accessToken?: string; user?: unknown; requires2FA?: boolean; tempToken?: string; restored?: boolean } } = {};
       try {
         const text = await res.text();
         if (text) resData = JSON.parse(text) as typeof resData;
@@ -122,18 +123,19 @@ export default function AuthPage() {
         setAuthError(msg);
         return;
       }
+      const payload = resData.data ?? (resData as { accessToken?: string; user?: unknown; requires2FA?: boolean; tempToken?: string; restored?: boolean });
 
-      if (isLogin && resData.requires2FA && resData.tempToken) {
-        setTwoFaTempToken(resData.tempToken);
+      if (isLogin && payload.requires2FA && payload.tempToken) {
+        setTwoFaTempToken(payload.tempToken);
         setTwoFactorOtp('');
         setShowTwoFactorInput(true);
         setAuthError('');
         return;
       }
 
-      let profileData = resData.user as Record<string, unknown> | undefined;
+      let profileData = payload.user as Record<string, unknown> | undefined;
       try {
-        const profileRes = await fetch('/api/user/profile', { headers: { Authorization: `Bearer ${resData.accessToken}` }, credentials: 'include' });
+        const profileRes = await fetch('/api/user/profile', { headers: { Authorization: `Bearer ${payload.accessToken}` }, credentials: 'include' });
         if (profileRes.ok) {
           const text = await profileRes.text();
           if (text) {
@@ -142,12 +144,12 @@ export default function AuthPage() {
           }
         }
       } catch {
-        profileData = (resData.user as Record<string, unknown>) ?? profileData;
+        profileData = (payload.user as Record<string, unknown>) ?? profileData;
       }
-      const userForAuth = ensureUserShape(profileData ?? (resData.user as Record<string, unknown>));
-      if (userForAuth && resData.accessToken) setAuth(userForAuth as unknown as User, resData.accessToken);
+      const userForAuth = ensureUserShape(profileData ?? (payload.user as Record<string, unknown>));
+      if (userForAuth && payload.accessToken) setAuth(userForAuth as unknown as User, payload.accessToken);
       setAuthMessage({
-        text: isLogin ? (resData.restored ? t('settings.welcomeBack') : t('auth.loginSuccess')) : t('auth.registerSuccess'),
+        text: isLogin ? (payload.restored ? t('settings.welcomeBack') : t('auth.loginSuccess')) : t('auth.registerSuccess'),
         type: 'success',
       });
     } catch (err: unknown) {
@@ -176,10 +178,12 @@ export default function AuthPage() {
         else if (data.message) msg = data.message;
         throw new Error(msg);
       }
-      const profileRes = await fetch('/api/user/profile', { headers: { Authorization: `Bearer ${data.accessToken}` } });
-      const profileJson = profileRes.ok ? await profileRes.json() : { data: data.user };
+      const authPayload = (data as { data?: { accessToken?: string; user?: unknown } })?.data ?? data;
+      const accessToken = authPayload?.accessToken ?? (data as { accessToken?: string }).accessToken;
+      const profileRes = await fetch('/api/user/profile', { headers: { Authorization: `Bearer ${accessToken}` } });
+      const profileJson = profileRes.ok ? await profileRes.json() : { data: authPayload?.user ?? data.user };
       const profileData = (profileJson as { data?: unknown })?.data ?? profileJson;
-      setAuth(profileData, data.accessToken);
+      setAuth(profileData, accessToken);
       setShowTwoFactorInput(false);
       setTwoFactorOtp('');
       setTwoFaTempToken('');
@@ -193,7 +197,8 @@ export default function AuthPage() {
     try {
       const res = await fetch('/api/auth/google/url');
       if (!res.ok) throw new Error('Failed to get Google login URL');
-      const { url } = await res.json();
+      const data = await res.json();
+      const url = (data as { data?: { url?: string } })?.data?.url ?? (data as { url?: string }).url;
       const width = 500, height = 600;
       const left = window.screenX + (window.outerWidth - width) / 2;
       const top = window.screenY + (window.outerHeight - height) / 2;

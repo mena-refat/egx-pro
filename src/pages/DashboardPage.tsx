@@ -44,7 +44,7 @@ export default function DashboardPage() {
       setMarketError(null);
       try {
         const res = await api.get('/stocks/market/overview', { signal: marketController.signal });
-        if (!marketController.signal.aborted) setMarketOverview(res.data);
+        if (!marketController.signal.aborted) setMarketOverview((res.data as { data?: unknown })?.data ?? res.data);
       } catch (err: unknown) {
         if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
         if (err instanceof Error) setMarketError(err.message);
@@ -118,7 +118,7 @@ export default function DashboardPage() {
     setMarketLoading(true);
     try {
       const res = await api.get('/stocks/market/overview');
-      setMarketOverview(res.data);
+      setMarketOverview((res.data as { data?: unknown })?.data ?? res.data);
     } catch (err: unknown) {
       setMarketError(err instanceof Error ? err.message : 'Failed to fetch');
     } finally {

@@ -16,10 +16,12 @@ export function useDashboardStats(isAuthenticated: boolean, pathname: string) {
       ]);
       if (!holdingsRes.ok || !stocksRes.ok || !watchlistRes.ok) return;
       const holdingsData = await holdingsRes.json();
-      const stocks = await stocksRes.json();
+      const stocksPayload = await stocksRes.json();
       const watchlistData = await watchlistRes.json();
-      const holdings = Array.isArray(holdingsData) ? holdingsData : (holdingsData.holdings || holdingsData?.items || []);
-      const watchlistItems = watchlistData?.items ?? watchlistData;
+      const holdingsInner = (holdingsData as { data?: { holdings?: unknown[] } })?.data ?? holdingsData;
+      const holdings = Array.isArray(holdingsInner) ? holdingsInner : (holdingsInner?.holdings || (holdingsData as { holdings?: unknown[] }).holdings || (holdingsData as { items?: unknown[] }).items || []);
+      const stocks = (stocksPayload as { data?: unknown[] })?.data ?? stocksPayload;
+      const watchlistItems = watchlistData?.items ?? (watchlistData as { data?: { items?: unknown[] } })?.data?.items ?? watchlistData;
       if (!Array.isArray(holdings) || !Array.isArray(stocks) || !Array.isArray(watchlistItems)) return;
       const priceMap: Record<string, Stock> = {};
       stocks.forEach((s: Stock) => priceMap[s.ticker] = s);

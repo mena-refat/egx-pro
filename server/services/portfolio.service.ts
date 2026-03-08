@@ -1,29 +1,22 @@
-import { prisma } from '../lib/prisma.ts';
 import { getBulkPrices, getBulkPricesDelayed } from '../lib/yahoo.ts';
 import { addHoldingSchema } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';
+import { PortfolioRepository } from '../repositories/portfolio.repository.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import type { AuthUser } from '../routes/types.ts';
 
 export const PortfolioService = {
   async getPortfolio(userId: string, page?: number, limit?: number) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
-    });
+    const user = await UserRepository.getPlanUser(userId);
     const delayed = user ? !isPro(user) : false;
-    const where = { userId };
     const pageNum = page != null ? Math.max(1, page) : 1;
     const limitNum = limit != null ? Math.min(50, Math.max(1, limit)) : 1000;
-    const skip = (pageNum - 1) * limitNum;
     const usePagination = page != null && limit != null;
-    const [holdings, total] = usePagination
-      ? await Promise.all([
-          prisma.portfolio.findMany({ where, skip, take: limitNum, orderBy: { buyDate: 'desc' } }),
-          prisma.portfolio.count({ where }),
-        ])
-      : [await prisma.portfolio.findMany({ where }), 0];
+    const skip = usePagination ? (pageNum - 1) * limitNum : undefined;
+    const take = usePagination ? limitNum : undefined;
+    const [holdings, total] = await PortfolioRepository.findByUser(userId, skip, take);
 
     const tickers = holdings.map((h) => h.ticker);
     const priceMap = new Map<string, { price: number; isDelayed?: boolean; priceTime?: string }>();
@@ -69,31 +62,26 @@ export const PortfolioService = {
     return result;
   },
 
-  async addHolding(user: AuthUser, body: unknown): Promise<{ holding: Awaited<ReturnType<typeof prisma.portfolio.create>>; newUnseenAchievements: string[] }> {
+  async addHolding(user: AuthUser, body: unknown): Promise<{ holding: Awaited<ReturnType<typeof PortfolioRepository.create>>; newUnseenAchievements: string[] }> {
     if (!user?.id) throw new AppError('UNAUTHORIZED', 401);
     const parsed = addHoldingSchema.safeParse(body);
     if (!parsed.success) throw new AppError('VALIDATION_ERROR', 400);
 
-    const planUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
-    });
+    const planUser = await UserRepository.getPlanUser(user.id);
     if (!planUser) throw new AppError('UNAUTHORIZED', 401);
     if (!isPro(planUser)) {
-      const count = await prisma.portfolio.count({ where: { userId: user.id } });
+      const count = await PortfolioRepository.countByUser(user.id);
       if (count >= FREE_LIMITS.portfolioStocks) throw new AppError('PORTFOLIO_LIMIT_REACHED', 403);
     }
 
     const { ticker, shares, purchasePrice, purchaseDate } = parsed.data;
     const completedBefore = await getCompletedAchievementIds(user.id);
-    const holding = await prisma.portfolio.create({
-      data: {
-        userId: user.id,
-        ticker,
-        shares,
-        avgPrice: purchasePrice,
-        buyDate: new Date(purchaseDate),
-      },
+    const holding = await PortfolioRepository.create({
+      userId: user.id,
+      ticker,
+      shares,
+      avgPrice: purchasePrice,
+      buyDate: new Date(purchaseDate),
     });
     const newUnseenAchievements = await addNewlyUnlockedAchievements(user.id, completedBefore);
     return { holding, newUnseenAchievements };
@@ -101,19 +89,16 @@ export const PortfolioService = {
 
   async updateHolding(userId: string, id: string, body: { shares?: number; purchasePrice?: number; purchaseDate?: string }): Promise<void> {
     const { shares, purchasePrice, purchaseDate } = body;
-    const result = await prisma.portfolio.updateMany({
-      where: { id, userId },
-      data: {
-        ...(shares != null && { shares: parseFloat(String(shares)) }),
-        ...(purchasePrice != null && { avgPrice: parseFloat(String(purchasePrice)) }),
-        ...(purchaseDate != null && { buyDate: new Date(purchaseDate) }),
-      },
+    const result = await PortfolioRepository.updateMany(userId, id, {
+      ...(shares != null && { shares: parseFloat(String(shares)) }),
+      ...(purchasePrice != null && { avgPrice: parseFloat(String(purchasePrice)) }),
+      ...(purchaseDate != null && { buyDate: new Date(purchaseDate) }),
     });
     if (result.count === 0) throw new AppError('NOT_FOUND', 404);
   },
 
   async deleteHolding(userId: string, id: string): Promise<void> {
-    const result = await prisma.portfolio.deleteMany({ where: { id, userId } });
+    const result = await PortfolioRepository.deleteMany(userId, id);
     if (result.count === 0) throw new AppError('NOT_FOUND', 404);
   },
 };

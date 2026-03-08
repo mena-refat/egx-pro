@@ -24,7 +24,7 @@ export function SubscriptionTab() {
   useEffect(() => {
     const controller = new AbortController();
     api.get('/billing/plan', { signal: controller.signal })
-      .then((res) => { if (!controller.signal.aborted) setPlanData(res.data); })
+      .then((res) => { if (!controller.signal.aborted) setPlanData((res.data as { data?: PlanData })?.data ?? res.data); })
       .catch(() => { if (!controller.signal.aborted) setPlanData(null); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
@@ -36,8 +36,9 @@ export function SubscriptionTab() {
     setMessage(null);
     try {
       const res = await api.post('/billing/discount/validate', { code: discountCode.trim(), plan: 'pro' });
-      if (res.data?.valid) setMessage(t('settings.discountValid', { defaultValue: 'الكود صالح' }));
-      else setMessage(res.data?.error || t('common.error'));
+      const payload = (res.data as { data?: { valid?: boolean } })?.data ?? res.data;
+      if (payload?.valid) setMessage(t('settings.discountValid', { defaultValue: 'الكود صالح' }));
+      else setMessage((res.data as { error?: string })?.error || t('common.error'));
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } } };
       setMessage(err.response?.data?.error || t('common.error'));
@@ -53,10 +54,10 @@ export function SubscriptionTab() {
       await api.post('/billing/upgrade', { plan: 'pro', discountCode: discountCode.trim() || undefined });
       setMessage(t('settings.upgradeSuccess', { defaultValue: 'تم التحديث بنجاح' }));
       const res = await api.get('/billing/plan');
-      setPlanData(res.data);
+      setPlanData((res.data as { data?: PlanData })?.data ?? res.data);
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } } };
-      setMessage(err.response?.data?.error || t('common.error'));
+      setMessage(err.response?.data?.error ?? t('common.error'));
     } finally {
       setUpgrading(false);
     }

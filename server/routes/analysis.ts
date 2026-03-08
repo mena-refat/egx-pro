@@ -24,7 +24,7 @@ function getFirstDayOfNextMonth(): Date {
 const analysisLimiter = rateLimit({
   windowMs: ONE_HOUR_MS,
   max: 20,
-  message: { error: 'Too many analysis requests, please try again later.' },
+  message: { error: 'RATE_LIMIT_EXCEEDED' },
   keyGenerator: (req) => {
     const userId = (req as AuthRequest).user?.id;
     if (userId) return userId;
@@ -43,7 +43,7 @@ router.post('/:ticker', authenticate, analysisLimiter, async (req: Request, res:
     const userId = (req as AuthRequest).user?.id;
 
     if (!userId) {
-      return res.status(401).json({ error: 'unauthorized' });
+      return res.status(401).json({ error: 'UNAUTHORIZED' });
     }
 
     // 0. Enforce subscription-based quota
@@ -60,7 +60,7 @@ router.post('/:ticker', authenticate, analysisLimiter, async (req: Request, res:
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'not_found' });
+      return res.status(404).json({ error: 'NOT_FOUND' });
     }
 
     const effectivePro = isPro(user);
@@ -112,7 +112,7 @@ router.post('/:ticker', authenticate, analysisLimiter, async (req: Request, res:
     ];
 
     if (!priceData || !financials) {
-      return res.status(404).json({ error: 'not_found' });
+      return res.status(404).json({ error: 'NOT_FOUND' });
     }
 
     // 2. Prepare prompt for Claude
@@ -148,7 +148,7 @@ router.post('/:ticker', authenticate, analysisLimiter, async (req: Request, res:
 
     // 3. Call Claude API
     if (!process.env.CLAUDE_API_KEY) {
-      return res.status(503).json({ error: 'AI analysis service is not configured' });
+      return res.status(503).json({ error: 'SERVICE_UNAVAILABLE' });
     }
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -234,11 +234,11 @@ router.post('/:ticker', authenticate, analysisLimiter, async (req: Request, res:
     const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
 
     // 5. Return result
-    res.json({ analysis: analysisJson, id: savedAnalysis.id, newUnseenAchievements: newAchievements });
+    res.json({ data: { analysis: analysisJson, id: savedAnalysis.id, newUnseenAchievements: newAchievements } });
 
   } catch (error) {
     logger.error('Analysis error', { error });
-    res.status(500).json({ error: 'Failed to generate analysis' });
+    res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });
 

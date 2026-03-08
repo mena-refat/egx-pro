@@ -21,6 +21,8 @@ import { getStockName } from '../lib/egxStocks';
 import { Stock } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { Skeleton } from '../components/ui/Skeleton';
+import { Button } from '../components/ui/Button';
+import { MarketIndicesGrid } from '../components/market/MarketIndicesGrid';
 
 type DataPoint = { value: number; change: number; changePercent: number };
 
@@ -62,26 +64,6 @@ function minutesAgo(ts: number): number {
   return Math.max(0, Math.floor((Date.now() - ts) / 60000));
 }
 
-function MiniSparkline({ changePercent }: { changePercent: number }) {
-  const up = changePercent >= 0;
-  const points = 8;
-  const w = 48;
-  const h = 24;
-  const pad = 2;
-  const ys = Array.from({ length: points }, (_, i) => {
-    const t = i / (points - 1);
-    const trend = up ? 1 - t : t;
-    const jitter = (Math.sin(i * 1.3) * 0.3 + 0.7);
-    return pad + (h - pad * 2) * (1 - trend * jitter);
-  });
-  const path = ys.map((y, i) => `${i === 0 ? 'M' : 'L'} ${(i / (points - 1)) * (w - pad * 2) + pad} ${y}`).join(' ');
-  return (
-    <svg width={w} height={h} className="shrink-0 opacity-70" aria-hidden>
-      <path d={path} fill="none" stroke={up ? 'currentColor' : 'currentColor'} strokeWidth={1.5} className={up ? 'text-[var(--success)]' : 'text-[var(--danger)]'} />
-    </svg>
-  );
-}
-
 export default function MarketPage() {
   const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
@@ -103,8 +85,8 @@ export default function MarketPage() {
     setLoadingOverview(true);
     setError(null);
     try {
-      const res = await api.get<MarketOverview>('/stocks/market/overview', { signal });
-      if (!signal?.aborted) setOverview(res.data);
+      const res = await api.get<MarketOverview | { data: MarketOverview }>('/stocks/market/overview', { signal });
+      if (!signal?.aborted) setOverview((res.data as { data?: MarketOverview })?.data ?? res.data);
     } catch (err: unknown) {
       if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
       if (!signal?.aborted) setError(t('market.loadError'));
@@ -116,8 +98,9 @@ export default function MarketPage() {
   const fetchStocks = async (signal?: AbortSignal) => {
     setLoadingStocks(true);
     try {
-      const res = await api.get<Stock[]>('/stocks/prices', { signal });
-      if (!signal?.aborted) setStocks(Array.isArray(res.data) ? res.data : []);
+      const res = await api.get<Stock[] | { data: Stock[] }>('/stocks/prices', { signal });
+      const raw = (res.data as { data?: Stock[] })?.data ?? res.data;
+      if (!signal?.aborted) setStocks(Array.isArray(raw) ? raw : []);
     } catch (err: unknown) {
       if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
       if (!signal?.aborted) setStocks([]);
@@ -129,8 +112,9 @@ export default function MarketPage() {
   const fetchNews = async (signal?: AbortSignal) => {
     setLoadingNews(true);
     try {
-      const res = await api.get<NewsItem[]>('/news/market', { signal });
-      if (!signal?.aborted) setNews(Array.isArray(res.data) ? res.data : []);
+      const res = await api.get<NewsItem[] | { data: NewsItem[] }>('/news/market', { signal });
+      const raw = (res.data as { data?: NewsItem[] })?.data ?? res.data;
+      if (!signal?.aborted) setNews(Array.isArray(raw) ? raw : []);
     } catch {
       if (!signal?.aborted) setNews([]);
     } finally {
@@ -259,27 +243,32 @@ export default function MarketPage() {
                   <Timer className="w-3.5 h-3.5" aria-hidden />
                   {t('market.stocksDelayed10')}
                 </span>
-                <button
+                <Button
                   type="button"
+                  variant="link"
+                  size="sm"
                   onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))}
-                  className="inline-flex items-center gap-0.5 text-[var(--brand)] hover:underline font-medium"
+                  className="inline-flex items-center gap-0.5 text-[var(--brand)]"
                 >
                   {t('market.upgradeToLivePrices')}
                   <ChevronLeft className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} aria-hidden />
-                </button>
+                </Button>
               </>
             )}
           </div>
         </div>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={refreshAll}
           disabled={refreshing}
-          className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] transition-colors disabled:opacity-50 self-start sm:self-center"
+          icon={<RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />}
+          className="self-start sm:self-center p-2 min-w-0"
           aria-label={t('market.refresh')}
         >
-          <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-        </button>
+          <span className="sr-only">{t('market.refresh')}</span>
+        </Button>
       </div>
 
       {error && (
@@ -291,59 +280,13 @@ export default function MarketPage() {
         </div>
       )}
 
-      {/* [1] المؤشرات المصرية */}
-      <section>
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <h2 className="text-lg font-bold text-[var(--text-primary)]">
-            {t('market.egyptIndices')}
-          </h2>
-          <span className="text-xs text-[var(--text-muted)]">
-            {t('market.lastUpdated')}: {updatedLabel}
-          </span>
-        </div>
-        {loadingOverview ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-2">
-                <Skeleton height={16} className="w-1/3" />
-                <Skeleton height={24} className="w-1/2" />
-                <Skeleton height={14} className="w-1/4" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {indices.map(({ key, label, data, icon: Icon }) => {
-              const val = data?.value ?? 0;
-              const changeP = data?.changePercent ?? 0;
-              const isUp = changeP > 0;
-              const isDown = changeP < 0;
-              return (
-                <div
-                  key={key}
-                  className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-sm"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    {Icon && <Icon className="w-4 h-4 text-[var(--text-muted)]" />}
-                    <span className="font-medium text-[var(--text-secondary)]">{label}</span>
-                  </div>
-                  <div className="flex items-end justify-between gap-2">
-                    <span className="text-lg font-bold text-[var(--text-primary)]">{formatValue(val, 0)}</span>
-                    <span className={`text-xs font-semibold flex items-center gap-0.5 ${isUp ? 'text-[var(--success)]' : isDown ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
-                      {formatChange(changeP)}
-                      {isUp && <TrendingUp className="w-3.5 h-3.5" />}
-                      {isDown && <TrendingDown className="w-3.5 h-3.5" />}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex justify-end">
-                    <MiniSparkline changePercent={changeP} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      <MarketIndicesGrid
+        indices={indices}
+        loading={loadingOverview}
+        title={t('market.egyptIndices')}
+        lastUpdatedLabel={updatedLabel}
+        lastUpdatedPrefix={t('market.lastUpdated')}
+      />
 
       {/* [2] العملات والسلع — تفاصيل فقط (بدون تكرار الأرقام الكبيرة) */}
       <section>

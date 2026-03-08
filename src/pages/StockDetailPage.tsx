@@ -19,10 +19,11 @@ export default function StockDetailPage() {
     const controller = new AbortController();
     setLoading(true);
     api
-      .get<Stock[]>('/stocks/prices', { signal: controller.signal })
+      .get<Stock[] | { data: Stock[] }>('/stocks/prices', { signal: controller.signal })
       .then((res) => {
         if (controller.signal.aborted) return;
-        const list = Array.isArray(res.data) ? res.data : [];
+        const raw = (res.data as { data?: Stock[] })?.data ?? res.data;
+        const list = Array.isArray(raw) ? raw : [];
         const found = list.find((s: Stock) => s.ticker.toUpperCase() === ticker.toUpperCase());
         if (found) setStock(found);
         else navigate('/stocks');

@@ -71,7 +71,8 @@ api.interceptors.response.use(
         const response = await axios.post('/api/auth/refresh', null, {
           withCredentials: true,
         });
-        const { accessToken } = response.data;
+        const payload = (response.data as { data?: { accessToken?: string } })?.data ?? response.data;
+        const accessToken = payload?.accessToken;
 
         useAuthStore.getState().setAuth(useAuthStore.getState().user, accessToken);
 

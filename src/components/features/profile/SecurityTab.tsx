@@ -119,7 +119,8 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
       const authRes = await fetch('/api/auth/sessions', { credentials: 'include' });
       if (authRes.ok) {
         const data = await authRes.json();
-        if (Array.isArray(data)) list = data;
+        const arr = (data as { data?: unknown[] })?.data ?? data;
+        if (Array.isArray(arr)) list = arr;
       }
       if (list.length === 0) {
         const userRes = await fetch('/api/user/sessions', { headers: { Authorization: `Bearer ${accessToken}` } });
@@ -209,7 +210,8 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
         else setEnable2FAError(t('settings.twoFaSetupFailed'));
         return;
       }
-      setSetupData({ qrCodeUrl: data.qrCodeUrl, manualCode: data.manualCode });
+      const payload = (data as { data?: { qrCodeUrl?: string; manualCode?: string } })?.data ?? data;
+      setSetupData({ qrCodeUrl: payload?.qrCodeUrl ?? '', manualCode: payload?.manualCode ?? '' });
       setEnable2FAStep(2);
     } catch {
       setEnable2FAError(t('settings.twoFaSetupFailed'));

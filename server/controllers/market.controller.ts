@@ -1,20 +1,26 @@
-import { Response } from 'express';
+import { Response, NextFunction } from 'express';
 import { MarketService } from '../services/market.service.ts';
 import { isPro } from '../lib/plan.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { logger } from '../lib/logger.ts';
 
+function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    fn(req, res).catch(next);
+  };
+}
+
 export const MarketController = {
   getStatus: (_req: AuthRequest, res: Response) => {
     try {
       const data = MarketService.getStatus();
-      res.json(data);
+      res.json({ data });
     } catch {
-      res.status(500).json({ error: 'Failed to get market status' });
+      res.status(500).json({ error: 'INTERNAL_ERROR' });
     }
   },
 
-  getOverview: async (req: AuthRequest, res: Response) => {
+  getOverview: run(async (req, res) => {
     try {
       const user = req.user;
       let delayed = false;
@@ -27,7 +33,7 @@ export const MarketController = {
         delayed = u ? !isPro(u) : false;
       }
       const payload = await MarketService.getOverview(delayed);
-      res.json(payload);
+      res.json({ data: payload });
     } catch (error) {
       logger.error('Stocks /market/overview error', { error });
       const { getMarketStatus, getGoldMarketStatus } = await import('../lib/marketHours.ts');
@@ -45,7 +51,7 @@ export const MarketController = {
         egxStatus: getMarketStatus(),
         goldMarketStatus: getGoldMarketStatus(),
       };
-      res.json(fallback);
+      res.json({ data: fallback });
     }
-  },
+  }),
 };

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User as UserIcon, Settings as SettingsIcon, Sun, Moon, Monitor, Target, Bell, LogOut, Trophy, Briefcase, UserPlus as UserPlusIcon, ChevronRight } from 'lucide-react';
 import type { NotificationItem } from '../../hooks/useNotifications';
 import { NotificationDropdown } from '../features/notifications/NotificationDropdown';
+import { Button } from '../ui/Button';
 
 type User = { fullName?: string; username?: string; avatarUrl?: string };
 
@@ -151,16 +152,16 @@ export function Header({
                 <div className="shrink-0 border-b border-[var(--border-subtle)] px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-[var(--text-secondary)]">{t('settings.notifications')}</span>
-                    <button type="button" onClick={() => setConfirmClearNotifications(true)} className="text-xs text-[var(--brand-text)] hover:opacity-80">{t('settings.clearAllNotifications')}</button>
+                    <Button type="button" variant="link" size="sm" onClick={() => setConfirmClearNotifications(true)} className="text-xs">{t('settings.clearAllNotifications')}</Button>
                   </div>
                   <div className="mt-2 flex justify-end">
-                    <button type="button" onClick={markAllRead} className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]">{t('settings.markAllAsRead')}</button>
+                    <Button type="button" variant="link" size="sm" onClick={markAllRead} className="text-[var(--text-muted)]">{t('settings.markAllAsRead')}</Button>
                   </div>
                   {confirmClearNotifications && (
                     <div className="mt-3 flex items-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-xs">
                       <span className="text-[var(--text-secondary)]">{t('settings.confirmClearNotifications')}</span>
-                      <button type="button" onClick={() => { clearAll(); setConfirmClearNotifications(false); }} className="text-[var(--brand-text)] hover:opacity-80 font-medium">{t('settings.yes')}</button>
-                      <button type="button" onClick={() => setConfirmClearNotifications(false)} className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]">{t('settings.no')}</button>
+                      <Button type="button" variant="link" size="sm" onClick={() => { clearAll(); setConfirmClearNotifications(false); }}>{t('settings.yes')}</Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmClearNotifications(false)} className="text-[var(--text-muted)]">{t('settings.no')}</Button>
                     </div>
                   )}
                 </div>
@@ -193,10 +194,10 @@ export function Header({
                   <SettingsIcon className="w-4 h-4" />
                   {t('settings.settingsPage')}
                 </a>
-                <button type="button" onClick={() => { onLogout(); setUserDropdownOpen(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] border-t border-[var(--border-subtle)]">
-                  <LogOut className="w-4 h-4" />
+                <Button type="button" variant="ghost" size="md" fullWidth onClick={() => { onLogout(); setUserDropdownOpen(false); }} className="justify-start rounded-none border-t border-[var(--border-subtle)]">
+                  <LogOut className="w-4 h-4 shrink-0" />
                   {t('settings.logout')}
-                </button>
+                </Button>
               </motion.div>
             )}
           </AnimatePresence>

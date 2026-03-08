@@ -66,7 +66,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     const ctx = authContext(req);
     const result = await AuthService.register(body, ctx);
     setRefreshCookie(res, result.refreshToken);
-    res.status(201).json({ accessToken: result.accessToken, user: result.user });
+    res.status(201).json({ data: { accessToken: result.accessToken, user: result.user } });
   } catch (e) {
     if (AuthService.isAuthServiceError(e)) {
       res.status(e.status).json({ error: e.error, ...(e.message && { message: e.message }) });
@@ -108,16 +108,12 @@ export async function login(req: Request, res: Response): Promise<void> {
     const ctx = authContext(req);
     const result = await AuthService.login(body, ctx);
     if ('requires2FA' in result && result.requires2FA) {
-      res.json({ requires2FA: true, tempToken: result.tempToken });
+      res.json({ data: { requires2FA: true, tempToken: result.tempToken } });
       return;
     }
     const success = result as { refreshToken: string; accessToken: string; user: unknown; restored?: boolean };
     setRefreshCookie(res, success.refreshToken);
-    res.json({
-      accessToken: success.accessToken,
-      ...(success.restored && { restored: true }),
-      user: success.user,
-    });
+    res.json({ data: { accessToken: success.accessToken, ...(success.restored && { restored: true }), user: success.user } });
   } catch (e) {
     handleError(e, res, 'Login failed');
   }
@@ -128,7 +124,7 @@ export async function twoFaAuthenticate(req: Request, res: Response): Promise<vo
     const ctx = authContext(req);
     const result = await AuthService.twoFaAuthenticate(req.body as { tempToken?: string; code?: string }, ctx);
     setRefreshCookie(res, result.refreshToken);
-    res.json({ accessToken: result.accessToken, user: result.user });
+    res.json({ data: { accessToken: result.accessToken, user: result.user } });
   } catch (e) {
     if (AuthService.isAuthServiceError(e)) {
       res.status(e.status).json({ error: e.error, ...(e.message && { message: e.message }) });
@@ -161,7 +157,7 @@ export async function twoFaVerify(req: Request, res: Response): Promise<void> {
       return;
     }
     await AuthService.twoFaVerify(userId, req.body as { code?: string }, authContext(req));
-    res.json({ success: true });
+    res.json({ data: { success: true } });
   } catch (e) {
     handleError(e, res, 'Failed to verify 2FA');
   }
@@ -185,7 +181,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
   try {
     const token = req.cookies?.refreshToken;
     const result = await AuthService.refresh(token);
-    res.json({ accessToken: result.accessToken });
+    res.json({ data: { accessToken: result.accessToken } });
   } catch (e) {
     clearRefreshCookie(res);
     if (AuthService.isAuthServiceError(e)) {
@@ -225,7 +221,7 @@ export async function getSessions(req: Request, res: Response): Promise<void> {
   try {
     const token = req.cookies?.refreshToken;
     const list = await AuthService.getSessions(token);
-    res.json(list);
+    res.json({ data: list });
   } catch (e) {
     handleError(e, res, 'Failed to load sessions');
   }
@@ -260,7 +256,7 @@ export async function getMe(req: Request, res: Response): Promise<void> {
   try {
     const token = req.cookies?.refreshToken;
     const result = await AuthService.getMe(token);
-    res.json({ accessToken: result.accessToken, user: result.user });
+    res.json({ data: { accessToken: result.accessToken, user: result.user } });
   } catch (e) {
     handleError(e, res, 'Auth check failed');
   }
@@ -268,7 +264,7 @@ export async function getMe(req: Request, res: Response): Promise<void> {
 
 export function getGoogleUrl(_req: Request, res: Response): void {
   const { url } = AuthService.getGoogleUrl();
-  res.json({ url });
+  res.json({ data: { url } });
 }
 
 export async function googleCallback(req: Request, res: Response): Promise<void> {
@@ -310,7 +306,7 @@ export async function sendVerifyEmail(req: AuthRequest, res: Response): Promise<
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     await setCache(`email_verify:${userId}`, code, 15 * 60);
     await EmailService.sendVerificationCode(user.email, code);
-    res.json({ success: true });
+    res.json({ data: { success: true } });
   } catch (e) {
     logger.error('sendVerifyEmail error', { error: e });
     res.status(500).json({ error: 'server_error' });
@@ -338,7 +334,7 @@ export async function confirmVerifyEmail(req: AuthRequest, res: Response): Promi
       where: { id: userId },
       data: { isEmailVerified: true },
     });
-    res.json({ success: true });
+    res.json({ data: { success: true } });
   } catch (e) {
     logger.error('confirmVerifyEmail error', { error: e });
     res.status(500).json({ error: 'server_error' });

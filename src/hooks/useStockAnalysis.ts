@@ -100,14 +100,22 @@ export function useStockAnalysis(stock: Stock) {
             api.get('/watchlist', { signal }).catch(() => ({ data: { items: [] } })),
           ]);
         if (signal.aborted) return;
-        setPriceDetail(priceRes.data as Record<string, unknown>);
-        if (statusRes.data?.egx) setEgxStatus(statusRes.data.egx);
-        setHistory(Array.isArray(histRes.data) ? histRes.data : []);
-        setFinancials(finRes.data as Record<string, unknown> | null);
-        setOrderDepthAvailable((depthRes.data as { available?: boolean })?.available ?? false);
-        setInvestorCategoriesAvailable((invRes.data as { available?: boolean })?.available ?? false);
-        setTradingStatsAvailable((statsRes.data as { available?: boolean })?.available ?? false);
-        setNews(Array.isArray(newsRes.data) ? newsRes.data : []);
+        const priceData = (priceRes.data as { data?: Record<string, unknown> })?.data ?? priceRes.data;
+        setPriceDetail(priceData as Record<string, unknown>);
+        const statusData = (statusRes.data as { data?: { egx?: unknown } })?.data ?? statusRes.data;
+        if (statusData?.egx) setEgxStatus(statusData.egx);
+        const histData = (histRes.data as { data?: unknown[] })?.data ?? histRes.data;
+        setHistory(Array.isArray(histData) ? histData : []);
+        const finData = (finRes.data as { data?: Record<string, unknown> | null })?.data ?? finRes.data;
+        setFinancials(finData as Record<string, unknown> | null);
+        const depthData = (depthRes.data as { data?: { available?: boolean } })?.data ?? depthRes.data;
+        setOrderDepthAvailable(depthData?.available ?? false);
+        const invData = (invRes.data as { data?: { available?: boolean } })?.data ?? invRes.data;
+        setInvestorCategoriesAvailable(invData?.available ?? false);
+        const statsData = (statsRes.data as { data?: { available?: boolean } })?.data ?? statsRes.data;
+        setTradingStatsAvailable(statsData?.available ?? false);
+        const newsData = (newsRes.data as { data?: unknown[] })?.data ?? newsRes.data;
+        setNews(Array.isArray(newsData) ? newsData : []);
         const rawList = (watchRes.data as { items?: { ticker: string }[] })?.items;
         setWatchlist(Array.isArray(rawList) ? rawList.map((w) => w.ticker) : []);
       } catch (err: unknown) {
@@ -131,7 +139,8 @@ export function useStockAnalysis(stock: Stock) {
       })
       .then((res) => {
         if (controller.signal.aborted) return;
-        const a = res.data?.analysis;
+        const payload = (res.data as { data?: { analysis?: { used: number; quota: number } } })?.data ?? res.data;
+        const a = payload?.analysis ?? (res.data as { analysis?: { used: number; quota: number } })?.analysis;
         if (a && Number.isFinite(a.quota)) setAnalysisPlan({ used: a.used, quota: a.quota });
       })
       .catch((err: unknown) => {
@@ -156,17 +165,19 @@ export function useStockAnalysis(stock: Stock) {
     setErrorAnalysis(null);
     try {
       const res = await api.post(`/analysis/${stock.ticker}`);
-      if (res.data?.analysis) {
-        setAnalysis(res.data.analysis);
+      const payload = (res.data as { data?: { analysis?: unknown } })?.data ?? res.data;
+      const analysisContent = payload?.analysis ?? (res.data as { analysis?: unknown })?.analysis;
+      if (analysisContent) {
+        setAnalysis(analysisContent);
         if (analysisPlan && Number.isFinite(analysisPlan.quota))
           setAnalysisPlan((p) => (p ? { ...p, used: p.used + 1 } : null));
       } else throw new Error('Invalid format');
     } catch (err: unknown) {
       const data =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { code?: string } } }).response?.data
+          ? (err as { response?: { data?: { error?: string; code?: string } } }).response?.data
           : undefined;
-      if (data?.code === 'ANALYSIS_LIMIT_REACHED') {
+      if (data?.error === 'ANALYSIS_LIMIT_REACHED' || data?.code === 'ANALYSIS_LIMIT_REACHED') {
         setShowAnalysisLimitModal(true);
         setAnalysisPlan((p) => (p ? { ...p, used: p.quota } : null));
       } else {

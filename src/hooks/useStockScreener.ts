@@ -76,7 +76,8 @@ export function useStockScreener() {
           api.get('/watchlist', { signal }),
         ]);
         if (signal?.aborted) return;
-        const raw = Array.isArray(stocksRes.data) ? stocksRes.data : [];
+        const rawList = (stocksRes.data as { data?: unknown[] })?.data ?? stocksRes.data;
+        const raw = Array.isArray(rawList) ? rawList : [];
         const withMeta: StockWithMeta[] = raw.map((s: Record<string, unknown>) => {
           const ticker = String(s.ticker ?? '');
           const info = getStockInfo(ticker);
@@ -99,8 +100,8 @@ export function useStockScreener() {
           };
         });
         setStocks(withMeta);
-        const rawList = (watchlistRes.data as { items?: { ticker: string }[] })?.items;
-        setWatchlist(Array.isArray(rawList) ? rawList.map((w) => w.ticker) : []);
+        const watchlistItems = (watchlistRes.data as { items?: { ticker: string }[] })?.items;
+        setWatchlist(Array.isArray(watchlistItems) ? watchlistItems.map((w) => w.ticker) : []);
       } catch (err: unknown) {
         if (
           err instanceof Error &&

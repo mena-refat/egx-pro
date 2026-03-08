@@ -71,7 +71,7 @@ export default function App() {
     const checkAuth = async () => {
       try {
         const res = await fetch('/api/auth/me', { credentials: 'include' });
-        if (res.ok) { const data = await res.json(); useAuthStore.getState().setAuth(data.user, data.accessToken); }
+        if (res.ok) { const data = await res.json(); const p = (data as { data?: { user?: unknown; accessToken?: string } })?.data ?? data; useAuthStore.getState().setAuth(p?.user ?? data.user, p?.accessToken ?? data.accessToken); }
         else if (isAuthenticated) logout();
       } catch (err) { console.error('Initial auth check failed', err); }
     };

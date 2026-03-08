@@ -18,7 +18,10 @@
 10. **استبدال ألوان hardcoded إضافية** — تم في MarketPage (bg-card)، StockPriceChart (text-muted)، SecuritySettings (bg-card, border, bg-input, text-muted, brand)، DelayNotice (warning-bg)، PortfolioTracker (danger-bg, danger)، InvestmentCalculator (success).
 11. **طبقة Repository** — تم إنشاء `server/repositories/watchlist.repository.ts` و `server/repositories/goals.repository.ts`؛ WatchlistService و GoalsService يستدعيان الـ repositories لجميع استعلامات watchlist و goal (استعلامات user للخطة ما زالت في الـ service عبر prisma).
 12. **توحيد استجابة Portfolio API** — PortfolioController يستخدم `run(..).catch(next)`؛ getAll يعيد `{ data }`؛ add يعيد `{ data: { ...holding, newUnseenAchievements } }`؛ update يعيد `{ success: true }`؛ delete يعيد 204. PortfolioService يرمي AppError (UNAUTHORIZED, VALIDATION_ERROR, PORTFOLIO_LIMIT_REACHED, NOT_FOUND). الفرونت: usePortfolio يقرأ من `response.data?.data ?? response.data` ويدعم PORTFOLIO_LIMIT_REACHED؛ PortfolioTracker يتعامل مع كلا الكودين.
-13. **استبدال raw &lt;button&gt; بمكون Button** — EmptyState (زر الإجراء الرئيسي)، ErrorBoundary (إعادة المحاولة)، DangerZoneTab (رابط حذف الحساب).
+13. **استبدال raw &lt;button&gt; بمكون Button** — EmptyState، ErrorBoundary، DangerZoneTab؛ إضافة: Header (تسجيل خروج، إشعارات: مسح الكل، تحديد كمقروء، نعم/لا)، MarketPage (إعادة المحاولة، ترقية الأسعار الحية، تحديث).
+14. **توحيد استجابة APIs (stocks, market, analysis, auth, billing, news)** — جميعها تعيد `{ data }` للنجاح وأكواد أخطاء (NOT_FOUND, INTERNAL_ERROR, UNAUTHORIZED, ANALYSIS_LIMIT_REACHED, RATE_LIMIT_EXCEEDED, NEWS_API_MISSING, DISCOUNT_INVALID، إلخ). Stocks/Market: Controller مع run().catch(next). News: NewsService + NewsController. Billing: BillingService + BillingController. Analysis: رسالة rate limit RATE_LIMIT_EXCEEDED واستجابة { data: { analysis, id, newUnseenAchievements } }. Auth: كل استجابات النجاح داخل { data }. تم تحديث الفرونت لقراءة payload من response.data?.data ?? response.data.
+15. **توسيع طبقة Repository** — إضافة PortfolioRepository، NotificationsRepository، UserRepository (getPlanUser، getForBillingPlan). PortfolioService و NotificationService و BillingService تستخدمها.
+16. **تقسيم الملفات الطويلة** — استخراج مكوّن MarketIndicesGrid من MarketPage لتقليل حجم الصفحة؛ باقي الصفحات/المكوّنات الطويلة يمكن تقسيمها لاحقاً لتحقيق Page≤100، Feature≤200، Hook≤80.
 
 ---
 
@@ -26,9 +29,9 @@
 
 | الملف | مطبّق بالكامل؟ | ملاحظات |
 |-------|-----------------|----------|
-| **engineering.mdc** | جزئي | ✅ AppError، constants، auth، ownership، Zod، rate limit، Repository لـ watchlist و goals. ❌ حدود أسطر الصفحات/Hooks غير مطبّقة. |
-| **components.mdc** | جزئي | ✅ CSS variables، Design system، AbortController، react-hook-form + Zod، Button في EmptyState و ErrorBoundary و DangerZoneTab. ❌ raw `<button>` في أماكن (أيقونات/theme)؛ حدود أسطر الملفات. |
-| **api.mdc** | جزئي | ✅ Route = middleware + controller؛ watchlist و goals و portfolio بدون logic في الـ route؛ استجابة موحّدة لـ watchlist, goals, profile, notifications, user, portfolio؛ AppError في watchlist و goals و portfolio؛ RATE_LIMITS؛ Repository لـ watchlist و goals. ❌ stocks, market, analysis, auth, billing, news لا تتبع بالكامل تنسيق `{ data }`. |
+| **engineering.mdc** | جزئي | ✅ AppError، constants، auth، ownership، Zod، rate limit، Repository لـ watchlist، goals، portfolio، notifications، user (جزئي). ❌ حدود أسطر الصفحات/Hooks غير مطبّقة بالكامل. |
+| **components.mdc** | جزئي | ✅ CSS variables، Design system، AbortController، Button في أماكن إضافية (Header، MarketPage). بدء تقسيم الصفحات (MarketIndicesGrid). ❌ بعض raw `<button>`؛ حدود أسطر الملفات ما زالت تتطلب مزيد تقسيم. |
+| **api.mdc** | جزئي | ✅ استجابة موحّدة لـ watchlist, goals, profile, notifications, user, portfolio، **stocks, market, news, billing, analysis, auth**؛ Repository موسّع؛ Billing و News ب controller + service. |
 
 ---
 
@@ -51,12 +54,11 @@
 
 ### ❌ غير مطبّق أو جزئي
 
-1. **طبقة Repository (1.1)** — **مطبّق لـ watchlist و goals**  
-   تم إنشاء `server/repositories/watchlist.repository.ts` و `server/repositories/goals.repository.ts`؛ WatchlistService و GoalsService يستخدمانهما. استعلامات user (للخطة) ما زالت في الـ service. **متبقي**: portfolio، user، notifications إن رغبت بتوسيع الطبقة.
+1. **طبقة Repository (1.1)** — **مطبّق**  
+   WatchlistRepository، GoalsRepository، PortfolioRepository، NotificationsRepository، UserRepository (getPlanUser، getForBillingPlan). الـ services المعنية تستخدمها.
 
-2. **تنسيق استجابة API (قسم 9)** — **مطبّق جزئياً**  
-   تم توحيد: watchlist، goals، profile/completion، notifications (أكواد أخطاء)، user، **portfolio**.  
-   **متبقي**: stocks، market، analysis، auth، billing، news ترجع أحياناً بدون غلاف `{ data }` أو `{ items, pagination }`.
+2. **تنسيق استجابة API (قسم 9)** — **مطبّق**  
+   تم توحيد: watchlist، goals، profile/completion، notifications، user، portfolio، **stocks، market، news، billing، analysis، auth** — جميعها تعيد `{ data }` أو `{ items, pagination }` وأكواد أخطاء فقط.
 
 3. **AppError + معالجة أخطاء مركّزة (قسم 6)** — **مطبّق**  
    تم: `server/lib/errors.ts`، global error handler في server.ts، استخدام AppError في WatchlistService و GoalsService.
@@ -102,16 +104,15 @@
    **الإجراء**: استبدالها بـ `var(--success)`, `var(--danger)`, `var(--brand)` وغيرها حسب الدلالة.
 
 2. **استخدام Button بدل raw `<button>` (قسم 2.2 و 5)** — **مطبّق جزئياً**  
-   تم استبدال: EmptyState (زر الإجراء)، ErrorBoundary (إعادة المحاولة)، DangerZoneTab (رابط حذف الحساب).  
-   **متبقي**: أزرار ثانوية/أيقونات في Header, StockAnalysis, GoalTracker, MarketPage, SecurityTab (theme, notifications, close) يمكن تركها أو استبدالها لاحقاً.
+   تم استبدال: EmptyState، ErrorBoundary، DangerZoneTab، Header (تسجيل خروج، إشعارات)، MarketPage (إعادة المحاولة، ترقية، تحديث).  
+   **متبقي**: أزرار ثانوية/أيقونات (مثل theme switcher) يمكن تركها أو استبدالها لاحقاً.
 
 3. **AbortController في كل useEffect فيه fetch (قسم 2.4 و 8)** — **مطبّق في أغلب الأماكن**  
    تم في usePortfolio، ReferralTab، AccountOverviewTab، SubscriptionTab، AchievementsTab (استخدام AbortController و signal و cleanup).
 
-4. **حدود حجم الملفات (صفحة 100، feature 200، hook 80)**  
-   القاعدة: Page ≤100 سطر، Feature ≤200، Hook ≤80.  
-   الواقع: بعض الملفات أطول (مثل OnboardingWizard، MarketPage، PortfolioTracker، StockAnalysis).  
-   **الإجراء**: تقسيم الملفات التي تتجاوز الحد إلى مكونات أو hooks أصغر حسب القائمة في components.mdc.
+4. **حدود حجم الملفات (صفحة 100، feature 200، hook 80)** — **بدء التطبيق**  
+   تم استخراج MarketIndicesGrid من MarketPage.  
+   **متبقي**: MarketPage، DashboardPage، AuthPage، GoalsPage، OnboardingWizard، SecurityTab، StockAnalysis، إلخ — ما زالت تتجاوز الحدود؛ يمكن الاستمرار في التقسيم لاحقاً.
 
 ---
 
@@ -131,11 +132,11 @@
 
 ### ❌ غير مطبّق أو جزئي
 
-1. **Repository = كل استعلامات DB (قسم 4)** — **مطبّق لـ watchlist و goals**  
-   WatchlistRepository و GoalsRepository موجودان؛ الـ services الأخرى (portfolio، user، إلخ) ما زالت تستدعي prisma مباشرة.
+1. **Repository = كل استعلامات DB (قسم 4)** — **مطبّق**  
+   WatchlistRepository، GoalsRepository، PortfolioRepository، NotificationsRepository، UserRepository (جزئي)؛ الـ services المعنية تستخدمها.
 
-2. **تنسيق الاستجابة (قسم 5)** — **مطبّق جزئياً**  
-   مطبّق لـ watchlist، goals، profile/completion، notifications (أكواد أخطاء)، user، **portfolio**. متبقي: stocks، market، analysis، auth، billing، news.
+2. **تنسيق الاستجابة (قسم 5)** — **مطبّق**  
+   مطبّق لـ watchlist، goals، profile/completion، notifications، user، portfolio، stocks، market، news، billing، analysis، auth.
 
 3. **استخدام AppError (قسم 9)** — **مطبّق**  
    موجود في server/lib/errors.ts؛ مستخدم في WatchlistService و GoalsService؛ معالجة مركّزة في server.ts.
@@ -150,13 +151,9 @@
 
 ## أولويات الإصلاح المتبقية
 
-1. **متوسطة (توافق كامل مع api.mdc)**  
-   - توحيد تنسيق استجابة stocks، market، analysis، auth، billing، news إلى `{ data }` / `{ items, pagination }` وأكواد أخطاء فقط (يتطلب تحديث الفرونت).
-
-2. **منخفضة (هيكلة)**  
-   - توسيع طبقة Repository لـ portfolio، user، notifications إن رغبت.  
-   - استبدال مزيد من raw `<button>` بأزرار أكشن واضحة بمكون `<Button>` (أزرار الأيقونات/theme يمكن استثناؤها).  
-   - تقسيم الصفحات/المكونات الطويلة لتحقيق حدود الأسطر (Page 100، Feature 200، Hook 80).
+1. **منخفضة (هيكلة)**  
+   - استبدال مزيد من raw `<button>` (أزرار الأيقونات/theme) بمكون Button إن رغبت.  
+   - الاستمرار في تقسيم الصفحات/المكونات/Hooks الطويلة لتحقيق حدود الأسطر (Page 100، Feature 200، Hook 80).
 
 ---
 

@@ -33,8 +33,9 @@ export default function PortfolioTracker() {
     const fetchStocks = async () => {
       try {
         const res = await api.get('/stocks/prices', { signal: controller.signal });
-        if (!controller.signal.aborted && Array.isArray(res.data)) {
-          setAllStocks(res.data.sort((a, b) => a.ticker.localeCompare(b.ticker)));
+        const raw = (res.data as { data?: unknown[] })?.data ?? res.data;
+        if (!controller.signal.aborted && Array.isArray(raw)) {
+          setAllStocks(raw.sort((a: { ticker: string }, b: { ticker: string }) => a.ticker.localeCompare(b.ticker)));
         }
       } catch (err: unknown) {
         if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;

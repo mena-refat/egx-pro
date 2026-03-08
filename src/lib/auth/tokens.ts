@@ -8,6 +8,7 @@ export const refreshAccessToken = async (): Promise<string> => {
   const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
   if (!res.ok) throw new Error('Refresh failed');
   const data = await res.json();
-  if (data.accessToken) setAccessToken(data.accessToken);
-  return data.accessToken;
+  const payload = (data as { data?: { accessToken?: string } })?.data ?? data;
+  if (payload?.accessToken) setAccessToken(payload.accessToken);
+  return payload?.accessToken ?? '';
 };

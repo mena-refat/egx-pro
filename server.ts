@@ -185,12 +185,38 @@ async function startServer() {
     }
   });
 
+  const swaggerUiOptions = {
+    customSiteTitle: 'EGX Pro — API Documentation',
+    customCss: `
+      .swagger-ui .topbar { display: none }
+      .swagger-ui .info { margin: 2rem 0 }
+      .swagger-ui .info .title { font-size: 2rem; margin: 0 0 0.5rem; color: #1e293b }
+      .swagger-ui .info .description { font-size: 1rem; line-height: 1.6; color: #475569; white-space: pre-wrap }
+      .swagger-ui .opblock-tag { font-size: 1.25rem; border-bottom: 1px solid #e2e8f0; padding: 0.75rem 0 }
+      .swagger-ui .opblock { border-radius: 8px; margin: 0.5rem 0 }
+      .swagger-ui .opblock .opblock-summary-method { border-radius: 4px; font-weight: 600 }
+      .swagger-ui table thead tr th { border-bottom: 2px solid #e2e8f0; padding: 0.75rem }
+      .swagger-ui .model-box-control { font-weight: 600 }
+      .swagger-ui .wrapper { max-width: 1460px; margin: 0 auto; padding: 0 24px }
+      .swagger-ui .scheme-container { box-shadow: none; border-radius: 8px; padding: 1rem }
+    `,
+    swaggerOptions: {
+      docExpansion: 'list',
+      defaultModelsExpandDepth: 2,
+      defaultModelExpandDepth: 2,
+      displayRequestDuration: true,
+      filter: true,
+      tryItOutEnabled: true,
+      persistAuthorization: true,
+      syntaxHighlight: { theme: 'monokai' },
+    },
+  };
   if (process.env.NODE_ENV !== 'production') {
-    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
-      customCss: '.swagger-ui .topbar { display: none }',
-      customSiteTitle: 'EGX Pro API Docs',
-    }));
-    logger.info('📚 API Docs available at http://localhost:3000/api/docs');
+    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerUiOptions));
+    logger.info('📚 API Docs: http://localhost:3000/api/docs');
+  } else if (process.env.EGX_EXPOSE_DOCS === 'true') {
+    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerUiOptions));
+    logger.info('📚 API Docs exposed at /api/docs (EGX_EXPOSE_DOCS=true)');
   }
 
   // 404 for unknown API routes (before static so /api/foo returns JSON not HTML)
