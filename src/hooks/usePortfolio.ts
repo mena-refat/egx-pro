@@ -13,7 +13,8 @@ export function usePortfolio(livePrices: Record<string, { price: number }>) {
     try {
       const response = await api.get('/portfolio', { signal });
       if (signal?.aborted) return;
-      setHoldings(Array.isArray(response.data) ? response.data : (response.data.holdings || []));
+      const payload = (response.data as { data?: { holdings?: PortfolioHolding[] } })?.data ?? response.data;
+      setHoldings(Array.isArray(payload) ? payload : (payload?.holdings ?? []));
     } catch (err: unknown) {
       if ((err as { code?: string }).code === 'ERR_CANCELED') return;
       if (err && typeof err === 'object' && 'response' in err) {
@@ -47,7 +48,7 @@ export function usePortfolio(livePrices: Record<string, { price: number }>) {
       const data = err && typeof err === 'object' && 'response' in err ? (err as { response?: { data?: { error?: string; code?: string } } }).response?.data : undefined;
       const errorMessage = data?.error || 'Failed to add holding';
       const e = new Error(errorMessage, { cause: err });
-      if (data?.code === 'PORTFOLIO_LIMIT') (e as Error & { code?: string }).code = 'PORTFOLIO_LIMIT';
+      if (data?.error === 'PORTFOLIO_LIMIT_REACHED') (e as Error & { code?: string }).code = 'PORTFOLIO_LIMIT_REACHED';
       throw e;
     }
   };

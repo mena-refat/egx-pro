@@ -16,6 +16,9 @@
 8. **توحيد استجابة profile/completion و notifications** — profile completion: `{ data: { percentage, missing } }`؛ أخطاء UNAUTHORIZED, NOT_FOUND, INTERNAL_ERROR. notifications: أكواد أخطاء UNAUTHORIZED, NOT_FOUND, INTERNAL_ERROR. الفرونت: useProfileCompletion و AccountOverviewTab يدعمان الصيغة الجديدة مع رجوع للصيغة القديمة.
 9. **توحيد استجابة User API** — جميع endpoints تعيد مورداً واحداً داخل `{ data }`؛ applyReferralCode (كان useReferralCode) تعيد `{ success: true, data: { referrerName } }`. أخطاء موحّدة (UNAUTHORIZED, NOT_FOUND, INTERNAL_ERROR، إلخ). تم تحديث الفرونت لقراءة `data` من الاستجابة.
 10. **استبدال ألوان hardcoded إضافية** — تم في MarketPage (bg-card)، StockPriceChart (text-muted)، SecuritySettings (bg-card, border, bg-input, text-muted, brand)، DelayNotice (warning-bg)، PortfolioTracker (danger-bg, danger)، InvestmentCalculator (success).
+11. **طبقة Repository** — تم إنشاء `server/repositories/watchlist.repository.ts` و `server/repositories/goals.repository.ts`؛ WatchlistService و GoalsService يستدعيان الـ repositories لجميع استعلامات watchlist و goal (استعلامات user للخطة ما زالت في الـ service عبر prisma).
+12. **توحيد استجابة Portfolio API** — PortfolioController يستخدم `run(..).catch(next)`؛ getAll يعيد `{ data }`؛ add يعيد `{ data: { ...holding, newUnseenAchievements } }`؛ update يعيد `{ success: true }`؛ delete يعيد 204. PortfolioService يرمي AppError (UNAUTHORIZED, VALIDATION_ERROR, PORTFOLIO_LIMIT_REACHED, NOT_FOUND). الفرونت: usePortfolio يقرأ من `response.data?.data ?? response.data` ويدعم PORTFOLIO_LIMIT_REACHED؛ PortfolioTracker يتعامل مع كلا الكودين.
+13. **استبدال raw &lt;button&gt; بمكون Button** — EmptyState (زر الإجراء الرئيسي)، ErrorBoundary (إعادة المحاولة)، DangerZoneTab (رابط حذف الحساب).
 
 ---
 
@@ -23,9 +26,9 @@
 
 | الملف | مطبّق بالكامل؟ | ملاحظات |
 |-------|-----------------|----------|
-| **engineering.mdc** | جزئي | ✅ AppError، constants، auth، ownership، Zod، rate limit. ❌ لا توجد طبقة Repository؛ حدود أسطر الصفحات/Hooks غير مطبّقة. |
-| **components.mdc** | جزئي | ✅ CSS variables (تم استبدال أغلب الألوان)، Design system، AbortController في أغلب الـ fetch، react-hook-form + Zod. ❌ raw `<button>` في أماكن (أيقونات/theme يُستثنى عادةً)； حدود أسطر الملفات. |
-| **api.mdc** | جزئي | ✅ Route = middleware + controller؛ watchlist و goals بدون logic في الـ route؛ استجابة موحّدة لـ watchlist, goals, profile, notifications, user؛ AppError في watchlist و goals؛ RATE_LIMITS من constants. ❌ لا Repository؛ portfolio, stocks, market, analysis, auth لا تتبع بالكامل تنسيق `{ data }` / `{ items, pagination }`. |
+| **engineering.mdc** | جزئي | ✅ AppError، constants، auth، ownership، Zod، rate limit، Repository لـ watchlist و goals. ❌ حدود أسطر الصفحات/Hooks غير مطبّقة. |
+| **components.mdc** | جزئي | ✅ CSS variables، Design system، AbortController، react-hook-form + Zod، Button في EmptyState و ErrorBoundary و DangerZoneTab. ❌ raw `<button>` في أماكن (أيقونات/theme)؛ حدود أسطر الملفات. |
+| **api.mdc** | جزئي | ✅ Route = middleware + controller؛ watchlist و goals و portfolio بدون logic في الـ route؛ استجابة موحّدة لـ watchlist, goals, profile, notifications, user, portfolio؛ AppError في watchlist و goals و portfolio؛ RATE_LIMITS؛ Repository لـ watchlist و goals. ❌ stocks, market, analysis, auth, billing, news لا تتبع بالكامل تنسيق `{ data }`. |
 
 ---
 
@@ -48,14 +51,12 @@
 
 ### ❌ غير مطبّق أو جزئي
 
-1. **طبقة Repository (1.1)**  
-   القاعدة: "repositories/ ← ALL database queries live here".  
-   الواقع: لا يوجد مجلد `server/repositories/`؛ الـ services تستدعي `prisma` مباشرة.  
-   **الإجراء**: إما إضافة طبقة repositories، أو تحديث القاعدة لتعكس الواقع (services تستدعي prisma).
+1. **طبقة Repository (1.1)** — **مطبّق لـ watchlist و goals**  
+   تم إنشاء `server/repositories/watchlist.repository.ts` و `server/repositories/goals.repository.ts`؛ WatchlistService و GoalsService يستخدمانهما. استعلامات user (للخطة) ما زالت في الـ service. **متبقي**: portfolio، user، notifications إن رغبت بتوسيع الطبقة.
 
 2. **تنسيق استجابة API (قسم 9)** — **مطبّق جزئياً**  
-   تم توحيد: watchlist، goals، profile/completion، notifications (أكواد أخطاء)، user.  
-   **متبقي**: portfolio، stocks، market، analysis، auth، billing، news ترجع أحياناً بدون غلاف `{ data }` أو `{ items, pagination }`؛ وتعديلها يتطلب تحديث الفرونت.
+   تم توحيد: watchlist، goals، profile/completion، notifications (أكواد أخطاء)، user، **portfolio**.  
+   **متبقي**: stocks، market، analysis، auth، billing، news ترجع أحياناً بدون غلاف `{ data }` أو `{ items, pagination }`.
 
 3. **AppError + معالجة أخطاء مركّزة (قسم 6)** — **مطبّق**  
    تم: `server/lib/errors.ts`، global error handler في server.ts، استخدام AppError في WatchlistService و GoalsService.
@@ -100,10 +101,9 @@
    - PortfolioTracker.tsx  
    **الإجراء**: استبدالها بـ `var(--success)`, `var(--danger)`, `var(--brand)` وغيرها حسب الدلالة.
 
-2. **استخدام Button بدل raw `<button>` (قسم 2.2 و 5)**  
-   القاعدة: كل الأزرار عبر مكون Button.  
-   الواقع: استخدام `<button type="button" ...>` في Header, StockAnalysis, GoalTracker, MarketPage, SecurityTab, SecuritySettings لأزرار ثانوية (theme, notifications, close).  
-   **الإجراء**: استبدال الأزرار التي هي "أكشن" واضح بمكون `<Button>`؛ يمكن الاستثناء لأزرار أيقونة صغيرة فقط إن وُضِع ذلك في القاعدة.
+2. **استخدام Button بدل raw `<button>` (قسم 2.2 و 5)** — **مطبّق جزئياً**  
+   تم استبدال: EmptyState (زر الإجراء)، ErrorBoundary (إعادة المحاولة)، DangerZoneTab (رابط حذف الحساب).  
+   **متبقي**: أزرار ثانوية/أيقونات في Header, StockAnalysis, GoalTracker, MarketPage, SecurityTab (theme, notifications, close) يمكن تركها أو استبدالها لاحقاً.
 
 3. **AbortController في كل useEffect فيه fetch (قسم 2.4 و 8)** — **مطبّق في أغلب الأماكن**  
    تم في usePortfolio، ReferralTab، AccountOverviewTab، SubscriptionTab، AchievementsTab (استخدام AbortController و signal و cleanup).
@@ -131,11 +131,11 @@
 
 ### ❌ غير مطبّق أو جزئي
 
-1. **Repository = كل استعلامات DB (قسم 4)**  
-   لا يوجد طبقة Repository؛ الـ services تستدعي prisma مباشرة.
+1. **Repository = كل استعلامات DB (قسم 4)** — **مطبّق لـ watchlist و goals**  
+   WatchlistRepository و GoalsRepository موجودان؛ الـ services الأخرى (portfolio، user، إلخ) ما زالت تستدعي prisma مباشرة.
 
 2. **تنسيق الاستجابة (قسم 5)** — **مطبّق جزئياً**  
-   مطبّق لـ watchlist، goals، profile/completion، notifications (أكواد أخطاء)، user. متبقي: portfolio، stocks، market، analysis، auth، billing، news.
+   مطبّق لـ watchlist، goals، profile/completion، notifications (أكواد أخطاء)، user، **portfolio**. متبقي: stocks، market، analysis، auth، billing، news.
 
 3. **استخدام AppError (قسم 9)** — **مطبّق**  
    موجود في server/lib/errors.ts؛ مستخدم في WatchlistService و GoalsService؛ معالجة مركّزة في server.ts.
@@ -151,11 +151,11 @@
 ## أولويات الإصلاح المتبقية
 
 1. **متوسطة (توافق كامل مع api.mdc)**  
-   - توحيد تنسيق استجابة portfolio، stocks، market، analysis، auth، billing، news إلى `{ data }` / `{ items, pagination }` وأكواد أخطاء فقط (يتطلب تحديث الفرونت).
+   - توحيد تنسيق استجابة stocks، market، analysis، auth، billing، news إلى `{ data }` / `{ items, pagination }` وأكواد أخطاء فقط (يتطلب تحديث الفرونت).
 
 2. **منخفضة (هيكلة)**  
-   - إدخال طبقة Repository إن رغبت بالتوافق الكامل مع engineering.mdc و api.mdc.  
-   - استبدال raw `<button>` بأزرار أكشن واضحة بمكون `<Button>` (أزرار الأيقونات/theme يمكن استثناؤها).  
+   - توسيع طبقة Repository لـ portfolio، user، notifications إن رغبت.  
+   - استبدال مزيد من raw `<button>` بأزرار أكشن واضحة بمكون `<Button>` (أزرار الأيقونات/theme يمكن استثناؤها).  
    - تقسيم الصفحات/المكونات الطويلة لتحقيق حدود الأسطر (Page 100، Feature 200، Hook 80).
 
 ---

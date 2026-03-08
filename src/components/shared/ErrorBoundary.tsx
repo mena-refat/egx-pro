@@ -1,5 +1,6 @@
 import React from 'react';
 import * as Sentry from '@sentry/react';
+import { Button } from '../ui/Button';
 
 export interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -18,13 +19,9 @@ export function ErrorBoundary({ children, fallback }: ErrorBoundaryProps) {
           <p className="text-[var(--text-secondary)] text-sm text-center max-w-sm">
             {error?.message || 'يرجى المحاولة مرة أخرى'}
           </p>
-          <button
-            type="button"
-            onClick={resetError}
-            className="px-4 py-2 bg-[var(--brand)] text-white rounded-lg text-sm"
-          >
+          <Button type="button" variant="primary" size="md" onClick={resetError}>
             إعادة المحاولة
-          </button>
+          </Button>
         </div>
       )}
     >

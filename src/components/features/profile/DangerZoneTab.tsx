@@ -73,13 +73,15 @@ export function DangerZoneTab({ user, onLogout, setRequestStatus }: ProfileTabPr
         <p className="text-sm text-[var(--text-muted)] mb-4">
           {t('settings.deleteAccountWarning')}
         </p>
-        <button
+        <Button
           type="button"
+          variant="link"
+          size="sm"
           onClick={() => setDeleteDialogOpen(true)}
-          className="text-sm text-[var(--text-muted)] hover:text-[var(--danger)] underline"
+          className="text-[var(--text-muted)] hover:text-[var(--danger)]"
         >
           {t('settings.deleteAccountPrompt')}
-        </button>
+        </Button>
       </div>
 
       {deleteDialogOpen && (

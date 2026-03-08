@@ -1,74 +1,58 @@
-import { Response } from 'express';
+import { Response, NextFunction } from 'express';
 import { PortfolioService } from '../services/portfolio.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
-import { logger } from '../lib/logger.ts';
+function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    fn(req, res).catch(next);
+  };
+}
 
 export const PortfolioController = {
-  getAll: async (req: AuthRequest, res: Response) => {
+  getAll: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
+    }
     const page = req.query.page != null ? Math.max(1, parseInt(String(req.query.page), 10)) : undefined;
     const limit = req.query.limit != null ? Math.min(50, Math.max(1, parseInt(String(req.query.limit), 10))) : undefined;
-    try {
-      const data = await PortfolioService.getPortfolio(userId, page, limit);
-      res.json(data);
-    } catch (error) {
-      logger.error('Error fetching portfolio', { error });
-      res.status(500).json({ error: 'Failed to fetch portfolio' });
-    }
-  },
+    const data = await PortfolioService.getPortfolio(userId, page, limit);
+    res.json({ data });
+  }),
 
-  add: async (req: AuthRequest, res: Response) => {
-    try {
-      const user = req.user;
-      if (!user?.id) return res.status(401).json({ error: 'Unauthorized' });
-      const result = await PortfolioService.addHolding(user, req.body);
-      res.status(201).json({ ...result.holding, newUnseenAchievements: result.newUnseenAchievements });
-    } catch (err) {
-      const e = err as Error & { code?: string; limit?: number };
-      if (e.message === 'Unauthorized') return res.status(401).json({ error: 'Unauthorized' });
-      if (e.message === 'pro_required') {
-        return res.status(403).json({
-          error: 'pro_required',
-          code: e.code ?? 'PORTFOLIO_LIMIT',
-          message: 'هذه الميزة متاحة في Pro',
-          limit: e.limit,
-        });
-      }
-      logger.error('Error adding holding', { err });
-      res.status(400).json({ error: e.message ?? 'Failed to add holding' });
+  add: run(async (req, res) => {
+    const user = req.user;
+    if (!user?.id) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
     }
-  },
+    const result = await PortfolioService.addHolding(user, req.body);
+    res.status(201).json({
+      data: { ...result.holding, newUnseenAchievements: result.newUnseenAchievements },
+    });
+  }),
 
-  update: async (req: AuthRequest, res: Response) => {
+  update: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    const { id } = req.params;
-    try {
-      const updated = await PortfolioService.updateHolding(userId, id, req.body);
-      if (!updated) return res.status(404).json({ error: 'Holding not found or unauthorized' });
-      res.json({ message: 'Holding updated successfully' });
-    } catch (error) {
-      logger.error('Error updating holding', { error });
-      res.status(500).json({ error: 'Failed to update holding' });
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
     }
-  },
+    await PortfolioService.updateHolding(userId, req.params.id, req.body);
+    res.json({ success: true });
+  }),
 
-  delete: async (req: AuthRequest, res: Response) => {
+  delete: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    const { id } = req.params;
-    try {
-      const deleted = await PortfolioService.deleteHolding(userId, id);
-      if (!deleted) return res.status(404).json({ error: 'Holding not found or unauthorized' });
-      res.json({ message: 'Holding deleted successfully' });
-    } catch (error) {
-      logger.error('Error deleting holding', { error });
-      res.status(500).json({ error: 'Failed to delete holding' });
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
     }
-  },
+    await PortfolioService.deleteHolding(userId, req.params.id);
+    res.status(204).send();
+  }),
 
   performance: async (_req: AuthRequest, res: Response) => {
-    res.json({ message: 'Performance calculation not yet fully implemented' });
+    res.json({ data: { message: 'Performance calculation not yet fully implemented' } });
   },
 };

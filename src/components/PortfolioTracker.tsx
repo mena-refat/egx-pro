@@ -89,7 +89,7 @@ export default function PortfolioTracker() {
       setNewHolding({ ticker: '', shares: '', avgPrice: '', buyDate: new Date().toISOString().split('T')[0] });
     } catch (err: unknown) {
       if (err instanceof Error) {
-        if ((err as Error & { code?: string }).code === 'PORTFOLIO_LIMIT') {
+        if ((err as Error & { code?: string }).code === 'PORTFOLIO_LIMIT_REACHED' || (err as Error & { code?: string }).code === 'PORTFOLIO_LIMIT') {
           setShowPortfolioLimitModal(true);
         } else {
           setAddError(err.message);

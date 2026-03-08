@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { LucideIcon } from 'lucide-react';
+import { Button } from '../ui/Button';
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -62,18 +63,9 @@ const EmptyState = memo(function EmptyState({
       )}
 
       {actionLabel && onAction && (
-        <button
-          onClick={onAction}
-          className="
-            px-6 py-3 rounded-xl text-body font-semibold
-            bg-[var(--brand)] text-white
-            hover:bg-[var(--brand-hover)]
-            shadow-md hover:shadow-lg
-            transition-all duration-200 btn-press
-          "
-        >
+        <Button variant="primary" size="lg" onClick={onAction}>
           {actionLabel}
-        </button>
+        </Button>
       )}
     </div>
   );
