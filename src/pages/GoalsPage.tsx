@@ -126,6 +126,76 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
   const activeGoals = goals.filter((g) => g.status !== 'completed');
   const completedGoals = goals.filter((g) => g.status === 'completed');
 
+  const openAddModal = useCallback(() => setAddModalOpen(true), []);
+  const closeAddModal = useCallback(() => setAddModalOpen(false), []);
+  const onSavedAdd = useCallback(() => {
+    setAddModalOpen(false);
+    fetchGoals();
+  }, [fetchGoals]);
+  const closeEditModal = useCallback(() => {
+    setEditModalOpen(false);
+    setEditGoalId(null);
+  }, []);
+  const onSavedEdit = useCallback(() => {
+    setEditModalOpen(false);
+    setEditGoalId(null);
+    fetchGoals();
+  }, [fetchGoals]);
+  const closeAmountModal = useCallback(() => {
+    setAmountModalOpen(false);
+    setAmountGoal(null);
+  }, []);
+  const onSavedAmount = useCallback(() => {
+    setAmountModalOpen(false);
+    setAmountGoal(null);
+    fetchGoals();
+  }, [fetchGoals]);
+  const toggleCompletedOpen = useCallback(() => setCompletedOpen((c) => !c), []);
+  const setMenuOpenIdFor = useCallback((id: string) => setMenuOpenId((prev) => (prev === id ? null : id)), []);
+  const openAmountFor = useCallback((goal: GoalRecord) => {
+    setAmountGoal(goal);
+    setAmountModalOpen(true);
+    setMenuOpenId(null);
+  }, []);
+  const openEditFor = useCallback((id: string) => {
+    setEditGoalId(id);
+    setEditModalOpen(true);
+    setMenuOpenId(null);
+  }, []);
+  const deleteGoal = useCallback(
+    async (id: string) => {
+      if (!window.confirm(t('goals.deleteConfirm'))) return;
+      try {
+        await fetch(`/api/goals/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        fetchGoals();
+      } catch {
+        setError(t('goals.errorDelete'));
+      }
+      setMenuOpenId(null);
+    },
+    [accessToken, t, fetchGoals]
+  );
+  const markComplete = useCallback(
+    async (id: string) => {
+      try {
+        await fetch(`/api/goals/${id}/complete`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        fetchGoals();
+      } catch {
+        setError(t('goals.errorAdd'));
+      }
+      setMenuOpenId(null);
+    },
+    [accessToken, fetchGoals]
+  );
+  const noop = useCallback(() => {}, []);
+  const noopAsync = useCallback(async () => {}, []);
+
   if (loading) {
     return (
       <div className="space-y-3 p-4">
@@ -158,7 +228,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
               {activeGoals.length} {t('goals.activeCount')}
             </p>
           </div>
-          <Button type="button" onClick={() => setAddModalOpen(true)} className="flex items-center gap-2" variant="primary">
+          <Button type="button" onClick={openAddModal} className="flex items-center gap-2" variant="primary">
             <Plus className="w-4 h-4" />
             {t('goals.addNew')}
           </Button>
@@ -172,7 +242,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
           title={t('goals.emptyTitle')}
           description={t('goals.emptyDescription')}
           actionLabel={t('goals.addFirst')}
-          onAction={() => setAddModalOpen(true)}
+          onAction={openAddModal}
         />
       )}
 
@@ -186,42 +256,11 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
               t={t as (key: string, opts?: object) => string}
               locale={i18n.language}
               menuOpen={menuOpenId === goal.id}
-              onMenuToggle={() => setMenuOpenId(menuOpenId === goal.id ? null : goal.id)}
-              onUpdateAmount={() => {
-                setAmountGoal(goal);
-                setAmountModalOpen(true);
-                setMenuOpenId(null);
-              }}
-              onEdit={() => {
-                setEditGoalId(goal.id);
-                setEditModalOpen(true);
-                setMenuOpenId(null);
-              }}
-              onDelete={async () => {
-                if (!window.confirm(t('goals.deleteConfirm'))) return;
-                try {
-                  await fetch(`/api/goals/${goal.id}`, {
-                    method: 'DELETE',
-                    headers: { Authorization: `Bearer ${accessToken}` },
-                  });
-                  fetchGoals();
-                } catch {
-                  setError(t('goals.errorDelete'));
-                }
-                setMenuOpenId(null);
-              }}
-              onMarkComplete={async () => {
-                try {
-                  await fetch(`/api/goals/${goal.id}/complete`, {
-                    method: 'PATCH',
-                    headers: { Authorization: `Bearer ${accessToken}` },
-                  });
-                  fetchGoals();
-                } catch {
-                  setError(t('goals.errorAdd'));
-                }
-                setMenuOpenId(null);
-              }}
+              onMenuToggle={() => setMenuOpenIdFor(goal.id)}
+              onUpdateAmount={() => openAmountFor(goal)}
+              onEdit={() => openEditFor(goal.id)}
+              onDelete={() => deleteGoal(goal.id)}
+              onMarkComplete={() => markComplete(goal.id)}
             />
           ))}
         </div>
@@ -230,7 +269,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       {/* Add goal button when we have goals but no header button visible on mobile */}
       {activeGoals.length > 0 && (
         <div className="flex justify-center lg:hidden">
-          <Button type="button" onClick={() => setAddModalOpen(true)} variant="primary" className="flex items-center gap-2">
+          <Button type="button" onClick={openAddModal} variant="primary" className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             {t('goals.addNew')}
           </Button>
@@ -243,7 +282,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
           <Button
             type="button"
             variant="ghost"
-            onClick={() => setCompletedOpen(!completedOpen)}
+            onClick={toggleCompletedOpen}
             className="w-full flex items-center justify-between px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] transition-colors"
           >
             <span className="font-medium">
@@ -268,11 +307,11 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
                       locale={i18n.language}
                       completed
                       menuOpen={false}
-                      onMenuToggle={() => {}}
-                      onUpdateAmount={() => {}}
-                      onEdit={() => {}}
-                      onDelete={async () => {}}
-                      onMarkComplete={async () => {}}
+                      onMenuToggle={noop}
+                      onUpdateAmount={noop}
+                      onEdit={noop}
+                      onDelete={noopAsync}
+                      onMarkComplete={noopAsync}
                     />
                   ))}
                 </div>
@@ -289,11 +328,8 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       {/* Add goal modal */}
       <AddEditGoalModal
         open={addModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        onSaved={() => {
-          setAddModalOpen(false);
-          fetchGoals();
-        }}
+        onClose={closeAddModal}
+        onSaved={onSavedAdd}
         accessToken={accessToken}
         t={t as (key: string, opts?: object) => string}
         mode="add"
@@ -302,15 +338,8 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       {/* Edit goal modal */}
       <AddEditGoalModal
         open={editModalOpen}
-        onClose={() => {
-          setEditModalOpen(false);
-          setEditGoalId(null);
-        }}
-        onSaved={() => {
-          setEditModalOpen(false);
-          setEditGoalId(null);
-          fetchGoals();
-        }}
+        onClose={closeEditModal}
+        onSaved={onSavedEdit}
         accessToken={accessToken}
         t={t as (key: string, opts?: object) => string}
         mode="edit"
@@ -322,15 +351,8 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       <UpdateAmountModal
         open={amountModalOpen}
         goal={amountGoal}
-        onClose={() => {
-          setAmountModalOpen(false);
-          setAmountGoal(null);
-        }}
-        onSaved={() => {
-          setAmountModalOpen(false);
-          setAmountGoal(null);
-          fetchGoals();
-        }}
+        onClose={closeAmountModal}
+        onSaved={onSavedAmount}
         accessToken={accessToken}
         t={t as (key: string, opts?: object) => string}
         locale={i18n.language}

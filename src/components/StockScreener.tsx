@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, TrendingUp, TrendingDown, Star, Plus, Circle, Timer } from 'lucide-react';
 import api from '../lib/api';
@@ -43,7 +43,7 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
   const isAr = i18n.language.startsWith('ar');
   const lang = isAr ? 'ar' : 'en';
 
-  const fetchData = async (signal?: AbortSignal) => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
@@ -85,13 +85,13 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [lang, isAr, t]);
 
   useEffect(() => {
     const controller = new AbortController();
     fetchData(controller.signal);
     return () => controller.abort();
-  }, []);
+  }, [fetchData]);
 
   const toggleWatchlist = async (e: React.MouseEvent, ticker: string) => {
     e.stopPropagation();

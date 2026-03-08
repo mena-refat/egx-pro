@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
@@ -63,6 +63,11 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
     successName?: string;
     error?: string;
   }>({ checking: false });
+  const finishTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (finishTimeoutRef.current) clearTimeout(finishTimeoutRef.current);
+  }, []);
 
   const [formData, setFormData] = useState({
     // step 1
@@ -252,8 +257,10 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
       }
       setReferralState({ checking: false, successName: data.referrerName, error: undefined });
       // بعد نجاح الكود نكمل وإنهاء الـ Onboarding بعد لحظات بسيطة
-      setTimeout(() => {
+      if (finishTimeoutRef.current) clearTimeout(finishTimeoutRef.current);
+      finishTimeoutRef.current = setTimeout(() => {
         handleFinish();
+        finishTimeoutRef.current = null;
       }, 2000);
     } catch (err) {
       console.error('Failed to apply referral code', err);

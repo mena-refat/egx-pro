@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, Check, X, Pencil, Loader2 } from 'lucide-react';
 import { validateUsernameFormat, USERNAME_MAX_LENGTH } from '../../../lib/validations';
@@ -28,6 +28,11 @@ export function AccountTab({ user, accessToken, onUpdateProfile, setRequestStatu
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [verifySending, setVerifySending] = useState(false);
   const [verifySent, setVerifySent] = useState(false);
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+  }, []);
 
   const sendVerification = async () => {
     if (!accessToken || verifySending) return;
@@ -147,7 +152,11 @@ export function AccountTab({ user, accessToken, onUpdateProfile, setRequestStatu
           setEditingField(null);
         }
         setRequestStatus({ type: 'success', message: t('settings.savedSuccess') });
-        setTimeout(() => setSuccessField(null), 2000);
+        if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+        successTimeoutRef.current = setTimeout(() => {
+          setSuccessField(null);
+          successTimeoutRef.current = null;
+        }, 2000);
       } catch (e) {
         setRequestStatus({ type: 'error', message: (e as Error).message || t('common.error') });
       } finally {

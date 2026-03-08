@@ -89,7 +89,7 @@ export function AchievementCongratsCard({
             </p>
 
             {/* Progress bar: يبدأ ممتلئ ويفرغ خلال 4 ثواني */}
-            <div className="w-full h-2 rounded-full bg-slate-700 overflow-hidden flex justify-end">
+            <div className="w-full h-2 rounded-full bg-[var(--bg-secondary)] overflow-hidden flex justify-end">
               <motion.div
                 className="h-full rounded-full bg-[var(--brand)] min-w-0"
                 animate={{ width: `${progress}%` }}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
@@ -41,6 +41,10 @@ export default function App() {
 
   useEffect(() => { localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed)); }, [sidebarCollapsed]);
 
+  const onToggleSidebar = useCallback(() => setSidebarCollapsed((c) => !c), []);
+  const onCompleteOnboarding = useCallback(() => updateUser({ isFirstLogin: false, onboardingCompleted: true }), [updateUser]);
+  const onSelectStock = useCallback((s: { ticker: string }) => navigate(`/stocks/${s.ticker}`), [navigate]);
+
   const handleThemeChange = async (nextTheme: 'dark' | 'light' | 'system') => {
     setTheme(nextTheme);
     if (accessToken) {
@@ -79,14 +83,14 @@ export default function App() {
   useEffect(() => { document.documentElement.dir = i18n.language.startsWith('ar') ? 'rtl' : 'ltr'; document.documentElement.lang = i18n.language; }, [i18n.language]);
 
   if (isAuthenticated && user?.isFirstLogin) {
-    return <OnboardingWizard onComplete={() => updateUser({ isFirstLogin: false, onboardingCompleted: true })} />;
+    return <OnboardingWizard onComplete={onCompleteOnboarding} />;
   }
   if (!isAuthenticated && pathname !== '/') return <Navigate to="/" replace />;
   if (!isAuthenticated) return <AuthPage />;
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row">
-      <Sidebar activeRoute={pathname} onNavigate={navigate} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
+      <Sidebar activeRoute={pathname} onNavigate={navigate} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />
       <main className="flex-1 p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto">
         <Header
           user={user ?? null}
@@ -113,7 +117,7 @@ export default function App() {
                 <Route path="/portfolio" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><PortfolioTracker /></Suspense></ErrorBoundary>} />
                 <Route path="/stocks" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><StockScreener onSelectStock={(s) => navigate(`/stocks/${s.ticker}`)} /></Suspense></ErrorBoundary>} />
                 <Route path="/stocks/:ticker" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><StockDetailPage /></Suspense></ErrorBoundary>} />
-                <Route path="/market" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><MarketPage onSelectStock={(s) => navigate(`/stocks/${s.ticker}`)} /></Suspense></ErrorBoundary>} />
+                <Route path="/market" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><MarketPage onSelectStock={onSelectStock} /></Suspense></ErrorBoundary>} />
                 <Route path="/calculator" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><InvestmentCalculator /></Suspense></ErrorBoundary>} />
                 <Route path="/goals" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><GoalsPage currentWealth={stats.totalValue} /></Suspense></ErrorBoundary>} />
                 <Route path="/settings" element={<ErrorBoundary><SettingsLayout /></ErrorBoundary>}>

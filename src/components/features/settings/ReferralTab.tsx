@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gift, Copy, Loader2 } from 'lucide-react';
 import api from '../../../lib/api';
@@ -17,6 +17,11 @@ export function ReferralTab() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ReferralData | null>(null);
   const [copied, setCopied] = useState(false);
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,7 +36,11 @@ export function ReferralTab() {
     if (data?.code) {
       navigator.clipboard.writeText(data.code);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+      copiedTimeoutRef.current = setTimeout(() => {
+        setCopied(false);
+        copiedTimeoutRef.current = null;
+      }, 2000);
     }
   };
 

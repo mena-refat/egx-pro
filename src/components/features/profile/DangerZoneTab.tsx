@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import { Button } from '../../ui/Button';
@@ -19,6 +19,11 @@ export function DangerZoneTab({ user, accessToken, onLogout, setRequestStatus }:
     const n = deleteConfirmText.trim();
     return n === 'حذف' || n.toUpperCase() === 'DELETE';
   })();
+
+  useEffect(() => () => {
+    const tId = (window as unknown as { __goodbyeTimeout?: ReturnType<typeof setTimeout> }).__goodbyeTimeout;
+    if (tId) clearTimeout(tId);
+  }, []);
 
   const handleDeleteAccount = async () => {
     const confirmNorm = deleteConfirmText.trim().toUpperCase();

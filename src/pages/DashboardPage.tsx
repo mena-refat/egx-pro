@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
@@ -110,6 +110,20 @@ export default function DashboardPage() {
   }, [holdings, livePrices]);
 
   const isRTL = i18n.language.startsWith('ar');
+  const goToStocks = useCallback(() => navigate('/stocks'), [navigate]);
+  const toggleMarketOverview = useCallback(() => setShowMarketOverview((v) => !v), []);
+  const retryMarketOverview = useCallback(async () => {
+    setMarketError(null);
+    setMarketLoading(true);
+    try {
+      const res = await api.get('/stocks/market/overview');
+      setMarketOverview(res.data);
+    } catch (err: unknown) {
+      setMarketError(err instanceof Error ? err.message : 'Failed to fetch');
+    } finally {
+      setMarketLoading(false);
+    }
+  }, []);
 
   if (portfolioLoading) {
     return (
@@ -160,7 +174,7 @@ export default function DashboardPage() {
         </div>
         <button
           type="button"
-          onClick={() => setShowMarketOverview(!showMarketOverview)}
+          onClick={toggleMarketOverview}
           className="text-label text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
         >
           {showMarketOverview ? (isRTL ? 'إخفاء المؤشرات' : 'Hide Indicators') : (isRTL ? 'إظهار المؤشرات' : 'Show Indicators')}
@@ -181,18 +195,7 @@ export default function DashboardPage() {
               <p>{marketError}</p>
               <button
                 type="button"
-                onClick={async () => {
-                  setMarketError(null);
-                  setMarketLoading(true);
-                  try {
-                    const res = await api.get('/stocks/market/overview');
-                    setMarketOverview(res.data);
-                  } catch (err: unknown) {
-                    setMarketError(err instanceof Error ? err.message : 'Failed to fetch');
-                  } finally {
-                    setMarketLoading(false);
-                  }
-                }}
+                onClick={retryMarketOverview}
                 className="mt-3 text-[var(--brand)] hover:underline font-medium"
               >
                 {t('common.retry')}
@@ -278,7 +281,7 @@ export default function DashboardPage() {
                   title={t('watchlist.emptyTitle')}
                   description={t('watchlist.emptyDescription')}
                   actionLabel={t('watchlist.addFirst')}
-                  onAction={() => navigate('/stocks')}
+                  onAction={goToStocks}
                 />
               </div>
             )}
@@ -327,7 +330,7 @@ export default function DashboardPage() {
                 title={t('watchlist.emptyTitle')}
                 description={t('watchlist.emptyDescription')}
                 actionLabel={t('watchlist.addFirst')}
-                onAction={() => navigate('/stocks')}
+                onAction={goToStocks}
               />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
