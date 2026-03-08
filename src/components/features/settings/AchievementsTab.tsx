@@ -21,11 +21,11 @@ export function AchievementsTab() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    api.get('/user/achievements')
+    const controller = new AbortController();
+    api.get('/user/achievements', { signal: controller.signal })
       .then((res) => {
-        if (cancelled) return;
-        const raw = Array.isArray(res.data) ? res.data : [];
+        if (controller.signal.aborted) return;
+        const raw = Array.isArray((res.data as { data?: unknown[] })?.data) ? (res.data as { data: unknown[] }).data : (Array.isArray(res.data) ? res.data : []);
         setItems(raw.map((a: Record<string, unknown>) => ({
           id: String(a.id ?? ''),
           level: String(a.level ?? ''),
@@ -37,9 +37,9 @@ export function AchievementsTab() {
           target: typeof a.target === 'number' ? a.target : undefined,
         })));
       })
-      .catch(() => { if (!cancelled) setError(t('common.error')); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .catch(() => { if (!controller.signal.aborted) setError(t('common.error')); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [t]);
 
   if (loading) return <div className="p-6 text-center text-[var(--text-muted)]">{t('common.loading')}</div>;

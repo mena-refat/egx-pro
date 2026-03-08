@@ -21,7 +21,7 @@ router.get('/completion', authenticate, async (req: AuthRequest, res: Response) 
       prisma.watchlist.count({ where: { userId } }),
     ]);
 
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ error: 'NOT_FOUND' });
 
     const hasEmail = Boolean(user.email?.trim());
     const hasPhone = Boolean(user.phone?.trim());
@@ -45,10 +45,10 @@ router.get('/completion', authenticate, async (req: AuthRequest, res: Response) 
         route: c.field === 'goal' ? '/goals' : c.field === 'watchlist' ? '/stocks' : '/profile?tab=settings',
       }));
 
-    res.json({ percentage, missing });
+    res.json({ data: { percentage, missing } });
   } catch (err) {
     logger.error('Profile completion error', { err });
-    res.status(500).json({ error: 'Failed to load completion' });
+    res.status(500).json({ error: 'INTERNAL_ERROR' });
   }
 });
 

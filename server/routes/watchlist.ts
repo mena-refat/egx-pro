@@ -1,172 +1,26 @@
-import { Router, Response, Request } from 'express';
+import { Router, Request } from 'express';
 import { rateLimit } from 'express-rate-limit';
-import { prisma } from '../lib/prisma.ts';
-import { watchlistTickerSchema, watchlistCheckTargetsSchema } from '../../src/lib/validations.ts';
-import { AuthRequest } from './types';
-import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
-import { createNotification } from '../lib/createNotification.ts';
-import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 import { authenticate } from '../middleware/auth.middleware.ts';
-import { logger } from '../lib/logger.ts';
+import { WatchlistController } from '../controllers/watchlist.controller.ts';
+import type { AuthRequest } from './types.ts';
+import { ONE_MINUTE_MS } from '../lib/constants.ts';
 
 const router = Router();
 
+const WATCHLIST_CREATE_MAX_PER_MIN = 20;
 const watchlistAddLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 20,
+  windowMs: ONE_MINUTE_MS,
+  max: WATCHLIST_CREATE_MAX_PER_MIN,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => (req as AuthRequest).userId ?? (req as Request).ip ?? 'anon',
-  handler: (_req, res) => res.status(429).json({ error: 'Too many watchlist requests, try again later' }),
+  handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
 });
 
-// Get watchlist
-router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    const watchlist = await prisma.watchlist.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json(watchlist);
-  } catch {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Add to watchlist
-router.post('/', authenticate, watchlistAddLimiter, async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-
-    const parsed = watchlistTickerSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const msg = parsed.error.issues[0]?.message ?? 'Invalid ticker';
-      return res.status(400).json({ error: msg });
-    }
-    const { ticker, targetPrice: bodyTargetPrice } = parsed.data;
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
-    });
-    if (!user) return res.status(401).json({ error: 'Unauthorized' });
-    if (!isPro(user)) {
-      const count = await prisma.watchlist.count({ where: { userId } });
-      if (count >= FREE_LIMITS.watchlistStocks) {
-        return res.status(403).json({
-          error: 'pro_required',
-          code: 'WATCHLIST_LIMIT',
-          message: 'هذه الميزة متاحة في Pro',
-          limit: FREE_LIMITS.watchlistStocks,
-        });
-      }
-    }
-    if (bodyTargetPrice != null && !isPro(user)) {
-      return res.status(403).json({
-        error: 'pro_required',
-        code: 'PRICE_ALERTS_PRO',
-        message: 'هذه الميزة متاحة في Pro',
-      });
-    }
-
-    // Check if already exists
-    const existing = await prisma.watchlist.findFirst({
-      where: { userId, ticker }
-    });
-    
-    if (existing) return res.status(400).json({ error: 'Already in watchlist' });
-
-    const completedBefore = await getCompletedAchievementIds(userId);
-    const item = await prisma.watchlist.create({
-      data: {
-        userId,
-        ticker,
-        targetPrice: bodyTargetPrice ?? undefined,
-      },
-    });
-    const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
-    res.status(201).json({ ...item, newUnseenAchievements: newAchievements });
-  } catch {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Update watchlist item (e.g. target price) — price alerts are Pro only
-router.patch('/:ticker', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-
-    const ticker = req.params.ticker?.toUpperCase();
-    if (!ticker) return res.status(400).json({ error: 'Invalid ticker' });
-    const targetPrice = typeof req.body?.targetPrice === 'number' ? req.body.targetPrice : null;
-    if (targetPrice != null) {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
-      });
-      if (!user || !isPro(user)) {
-        return res.status(403).json({
-          error: 'pro_required',
-          code: 'PRICE_ALERTS_PRO',
-          message: 'هذه الميزة متاحة في Pro',
-        });
-      }
-    }
-    await prisma.watchlist.updateMany({
-      where: { userId, ticker },
-      data: targetPrice != null ? { targetPrice } : { targetPrice: null, targetReachedNotifiedAt: null },
-    });
-    res.json({ success: true });
-  } catch {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Check watchlist targets and create notifications when currentPrice >= targetPrice
-router.post('/check-targets', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const parsed = watchlistCheckTargetsSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid body' });
-    const userId = req.userId!;
-    for (const { ticker, targetPrice, currentPrice } of parsed.data.items) {
-      if (currentPrice < targetPrice) continue;
-      const row = await prisma.watchlist.findFirst({
-        where: { userId, ticker: ticker.toUpperCase(), targetPrice, targetReachedNotifiedAt: null },
-      });
-      if (!row) continue;
-      const titleAr = `سهم ${ticker} وصل للسعر المستهدف`;
-      const titleEn = `${ticker} reached target price`;
-      const bodyAr = `السعر الحالي ${currentPrice} وصل أو تجاوز المستهدف ${targetPrice}`;
-      const bodyEn = `Current price ${currentPrice} reached or exceeded target ${targetPrice}`;
-      await createNotification(userId, 'stock_target', titleAr, bodyAr);
-      await prisma.watchlist.update({
-        where: { id: row.id },
-        data: { targetReachedNotifiedAt: new Date() },
-      });
-    }
-    res.json({ success: true });
-  } catch (err) {
-    logger.error('Check targets error', { err });
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Remove from watchlist
-router.delete('/:ticker', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    await prisma.watchlist.deleteMany({
-      where: { userId, ticker: req.params.ticker },
-    });
-    res.status(204).send();
-  } catch {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+router.get('/', authenticate, WatchlistController.list);
+router.post('/', authenticate, watchlistAddLimiter, WatchlistController.add);
+router.patch('/:ticker', authenticate, WatchlistController.update);
+router.post('/check-targets', authenticate, WatchlistController.checkTargets);
+router.delete('/:ticker', authenticate, WatchlistController.remove);
 
 export default router;

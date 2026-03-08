@@ -23,17 +23,18 @@ export function AccountOverviewTab() {
   const [completion, setCompletion] = useState<CompletionData | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
+    const signal = controller.signal;
     Promise.all([
-      api.get('/user/profile/stats').then((r) => r.data).catch(() => null),
-      api.get('/profile/completion').then((r) => r.data).catch(() => null),
+      api.get('/user/profile/stats', { signal }).then((r) => (r.data as { data?: unknown })?.data ?? r.data).catch(() => null),
+      api.get('/profile/completion', { signal }).then((r) => (r.data as { data?: CompletionData })?.data ?? (r.data as CompletionData)).catch(() => null),
     ]).then(([s, c]) => {
-      if (!cancelled) {
+      if (!signal.aborted) {
         setStats(s ?? null);
         setCompletion(c ?? null);
       }
-    }).finally(() => { if (!cancelled) setStatsLoading(false); });
-    return () => { cancelled = true; };
+    }).finally(() => { if (!signal.aborted) setStatsLoading(false); });
+    return () => controller.abort();
   }, []);
 
   if (statsLoading) return <div className="p-6 text-center text-[var(--text-muted)]">{t('common.loading')}</div>;

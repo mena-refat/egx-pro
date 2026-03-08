@@ -7,27 +7,31 @@ export function usePortfolio(livePrices: Record<string, { price: number }>) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPortfolio = useCallback(async () => {
+  const fetchPortfolio = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await api.get('/portfolio');
-      // The API returns { holdings: [...], summary: {...} }
+      const response = await api.get('/portfolio', { signal });
+      if (signal?.aborted) return;
       setHoldings(Array.isArray(response.data) ? response.data : (response.data.holdings || []));
     } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'ERR_CANCELED') return;
       if (err && typeof err === 'object' && 'response' in err) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setError((err as any).response?.data?.error || 'Failed to fetch portfolio');
+        setError((err as { response?: { data?: { error?: string } } }).response?.data?.error || 'Failed to fetch portfolio');
       } else {
         setError('Failed to fetch portfolio');
       }
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) setIsLoading(false);
     }
   }, []);
 
+  const refetch = useCallback(() => fetchPortfolio(), [fetchPortfolio]);
+
   useEffect(() => {
-    fetchPortfolio();
+    const controller = new AbortController();
+    fetchPortfolio(controller.signal);
+    return () => controller.abort();
   }, [fetchPortfolio]);
 
   const addHolding = async (data: { ticker: string; shares: number; price: number; date: string }) => {
@@ -79,7 +83,7 @@ export function usePortfolio(livePrices: Record<string, { price: number }>) {
     holdings,
     isLoading,
     error,
-    refetch: fetchPortfolio,
+    refetch,
     addHolding,
     removeHolding,
     stats: {

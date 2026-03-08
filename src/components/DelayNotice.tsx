@@ -52,7 +52,7 @@ export default function DelayNotice({
             <Clock className="w-5 h-5 text-[var(--warning)]" aria-hidden />
           </div>
           <div className="min-w-0">
-            <p className="font-medium text-slate-200">{t('delay.noticeTitle')}</p>
+            <p className="font-medium text-[var(--text-secondary)]">{t('delay.noticeTitle')}</p>
             <p className="text-sm text-[var(--text-muted)] mt-0.5">{t('delay.noticeBody')}</p>
           </div>
         </div>

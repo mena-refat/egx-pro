@@ -22,12 +22,12 @@ export function SubscriptionTab() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    api.get('/billing/plan')
-      .then((res) => { if (!cancelled) setPlanData(res.data); })
-      .catch(() => { if (!cancelled) setPlanData(null); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    const controller = new AbortController();
+    api.get('/billing/plan', { signal: controller.signal })
+      .then((res) => { if (!controller.signal.aborted) setPlanData(res.data); })
+      .catch(() => { if (!controller.signal.aborted) setPlanData(null); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, []);
 
   const handleValidateCode = async () => {

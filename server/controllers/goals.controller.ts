@@ -1,101 +1,77 @@
-import { Response } from 'express';
-import { ZodError } from 'zod';
+import { Response, NextFunction } from 'express';
 import { GoalsService } from '../services/goals.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
 
+function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    fn(req, res).catch(next);
+  };
+}
+
 export const GoalsController = {
-  getAll: async (req: AuthRequest, res: Response) => {
-    try {
-      const userId = req.user?.id ?? req.userId;
-      if (!userId) return res.status(401).json({ error: 'unauthorized' });
-      const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
-      const limit = Math.min(50, Math.max(1, parseInt((req.query.limit as string) || '50', 10)));
-      const data = await GoalsService.getUserGoals(userId, page, limit);
-      res.json(data);
-    } catch {
-      res.status(500).json({ error: 'Internal server error' });
+  getAll: run(async (req, res) => {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
     }
-  },
+    const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+    const limit = Math.min(50, Math.max(1, parseInt((req.query.limit as string) || '50', 10)));
+    const data = await GoalsService.getUserGoals(userId, page, limit);
+    res.json({ items: data.items, pagination: data.pagination });
+  }),
 
-  create: async (req: AuthRequest, res: Response) => {
-    try {
-      const user = req.user;
-      if (!user?.id) return res.status(401).json({ error: 'unauthorized' });
-      const result = await GoalsService.create(user, req.body);
-      res.status(201).json({ ...result.goal, newUnseenAchievements: result.newUnseenAchievements });
-    } catch (err) {
-      if (err instanceof ZodError) {
-        return res.status(400).json({ error: err.issues[0]?.message ?? 'Validation failed' });
-      }
-      const e = err as Error & { code?: string; limit?: number };
-      if (e.message === 'pro_required') {
-        return res.status(403).json({
-          error: 'pro_required',
-          code: e.code ?? 'GOALS_LIMIT',
-          message: 'هذه الميزة متاحة في Pro',
-          limit: e.limit,
-        });
-      }
-      if (e.message === 'Unauthorized') return res.status(401).json({ error: 'unauthorized' });
-      res.status(500).json({ error: 'Internal server error' });
+  create: run(async (req, res) => {
+    const user = req.user;
+    if (!user?.id) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
     }
-  },
+    const result = await GoalsService.create(user, req.body);
+    res.status(201).json({
+      data: { ...result.goal, newUnseenAchievements: result.newUnseenAchievements },
+    });
+  }),
 
-  update: async (req: AuthRequest, res: Response) => {
-    try {
-      const userId = req.user?.id ?? req.userId;
-      if (!userId) return res.status(401).json({ error: 'unauthorized' });
-      const { id } = req.params;
-      const updated = await GoalsService.update(userId, id, req.body);
-      if (!updated) return res.status(404).json({ error: 'Goal not found' });
-      res.json(updated);
-    } catch (err) {
-      if (err instanceof ZodError) {
-        return res.status(400).json({ error: err.issues[0]?.message ?? 'Validation failed' });
-      }
-      res.status(500).json({ error: 'Internal server error' });
+  update: run(async (req, res) => {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
     }
-  },
+    const updated = await GoalsService.update(userId, req.params.id, req.body);
+    res.json({ data: updated });
+  }),
 
-  updateAmount: async (req: AuthRequest, res: Response) => {
-    try {
-      const userId = req.user?.id ?? req.userId;
-      if (!userId) return res.status(401).json({ error: 'unauthorized' });
-      const { id } = req.params;
-      const updated = await GoalsService.updateAmount(userId, id, req.body);
-      if (!updated) return res.status(404).json({ error: 'Goal not found' });
-      res.json(updated);
-    } catch (err) {
-      if (err instanceof ZodError) {
-        return res.status(400).json({ error: err.issues[0]?.message ?? 'Validation failed' });
-      }
-      res.status(500).json({ error: 'Internal server error' });
+  updateAmount: run(async (req, res) => {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
     }
-  },
+    const updated = await GoalsService.updateAmount(userId, req.params.id, req.body);
+    res.json({ data: updated });
+  }),
 
-  complete: async (req: AuthRequest, res: Response) => {
-    try {
-      const userId = req.user?.id ?? req.userId;
-      if (!userId) return res.status(401).json({ error: 'unauthorized' });
-      const { id } = req.params;
-      const result = await GoalsService.complete(userId, id);
-      if (!result) return res.status(404).json({ error: 'Goal not found' });
-      res.json({ ...result.goal, newUnseenAchievements: result.newUnseenAchievements });
-    } catch {
-      res.status(500).json({ error: 'Internal server error' });
+  complete: run(async (req, res) => {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
     }
-  },
+    const result = await GoalsService.complete(userId, req.params.id);
+    res.json({
+      data: { ...result.goal, newUnseenAchievements: result.newUnseenAchievements },
+    });
+  }),
 
-  delete: async (req: AuthRequest, res: Response) => {
-    try {
-      const userId = req.user?.id ?? req.userId;
-      if (!userId) return res.status(401).json({ error: 'unauthorized' });
-      const { id } = req.params;
-      const deleted = await GoalsService.delete(userId, id);
-      if (!deleted) return res.status(404).json({ error: 'Goal not found' });
-      res.status(204).send();
-    } catch {
-      res.status(500).json({ error: 'Internal server error' });
+  delete: run(async (req, res) => {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
     }
-  },
+    await GoalsService.delete(userId, req.params.id);
+    res.status(204).send();
+  }),
 };

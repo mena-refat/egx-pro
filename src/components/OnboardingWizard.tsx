@@ -256,7 +256,8 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
         setReferralState({ checking: false, error: data.error || 'كود غير صحيح' });
         return;
       }
-      setReferralState({ checking: false, successName: data.referrerName, error: undefined });
+      const referrerName = (data as { data?: { referrerName?: string } }).data?.referrerName ?? (data as { referrerName?: string }).referrerName;
+      setReferralState({ checking: false, successName: referrerName, error: undefined });
       // بعد نجاح الكود نكمل وإنهاء الـ Onboarding بعد لحظات بسيطة
       if (finishTimeoutRef.current) clearTimeout(finishTimeoutRef.current);
       finishTimeoutRef.current = setTimeout(() => {
@@ -704,12 +705,12 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
                 inputClassName="text-center text-lg tracking-[0.2em]"
               />
               {referralState.successName && (
-                <p className="text-sm text-emerald-400 text-center">
+                <p className="text-sm text-[var(--success)] text-center">
                   تم! انضممت عن طريق دعوة {referralState.successName}
                 </p>
               )}
               {referralState.error && (
-                <p className="text-sm text-red-400 text-center">{referralState.error}</p>
+                <p className="text-sm text-[var(--danger)] text-center">{referralState.error}</p>
               )}
               <div className="flex flex-col sm:flex-row gap-3 mt-4">
                 <Button type="button" variant="primary" size="lg" fullWidth onClick={handleReferralApply} disabled={referralState.checking}>
@@ -773,7 +774,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
               {isRTL ? 'السابق' : 'Back'}
             </Button>
             <div className="flex flex-col items-end gap-2">
-              {validationError && <p className="text-red-500 text-xs">{validationError}</p>}
+              {validationError && <p className="text-[var(--danger)] text-xs">{validationError}</p>}
               {currentStep < steps.length - 1 && (
                 <Button variant="primary" size="md" onClick={handleNext} icon={isRTL ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />} iconPosition="right">
                   {isRTL ? 'التالي' : 'Next'}

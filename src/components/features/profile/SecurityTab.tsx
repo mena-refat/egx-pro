@@ -99,9 +99,10 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
         const res = await fetch('/api/user/security', { headers: { Authorization: `Bearer ${accessToken}` } });
         const data = await res.json();
         if (res.ok) {
-          setLastPasswordChangeAt(data.lastPasswordChangeAt ?? null);
-          setTwoFactorEnabled(Boolean(data.twoFactorEnabled));
-          setTwoFactorEnabledAt(data.twoFactorEnabledAt ?? null);
+          const payload = (data as { data?: { lastPasswordChangeAt?: string; twoFactorEnabled?: boolean; twoFactorEnabledAt?: string } }).data ?? data;
+          setLastPasswordChangeAt(payload?.lastPasswordChangeAt ?? null);
+          setTwoFactorEnabled(Boolean(payload?.twoFactorEnabled));
+          setTwoFactorEnabledAt(payload?.twoFactorEnabledAt ?? null);
         }
       } catch {
         // ignore
@@ -124,7 +125,8 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
         const userRes = await fetch('/api/user/sessions', { headers: { Authorization: `Bearer ${accessToken}` } });
         if (userRes.ok) {
           const data = await userRes.json();
-          if (Array.isArray(data)) list = data;
+          const arr = (data as { data?: unknown[] }).data ?? data;
+          if (Array.isArray(arr)) list = arr;
         }
       }
       setSessions(list.map((s: { id: string; deviceType?: string; browser?: string; os?: string; deviceInfo?: string; city?: string; country?: string; createdAt: string; isCurrentSession?: boolean }) => ({
@@ -248,7 +250,8 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
       const secRes = await fetch('/api/user/security', { headers: { Authorization: `Bearer ${accessToken}` } });
       if (secRes.ok) {
         const sec = await secRes.json();
-        setTwoFactorEnabledAt(sec.twoFactorEnabledAt ?? null);
+        const payload = (sec as { data?: { twoFactorEnabledAt?: string } }).data ?? sec;
+        setTwoFactorEnabledAt(payload?.twoFactorEnabledAt ?? null);
       }
     } catch {
       setEnable2FAError(t('settings.twoFaSetupFailed'));

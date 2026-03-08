@@ -185,7 +185,7 @@ export default function InvestmentCalculator() {
           </div>
           <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 flex items-center gap-3 h-[88px]">
             <div className="w-10 h-10 rounded-lg bg-[var(--success-bg)] flex items-center justify-center shrink-0">
-              <TrendingUp className="w-5 h-5 text-emerald-400" />
+              <TrendingUp className="w-5 h-5 text-[var(--success)]" />
             </div>
             <div className="min-w-0 flex-1 overflow-hidden">
               <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">{t('calculator.netProfit')}</p>
@@ -263,7 +263,7 @@ export default function InvestmentCalculator() {
                       <p className="text-[var(--text-muted)]">
                         {t('calculator.tooltipPrincipal')}: {formatMoney(d.principal, locale)}
                       </p>
-                      <p className="text-emerald-400">
+                      <p className="text-[var(--success)]">
                         {t('calculator.tooltipProfit')}: {formatMoney(d.profit, locale)}
                       </p>
                     </div>

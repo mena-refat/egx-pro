@@ -21,6 +21,8 @@ import * as Sentry from '@sentry/node';
 import { setupWebSocket } from './server/websocket.ts';
 import { validateEnv } from './server/lib/env.ts';
 import { logger } from './server/lib/logger.ts';
+import { RATE_LIMITS } from './server/lib/constants.ts';
+import { AppError } from './server/lib/errors.ts';
 import { sanitizeInput } from './server/lib/sanitize.ts';
 import authRoutes from './server/routes/auth.ts';
 import portfolioRoutes from './server/routes/portfolio.ts';
@@ -108,37 +110,37 @@ async function startServer() {
   // Rate Limiting — always respond with JSON so the client never gets "Too many requests" as plain text
   const ipKey = (req: express.Request) => (req.ip ?? 'unknown').replace(/^::ffff:/, '');
   const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 5,
+    windowMs: RATE_LIMITS.login.windowMs,
+    max: RATE_LIMITS.login.max,
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => ipKey(req),
-    handler: (_req, res) => res.status(429).json({ error: 'محاولات كثيرة، انتظر 15 دقيقة' }),
+    handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
   });
   const registerLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000,
-    max: 3,
+    windowMs: RATE_LIMITS.register.windowMs,
+    max: RATE_LIMITS.register.max,
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => ipKey(req),
-    handler: (_req, res) => res.status(429).json({ error: 'محاولات كثيرة، انتظر ساعة' }),
+    handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
   });
   const refreshLimiter = rateLimit({
-    windowMs: 60 * 1000,
-    max: 10,
+    windowMs: RATE_LIMITS.refresh.windowMs,
+    max: RATE_LIMITS.refresh.max,
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => ipKey(req),
-    handler: (_req, res) => res.status(429).json({ error: 'محاولات كثيرة، انتظر دقيقة' }),
+    handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
   });
   const apiLimiter = rateLimit({
-    windowMs: 60 * 1000,
-    max: 100,
+    windowMs: RATE_LIMITS.api.windowMs,
+    max: RATE_LIMITS.api.max,
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => ipKey(req),
     skip: (req) => req.path.startsWith('/api/auth'), // لا نحسب تسجيل الدخول/التسجيل ضمن الحد العام
-    handler: (_req, res) => res.status(429).json({ error: 'طلبات كثيرة، انتظر قليلاً' }),
+    handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
   });
 
   app.use('/api/auth/login', loginLimiter);
@@ -200,10 +202,17 @@ async function startServer() {
     Sentry.setupExpressErrorHandler(app);
   }
 
-  // Global Error Handler
+  // Global Error Handler — AppError and ZodError get consistent JSON; never expose internals
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const reqId = (req as express.Request & { id?: string }).id;
+
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ error: err.code });
+    }
+    if (err && typeof err === 'object' && (err as { name?: string }).name === 'ZodError') {
+      return res.status(400).json({ error: 'VALIDATION_ERROR' });
+    }
 
     const message = err instanceof Error ? err.message : String(err);
     const logLine = `[${new Date().toISOString()}] [${reqId ?? 'no-id'}] ${message}\n`;
@@ -222,7 +231,7 @@ async function startServer() {
       logger.error('Unhandled Error:', { reqId, err });
     }
 
-    res.status(500).json({ error: 'server_error' });
+    res.status(500).json({ error: 'INTERNAL_ERROR' });
   });
 
   // Vite Integration

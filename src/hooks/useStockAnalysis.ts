@@ -97,7 +97,7 @@ export function useStockAnalysis(stock: Stock) {
               .get(`/stocks/${stock.ticker}/trading-stats`, { signal })
               .catch(() => ({ data: { available: false } })),
             api.get(`/stocks/${stock.ticker}/news`, { signal }),
-            api.get('/watchlist', { signal }).catch(() => ({ data: [] })),
+            api.get('/watchlist', { signal }).catch(() => ({ data: { items: [] } })),
           ]);
         if (signal.aborted) return;
         setPriceDetail(priceRes.data as Record<string, unknown>);
@@ -108,11 +108,8 @@ export function useStockAnalysis(stock: Stock) {
         setInvestorCategoriesAvailable((invRes.data as { available?: boolean })?.available ?? false);
         setTradingStatsAvailable((statsRes.data as { available?: boolean })?.available ?? false);
         setNews(Array.isArray(newsRes.data) ? newsRes.data : []);
-        setWatchlist(
-          Array.isArray(watchRes.data)
-            ? (watchRes.data as { ticker: string }[]).map((w) => w.ticker)
-            : []
-        );
+        const rawList = (watchRes.data as { items?: { ticker: string }[] })?.items;
+        setWatchlist(Array.isArray(rawList) ? rawList.map((w) => w.ticker) : []);
       } catch (err: unknown) {
         if (
           err instanceof Error &&

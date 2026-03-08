@@ -18,8 +18,9 @@ export function useDashboardStats(isAuthenticated: boolean, pathname: string) {
       const holdingsData = await holdingsRes.json();
       const stocks = await stocksRes.json();
       const watchlistData = await watchlistRes.json();
-      const holdings = Array.isArray(holdingsData) ? holdingsData : (holdingsData.holdings || []);
-      if (!Array.isArray(holdings) || !Array.isArray(stocks) || !Array.isArray(watchlistData)) return;
+      const holdings = Array.isArray(holdingsData) ? holdingsData : (holdingsData.holdings || holdingsData?.items || []);
+      const watchlistItems = watchlistData?.items ?? watchlistData;
+      if (!Array.isArray(holdings) || !Array.isArray(stocks) || !Array.isArray(watchlistItems)) return;
       const priceMap: Record<string, Stock> = {};
       stocks.forEach((s: Stock) => priceMap[s.ticker] = s);
       let totalValue = 0, bestStock = '--', bestChange = -Infinity;

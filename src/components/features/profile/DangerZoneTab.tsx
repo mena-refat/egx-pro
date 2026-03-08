@@ -42,11 +42,10 @@ export function DangerZoneTab({ user, onLogout, setRequestStatus }: ProfileTabPr
       });
       const data = await res.json();
       if (!res.ok) {
-        if (data?.error === 'wrong_password' || data?.message) {
-          setDeleteError(data?.message || t('settings.wrongPassword'));
-        } else {
-          setDeleteError(data?.error || data?.message || 'Failed');
-        }
+        const code = (data as { error?: string })?.error;
+        if (code === 'WRONG_PASSWORD') setDeleteError(t('settings.wrongPassword'));
+        else if (code === 'INVALID_CONFIRM' || code === 'PASSWORD_REQUIRED' || code === 'INVALID_ACCOUNT') setDeleteError(t('settings.deleteAccountConfirm'));
+        else setDeleteError(code || 'Failed');
         return;
       }
       setDeleteDialogOpen(false);

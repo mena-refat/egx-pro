@@ -40,7 +40,7 @@ export default function ProfilePage() {
     let cancelled = false;
     fetch('/api/user/profile', { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => { if (!cancelled && data) setUser(data as ProfileUser); })
+      .then((data) => { if (!cancelled && data) setUser((data as { data?: ProfileUser }).data ?? (data as ProfileUser)); })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -55,8 +55,9 @@ export default function ProfilePage() {
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((body?.error as string) || 'Failed');
-    updateUser(body as Partial<ProfileUser>);
-    if (body && typeof body === 'object') setUser((prev) => (prev ? { ...prev, ...body } : (body as ProfileUser)));
+    const payload = (body as { data?: ProfileUser }).data ?? (body as Partial<ProfileUser>);
+    updateUser(payload as Partial<ProfileUser>);
+    if (payload && typeof payload === 'object') setUser((prev) => (prev ? { ...prev, ...payload } : (payload as ProfileUser)));
   };
 
   const tabProps = {

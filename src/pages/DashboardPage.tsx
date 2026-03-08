@@ -58,7 +58,8 @@ export default function DashboardPage() {
       setWatchlistLoading(true);
       try {
         const res = await api.get('/watchlist', { signal: watchlistController.signal });
-        if (!watchlistController.signal.aborted) setWatchlist(Array.isArray(res.data) ? res.data : []);
+        const items = (res.data as { items?: unknown[] })?.items;
+        if (!watchlistController.signal.aborted) setWatchlist(Array.isArray(items) ? items : []);
       } catch (err: unknown) {
         if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
         if (import.meta.env.DEV) console.error('Failed to fetch watchlist', err);

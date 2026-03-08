@@ -86,11 +86,12 @@ const GoalTracker = memo(function GoalTracker({ currentWealth }: { currentWealth
         setIsAdding(false);
         setNewGoal({ name: '', targetAmount: '', targetDate: '', type: 'apartment' });
         setRefreshTrigger(prev => prev + 1);
-        if (Array.isArray(data.newUnseenAchievements) && data.newUnseenAchievements.length > 0) {
-          useAuthStore.getState().addUnseenAchievementsCount(data.newUnseenAchievements.length);
+        const payload = data?.data ?? data;
+        if (Array.isArray(payload?.newUnseenAchievements) && payload.newUnseenAchievements.length > 0) {
+          useAuthStore.getState().addUnseenAchievementsCount(payload.newUnseenAchievements.length);
         }
       } else {
-        setError(data.error || t('goals.errorAdd'));
+        setError((data as { error?: string })?.error || t('goals.errorAdd'));
       }
     } catch (err) {
       console.error('Add goal error', err);

@@ -78,14 +78,14 @@ export default function SecuritySettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-white/5">
+      <div className="flex items-center justify-between p-4 bg-[var(--bg-card)] rounded-2xl border border-[var(--border)]">
         <div className="flex items-center gap-4">
-          <div className={`p-3 rounded-xl ${user?.twoFactorEnabled ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-700 text-slate-400'}`}>
+          <div className={`p-3 rounded-xl ${user?.twoFactorEnabled ? 'bg-[var(--success-bg)] text-[var(--success)]' : 'bg-[var(--bg-secondary)] text-[var(--text-muted)]'}`}>
             <Shield className="w-6 h-6" />
           </div>
           <div>
             <h3 className="font-bold">{isRTL ? 'المصادقة الثنائية (2FA)' : 'Two-Factor Authentication'}</h3>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-[var(--text-muted)]">
               {user?.twoFactorEnabled 
                 ? (isRTL ? 'حسابك محمي بطبقة أمان إضافية' : 'Your account is protected with an extra layer of security')
                 : (isRTL ? 'أضف طبقة أمان إضافية لحسابك' : 'Add an extra layer of security to your account')}
@@ -94,7 +94,7 @@ export default function SecuritySettings() {
         </div>
         <button
           onClick={user?.twoFactorEnabled ? disable2FA : startSetup}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${user?.twoFactorEnabled ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-violet-600 text-white hover:bg-violet-500'}`}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${user?.twoFactorEnabled ? 'bg-[var(--danger-bg)] text-[var(--danger)] hover:opacity-90' : 'bg-[var(--brand)] text-[var(--text-inverse)] hover:bg-[var(--brand-hover)]'}`}
         >
           {user?.twoFactorEnabled ? (isRTL ? 'تعطيل' : 'Disable') : (isRTL ? 'تفعيل' : 'Enable')}
         </button>
@@ -117,9 +117,9 @@ export default function SecuritySettings() {
               </button>
 
               <div className="text-center mb-6">
-                <Smartphone className="w-12 h-12 text-violet-500 mx-auto mb-4" />
+                <Smartphone className="w-12 h-12 text-[var(--brand)] mx-auto mb-4" />
                 <h2 className="text-2xl font-bold">{isRTL ? 'إعداد المصادقة الثنائية' : 'Setup 2FA'}</h2>
-                <p className="text-slate-400 text-sm mt-2">
+                <p className="text-[var(--text-muted)] text-sm mt-2">
                   {isRTL ? 'امسح رمز QR باستخدام تطبيق المصادقة (مثل Google Authenticator)' : 'Scan the QR code with your authenticator app (e.g., Google Authenticator)'}
                 </p>
               </div>
@@ -142,7 +142,7 @@ export default function SecuritySettings() {
                 </div>
 
                 {error && (
-                  <div className="flex items-center gap-2 text-red-400 text-sm bg-red-400/10 p-3 rounded-xl">
+                  <div className="flex items-center gap-2 text-[var(--danger)] text-sm bg-[var(--danger-bg)] p-3 rounded-xl">
                     <AlertCircle className="w-4 h-4" />
                     <span>{error}</span>
                   </div>
@@ -151,7 +151,7 @@ export default function SecuritySettings() {
                 <button
                   onClick={verifyAndEnable}
                   disabled={token.length !== 6}
-                  className="w-full py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold transition-all"
+                  className="w-full py-3 bg-[var(--brand)] hover:bg-[var(--brand-hover)] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold transition-all"
                 >
                   {isRTL ? 'تأكيد وتفعيل' : 'Verify and Enable'}
                 </button>
@@ -165,7 +165,7 @@ export default function SecuritySettings() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-500"
+          className="p-4 bg-[var(--success-bg)] border border-[var(--border)] rounded-2xl flex items-center gap-3 text-[var(--success)]"
         >
           <CheckCircle2 className="w-5 h-5" />
           <span>{isRTL ? 'تم تفعيل المصادقة الثنائية بنجاح!' : '2FA has been enabled successfully!'}</span>

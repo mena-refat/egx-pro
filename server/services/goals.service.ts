@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma.ts';
 import { goalSchema, goalUpdateSchema, goalAmountSchema } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
+import { AppError } from '../lib/errors.ts';
 import type { AuthUser } from '../routes/types.ts';
 import type { z } from 'zod';
 
@@ -26,20 +27,15 @@ export const GoalsService = {
   },
 
   async create(user: AuthUser, body: unknown): Promise<{ goal: Awaited<ReturnType<typeof prisma.goal.create>>; newUnseenAchievements: string[] }> {
-    if (!user?.id) throw new Error('Unauthorized');
+    if (!user?.id) throw new AppError('UNAUTHORIZED', 401);
     const planUser = await prisma.user.findUnique({
       where: { id: user.id },
       select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
     });
-    if (!planUser) throw new Error('Unauthorized');
+    if (!planUser) throw new AppError('UNAUTHORIZED', 401);
     if (!isPro(planUser)) {
       const count = await prisma.goal.count({ where: { userId: user.id } });
-      if (count >= FREE_LIMITS.goals) {
-        const err = new Error('pro_required') as Error & { code?: string; limit?: number };
-        err.code = 'GOALS_LIMIT';
-        err.limit = FREE_LIMITS.goals;
-        throw err;
-      }
+      if (count >= FREE_LIMITS.goals) throw new AppError('GOAL_LIMIT_REACHED', 403);
     }
 
     const raw = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
@@ -72,7 +68,7 @@ export const GoalsService = {
 
   async update(userId: string, goalId: string, body: unknown) {
     const goal = await prisma.goal.findFirst({ where: { id: goalId, userId } });
-    if (!goal) return null;
+    if (!goal) throw new AppError('NOT_FOUND', 404);
     const validated = goalUpdateSchema.parse(body) as GoalUpdateSchema;
     const updateData: Record<string, unknown> = {};
     if (validated.title != null) updateData.title = validated.title;
@@ -88,7 +84,7 @@ export const GoalsService = {
 
   async updateAmount(userId: string, goalId: string, body: unknown) {
     const goal = await prisma.goal.findFirst({ where: { id: goalId, userId } });
-    if (!goal) return null;
+    if (!goal) throw new AppError('NOT_FOUND', 404);
     const { currentAmount } = goalAmountSchema.parse(body);
     const now = new Date();
     const isComplete = currentAmount >= goal.targetAmount;
@@ -105,9 +101,9 @@ export const GoalsService = {
     return updated;
   },
 
-  async complete(userId: string, goalId: string): Promise<{ goal: Awaited<ReturnType<typeof prisma.goal.update>>; newUnseenAchievements: string[] } | null> {
+  async complete(userId: string, goalId: string): Promise<{ goal: Awaited<ReturnType<typeof prisma.goal.update>>; newUnseenAchievements: string[] }> {
     const goal = await prisma.goal.findFirst({ where: { id: goalId, userId } });
-    if (!goal) return null;
+    if (!goal) throw new AppError('NOT_FOUND', 404);
     const now = new Date();
     const completedBefore = await getCompletedAchievementIds(userId);
     const updated = await prisma.goal.update({
@@ -118,10 +114,9 @@ export const GoalsService = {
     return { goal: updated, newUnseenAchievements };
   },
 
-  async delete(userId: string, goalId: string): Promise<boolean> {
+  async delete(userId: string, goalId: string): Promise<void> {
     const goal = await prisma.goal.findFirst({ where: { id: goalId, userId } });
-    if (!goal) return false;
+    if (!goal) throw new AppError('NOT_FOUND', 404);
     await prisma.goal.delete({ where: { id: goalId } });
-    return true;
   },
 };

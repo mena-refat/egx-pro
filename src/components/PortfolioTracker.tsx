@@ -143,7 +143,7 @@ export default function PortfolioTracker() {
 
   if (error) {
     return (
-      <div className="p-8 text-center text-red-500 card-base">
+      <div className="p-8 text-center text-[var(--danger)] card-base">
         <p>{error}</p>
       </div>
     );
@@ -162,14 +162,14 @@ export default function PortfolioTracker() {
         </div>
         <div className="card-base p-6">
           <div className="flex items-center gap-3 text-[var(--text-secondary)] mb-2">
-            {stats.totalGain >= 0 ? <TrendingUp className="w-4 h-4 text-emerald-500" /> : <TrendingDown className="w-4 h-4 text-red-500" />}
+            {stats.totalGain >= 0 ? <TrendingUp className="w-4 h-4 text-[var(--success)]" /> : <TrendingDown className="w-4 h-4 text-[var(--danger)]" />}
             <span className="text-sm font-medium uppercase tracking-wider">{t('portfolio.profitLoss')}</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <p className={`text-3xl font-bold ${stats.totalGain >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {stats.totalGain >= 0 ? '+' : ''}{stats.totalGain.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+<p className={`text-3xl font-bold ${stats.totalGain >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
+            {stats.totalGain >= 0 ? '+' : ''}{stats.totalGain.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
-            <span className={`text-sm font-bold ${stats.totalGain >= 0 ? 'text-emerald-500/80' : 'text-red-500/80'}`}>
+            <span className={`text-sm font-bold ${stats.totalGain >= 0 ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'}`}>
               ({stats.gainPercent.toFixed(2)}%)
             </span>
           </div>
@@ -215,7 +215,7 @@ export default function PortfolioTracker() {
                     <th className="px-6 py-4 font-medium"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y dark:divide-white/5 divide-slate-100">
+                <tbody className="divide-y divide-[var(--border-subtle)]">
                   {holdings.map(h => {
                     const currentPrice = livePrices[h.ticker]?.price || h.avgPrice;
                     const profit = (currentPrice - h.avgPrice) * h.shares;
@@ -234,10 +234,10 @@ export default function PortfolioTracker() {
                         <td className="px-6 py-4 font-mono">{h.avgPrice.toLocaleString()}</td>
                         <td className="px-6 py-4 font-mono">{currentPrice.toLocaleString()}</td>
                         <td className="px-6 py-4">
-                          <div className={`font-bold ${profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          <div className={`font-bold ${profit >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
                             {profit >= 0 ? '+' : ''}{profit.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                           </div>
-                          <div className={`text-xs ${profit >= 0 ? 'text-emerald-500/60' : 'text-red-500/60'}`}>
+                          <div className={`text-xs ${profit >= 0 ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'}`}>
                             {profitPercent.toFixed(2)}%
                           </div>
                         </td>
@@ -394,7 +394,7 @@ export default function PortfolioTracker() {
       {showPortfolioLimitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowPortfolioLimitModal(false)}>
           <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">{t('plan.portfolioLimitMessage')}</p>
+            <p className="text-sm text-[var(--text-secondary)] mb-6">{t('plan.portfolioLimitMessage')}</p>
             <div className="flex gap-2 justify-center">
               <Button type="button" variant="primary" size="md" onClick={() => { setShowPortfolioLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }}>{t('plan.subscribeNow')}</Button>
               <Button type="button" variant="secondary" size="md" onClick={() => setShowPortfolioLimitModal(false)}>{t('plan.cancel')}</Button>

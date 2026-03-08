@@ -84,7 +84,8 @@ export function AccountTab({ user, onUpdateProfile, setRequestStatus }: ProfileT
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || 'Invalid');
-        if (data.available) {
+        const payload = (data as { data?: { available?: boolean } }).data ?? data;
+        if (payload?.available) {
           setUsernameStatus('available');
           setUsernameMessage(null);
         } else {
@@ -189,7 +190,8 @@ export function AccountTab({ user, onUpdateProfile, setRequestStatus }: ProfileT
             setUploadMessage((data?.error as string) || t('profile.avatarUploadFailed'));
             return;
           }
-          await onUpdateProfile({ avatarUrl: data.avatarUrl }, { success: '' });
+          const avatarUrl = (data as { data?: { avatarUrl?: string } }).data?.avatarUrl ?? (data as { avatarUrl?: string }).avatarUrl;
+          await onUpdateProfile({ avatarUrl }, { success: '' });
           setUploadMessage(t('profile.avatarUpdated'));
         } catch {
           setUploadMessage(t('profile.avatarUploadFailed'));

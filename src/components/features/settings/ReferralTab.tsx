@@ -25,12 +25,12 @@ export function ReferralTab() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    api.get('/user/referral')
-      .then((res) => { if (!cancelled) setData(res.data); })
-      .catch(() => { if (!cancelled) setData(null); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    const controller = new AbortController();
+    api.get('/user/referral', { signal: controller.signal })
+      .then((res) => { if (!controller.signal.aborted) setData((res.data as { data?: ReferralData }).data ?? (res.data as ReferralData)); })
+      .catch(() => { if (!controller.signal.aborted) setData(null); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, []);
 
   const handleCopy = () => {

@@ -94,8 +94,8 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart() {
             onClick={() => setSelectedRange(range)}
             className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
               selectedRange === range
-                ? 'bg-violet-500 text-white'
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                ? 'bg-[var(--brand)] text-[var(--text-inverse)]'
+                : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'
             }`}
           >
             {range}

@@ -15,9 +15,9 @@ export default function StockNameDisplay({ ticker, lang, className = '' }: Stock
   return (
     <div className={className}>
       <div className="font-bold text-lg leading-tight">{name}</div>
-      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{ticker}</div>
+      <div className="text-xs text-[var(--text-muted)] mt-0.5">{ticker}</div>
       {nameEn && (
-        <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate max-w-[200px]" title={nameEn}>
+        <div className="text-xs text-[var(--text-secondary)] mt-0.5 truncate max-w-[200px]" title={nameEn}>
           {nameEn}
         </div>
       )}

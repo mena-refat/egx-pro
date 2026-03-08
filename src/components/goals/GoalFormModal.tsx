@@ -85,7 +85,7 @@ export function GoalFormModal({
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          if (res.status === 403 && data.code === 'GOALS_LIMIT') {
+          if (res.status === 403 && data.error === 'GOAL_LIMIT_REACHED') {
             setShowGoalsLimitModal(true);
             setSubmitting(false);
             return;
@@ -109,7 +109,7 @@ export function GoalFormModal({
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || 'Failed');
+          throw new Error((data as { error?: string }).error || 'Failed');
         }
       }
       if (typeof window !== 'undefined')

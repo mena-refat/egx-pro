@@ -49,7 +49,7 @@ export default function App() {
       try {
         const res = await fetch('/api/user/profile', { method: 'PUT', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ theme: nextTheme }) });
         const body = await res.json().catch(() => null);
-        if (res.ok && body) updateUser(body);
+        if (res.ok && body) updateUser((body as { data?: Record<string, unknown> }).data ?? body);
       } catch (err) { console.error('Failed to update theme from header', err); }
     }
   };

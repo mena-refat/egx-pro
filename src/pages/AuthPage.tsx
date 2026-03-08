@@ -136,7 +136,10 @@ export default function AuthPage() {
         const profileRes = await fetch('/api/user/profile', { headers: { Authorization: `Bearer ${resData.accessToken}` }, credentials: 'include' });
         if (profileRes.ok) {
           const text = await profileRes.text();
-          if (text) profileData = JSON.parse(text) as Record<string, unknown>;
+          if (text) {
+            const parsed = JSON.parse(text) as { data?: Record<string, unknown> };
+            profileData = parsed?.data ?? (parsed as Record<string, unknown>);
+          }
         }
       } catch {
         profileData = (resData.user as Record<string, unknown>) ?? profileData;
@@ -174,7 +177,8 @@ export default function AuthPage() {
         throw new Error(msg);
       }
       const profileRes = await fetch('/api/user/profile', { headers: { Authorization: `Bearer ${data.accessToken}` } });
-      const profileData = profileRes.ok ? await profileRes.json() : data.user;
+      const profileJson = profileRes.ok ? await profileRes.json() : { data: data.user };
+      const profileData = (profileJson as { data?: unknown })?.data ?? profileJson;
       setAuth(profileData, data.accessToken);
       setShowTwoFactorInput(false);
       setTwoFactorOtp('');

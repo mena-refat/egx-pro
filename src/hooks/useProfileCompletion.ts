@@ -16,7 +16,8 @@ export function useProfileCompletion(isAuthenticated: boolean) {
       const res = await fetch('/api/profile/completion', { headers: { Authorization: `Bearer ${accessToken}` } });
       if (res.ok) {
         const data = await res.json();
-        setProfileCompletion({ percentage: data.percentage ?? 0, missing: data.missing ?? [] });
+        const payload = data?.data ?? data;
+        setProfileCompletion({ percentage: payload?.percentage ?? 0, missing: payload?.missing ?? [] });
       } else setProfileCompletion(null);
     } catch {
       setProfileCompletion(null);

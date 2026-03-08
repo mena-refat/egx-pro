@@ -99,11 +99,8 @@ export function useStockScreener() {
           };
         });
         setStocks(withMeta);
-        setWatchlist(
-          Array.isArray(watchlistRes.data)
-            ? (watchlistRes.data as { ticker: string }[]).map((w) => w.ticker)
-            : []
-        );
+        const rawList = (watchlistRes.data as { items?: { ticker: string }[] })?.items;
+        setWatchlist(Array.isArray(rawList) ? rawList.map((w) => w.ticker) : []);
       } catch (err: unknown) {
         if (
           err instanceof Error &&
@@ -167,9 +164,9 @@ export function useStockScreener() {
     } catch (err: unknown) {
       const data =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { code?: string } } }).response?.data
+          ? (err as { response?: { data?: { error?: string } } }).response?.data
           : undefined;
-      if (data?.code === 'WATCHLIST_LIMIT') setShowWatchlistLimitModal(true);
+      if (data?.error === 'WATCHLIST_LIMIT_REACHED') setShowWatchlistLimitModal(true);
     } finally {
       setAddTargetSubmitting(false);
     }
