@@ -12,4 +12,4 @@ export const RATE_LIMITS = {
 } as const;
 
 /** Plan prices (EGP) — for billing display/calculation */
-export const PLAN_PRICES = { pro: 149, yearly: 999 } as const;
+export const PLAN_PRICES = { pro: 149, yearly: 1399 } as const;

@@ -5,10 +5,21 @@ import { AppError } from '../lib/errors.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 
 type Plan = 'free' | 'pro' | 'annual';
+export type PlanUpgrade = 'pro_monthly' | 'pro_yearly' | 'pro' | 'annual';
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
 function getCurrentMonthKey(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function resolvePlan(plan: PlanUpgrade): { planValue: 'pro' | 'yearly'; durationMs: number } {
+  if (plan === 'pro_yearly' || plan === 'annual') {
+    return { planValue: 'yearly', durationMs: ONE_YEAR_MS };
+  }
+  return { planValue: 'pro', durationMs: THIRTY_DAYS_MS };
 }
 
 export const BillingService = {
@@ -41,71 +52,140 @@ export const BillingService = {
     };
   },
 
-  async validateDiscount(userId: string, code: string, plan: Plan) {
+  async validateDiscount(userId: string, code: string, plan?: Plan) {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
-    if (!code || !plan || !['pro', 'annual'].includes(plan)) throw new AppError('INVALID_REQUEST', 400);
-    const discount = await prisma.discountCode.findUnique({ where: { code } });
+    if (!code?.trim()) throw new AppError('INVALID_REQUEST', 400);
+    const discount = await prisma.discountCode.findUnique({ where: { code: code.trim() } });
     if (
       !discount ||
       !discount.active ||
       (discount.expiresAt != null && discount.expiresAt < new Date()) ||
       (discount.maxUses != null && discount.usedCount >= discount.maxUses)
     ) {
-      throw new AppError('DISCOUNT_INVALID', 400);
+      throw new AppError('INVALID_DISCOUNT_CODE', 400);
     }
-    const basePrice = plan === 'pro' ? PLAN_PRICES.pro : PLAN_PRICES.yearly;
+    const used = await prisma.discountUsage.findUnique({
+      where: { userId_codeId: { userId, codeId: discount.id } },
+    });
+    if (used) throw new AppError('DISCOUNT_ALREADY_USED', 400);
+
+    const planKey = plan === 'annual' ? 'yearly' : 'pro';
+    const basePrice: number = planKey === 'yearly' ? PLAN_PRICES.yearly : PLAN_PRICES.pro;
     let finalPrice: number = basePrice;
     if (discount.type === 'percentage') {
       finalPrice = Math.round(basePrice * (1 - discount.value / 100));
     } else if (discount.type === 'amount') {
       finalPrice = Math.max(0, basePrice - discount.value);
     }
-    const discountAmount: number = basePrice - finalPrice;
-    return { valid: true, code: discount.code, type: discount.type, value: discount.value, basePrice, finalPrice, discountAmount };
+    const discountAmount = basePrice - finalPrice;
+    const percent =
+      discount.type === 'percentage'
+        ? discount.value
+        : Math.round((discountAmount / basePrice) * 100);
+
+    return {
+      valid: true,
+      percent,
+      code: discount.code,
+      type: discount.type,
+      value: discount.value,
+      basePrice,
+      finalPrice,
+      discountAmount,
+    };
   },
 
-  async upgrade(userId: string, plan: Plan, discountCode?: string) {
+  async upgrade(
+    userId: string,
+    plan: PlanUpgrade,
+    options: { discountCode?: string; paymentToken?: string }
+  ) {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
-    if (!['pro', 'annual'].includes(plan)) throw new AppError('INVALID_REQUEST', 400);
-    const currentUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { plan: true, planExpiresAt: true },
-    });
-    if (
-      currentUser?.plan === 'yearly' &&
-      plan === 'pro' &&
-      currentUser.planExpiresAt != null &&
-      currentUser.planExpiresAt > new Date()
-    ) {
-      throw new AppError('UPGRADE_DOWNGRADE_BLOCKED', 400);
+    if (!['pro_monthly', 'pro_yearly', 'pro', 'annual'].includes(plan)) {
+      throw new AppError('INVALID_PLAN', 400);
     }
-    let appliedDiscount: { id: string } | null = null;
-    if (discountCode) {
-      const discount = await prisma.discountCode.findUnique({ where: { code: discountCode } });
-      if (
-        !discount ||
-        !discount.active ||
-        (discount.expiresAt != null && discount.expiresAt < new Date()) ||
-        (discount.maxUses != null && discount.usedCount >= discount.maxUses)
-      ) {
-        throw new AppError('DISCOUNT_INVALID', 400);
-      }
-      appliedDiscount = { id: discount.id };
-      await prisma.discountCode.update({
-        where: { id: discount.id },
-        data: { usedCount: discount.usedCount + 1 },
+
+    const { planValue, durationMs } = resolvePlan(plan);
+    const planExpiresAt = new Date(Date.now() + durationMs);
+
+    let discountPercent = 0;
+    let discount: { id: string; type: string; value: number; maxUses: number | null; usedCount: number } | null = null;
+
+    if (options.discountCode?.trim()) {
+      const code = await prisma.discountCode.findUnique({
+        where: { code: options.discountCode.trim() },
       });
+      if (
+        !code ||
+        !code.active ||
+        (code.expiresAt != null && code.expiresAt < new Date()) ||
+        (code.maxUses != null && code.usedCount >= code.maxUses)
+      ) {
+        throw new AppError('INVALID_DISCOUNT_CODE', 400);
+      }
+      const alreadyUsed = await prisma.discountUsage.findUnique({
+        where: { userId_codeId: { userId, codeId: code.id } },
+      });
+      if (alreadyUsed) throw new AppError('DISCOUNT_ALREADY_USED', 400);
+
+      discount = { id: code.id, type: code.type, value: code.value, maxUses: code.maxUses, usedCount: code.usedCount };
+      const basePrice = planValue === 'yearly' ? PLAN_PRICES.yearly : PLAN_PRICES.pro;
+      if (code.type === 'percentage') {
+        discountPercent = code.value;
+      } else {
+        discountPercent = Math.min(100, Math.round((code.value / basePrice) * 100));
+      }
+
+      if (discountPercent >= 100) {
+        await prisma.$transaction([
+          prisma.user.update({
+            where: { id: userId },
+            data: { plan: planValue, planExpiresAt },
+          }),
+          prisma.discountUsage.create({
+            data: { userId, codeId: code.id },
+          }),
+          prisma.discountCode.update({
+            where: { id: code.id },
+            data: {
+              usedCount: code.usedCount + 1,
+              ...(code.maxUses === 1 ? { active: false } : {}),
+            },
+          }),
+        ]);
+        return { success: true };
+      }
     }
-    const now = new Date();
-    const endsAt = new Date(now);
-    if (plan === 'pro') endsAt.setMonth(endsAt.getMonth() + 1);
-    else endsAt.setFullYear(endsAt.getFullYear() + 1);
-    const planValue = plan === 'annual' ? 'yearly' : plan;
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { plan: planValue, planExpiresAt: endsAt },
-      select: { plan: true, planExpiresAt: true },
-    });
-    return { ...updated, discountApplied: Boolean(appliedDiscount) };
+
+    if (discountPercent < 100 && !options.paymentToken) {
+      throw new AppError('PAYMENT_TOKEN_REQUIRED', 400);
+    }
+
+    const basePrice = planValue === 'yearly' ? PLAN_PRICES.yearly : PLAN_PRICES.pro;
+    const finalPrice = Math.round(basePrice * (1 - discountPercent / 100));
+    // TODO: verify payment with Paymob using options.paymentToken and finalPrice
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: { plan: planValue, planExpiresAt },
+      }),
+      ...(discount
+        ? [
+            prisma.discountUsage.create({
+              data: { userId, codeId: discount.id },
+            }),
+            prisma.discountCode.update({
+              where: { id: discount.id },
+              data: {
+                usedCount: discount.usedCount + 1,
+                ...(discount.maxUses === 1 ? { active: false } : {}),
+              },
+            }),
+          ]
+        : []),
+    ]);
+
+    return { success: true };
   },
 };

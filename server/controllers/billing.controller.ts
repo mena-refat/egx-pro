@@ -27,7 +27,11 @@ export const BillingController = {
       return;
     }
     const { code, plan } = req.body as { code?: string; plan?: string };
-    const data = await BillingService.validateDiscount(userId, String(code ?? ''), plan as 'pro' | 'annual');
+    const data = await BillingService.validateDiscount(
+      userId,
+      String(code ?? '').trim(),
+      plan as 'pro' | 'annual' | undefined
+    );
     res.json({ data });
   }),
 
@@ -37,8 +41,15 @@ export const BillingController = {
       res.status(401).json({ error: 'UNAUTHORIZED' });
       return;
     }
-    const { plan, discountCode } = req.body as { plan?: string; discountCode?: string };
-    const data = await BillingService.upgrade(userId, plan as 'pro' | 'annual', discountCode);
+    const { plan, discountCode, paymentToken } = req.body as {
+      plan?: string;
+      discountCode?: string;
+      paymentToken?: string;
+    };
+    const data = await BillingService.upgrade(userId, plan as import('../services/billing.service.ts').PlanUpgrade, {
+      discountCode,
+      paymentToken,
+    });
     await auditLog({
       userId,
       action: 'SUBSCRIPTION_UPGRADE',

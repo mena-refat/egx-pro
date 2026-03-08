@@ -72,6 +72,7 @@ model User {
   referralsSent      Referral[] @relation("ReferralsSent")
   referralsReceived  Referral[] @relation("ReferralsReceived")
   notifications      Notification[]
+  discountUsages   DiscountUsage[]
 }
 
 model RefreshToken {
@@ -195,6 +196,22 @@ model DiscountCode {
   usedCount  Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  usages     DiscountUsage[]
+}
+
+model DiscountUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  codeId    String
+  createdAt DateTime @default(now())
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code DiscountCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, codeId])
+  @@index([userId])
+  @@index([codeId])
 }
 
 model Notification {

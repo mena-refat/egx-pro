@@ -1,5 +1,5 @@
-/** Plan prices (EGP) */
-export const PLAN_PRICES = { pro: 149, yearly: 999 } as const;
+/** Plan prices (EGP) — pro = monthly, yearly = per year */
+export const PLAN_PRICES = { pro: 149, yearly: 1399 } as const;
 
 /** Free tier limits — must match server/lib/plan.ts */
 export const FREE_LIMITS = {
