@@ -204,6 +204,14 @@
     "congrats": "مبروك!",
     "newAchievement": "حققت إنجاز جديد",
     "tabLabel": "الإنجازات",
+    "progress": "تقدمك في الإنجازات",
+    "summaryNote": "حققت {{unlocked}} من أصل {{total}} إنجاز",
+    "level": "المستوى",
+    "completed": "مكتمل",
+    "unlocked": "محقق",
+    "goNow": "اذهب الآن",
+    "dismiss": "فهمت",
+    "lockedHint": "لم يُحقق بعد",
     "levels": { "beginner": "ناشئ", "growth": "مستثمر", "pro": "محترف", "legend": "أسطورة" },
     "levelTitles": { "first": "المستوى 1", "second": "المستوى 2", "third": "المستوى 3", "fourth": "المستوى 4" },
     "goToChallenge": "انطلق نحو التحدي",
@@ -693,7 +701,9 @@
     "active": "نشط ✓",
     "pending": "في الانتظار",
     "emptyTitle": "لا توجد دعوات بعد",
-    "emptyDescription": "انسخ رابط دعوتك وشاركه مع أصدقائك الآن"
+    "emptyDescription": "انسخ رابط دعوتك وشاركه مع أصدقائك الآن",
+    "share": "مشاركة",
+    "shareText": "انضم إلى EGX Pro واستثمر في البورصة المصرية بذكاء! استخدم كودي {{code}} عند التسجيل"
   },
   "plan": {
     "analysisLimitTitle": "أنت مستثمر جاد!",

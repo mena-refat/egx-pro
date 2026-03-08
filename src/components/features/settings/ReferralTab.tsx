@@ -3,12 +3,12 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   Gift,
-  Copy,
   Check,
   Users,
   Trophy,
   Crown,
-  ChevronLeft,
+  Share2,
+  Link,
   Sparkles,
   Clock,
   AlertCircle,
@@ -38,8 +38,8 @@ function ReferralTabInner() {
   const [data, setData] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [shared, setShared] = useState(false);
 
   const fetchReferrals = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -71,13 +71,6 @@ function ReferralTabInner() {
     return () => controller.abort();
   }, [fetchReferrals]);
 
-  const handleCopyCode = useCallback(async () => {
-    if (!data?.referralCode) return;
-    await navigator.clipboard.writeText(data.referralCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [data?.referralCode]);
-
   const handleCopyLink = useCallback(async () => {
     if (!data?.referralCode) return;
     const link = `${window.location.origin}/register?ref=${data.referralCode}`;
@@ -85,6 +78,30 @@ function ReferralTabInner() {
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   }, [data?.referralCode]);
+
+  const handleShare = useCallback(async () => {
+    if (!data?.referralCode) return;
+
+    const shareUrl = `${window.location.origin}/register?ref=${data.referralCode}`;
+    const shareText = t('referral.shareText', { code: data.referralCode });
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'EGX Pro',
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (err: unknown) {
+        if ((err as { name?: string }).name === 'AbortError') return;
+      }
+      return;
+    }
+
+    await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
+  }, [data?.referralCode, t]);
 
   if (loading) {
     return (
@@ -265,35 +282,35 @@ function ReferralTabInner() {
           {t('referral.yourCode')}
         </p>
 
-        <div className="flex items-center gap-2 mb-4">
-          <div className="flex-1 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-3 font-mono text-lg font-black text-[var(--brand)] tracking-widest text-center select-all">
-            {data.referralCode}
-          </div>
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-3 font-mono text-lg font-black text-[var(--brand)] tracking-widest text-center select-all mb-3">
+          {data.referralCode}
+        </div>
+
+        {/* زراران جنب بعض: نسخ الرابط + مشاركة */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
           <Button
             type="button"
             variant="secondary"
-            size="sm"
-            onClick={handleCopyCode}
-            aria-label={t('referral.copyLink')}
-            className="w-11 h-11 flex-shrink-0 rounded-xl p-0 min-w-0"
-            icon={copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+            className="w-full"
+            onClick={handleCopyLink}
+            icon={copiedLink ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
+            iconPosition={isRTL ? 'right' : 'left'}
           >
-            {''}
+            {copiedLink ? t('referral.linkCopied') : t('referral.copyLink')}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            className="w-full"
+            onClick={handleShare}
+            icon={shared ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+            iconPosition={isRTL ? 'right' : 'left'}
+          >
+            {shared ? t('success.copied') : t('referral.share')}
           </Button>
         </div>
 
-        <Button
-          type="button"
-          variant="secondary"
-          className="w-full"
-          onClick={handleCopyLink}
-          icon={copiedLink ? <Check className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          iconPosition={isRTL ? 'right' : 'left'}
-        >
-          {copiedLink ? t('referral.linkCopied') : t('referral.copyLink')}
-        </Button>
-
-        <p className="text-xs text-[var(--text-muted)] text-center mt-2">
+        <p className="text-xs text-[var(--text-muted)] text-center">
           {t('referral.codeNote')}
         </p>
       </motion.div>
