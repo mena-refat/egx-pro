@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../lib/prisma.ts';
+import { generateUniqueReferralCode, checkAndRewardReferrer } from '../lib/referral.ts';
 import {
   hashPassword,
   verifyPassword,
@@ -77,7 +78,7 @@ export async function register(
   ctx: AuthContext
 ): Promise<{ user: unknown; accessToken: string; refreshToken: string }> {
   const parsed = registerSchema.parse(body);
-  const { fullName, emailOrPhone: raw, password } = parsed;
+  const { fullName, emailOrPhone: raw, password, referralCode: incomingRefCode } = parsed;
   const pwCheck = validateRegisterPassword(password, raw);
   if (!pwCheck.ok) fail(400, (pwCheck as { ok: false; message: string }).message);
 
@@ -134,6 +135,22 @@ export async function register(
       lastPasswordChangeAt: new Date(),
     },
   });
+
+  if (incomingRefCode?.trim()) {
+    const referrer = await prisma.user.findUnique({
+      where: { referralCode: incomingRefCode.trim().toUpperCase() },
+      select: { id: true },
+    });
+    if (referrer && referrer.id !== user.id) {
+      await prisma.referral.create({
+        data: {
+          referrerId: referrer.id,
+          referredId: user.id,
+          isActive: false,
+        },
+      });
+    }
+  }
 
   // أرسل Welcome email في الخلفية (لا تنتظره)
   if (user.email) {
@@ -231,6 +248,17 @@ export async function login(
     return { requires2FA: true, tempToken };
   }
 
+  const referral = await prisma.referral.findUnique({
+    where: { referredId: user.id },
+  });
+  if (referral && !referral.isActive) {
+    await prisma.referral.update({
+      where: { id: referral.id },
+      data: { isActive: true },
+    });
+    await checkAndRewardReferrer(referral.referrerId);
+  }
+
   const loginId = user.email ?? user.phone ?? '';
   const accessToken = generateAccessToken({ id: user.id, email: loginId });
   const refreshToken = generateRefreshToken();
@@ -284,6 +312,17 @@ export async function twoFaAuthenticate(
     window: 2,
   });
   if (!valid) fail(401, 'invalid_code');
+
+  const referral = await prisma.referral.findUnique({
+    where: { referredId: user.id },
+  });
+  if (referral && !referral.isActive) {
+    await prisma.referral.update({
+      where: { id: referral.id },
+      data: { isActive: true },
+    });
+    await checkAndRewardReferrer(referral.referrerId);
+  }
 
   const loginId = user.email ?? user.phone ?? '';
   const accessToken = generateAccessToken({ id: user.id, email: loginId });

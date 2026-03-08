@@ -619,13 +619,13 @@ export const UserService = {
       }) as typeof user;
     }
     const [completedCount, completedReferrals, weeklyJoinedCount] = await Promise.all([
-      prisma.referral.count({ where: { referrerId: userId, status: 'completed' } }),
+      prisma.referral.count({ where: { referrerId: userId, isActive: true } }),
       prisma.referral.findMany({
-        where: { referrerId: userId, status: 'completed' },
+        where: { referrerId: userId, isActive: true },
         orderBy: { createdAt: 'asc' },
         take: 5,
         include: {
-          referredUser: { select: { fullName: true, createdAt: true } },
+          referred: { select: { fullName: true, createdAt: true } },
         },
       }),
       (async () => {
@@ -634,15 +634,15 @@ export const UserService = {
         return prisma.referral.count({
           where: {
             referrerId: userId,
-            status: 'completed',
-            referredUser: { createdAt: { gte: weekAgo } },
+            isActive: true,
+            referred: { createdAt: { gte: weekAgo } },
           },
         });
       })(),
     ]);
     const friends = completedReferrals.map((ref, index) => ({
-      id: ref.referredUserId,
-      name: ref.referredUser?.fullName ?? null,
+      id: ref.referredId,
+      name: ref.referred?.fullName ?? null,
       order: index + 1,
     }));
     return {
@@ -664,7 +664,7 @@ export const UserService = {
     if (!user) return { error: 'User not found' as const };
     if (user.freeReferralRewarded) return { error: 'Reward already claimed' as const };
     const completedCount = await prisma.referral.count({
-      where: { referrerId: userId, status: 'completed' },
+      where: { referrerId: userId, isActive: true },
     });
     if (completedCount < 5) return { error: 'Not enough referrals yet' as const };
     const now = new Date();
@@ -695,40 +695,21 @@ export const UserService = {
     });
     if (!referrer) return { error: 'Invalid referral code' as const };
     if (referrer.id === currentUser.id) return { error: 'You cannot use your own referral code' as const };
-    await prisma.$transaction(async (tx) => {
-      await tx.user.update({
+    await prisma.$transaction([
+      prisma.user.update({
         where: { id: currentUser.id },
         data: { referredBy: referrer.id, referralUsed: trimmed },
-      });
-      await tx.referral.create({
+      }),
+      prisma.referral.create({
         data: {
           referrerId: referrer.id,
-          referredUserId: currentUser.id,
-          status: 'completed',
+          referredId: currentUser.id,
+          isActive: true,
         },
-      });
-      const referrerUser = await tx.user.findUnique({
-        where: { id: referrer.id },
-        select: { totalReferrals: true, referralProDaysRemaining: true, referralProExpiresAt: true },
-      });
-      if (!referrerUser) return;
-      const now = new Date();
-      const previousTotal = referrerUser.totalReferrals ?? 0;
-      const totalReferrals = previousTotal + 1;
-      let referralProDaysRemaining = referrerUser.referralProDaysRemaining ?? 0;
-      let referralProExpiresAt = referrerUser.referralProExpiresAt;
-      if (totalReferrals % 5 === 0) {
-        referralProDaysRemaining += 30;
-        const baseDate = referralProExpiresAt && referralProExpiresAt > now ? referralProExpiresAt : now;
-        const extended = new Date(baseDate);
-        extended.setDate(extended.getDate() + 30);
-        referralProExpiresAt = extended;
-      }
-      await tx.user.update({
-        where: { id: referrer.id },
-        data: { totalReferrals, referralProDaysRemaining, referralProExpiresAt },
-      });
-    });
+      }),
+    ]);
+    const { checkAndRewardReferrer } = await import('../lib/referral.ts');
+    await checkAndRewardReferrer(referrer.id);
     await createNotification(
       referrer.id,
       'referral',

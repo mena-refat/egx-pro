@@ -35,6 +35,7 @@ import goalsRoutes from './server/routes/goals.ts';
 import notificationsRoutes from './server/routes/notifications.ts';
 import billingRoutes from './server/routes/billing.ts';
 import newsRoutes from './server/routes/news.ts';
+import referralRoutes from './server/routes/referral.ts';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './server/lib/swagger.ts';
 
@@ -170,6 +171,7 @@ async function startServer() {
   app.use('/api/notifications', notificationsRoutes);
   app.use('/api/billing', billingRoutes);
   app.use('/api/news', newsRoutes);
+  app.use('/api/referral', referralRoutes);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

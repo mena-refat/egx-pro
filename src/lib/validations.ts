@@ -109,6 +109,7 @@ export const registerSchema = z.object({
     (v) => (v === undefined || v === null ? '' : v),
     z.string().min(1, 'كلمة المرور مطلوبة').max(255, 'Password too long')
   ),
+  referralCode: z.string().max(20).optional(),
 });
 
 export const loginSchema = z.object({

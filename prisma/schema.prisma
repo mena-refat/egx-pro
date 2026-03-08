@@ -175,14 +175,18 @@ model Analysis {
 }
 
 model Referral {
-  id              String   @id @default(uuid())
-  referrerId      String
-  referredUserId  String
-  status          String   @default("pending") // pending, completed
-  createdAt       DateTime @default(now())
+  id          String    @id @default(cuid())
+  referrerId  String
+  referredId  String    @unique
+  isActive    Boolean   @default(false)
+  rewardedAt  DateTime?
+  createdAt   DateTime  @default(now())
 
-  referrer        User     @relation("ReferralsSent", fields: [referrerId], references: [id], onDelete: Cascade)
-  referredUser    User     @relation("ReferralsReceived", fields: [referredUserId], references: [id], onDelete: Cascade)
+  referrer User @relation("ReferralsSent", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred User @relation("ReferralsReceived", fields: [referredId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+  @@index([referrerId, isActive])
 }
 
 model DiscountCode {

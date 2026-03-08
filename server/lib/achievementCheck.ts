@@ -72,7 +72,7 @@ export async function getAchievementContext(userId: string): Promise<Achievement
     prisma.goal.count({ where: { userId } }),
     prisma.goal.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } }),
     prisma.goal.count({ where: { userId, achievedAt: { not: null } } }),
-    prisma.referral.count({ where: { referrerId: userId, status: 'completed' } }),
+    prisma.referral.count({ where: { referrerId: userId, isActive: true } }),
     prisma.analysis.groupBy({ by: ['ticker'], where: { userId } }),
   ]);
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../store/authStore';
@@ -28,6 +29,8 @@ function ensureUserShape(u: Record<string, unknown> | null | undefined): Record<
 }
 
 export default function AuthPage() {
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get('ref') ?? '';
   const { t, i18n } = useTranslation('common');
   const setAuth = useAuthStore((s) => s.setAuth);
   const [isLogin, setIsLogin] = useState(true);
@@ -105,7 +108,14 @@ export default function AuthPage() {
       }
 
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-      const body = isLogin ? { emailOrPhone: data.emailOrPhone, password: data.password } : { emailOrPhone: data.emailOrPhone, password: data.password, fullName: data.fullName ?? '' };
+      const body = isLogin
+        ? { emailOrPhone: data.emailOrPhone, password: data.password }
+        : {
+            emailOrPhone: data.emailOrPhone,
+            password: data.password,
+            fullName: data.fullName ?? '',
+            referralCode: refCode || undefined,
+          };
       const res = await fetch(endpoint, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
       let resData: { error?: string; message?: string; data?: { accessToken?: string; user?: unknown; requires2FA?: boolean; tempToken?: string; restored?: boolean } } = {};

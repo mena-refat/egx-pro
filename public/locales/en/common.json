@@ -97,7 +97,8 @@
     "username_taken": "Username already taken",
     "required_field": "This field is required",
     "phone_required": "Phone number is required",
-    "phone_11_digits": "Phone number must be 11 digits"
+    "phone_11_digits": "Phone number must be 11 digits",
+    "loadFailed": "Failed to load data, please try again"
   },
   "auth": {
     "loading": "Loading...",
@@ -666,6 +667,31 @@
       "shariaMode": "Islamic (Sharia) investment mode",
       "prioritySupport": "Priority support"
     }
+  },
+  "referral": {
+    "title": "Invite your friends",
+    "subtitle": "Share your code — every 5 friends who join earns you 1 free Pro month",
+    "totalReferrals": "Total referrals",
+    "activeReferrals": "Active referrals",
+    "monthsEarned": "Free months",
+    "nextReward": "Progress to next reward",
+    "progressNote": "{{count}} more referrals for a free Pro month 🎁",
+    "startInviting": "Start inviting your friends now!",
+    "proActive": "Pro active until {{date}} 🎉",
+    "yourCode": "Your personal code",
+    "copyLink": "Copy invite link",
+    "linkCopied": "Link copied!",
+    "codeNote": "This code is unique to you and will never change",
+    "howItWorks": "How does it work?",
+    "step1": "Copy your personal code or invite link",
+    "step2": "Share it with friends to sign up on EGX Pro",
+    "step3": "When 5 accounts activate you automatically get 1 free Pro month",
+    "recentReferrals": "Recent referrals",
+    "user": "User",
+    "active": "Active ✓",
+    "pending": "Pending",
+    "emptyTitle": "No referrals yet",
+    "emptyDescription": "Copy your invite link and share it with friends now"
   },
   "plan": {
     "analysisLimitTitle": "You're a serious investor!",
