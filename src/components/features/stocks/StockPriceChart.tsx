@@ -54,7 +54,7 @@ export function StockPriceChart({
     };
   }, [data, height, lineColor]);
 
-  if (!data.length) return <div className="w-full flex items-center justify-center text-slate-400 text-sm" style={{ height }}>—</div>;
+  if (!data.length) return <div className="w-full flex items-center justify-center text-[var(--text-muted)] text-sm" style={{ height }}>—</div>;
 
   return <div ref={containerRef} className="w-full" style={{ height }} />;
 }

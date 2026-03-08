@@ -97,9 +97,7 @@ export const WatchlistService = {
       });
       if (!row) continue;
       const titleAr = `سهم ${ticker} وصل للسعر المستهدف`;
-      const titleEn = `${ticker} reached target price`;
       const bodyAr = `السعر الحالي ${currentPrice} وصل أو تجاوز المستهدف ${targetPrice}`;
-      const bodyEn = `Current price ${currentPrice} reached or exceeded target ${targetPrice}`;
       await createNotification(userId, 'stock_target', titleAr, bodyAr);
       await prisma.watchlist.update({
         where: { id: row.id },

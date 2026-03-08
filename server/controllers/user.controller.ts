@@ -131,12 +131,12 @@ export const UserController = {
     }
   },
 
-  useReferralCode: async (req: AuthRequest, res: Response) => {
+  applyReferralCode: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
     if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
     try {
       const { code } = (req.body || {}) as { code?: string };
-      const result = await UserService.useReferralCode(id, code ?? '');
+      const result = await UserService.applyReferralCode(id, code ?? '');
       if (result.error === 'Referral code is required') return res.status(400).json({ error: 'VALIDATION_ERROR' });
       if (result.error === 'User not found') return res.status(404).json({ error: 'NOT_FOUND' });
       if (result.error === 'Referral code already used') return res.status(400).json({ error: 'REFERRAL_CODE_ALREADY_USED' });

@@ -45,7 +45,7 @@ export function DangerZoneTab({ user, onLogout, setRequestStatus }: ProfileTabPr
         const code = (data as { error?: string })?.error;
         if (code === 'WRONG_PASSWORD') setDeleteError(t('settings.wrongPassword'));
         else if (code === 'INVALID_CONFIRM' || code === 'PASSWORD_REQUIRED' || code === 'INVALID_ACCOUNT') setDeleteError(t('settings.deleteAccountConfirm'));
-        else setDeleteError(code || 'Failed');
+        else setDeleteError(t('common.error') || code || 'Failed');
         return;
       }
       setDeleteDialogOpen(false);

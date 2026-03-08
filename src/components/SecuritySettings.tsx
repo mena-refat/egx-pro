@@ -108,10 +108,10 @@ export default function SecuritySettings() {
             exit={{ opacity: 0, y: 20 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           >
-            <div className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
+            <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
               <button 
                 onClick={() => setIsSettingUp(false)}
-                className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-full transition-colors"
+                className="absolute top-4 right-4 p-2 hover:bg-[var(--bg-card-hover)] rounded-full transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -130,13 +130,13 @@ export default function SecuritySettings() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-slate-400 mb-2">{isRTL ? 'أدخل الرمز المكون من 6 أرقام' : 'Enter 6-digit code'}</label>
+                  <label className="block text-sm text-[var(--text-muted)] mb-2">{isRTL ? 'أدخل الرمز المكون من 6 أرقام' : 'Enter 6-digit code'}</label>
                   <input
                     type="text"
                     maxLength={6}
                     value={token}
                     onChange={(e) => setToken(e.target.value.replace(/\D/g, ''))}
-                    className="w-full bg-slate-800 border border-white/5 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] focus:ring-2 focus:ring-violet-500 outline-none"
+                    className="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] focus:ring-2 focus:ring-[var(--brand)] outline-none text-[var(--text-primary)]"
                     placeholder="000000"
                   />
                 </div>

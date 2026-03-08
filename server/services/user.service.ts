@@ -680,7 +680,7 @@ export const UserService = {
     return { data: updated };
   },
 
-  async useReferralCode(userId: string, code: string) {
+  async applyReferralCode(userId: string, code: string) {
     const trimmed = (code || '').trim().toUpperCase();
     if (!trimmed) return { error: 'Referral code is required' as const };
     const currentUser = await prisma.user.findUnique({

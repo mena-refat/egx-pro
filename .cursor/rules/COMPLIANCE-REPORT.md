@@ -14,17 +14,18 @@
 6. **توحيد استجابة API للـ watchlist** — قائمة: `{ items, pagination }`؛ مورد واحد (إضافة): `{ data: { ...item, newUnseenAchievements } }`؛ أخطاء: `{ error: 'CODE' }`. تم تحديث الفرونت لاستخدام `response.data.items` وقيد `WATCHLIST_LIMIT_REACHED`.
 7. **توحيد استجابة API للـ goals** — GoalsService يرمي `AppError` (UNAUTHORIZED, GOAL_LIMIT_REACHED, NOT_FOUND). GoalsController يستخدم `run(..).catch(next)` ويعيد: قائمة `{ items, pagination }`؛ موارد مفردة `{ data: goal }` أو `{ data: { ...goal, newUnseenAchievements } }`؛ أخطاء عبر الـ global handler. rate limit: `RATE_LIMIT_EXCEEDED`. الفرونت: GoalFormModal (GOAL_LIMIT_REACHED)، GoalTracker (data.data.newUnseenAchievements).
 8. **توحيد استجابة profile/completion و notifications** — profile completion: `{ data: { percentage, missing } }`؛ أخطاء UNAUTHORIZED, NOT_FOUND, INTERNAL_ERROR. notifications: أكواد أخطاء UNAUTHORIZED, NOT_FOUND, INTERNAL_ERROR. الفرونت: useProfileCompletion و AccountOverviewTab يدعمان الصيغة الجديدة مع رجوع للصيغة القديمة.
-9. **توحيد استجابة User API** — جميع endpoints تعيد مورداً واحداً داخل `{ data }`: getProfile, updateProfile, getProfileStats, checkUsername, getUnseenAchievements, getAchievements, getReferral, getSecurity, getSessions؛ redeemReferral و uploadAvatar و deleteAccount تعيد `{ data: ... }`؛ useReferralCode تعيد `{ success: true, data: { referrerName } }`. أخطاء موحّدة: UNAUTHORIZED, NOT_FOUND, INTERNAL_ERROR, EMAIL_ALREADY_EXISTS, PHONE_ALREADY_EXISTS, USERNAME_TAKEN, USERNAME_COOLDOWN, INVALID_PHONE, VALIDATION_ERROR, REWARD_ALREADY_CLAIMED, NOT_ENOUGH_REFERRALS, REFERRAL_CODE_ALREADY_USED, INVALID_REFERRAL_CODE, OWN_REFERRAL_CODE, INVALID_IMAGE_FORMAT, INVALID_CONFIRM, PASSWORD_REQUIRED, INVALID_ACCOUNT, WRONG_PASSWORD. revokeAllOtherSessions: `{ success: true }`. تم تحديث الفرونت: ProfilePage، App، AuthPage، AccountTab، SecurityTab، ReferralTab، AchievementsTab، DangerZoneTab، OnboardingWizard لقراءة `data` من الاستجابة.
+9. **توحيد استجابة User API** — جميع endpoints تعيد مورداً واحداً داخل `{ data }`؛ applyReferralCode (كان useReferralCode) تعيد `{ success: true, data: { referrerName } }`. أخطاء موحّدة (UNAUTHORIZED, NOT_FOUND, INTERNAL_ERROR، إلخ). تم تحديث الفرونت لقراءة `data` من الاستجابة.
+10. **استبدال ألوان hardcoded إضافية** — تم في MarketPage (bg-card)، StockPriceChart (text-muted)، SecuritySettings (bg-card, border, bg-input, text-muted, brand)، DelayNotice (warning-bg)، PortfolioTracker (danger-bg, danger)، InvestmentCalculator (success).
 
 ---
 
-## ملخص سريع
+## ملخص سريع (محدّث)
 
 | الملف | مطبّق بالكامل؟ | ملاحظات |
 |-------|-----------------|----------|
-| **engineering.mdc** | جزئي | نقص طبقة Repository، تنسيق Response، AppError |
-| **components.mdc** | جزئي | ألوان hardcoded، بعض raw `<button>`، بعض useEffect بدون AbortController |
-| **api.mdc** | جزئي | لا توجد طبقة Repository، تنسيق Response غير موحّد، watchlist فيه logic في الـ route |
+| **engineering.mdc** | جزئي | ✅ AppError، constants، auth، ownership، Zod، rate limit. ❌ لا توجد طبقة Repository؛ حدود أسطر الصفحات/Hooks غير مطبّقة. |
+| **components.mdc** | جزئي | ✅ CSS variables (تم استبدال أغلب الألوان)، Design system، AbortController في أغلب الـ fetch، react-hook-form + Zod. ❌ raw `<button>` في أماكن (أيقونات/theme يُستثنى عادةً)； حدود أسطر الملفات. |
+| **api.mdc** | جزئي | ✅ Route = middleware + controller؛ watchlist و goals بدون logic في الـ route؛ استجابة موحّدة لـ watchlist, goals, profile, notifications, user؛ AppError في watchlist و goals؛ RATE_LIMITS من constants. ❌ لا Repository؛ portfolio, stocks, market, analysis, auth لا تتبع بالكامل تنسيق `{ data }` / `{ items, pagination }`. |
 
 ---
 
@@ -50,32 +51,23 @@
 1. **طبقة Repository (1.1)**  
    القاعدة: "repositories/ ← ALL database queries live here".  
    الواقع: لا يوجد مجلد `server/repositories/`؛ الـ services تستدعي `prisma` مباشرة.  
-   **الإجراء**: إما إضافة طبقة repositories ونقل كل استعلامات Prisma إليها، أو تحديث القاعدة لتعكس الواقع الحالي (services تستدعي prisma).
+   **الإجراء**: إما إضافة طبقة repositories، أو تحديث القاعدة لتعكس الواقع (services تستدعي prisma).
 
-2. **تنسيق استجابة API (قسم 9)**  
-   القاعدة: Single item → `res.status(200).json({ data: goal })`، List → `{ items, pagination }`.  
-   الواقع: كثير من المسارات ترجع `res.json(goal)` أو `res.json(data)` بدون غلاف `{ data: ... }`، وبعض الأخطاء ترجع `message` مع `error`.  
-   **أمثلة**: portfolio controller يرجع `res.json(data)`، goals يرجع `res.json(data)`، auth يرجع `res.status(400).json({ error: '...', message: '...' })`.
+2. **تنسيق استجابة API (قسم 9)** — **مطبّق جزئياً**  
+   تم توحيد: watchlist، goals، profile/completion، notifications (أكواد أخطاء)، user.  
+   **متبقي**: portfolio، stocks، market، analysis، auth، billing، news ترجع أحياناً بدون غلاف `{ data }` أو `{ items, pagination }`؛ وتعديلها يتطلب تحديث الفرونت.
 
-3. **AppError + معالجة أخطاء مركّزة (قسم 6)**  
-   القاعدة: استخدام `throw new AppError('CODE', status)` ومعالجة موحّدة في server.  
-   الواقع: لا يوجد `server/lib/errors.ts` ولا كلاس `AppError`؛ الأخطاء تُعالج بـ try/catch في الـ controllers وتُرجع نصوص مختلفة.  
-   **الإجراء**: إنشاء `AppError` واستخدامه في الـ services، وإضافة middleware للأخطاء في server.ts يطبّق التنسيق الموحّد.
+3. **AppError + معالجة أخطاء مركّزة (قسم 6)** — **مطبّق**  
+   تم: `server/lib/errors.ts`، global error handler في server.ts، استخدام AppError في WatchlistService و GoalsService.
 
-4. **Route بدون منطق أعمال (api.mdc)**  
-   القاعدة: الـ route = method + path + middleware + controller فقط.  
-   الواقع: `server/routes/watchlist.ts` يحتوي على منطق أعمال (استدعاء prisma، تحقق isPro، إنشاء إشعارات) داخل الـ route بدل نقله إلى controller + service.  
-   **الإجراء**: نقل منطق الـ watchlist إلى WatchlistController + WatchlistService (وإن أردت، WatchlistRepository لاحقاً).
+4. **Route بدون منطق أعمال (api.mdc)** — **مطبّق لـ watchlist و goals**  
+   watchlist و goals: الـ route = middleware + controller فقط؛ المنطق في Service.
 
-5. **RATE_LIMITS في server.ts**  
-   القاعدة (api.mdc): استيراد من constants.  
-   الواقع: في server.ts أرقام الـ rate limit مكتوبة يدوياً (مثل 15*60*1000, max: 5).  
-   **الإجراء**: استيراد RATE_LIMITS (أو ONE_MINUTE_MS) من `server/lib/constants.ts` واستخدامها في تعريف الـ limiters.
+5. **RATE_LIMITS في server.ts** — **مطبّق**  
+   تم استيراد RATE_LIMITS و ONE_MINUTE_MS من constants؛ رسالة rate limit: `RATE_LIMIT_EXCEEDED`.
 
 6. **ثوابت FREE_LIMITS موحّدة**  
-   القاعدة: وجود FREE_LIMITS في constants.  
-   الواقع: السيرفر يستخدم `server/lib/plan.ts` (مثلاً portfolioStocks: 10, watchlistStocks: 20) والفرونت يستخدم `src/lib/constants.ts` (portfolio: 5, watchlist: 10).  
-   **الإجراء**: توحيد المصدر (مثلاً تعريف الحدود في مكان واحد واستخدامها من السيرفر والفرونت إن لزم).
+   السيرفر: `server/lib/plan.ts` (portfolioStocks, watchlistStocks, goals). الفرونت: `src/lib/constants.ts` قد تختلف أرقاماً. **الإجراء**: توحيد المصدر إن لزم.
 
 ---
 
@@ -113,13 +105,8 @@
    الواقع: استخدام `<button type="button" ...>` في Header, StockAnalysis, GoalTracker, MarketPage, SecurityTab, SecuritySettings لأزرار ثانوية (theme, notifications, close).  
    **الإجراء**: استبدال الأزرار التي هي "أكشن" واضح بمكون `<Button>`؛ يمكن الاستثناء لأزرار أيقونة صغيرة فقط إن وُضِع ذلك في القاعدة.
 
-3. **AbortController في كل useEffect فيه fetch (قسم 2.4 و 8)**  
-   القاعدة: أي useEffect يستدعي fetch أو api.get يجب أن يستخدم AbortController و cleanup.  
-   الواقع:  
-   - usePortfolio: `useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);` بدون AbortController.  
-   - ReferralTab: استخدام `cancelled` flag مع api.get بدون signal (مقبول وظيفياً لكن لا يلائم نص القاعدة).  
-   - AccountOverviewTab, AchievementsTab, SubscriptionTab: يفضل مراجعة وجود إما AbortController أو على الأقل إلغاء الطلب عند الـ unmount.  
-   **الإجراء**: إضافة AbortController وتمرير `signal` لـ api.get في هذه الـ hooks واستدعاء abort في الـ cleanup.
+3. **AbortController في كل useEffect فيه fetch (قسم 2.4 و 8)** — **مطبّق في أغلب الأماكن**  
+   تم في usePortfolio، ReferralTab، AccountOverviewTab، SubscriptionTab، AchievementsTab (استخدام AbortController و signal و cleanup).
 
 4. **حدود حجم الملفات (صفحة 100، feature 200، hook 80)**  
    القاعدة: Page ≤100 سطر، Feature ≤200، Hook ≤80.  
@@ -145,39 +132,31 @@
 ### ❌ غير مطبّق أو جزئي
 
 1. **Repository = كل استعلامات DB (قسم 4)**  
-   لا يوجد طبقة Repository؛ الـ services تستدعي prisma مباشرة. (نفس النقطة في engineering.mdc.)
+   لا يوجد طبقة Repository؛ الـ services تستدعي prisma مباشرة.
 
-2. **تنسيق الاستجابة (قسم 5)**  
-   المطلوب: `res.status(200).json({ data: goal })` و `res.status(400).json({ error: 'VALIDATION_ERROR' })` بدون كشف تفاصيل داخلية.  
-   الواقع: استجابات بدون غلاف `data`، وبعض الأخطاء ترجع `message` أو نصوص مفصّلة. (نفس النقطة في engineering.mdc.)
+2. **تنسيق الاستجابة (قسم 5)** — **مطبّق جزئياً**  
+   مطبّق لـ watchlist، goals، profile/completion، notifications (أكواد أخطاء)، user. متبقي: portfolio، stocks، market، analysis، auth، billing، news.
 
-3. **استخدام AppError (قسم 9)**  
-   لا يوجد AppError ولا معالجة أخطاء موحّدة حسب القاعدة. (نفس النقطة في engineering.mdc.)
+3. **استخدام AppError (قسم 9)** — **مطبّق**  
+   موجود في server/lib/errors.ts؛ مستخدم في WatchlistService و GoalsService؛ معالجة مركّزة في server.ts.
 
-4. **منطق الأعمال داخل route (قسم 1)**  
-   watchlist.ts يحتوي على تحقق isPro، عدّ الـ watchlist، إنشاء achievements وnotifications داخل الـ route. المطلوب: استدعاء controller فقط، والمنطق في service (وربما repository).
+4. **منطق الأعمال داخل route (قسم 1)** — **مطبّق لـ watchlist و goals**  
+   watchlist و goals: route = controller فقط؛ المنطق في Service.
 
-5. **RATE_LIMITS من constants (قسم 10 و 13)**  
-   في server.ts أرقام الـ rate limit غير مستوردة من server/lib/constants.  
-   **الإجراء**: استيراد ONE_MINUTE_MS و ONE_HOUR_MS و RATE_LIMITS من constants واستخدامها في server.ts.
+5. **RATE_LIMITS من constants (قسم 10 و 13)** — **مطبّق**  
+   تم استيراد RATE_LIMITS و ONE_MINUTE_MS من server/lib/constants.ts في server.ts و routes.
 
 ---
 
-## أولويات الإصلاح المقترحة
+## أولويات الإصلاح المتبقية
 
-1. **عالية (أمان واتساق)**  
-   - توحيد تنسيق استجابة API (وخاصة الأخطاء) وعدم كشف تفاصيل داخلية.  
-   - استيراد واستخدام ثوابت الـ rate limit من server/lib/constants في server.ts.
+1. **متوسطة (توافق كامل مع api.mdc)**  
+   - توحيد تنسيق استجابة portfolio، stocks، market، analysis، auth، billing، news إلى `{ data }` / `{ items, pagination }` وأكواد أخطاء فقط (يتطلب تحديث الفرونت).
 
-2. **متوسطة (توافق مع القواعد)**  
-   - استبدال الألوان Hardcoded في الفرونت بـ CSS variables.  
-   - إضافة AbortController في usePortfolio وأي useEffect آخر يستدعي fetch بدون إلغاء.  
-   - نقل منطق watchlist من الـ route إلى WatchlistController + WatchlistService.
-
-3. **منخفضة (هيكلة)**  
-   - إدخال طبقة Repository إن رغبت بالتوافق الكامل مع النص الحالي للقواعد.  
-   - إدخال AppError و error middleware في server.ts.  
-   - تقسيم الصفحات/المكونات الطويلة لتحقيق حدود الأسطر.
+2. **منخفضة (هيكلة)**  
+   - إدخال طبقة Repository إن رغبت بالتوافق الكامل مع engineering.mdc و api.mdc.  
+   - استبدال raw `<button>` بأزرار أكشن واضحة بمكون `<Button>` (أزرار الأيقونات/theme يمكن استثناؤها).  
+   - تقسيم الصفحات/المكونات الطويلة لتحقيق حدود الأسطر (Page 100، Feature 200، Hook 80).
 
 ---
 

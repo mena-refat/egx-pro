@@ -594,7 +594,7 @@ export default function MarketPage() {
             ))}
           </div>
         ) : news.length === 0 ? (
-          <div className="rounded-xl border border-[var(--border)] bg-white dark:bg-slate-800/30 p-12 text-center">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-12 text-center">
             <Newspaper className="w-12 h-12 mx-auto text-[var(--text-muted)] mb-4" />
             <p className="font-medium text-[var(--text-secondary)]">{t('market.newsEmptyTitle')}</p>
             <p className="text-sm text-[var(--text-muted)] mt-1">{t('market.newsEmptyDesc')}</p>

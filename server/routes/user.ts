@@ -13,7 +13,7 @@ router.post('/mark-achievements-seen', authenticate, UserController.markAchievem
 router.get('/achievements', authenticate, UserController.getAchievements);
 router.get('/referral', authenticate, UserController.getReferral);
 router.post('/referral/redeem', authenticate, UserController.redeemReferral);
-router.post('/referral/use', authenticate, UserController.useReferralCode);
+router.post('/referral/use', authenticate, UserController.applyReferralCode);
 router.get('/security', authenticate, UserController.getSecurity);
 router.get('/sessions', authenticate, UserController.getSessions);
 router.delete('/sessions/:id', authenticate, UserController.revokeSession);

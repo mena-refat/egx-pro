@@ -180,7 +180,7 @@ async function startServer() {
       const { prisma } = await import('./server/lib/prisma.ts');
       await prisma.$queryRaw`SELECT 1`;
       res.json({ status: 'ok', db: 'connected' });
-    } catch (e) {
+    } catch {
       res.status(503).json({ status: 'error', db: 'disconnected' });
     }
   });

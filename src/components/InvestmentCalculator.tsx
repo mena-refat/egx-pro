@@ -189,7 +189,7 @@ export default function InvestmentCalculator() {
             </div>
             <div className="min-w-0 flex-1 overflow-hidden">
               <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">{t('calculator.netProfit')}</p>
-              <p className="text-base font-bold text-emerald-400 break-all leading-tight">
+              <p className="text-base font-bold text-[var(--success)] break-all leading-tight">
                 <AnimatedNumber value={result.profit} prefix="+ " suffix={` ${currencyShort}`} />
               </p>
             </div>
