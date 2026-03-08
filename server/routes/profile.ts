@@ -10,7 +10,8 @@ const WEIGHT = 20;
 /** GET /api/profile/completion — percentage + missing items with routes */
 router.get('/completion', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.id ?? req.userId!;
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     const [user, goalsCount, watchlistCount] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },

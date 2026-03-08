@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import EmptyState from './shared/EmptyState';
@@ -11,13 +12,15 @@ import { Stock } from '../types';
 import type { StockWithMeta } from '../hooks/useStockScreener';
 
 export interface StockScreenerProps {
-  onSelectStock: (stock: Stock) => void;
+  onSelectStock?: (stock: Stock) => void;
 }
 
-export default function StockScreener({ onSelectStock }: StockScreenerProps) {
+export default function StockScreener({ onSelectStock }: StockScreenerProps = {}) {
   const { i18n } = useTranslation('common');
+  const navigate = useNavigate();
   const isAr = i18n.language.startsWith('ar');
   const screener = useStockScreener();
+  const handleSelectStock = onSelectStock ?? ((s: Stock) => navigate(`/stocks/${s.ticker}`));
 
   const handleSubscribe = () => {
     screener.setShowWatchlistLimitModal(false);
@@ -67,7 +70,7 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps) {
       <StockTable
         stocks={screener.sorted}
         watchlist={screener.watchlist}
-        onSelectStock={(s: StockWithMeta) => onSelectStock(s)}
+        onSelectStock={(s: StockWithMeta) => handleSelectStock(s)}
         onToggleWatchlist={screener.toggleWatchlist}
         t={screener.t}
         lang={screener.lang}

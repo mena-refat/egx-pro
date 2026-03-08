@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth.middleware.ts';
 import type { AuthRequest } from './types.ts';
 import { auditLog } from '../lib/audit.ts';
 import { logger } from '../lib/logger.ts';
+import { PLAN_PRICES } from '../lib/constants.ts';
 
 const router = Router();
 
@@ -93,8 +94,8 @@ router.post('/discount/validate', authenticate, async (req: Request, res: Respon
       return res.status(400).json({ error: 'الكود غير صحيح أو منتهي' });
     }
 
-    const basePrice = plan === 'pro' ? 149 : 999;
-    let finalPrice = basePrice;
+    const basePrice = plan === 'pro' ? PLAN_PRICES.pro : PLAN_PRICES.yearly;
+    let finalPrice: number = basePrice;
 
     if (discount.type === 'percentage') {
       finalPrice = Math.round(basePrice * (1 - discount.value / 100));

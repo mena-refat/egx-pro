@@ -19,6 +19,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { TIMEOUTS } from '../lib/constants';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 
@@ -261,7 +262,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
       finishTimeoutRef.current = setTimeout(() => {
         handleFinish();
         finishTimeoutRef.current = null;
-      }, 2000);
+      }, TIMEOUTS.successFeedback);
     } catch (err) {
       console.error('Failed to apply referral code', err);
       setReferralState({ checking: false, error: 'حدث خطأ أثناء التحقق من الكود' });

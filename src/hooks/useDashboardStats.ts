@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useAuthStore } from '../store/authStore';
 import type { Stock, PortfolioHolding } from '../types';
 
-export function useDashboardStats(isAuthenticated: boolean, pathname: string, accessToken: string | null) {
+export function useDashboardStats(isAuthenticated: boolean, pathname: string) {
+  const accessToken = useAuthStore((s) => s.accessToken);
   const [stats, setStats] = useState({ totalValue: 0, topPerformer: '--', topPerformerChange: 0 });
 
   const fetchDashboardData = useCallback(async () => {

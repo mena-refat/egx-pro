@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   TrendingUp,
@@ -81,8 +82,9 @@ function MiniSparkline({ changePercent }: { changePercent: number }) {
   );
 }
 
-export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stock) => void }) {
+export default function MarketPage() {
   const { t, i18n } = useTranslation('common');
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const isPro = user?.plan === 'pro' || user?.plan === 'yearly';
   const isAr = i18n.language.startsWith('ar');
@@ -519,7 +521,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
                     <li key={s.ticker}>
                       <button
                         type="button"
-                        onClick={() => onSelectStock?.(s)}
+                        onClick={() => navigate(`/stocks/${s.ticker}`)}
                         className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
                       >
                         <div className="min-w-0">
@@ -552,7 +554,7 @@ export default function MarketPage({ onSelectStock }: { onSelectStock?: (s: Stoc
                     <li key={s.ticker}>
                       <button
                         type="button"
-                        onClick={() => onSelectStock?.(s)}
+                        onClick={() => navigate(`/stocks/${s.ticker}`)}
                         className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
                       >
                         <div className="min-w-0">

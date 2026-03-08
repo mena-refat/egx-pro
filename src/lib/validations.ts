@@ -38,6 +38,7 @@ export function isEmailInput(s: string): boolean {
 export const passwordSchema = z
   .string()
   .min(8, 'كلمة المرور 8 أحرف على الأقل')
+  .max(255, 'Password too long')
   .regex(/[A-Z]/, 'يجب أن تحتوي على حرف كبير واحد على الأقل')
   .regex(/[0-9]/, 'يجب أن تحتوي على رقم واحد على الأقل');
 
@@ -82,6 +83,7 @@ const emailOrPhoneSchema = z.preprocess(
   (v) => (v === undefined || v === null ? '' : v),
   z.string()
     .min(1, 'Email or phone is required')
+    .max(255, 'Email or phone too long')
     .transform((s) => (typeof s === 'string' ? s.trim() : ''))
     .refine(
       (s) => {
@@ -105,7 +107,7 @@ export const registerSchema = z.object({
   emailOrPhone: emailOrPhoneSchema,
   password: z.preprocess(
     (v) => (v === undefined || v === null ? '' : v),
-    z.string().min(1, 'كلمة المرور مطلوبة')
+    z.string().min(1, 'كلمة المرور مطلوبة').max(255, 'Password too long')
   ),
 });
 
@@ -113,7 +115,7 @@ export const loginSchema = z.object({
   emailOrPhone: emailOrPhoneSchema,
   password: z.preprocess(
     (v) => (v === undefined || v === null ? '' : v),
-    z.string().min(1, 'Password is required')
+    z.string().min(1, 'Password is required').max(255, 'Password too long')
   ),
 });
 
@@ -138,7 +140,7 @@ export const watchlistTickerSchema = z.object({
 
 export const watchlistCheckTargetsSchema = z.object({
   items: z.array(z.object({
-    ticker: z.string(),
+    ticker: z.string().min(1).max(20),
     targetPrice: z.number().positive(),
     currentPrice: z.number().nonnegative(),
   })),
@@ -167,7 +169,7 @@ export function validateUsernameFormat(value: string): string | null {
 const goalCategoryEnum = z.enum(['home', 'car', 'retirement', 'wealth', 'travel', 'other']);
 
 export const goalSchema = z.object({
-  title: z.string().min(3, 'Goal title must be at least 3 characters'),
+  title: z.string().min(3, 'Goal title must be at least 3 characters').max(500, 'Goal title too long'),
   category: goalCategoryEnum.default('home'),
   targetAmount: z.coerce.number().positive('Target amount must be positive'),
   currentAmount: z.coerce.number().min(0).optional().default(0),
@@ -184,7 +186,7 @@ export const goalSchema = z.object({
 });
 
 export const goalUpdateSchema = z.object({
-  title: z.string().min(3).optional(),
+  title: z.string().min(3).max(500).optional(),
   category: goalCategoryEnum.optional(),
   targetAmount: z.number().positive().optional(),
   currentAmount: z.number().min(0).optional(),

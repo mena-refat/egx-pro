@@ -16,10 +16,10 @@ router.post('/2fa/disable', AuthController.twoFaDisable);
 router.post('/refresh', AuthController.refresh);
 router.post('/logout', AuthController.logout);
 router.post('/logout-all', AuthController.logoutAll);
-router.get('/sessions', AuthController.getSessions);
-router.delete('/sessions/:tokenId', AuthController.revokeSession);
-router.post('/change-password', AuthController.changePassword);
+router.delete('/sessions/:tokenId', authenticate, AuthController.revokeSession);
+router.post('/change-password', authenticate, AuthController.changePassword);
 router.get('/me', AuthController.getMe);
+router.get('/sessions', authenticate, AuthController.getSessions);
 router.get('/google/url', AuthController.getGoogleUrl);
 router.get('/google/callback', AuthController.googleCallback);
 

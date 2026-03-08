@@ -347,7 +347,7 @@ export default function DashboardPage() {
                         <p className="font-semibold text-body text-[var(--text-primary)]">{getStockName(stock.ticker, i18n.language.startsWith('ar') ? 'ar' : 'en')}</p>
                         <p className="text-label mt-0.5">{stock.ticker}</p>
                         {getStockInfo(stock.ticker)?.nameEn && (
-                          <p className="text-label mt-0.5 truncate max-w-[200px]">{getStockInfo(stock.ticker)!.nameEn}</p>
+                          <p className="text-label mt-0.5 truncate max-w-[200px]">{getStockInfo(stock.ticker)?.nameEn}</p>
                         )}
                       </div>
                       <div className="text-end shrink-0 ms-4">

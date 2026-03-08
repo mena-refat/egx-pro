@@ -1,0 +1,964 @@
+description: Engineering standards, security, architecture, and component rules for EGX Pro
+globs: ["src/**/*.ts", "src/**/*.tsx", "server/**/*.ts"]
+alwaysApply: true
+
+# Engineering Standards — EGX Pro
+# AI-Enforced Rules — All Generated Code Must Follow These Standards
+
+---
+
+## Tech Stack (Reference)
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, TypeScript, Tailwind CSS 4, Vite 6 |
+| State | Zustand 5 |
+| Forms | react-hook-form + Zod |
+| Routing | react-router-dom v7 |
+| UI Animation | Framer Motion |
+| Charts | Recharts (dashboard) + Lightweight Charts (stock prices) |
+| i18n | i18next + react-i18next |
+| HTTP Client | Axios + axios-retry |
+| Backend | Express 4, TypeScript |
+| ORM | Prisma 6 + PostgreSQL |
+| Cache | Upstash Redis |
+| Auth | JWT (RS256) + HttpOnly Cookies |
+| Logging | Winston |
+| Monitoring | Sentry |
+| WebSocket | ws |
+| Email | Resend |
+| Testing | Vitest + React Testing Library |
+| CI/CD | GitHub Actions |
+
+---
+
+## 1. System Architecture
+
+### 1.1 Backend Layer Structure
+
+Every backend feature must follow this exact structure. No exceptions.
+
+```
+server/
+  routes/          ← HTTP routing ONLY — no logic
+  controllers/     ← request/response ONLY — no business logic
+  services/        ← ALL business logic lives here
+  repositories/    ← ALL database queries live here
+  middleware/      ← auth, validation, rate limiting
+  lib/             ← shared utilities (logger, redis, prisma, constants)
+  services/        ← external services (email, AI, yahoo finance)
+```
+
+#### Controller — request/response only:
+```ts
+// ✅ CORRECT
+export const GoalsController = {
+  async create(req: AuthRequest, res: Response) {
+    const result = await GoalsService.create(req.user, req.body);
+    res.status(201).json(result);
+  },
+  async list(req: AuthRequest, res: Response) {
+    const page = Number(req.query.page) || 1;
+    const result = await GoalsService.getUserGoals(req.user.id, page);
+    res.json(result);
+  }
+};
+
+// ❌ WRONG — business logic inside controller
+export const GoalsController = {
+  async create(req: AuthRequest, res: Response) {
+    const count = await prisma.goal.count({ where: { userId: req.user.id } });
+    if (count >= 3) return res.status(403).json({ error: 'limit reached' });
+    const goal = await prisma.goal.create({ data: req.body });
+    res.status(201).json(goal);
+  }
+};
+```
+
+#### Service — business logic only:
+```ts
+// ✅ CORRECT
+export const GoalsService = {
+  async create(user: AuthUser, body: unknown) {
+    const data = goalSchema.parse(body);
+    if (!isPro(user)) await GoalsRepository.enforceLimit(user.id);
+    const goal = await GoalsRepository.create(user.id, data);
+    await AchievementService.checkGoalAchievements(user.id);
+    return goal;
+  }
+};
+```
+
+#### Repository — database only:
+```ts
+// ✅ CORRECT
+export const GoalsRepository = {
+  async create(userId: string, data: GoalCreateInput) {
+    return prisma.goal.create({ data: { userId, ...data } });
+  },
+  async findByUser(userId: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+    const [items, total] = await Promise.all([
+      prisma.goal.findMany({ where: { userId }, skip, take: limit }),
+      prisma.goal.count({ where: { userId } })
+    ]);
+    return { items, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+  },
+  async enforceLimit(userId: string) {
+    const count = await prisma.goal.count({ where: { userId } });
+    if (count >= FREE_LIMITS.goals) {
+      throw new AppError('GOAL_LIMIT_REACHED', 403);
+    }
+  }
+};
+```
+
+### 1.2 Frontend Layer Structure
+
+```
+src/
+  pages/            ← route-level components, max 100 lines, orchestration only
+  components/
+    features/       ← feature-specific components (goals/, portfolio/, stocks/)
+    shared/         ← reusable: Button, Input, EmptyState, PageLoader, ErrorBoundary
+    layout/         ← Sidebar, Header, BottomNav, SettingsLayout
+  hooks/            ← ALL data fetching and state logic (useGoals, usePortfolio...)
+  lib/
+    constants.ts    ← ALL magic numbers and config values
+    validations.ts  ← ALL Zod schemas
+    api.ts          ← axios instance
+    auth/           ← token management
+  store/
+    authStore.ts    ← Zustand auth store
+  types/            ← shared TypeScript interfaces
+```
+
+#### Page — orchestration only, max 100 lines:
+```tsx
+// ✅ CORRECT
+export default function GoalsPage() {
+  const { goals, loading, error, addGoal, refetch } = useGoals();
+
+  if (loading) return <SkeletonList />;
+  if (error) return <ErrorMessage message={error} onRetry={refetch} />;
+  if (goals.length === 0) return (
+    <EmptyState icon={Target} title={t('goals.emptyTitle')} actionLabel={t('goals.addFirst')} onAction={() => setAddModalOpen(true)} />
+  );
+
+  return (
+    <div>
+      <GoalsList goals={goals} />
+      <GoalFormModal onSubmit={addGoal} />
+    </div>
+  );
+}
+
+// ❌ WRONG — page has fetch logic + raw JSX mixed together
+export default function GoalsPage() {
+  const [goals, setGoals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    fetch('/api/goals').then(r => r.json()).then(d => setGoals(d.items)).finally(() => setLoading(false));
+  }, []);
+  return <div>{goals.map(g => <div key={g.id} className="bg-white border border-gray-200 p-4">{g.title}</div>)}</div>;
+}
+```
+
+#### Custom Hook — all data logic, max 80 lines:
+```ts
+// ✅ CORRECT
+export function useGoals() {
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { accessToken } = useAuthStore();
+
+  const fetchGoals = useCallback(async (signal?: AbortSignal) => {
+    if (!accessToken) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get('/goals', { signal });
+      setGoals(res.data.items);
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'ERR_CANCELED') return;
+      setError(t('errors.loadFailed'));
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchGoals(controller.signal);
+    return () => controller.abort();
+  }, [fetchGoals]);
+
+  return { goals, loading, error, refetch: fetchGoals };
+}
+```
+
+---
+
+## 2. Component Rules
+
+### 2.1 Size Limits
+
+| Component Type | Max Lines |
+|---|---|
+| Page component | 100 |
+| Feature component | 200 |
+| Shared component | 150 |
+| Custom hook | 80 |
+| Any function | 40 |
+| Controller method | 15 |
+| Service method | 30 |
+| Repository method | 20 |
+
+If a file exceeds the limit — split it.
+
+### 2.2 Always Use Design System Components
+
+```tsx
+// ✅ CORRECT
+import { Button } from '@/components/shared/Button';
+import { Input } from '@/components/shared/Input';
+
+<Button variant="primary" loading={isSubmitting} disabled={isSubmitting}>
+  {t('goals.save')}
+</Button>
+<Input
+  {...register('title')}
+  error={errors.title?.message}
+  placeholder={t('goals.titlePlaceholder')}
+/>
+
+// ❌ WRONG — raw HTML with hardcoded styles
+<button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+  حفظ
+</button>
+<input className="border border-gray-300 rounded px-3 py-2 w-full" />
+```
+
+### 2.3 Always Use CSS Variables — Never Hardcode Colors
+
+All colors must come from the design tokens defined in `index.css`.
+
+```tsx
+// ✅ CORRECT
+<div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl">
+<p className="text-[var(--text-primary)]">عنوان</p>
+<p className="text-[var(--text-secondary)]">وصف</p>
+<span className="text-[var(--success)]">+2.5%</span>
+<span className="text-[var(--danger)]">-1.2%</span>
+<button className="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white">
+<div className="bg-[var(--success-bg)] text-[var(--success-text)]">
+
+// ❌ WRONG — hardcoded colors anywhere
+<div className="bg-white border-gray-200">
+<span className="text-green-500">+2.5%</span>
+<span className="text-red-500">-1.2%</span>
+<button className="bg-purple-600 hover:bg-purple-700">
+<div style={{ color: '#7c3aed', background: '#fff' }}>
+```
+
+Available CSS variables:
+```
+Backgrounds: --bg-primary, --bg-secondary, --bg-card, --bg-card-hover, --bg-input, --bg-sidebar, --bg-header
+Text:        --text-primary, --text-secondary, --text-muted, --text-disabled, --text-inverse
+Brand:       --brand, --brand-hover, --brand-subtle, --brand-text
+Status:      --success, --success-bg, --success-text
+             --danger, --danger-bg, --danger-text
+             --warning, --warning-bg, --warning-text
+Borders:     --border, --border-subtle, --border-strong
+Shadows:     --shadow-sm, --shadow-md, --shadow-lg
+```
+
+### 2.4 Always Wrap useEffect Fetch with AbortController
+
+```tsx
+// ✅ CORRECT
+useEffect(() => {
+  const controller = new AbortController();
+
+  const load = async () => {
+    try {
+      const res = await api.get('/endpoint', { signal: controller.signal });
+      setData(res.data);
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'ERR_CANCELED') return;
+      setError('فشل التحميل');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  load();
+  return () => controller.abort();
+}, [dependency]);
+
+// ❌ WRONG — no cleanup, causes memory leak and state updates on unmounted component
+useEffect(() => {
+  api.get('/endpoint').then(res => setData(res.data));
+}, []);
+```
+
+### 2.5 Always Clean Up Event Listeners and Timers
+
+```tsx
+// ✅ CORRECT — event listener
+useEffect(() => {
+  const handler = (e: MouseEvent) => { ... };
+  document.addEventListener('mousedown', handler);
+  return () => document.removeEventListener('mousedown', handler);
+}, []);
+
+// ✅ CORRECT — timeout
+useEffect(() => {
+  const id = setTimeout(() => setVisible(false), TIMEOUTS.toast);
+  return () => clearTimeout(id);
+}, []);
+
+// ✅ CORRECT — interval
+useEffect(() => {
+  const id = setInterval(fetchPrices, CACHE_TTL.prices * 1000);
+  return () => clearInterval(id);
+}, []);
+
+// ❌ WRONG — no cleanup
+useEffect(() => {
+  window.addEventListener('resize', handleResize);
+  setTimeout(() => setVisible(false), 3000);
+}, []);
+```
+
+### 2.6 Memoize Heavy Components and Callbacks
+
+```tsx
+// ✅ CORRECT
+const StockCard = memo(function StockCard({ stock, onAdd }: StockCardProps) {
+  return <div>...</div>;
+});
+
+// In parent:
+const handleAddToWatchlist = useCallback((ticker: string) => {
+  addToWatchlist(ticker);
+}, [addToWatchlist]);
+
+const sortedStocks = useMemo(() =>
+  [...stocks].sort((a, b) => b.changePercent - a.changePercent),
+  [stocks]
+);
+
+// ❌ WRONG — new function/object created every render, breaks memo
+<StockCard onAdd={(ticker) => addToWatchlist(ticker)} />
+<StockCard options={{ showChart: true }} />
+```
+
+### 2.7 Forms Always Use react-hook-form + Zod
+
+```tsx
+// ✅ CORRECT
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { goalSchema } from '@/lib/validations';
+
+type GoalFormData = z.infer<typeof goalSchema>;
+
+const {
+  register,
+  handleSubmit,
+  formState: { errors, isSubmitting },
+  reset,
+} = useForm<GoalFormData>({ resolver: zodResolver(goalSchema) });
+
+const onSubmit = async (data: GoalFormData) => {
+  await createGoal(data);
+  reset();
+};
+
+// ❌ WRONG — manual state for forms
+const [title, setTitle] = useState('');
+const [amount, setAmount] = useState('');
+const [error, setError] = useState('');
+```
+
+### 2.8 Always Show Loading, Error, and Empty States
+
+```tsx
+// ✅ CORRECT — all 3 states handled
+if (loading) return <SkeletonList count={5} />;
+if (error) return <ErrorMessage message={error} onRetry={refetch} />;
+if (items.length === 0) return (
+  <EmptyState
+    icon={Target}
+    title={t('goals.emptyTitle')}
+    description={t('goals.emptyDescription')}
+    actionLabel={t('goals.addFirst')}
+    onAction={openAddModal}
+  />
+);
+return <GoalsList items={items} />;
+
+// ❌ WRONG — no states handled
+return <div>{items.map(item => <GoalCard key={item.id} goal={item} />)}</div>;
+```
+
+---
+
+## 3. Constants — Never Use Magic Numbers
+
+All numbers, prices, limits, and durations must be named constants.
+
+### `src/lib/constants.ts` and `server/lib/constants.ts`:
+
+```ts
+// ✅ CORRECT — import from constants
+import { PLAN_PRICES, FREE_LIMITS, TIMEOUTS, CACHE_TTL } from '@/lib/constants';
+
+if (count >= FREE_LIMITS.goals) throw new AppError('GOAL_LIMIT_REACHED', 403);
+const price = PLAN_PRICES.pro;
+const id = setTimeout(fn, TIMEOUTS.toast);
+await setCache(key, data, CACHE_TTL.prices);
+
+// ❌ WRONG — magic numbers scattered everywhere
+if (count >= 3) ...
+const price = 149;
+setTimeout(fn, 3000);
+setCache(key, data, 60);
+```
+
+### Required constants:
+```ts
+// src/lib/constants.ts
+export const PLAN_PRICES = {
+  pro: 149,
+  yearly: 999,
+} as const;
+
+export const FREE_LIMITS = {
+  goals: 3,
+  portfolioHoldings: 5,
+  watchlist: 10,
+  aiAnalysisPerMonth: 3,
+} as const;
+
+export const TIMEOUTS = {
+  toast: 3000,
+  debounce: 300,
+  retry: 1000,
+  sessionCheck: 5 * 60 * 1000,
+} as const;
+
+export const CACHE_TTL = {
+  prices: 60,          // seconds
+  delayedPrices: 600,
+  news: 300,
+  profile: 600,
+  market: 300,
+} as const;
+
+// server/lib/constants.ts
+export const ONE_MINUTE_MS  = 60 * 1000;
+export const ONE_HOUR_MS    = 60 * 60 * 1000;
+export const ONE_DAY_MS     = 24 * 60 * 60 * 1000;
+export const THIRTY_DAYS_MS = 30 * ONE_DAY_MS;
+
+export const RATE_LIMITS = {
+  login:    { max: 5,   windowMs: 15 * ONE_MINUTE_MS },
+  register: { max: 3,   windowMs: ONE_HOUR_MS },
+  refresh:  { max: 10,  windowMs: ONE_MINUTE_MS },
+  api:      { max: 100, windowMs: ONE_MINUTE_MS },
+} as const;
+```
+
+---
+
+## 4. TypeScript Rules
+
+### 4.1 No `any` — Use Explicit Types
+
+```ts
+// ✅ CORRECT
+async function getUser(id: string): Promise<User | null> {
+  return prisma.user.findUnique({ where: { id } });
+}
+const userId = (req as AuthRequest).user.id;
+
+// ❌ WRONG
+async function getUser(id: any) { ... }
+const userId = (req as any).user?.id;
+```
+
+### 4.2 No Non-Null Assertion Without a Guard
+
+```ts
+// ✅ CORRECT
+if (!user?.id) throw new AppError('UNAUTHORIZED', 401);
+const id = user.id; // safe after guard
+
+// ❌ WRONG — crashes if user is null
+const id = user!.id;
+const name = data!.user!.fullName!;
+```
+
+### 4.3 Always Type Component Props
+
+```tsx
+// ✅ CORRECT
+interface StockCardProps {
+  stock: Stock;
+  isInWatchlist: boolean;
+  onAddToWatchlist: (ticker: string) => void;
+  onRemoveFromWatchlist: (ticker: string) => void;
+}
+
+const StockCard = memo(function StockCard({
+  stock,
+  isInWatchlist,
+  onAddToWatchlist,
+  onRemoveFromWatchlist,
+}: StockCardProps) {
+  return <div>...</div>;
+});
+
+// ❌ WRONG
+function StockCard({ stock, onAdd, onRemove }: any) { ... }
+function StockCard(props: any) { ... }
+```
+
+### 4.4 Use AuthRequest Type for Protected Routes
+
+```ts
+// ✅ CORRECT
+import type { AuthRequest } from '../routes/types';
+
+router.get('/', authenticate, async (req: Request, res: Response) => {
+  const { user } = req as AuthRequest;
+  const goals = await GoalsService.getUserGoals(user.id);
+  res.json(goals);
+});
+
+// ❌ WRONG
+const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id);
+```
+
+---
+
+## 5. Security Rules
+
+### 5.1 Always Validate Input with Zod
+
+```ts
+// ✅ CORRECT — validate at route entry
+router.post('/goals', authenticate, async (req: Request, res: Response) => {
+  const data = goalSchema.parse(req.body); // throws ZodError if invalid
+  const result = await GoalsService.create((req as AuthRequest).user, data);
+  res.status(201).json(result);
+});
+
+// ❌ WRONG — using req.body directly
+router.post('/goals', authenticate, async (req: Request, res: Response) => {
+  const goal = await prisma.goal.create({ data: req.body });
+  res.json(goal);
+});
+```
+
+### 5.2 Always Verify Resource Ownership
+
+```ts
+// ✅ CORRECT — userId enforced in the query itself
+const goal = await prisma.goal.findUnique({
+  where: { id, userId: req.user.id }
+});
+if (!goal) return res.status(404).json({ error: 'NOT_FOUND' });
+
+// ❌ WRONG — anyone can access any resource by ID
+const goal = await prisma.goal.findUnique({ where: { id } });
+```
+
+### 5.3 Always Use authenticate Middleware
+
+```ts
+// ✅ CORRECT
+router.get('/',     authenticate, GoalsController.list);
+router.post('/',    authenticate, GoalsController.create);
+router.put('/:id',  authenticate, GoalsController.update);
+router.delete('/:id', authenticate, GoalsController.delete);
+
+// ❌ WRONG — missing auth
+router.get('/', GoalsController.list);
+router.post('/upgrade', async (req, res) => { ... }); // unprotected billing!
+```
+
+### 5.4 Never Log Sensitive Data
+
+```ts
+// ✅ CORRECT
+logger.info('User logged in', { userId: user.id, ip: req.ip });
+logger.error('Auth failed', { email: user.email, reason: 'invalid_password' });
+
+// ❌ WRONG
+logger.info('Login attempt', { password: req.body.password });
+logger.debug('Token issued', { token: accessToken });
+logger.error('Error', { secret: process.env.JWT_SECRET });
+```
+
+### 5.5 All String Inputs Must Have max() Limit
+
+```ts
+// ✅ CORRECT
+const goalSchema = z.object({
+  title:        z.string().min(1).max(100),
+  category:     z.string().min(1).max(50),
+  targetAmount: z.number().positive().max(100_000_000),
+  currency:     z.string().length(3),
+  deadline:     z.string().datetime().optional(),
+});
+
+// ❌ WRONG — no max limit, allows huge payloads
+const goalSchema = z.object({
+  title:        z.string().min(1),
+  targetAmount: z.number(),
+});
+```
+
+---
+
+## 6. Error Handling
+
+### 6.1 Use AppError for All Business Errors
+
+```ts
+// In server/lib/errors.ts:
+export class AppError extends Error {
+  constructor(
+    public readonly code: string,
+    public readonly status: number,
+    message?: string
+  ) {
+    super(message ?? code);
+    this.name = 'AppError';
+  }
+}
+
+// ✅ CORRECT — throw typed errors from services
+throw new AppError('GOAL_LIMIT_REACHED', 403);
+throw new AppError('UNAUTHORIZED', 401);
+throw new AppError('NOT_FOUND', 404);
+throw new AppError('INVALID_PLAN', 400);
+
+// ❌ WRONG — generic errors that leak details
+throw new Error('prisma query failed: ...');
+res.status(500).json({ error: err.message }); // exposes internals
+```
+
+### 6.2 Centralized Error Middleware in server.ts
+
+```ts
+// ✅ CORRECT — one place handles all errors
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof AppError) {
+    return res.status(err.status).json({ error: err.code });
+  }
+  if (err.name === 'ZodError') {
+    return res.status(400).json({ error: 'VALIDATION_ERROR', details: err });
+  }
+  logger.error('Unhandled error', { message: err.message, stack: err.stack });
+  res.status(500).json({ error: 'INTERNAL_ERROR' });
+});
+```
+
+### 6.3 Frontend Error Handling in Hooks
+
+```ts
+// ✅ CORRECT
+try {
+  const res = await api.post('/goals', data);
+  setGoals(prev => [...prev, res.data]);
+} catch (err: unknown) {
+  if ((err as { code?: string }).code === 'ERR_CANCELED') return;
+  const message = (err as { response?: { data?: { error?: string } } })
+    ?.response?.data?.error;
+  setError(t(`errors.${message}`) ?? t('errors.unknown'));
+}
+```
+
+---
+
+## 7. Performance Rules
+
+### 7.1 Database — Always Add Indexes for userId
+
+```prisma
+// ✅ CORRECT — every model that queries by userId must have index
+model Goal {
+  id        String   @id @default(cuid())
+  userId    String
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])                // required
+  @@index([userId, status])        // for filtered queries
+  @@index([userId, createdAt])     // for sorted queries
+}
+
+// ❌ WRONG — no index = full table scan on every request
+model Goal {
+  id     String @id
+  userId String
+  // missing @@index([userId])
+}
+```
+
+### 7.2 Never N+1 Queries — Use Bulk Operations
+
+```ts
+// ✅ CORRECT
+const tickers = holdings.map(h => h.ticker);
+const prices = await getBulkPrices(tickers); // 1 request for all
+
+// ❌ WRONG — 1 request per stock
+for (const holding of holdings) {
+  const price = await getStockPrice(holding.ticker); // N requests
+}
+```
+
+### 7.3 Always Use Redis Cache for Expensive Operations
+
+```ts
+// ✅ CORRECT
+export async function getStockPrice(ticker: string) {
+  const cacheKey = `price:${ticker}`;
+  const cached = await getCache(cacheKey);
+  if (cached) return cached as StockPrice;
+
+  const fresh = await fetchFromYahoo(ticker);
+  await setCache(cacheKey, fresh, CACHE_TTL.prices);
+  return fresh;
+}
+
+// ❌ WRONG — hits Yahoo Finance on every request
+export async function getStockPrice(ticker: string) {
+  return fetchFromYahoo(ticker);
+}
+```
+
+### 7.4 Always Use React.lazy for Heavy Pages
+
+```tsx
+// ✅ CORRECT — in App.tsx
+const StockScreener     = lazy(() => import('./components/StockScreener'));
+const StockAnalysis     = lazy(() => import('./components/StockAnalysis'));
+const MarketPage        = lazy(() => import('./pages/MarketPage'));
+const GoalsPage         = lazy(() => import('./pages/GoalsPage'));
+const StockDetailPage   = lazy(() => import('./pages/StockDetailPage'));
+const PortfolioTracker  = lazy(() => import('./components/PortfolioTracker'));
+const InvestmentCalculator = lazy(() => import('./components/InvestmentCalculator'));
+
+// Always wrap with Suspense
+<Suspense fallback={<PageLoader />}>
+  <StockScreener />
+</Suspense>
+
+// ❌ WRONG — static import loads everything upfront
+import StockScreener from './components/StockScreener';
+import MarketPage from './pages/MarketPage';
+```
+
+---
+
+## 8. Logging Rules
+
+### Always Use Winston — Never console.*
+
+```ts
+// ✅ CORRECT — server side
+import { logger } from '../lib/logger';
+logger.info('Goal created', { userId, goalId: goal.id });
+logger.warn('Rate limit approached', { userId, endpoint: '/analysis' });
+logger.error('Yahoo Finance failed', { ticker, error: err.message });
+
+// ✅ CORRECT — frontend (only in development)
+if (import.meta.env.DEV) {
+  console.error('WebSocket error:', err);
+}
+
+// ❌ WRONG — anywhere in server code
+console.log('Goal created');
+console.error(err);
+console.warn('something happened');
+```
+
+---
+
+## 9. API Response Format
+
+All API responses must follow this exact structure. No exceptions.
+
+```ts
+// ✅ Single item
+res.status(200).json({ data: goal });
+res.status(201).json({ data: goal });
+
+// ✅ List with pagination
+res.status(200).json({
+  items: goals,
+  pagination: { page, limit, total, totalPages }
+});
+
+// ✅ Simple success
+res.status(200).json({ success: true });
+
+// ✅ Error — always use error code strings, never messages
+res.status(400).json({ error: 'VALIDATION_ERROR' });
+res.status(401).json({ error: 'UNAUTHORIZED' });
+res.status(403).json({ error: 'PLAN_LIMIT_REACHED' });
+res.status(404).json({ error: 'NOT_FOUND' });
+res.status(409).json({ error: 'EMAIL_ALREADY_EXISTS' });
+res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' });
+res.status(500).json({ error: 'INTERNAL_ERROR' });
+
+// ❌ WRONG — inconsistent formats
+res.json(goal);
+res.json({ success: true, data: goal, message: 'created' });
+res.status(400).json({ message: 'bad request' });
+res.status(500).json({ error: err.message }); // exposes internals
+```
+
+---
+
+## 10. i18n Rules
+
+All user-facing text must use the translation system. No exceptions.
+
+```tsx
+// ✅ CORRECT
+const { t } = useTranslation('common');
+<h1>{t('dashboard.title')}</h1>
+<p>{t('errors.loadFailed')}</p>
+<button>{t('common.save')}</button>
+toast.error(t('goals.limitReached'));
+
+// ❌ WRONG — hardcoded Arabic or English text
+<h1>لوحة التحكم</h1>
+<h1>Dashboard</h1>
+toast.error('لقد وصلت للحد الأقصى من الأهداف');
+```
+
+Translation keys must exist in both:
+- `public/locales/ar/common.json`
+- `public/locales/en/common.json`
+
+---
+
+## 11. State Management Rules
+
+### Use Zustand for Global State — useContext Only for Theme/Locale
+
+```tsx
+// ✅ CORRECT — global auth state via Zustand
+const { user, accessToken, logout } = useAuthStore();
+const user = useAuthStore((s) => s.user);            // selector for performance
+const logout = useAuthStore((s) => s.logout);        // single value selector
+
+// ✅ CORRECT — local component state via useState
+const [isOpen, setIsOpen] = useState(false);
+const [search, setSearch] = useState('');
+
+// ❌ WRONG — prop drilling auth through multiple levels
+<App user={user} accessToken={accessToken}>
+  <Sidebar user={user}>
+    <ProfileMenu user={user} onLogout={logout} />
+  </Sidebar>
+</App>
+```
+
+### Avoid Prop Drilling Beyond 1 Level
+
+```tsx
+// ✅ CORRECT — consume directly from store
+function ProfileMenu() {
+  const { user, logout } = useAuthStore(); // consume directly
+  return <button onClick={logout}>{user?.fullName}</button>;
+}
+
+// ❌ WRONG — passed through 3 levels
+<App onLogout={logout}>
+  <Header onLogout={onLogout}>
+    <ProfileMenu onLogout={onLogout} />
+  </Header>
+</App>
+```
+
+---
+
+## 12. Design System — Component Inventory
+
+Use these components. Do not create alternatives.
+
+| Component | Import | Use For |
+|---|---|---|
+| `<Button>` | `@/components/shared/Button` | All clickable actions |
+| `<Input>` | `@/components/shared/Input` | All text inputs |
+| `<EmptyState>` | `@/components/shared/EmptyState` | Empty lists |
+| `<PageLoader>` | `@/components/shared/PageLoader` | Lazy load fallback |
+| `<ErrorBoundary>` | `@/components/shared/ErrorBoundary` | Wrap all routes |
+| `<SkeletonList>` | `@/components/shared/Skeleton` | Loading states |
+| `<SettingsLayout>` | `@/components/layout/SettingsLayout` | Settings pages |
+| `<BottomNav>` | `@/components/layout/BottomNav` | Mobile navigation |
+
+---
+
+## 13. Folder Naming Conventions
+
+```
+files:     kebab-case     → stock-card.tsx, use-portfolio.ts
+components: PascalCase    → StockCard.tsx, GoalTracker.tsx
+hooks:     camelCase      → useGoals.ts, useStockDetail.ts
+constants: UPPER_SNAKE    → FREE_LIMITS, PLAN_PRICES
+types:     PascalCase     → StockPrice, GoalRecord, AuthUser
+```
+
+---
+
+## 14. Git and CI/CD Rules
+
+- `main` → Production only. Never push directly.
+- `develop` → Staging. All features merge here first.
+- `feature/xxx` → Individual features.
+
+Every push to `main` or `develop` must pass:
+1. `npx tsc --noEmit` — zero TypeScript errors
+2. `npm run test` — all tests pass
+3. `npm run build` — build succeeds
+4. `npm audit --audit-level=high` — no high vulnerabilities
+
+---
+
+## 15. Quick Reference Checklist
+
+Before submitting any code, verify:
+
+```
+[ ] No file exceeds its line limit
+[ ] No hardcoded colors (use CSS variables)
+[ ] No magic numbers (use constants.ts)
+[ ] No raw <button> or <input> (use Button/Input components)
+[ ] No console.* in server code (use logger)
+[ ] No console.log in frontend (use import.meta.env.DEV guard)
+[ ] Every useEffect with fetch has AbortController cleanup
+[ ] Every addEventListener has removeEventListener cleanup
+[ ] Every setTimeout has clearTimeout cleanup
+[ ] Every protected route has authenticate middleware
+[ ] Every resource query checks userId ownership
+[ ] Every form uses react-hook-form + Zod
+[ ] Every list has loading/error/empty state handling
+[ ] Every user-facing text uses t() from i18next
+[ ] Every new Prisma model has @@index([userId])
+[ ] TypeScript: zero errors (npx tsc --noEmit)
+[ ] No non-null assertions (!.) without a guard above
+[ ] No prop drilling beyond 1 level
+```

@@ -22,7 +22,6 @@ export interface ProfileUser {
 
 export interface ProfileTabProps {
   user: ProfileUser;
-  accessToken: string | null;
   onUpdateProfile: (data: Record<string, unknown>, messages?: { success?: string; error?: string }) => Promise<void>;
   onLogout: () => void;
   setRequestStatus: (s: { type: 'success' | 'error'; message: string } | null) => void;

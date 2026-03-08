@@ -21,6 +21,7 @@ import { validateChangePassword } from '../../../lib/validations';
 import { OTPInput } from '../../ui/OTPInput';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
+import { useAuthStore } from '../../../store/authStore';
 import type { ProfileTabProps } from './types';
 
 function formatLastActivity(
@@ -49,7 +50,8 @@ function sessionDeviceLabel(
   return `${browser} ${on} ${os}`;
 }
 
-export function SecurityTab({ user, accessToken, onUpdateProfile, setRequestStatus }: ProfileTabProps) {
+export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: ProfileTabProps) {
+  const accessToken = useAuthStore((s) => s.accessToken);
   const { t, i18n } = useTranslation('common');
   const [lastPasswordChangeAt, setLastPasswordChangeAt] = useState<string | null>(null);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -487,7 +489,7 @@ export function SecurityTab({ user, accessToken, onUpdateProfile, setRequestStat
                     <p className="text-xs text-[var(--text-muted)] mb-1">{t('settings.twoFaStep2Manual')}</p>
                     <div className="flex items-center gap-2 mb-6">
                       <code className="flex-1 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] font-mono">{setupData.manualCode}</code>
-                      <button type="button" onClick={() => navigator.clipboard.writeText(setupData!.manualCode.replace(/\s/g, ''))} className="p-2 rounded-lg border border-[var(--border)]" title={t('settings.twoFaCopyCode')}><Copy className="w-4 h-4" /></button>
+                      <button type="button" onClick={() => setupData?.manualCode && navigator.clipboard.writeText(setupData.manualCode.replace(/\s/g, ''))} className="p-2 rounded-lg border border-[var(--border)]" title={t('settings.twoFaCopyCode')}><Copy className="w-4 h-4" /></button>
                     </div>
                     <div className="flex justify-between">
                       <Button type="button" variant="secondary" onClick={() => setEnable2FAStep(1)}>← {t('settings.twoFaPrev')}</Button>

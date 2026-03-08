@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gift, Copy, Loader2 } from 'lucide-react';
 import api from '../../../lib/api';
+import { TIMEOUTS } from '../../../lib/constants';
 import { Button } from '../../ui/Button';
 
 interface ReferralData {
@@ -40,7 +41,7 @@ export function ReferralTab() {
       copiedTimeoutRef.current = setTimeout(() => {
         setCopied(false);
         copiedTimeoutRef.current = null;
-      }, 2000);
+      }, TIMEOUTS.copiedFeedback);
     }
   };
 

@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
+import { useAuthStore } from '../../../store/authStore';
+import { TIMEOUTS } from '../../../lib/constants';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import type { ProfileTabProps } from './types';
 
-export function DangerZoneTab({ user, accessToken, onLogout, setRequestStatus }: ProfileTabProps) {
+export function DangerZoneTab({ user, onLogout, setRequestStatus }: ProfileTabProps) {
+  const accessToken = useAuthStore((s) => s.accessToken);
   const { t } = useTranslation('common');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -52,7 +55,7 @@ export function DangerZoneTab({ user, accessToken, onLogout, setRequestStatus }:
       const t1 = setTimeout(() => {
         setGoodbyeOpen(false);
         onLogout();
-      }, 5000);
+      }, TIMEOUTS.goodbyeDelay);
       (window as unknown as { __goodbyeTimeout?: ReturnType<typeof setTimeout> }).__goodbyeTimeout = t1;
     } catch (err) {
       setDeleteError((err as Error).message || 'Failed');

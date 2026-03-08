@@ -1,0 +1,877 @@
+---
+description: Frontend component rules, design system, React patterns, state management, and UI standards for EGX Pro
+globs: ["src/**/*.tsx", "src/**/*.ts"]
+alwaysApply: true
+---
+
+# Component Rules — EGX Pro Frontend
+
+---
+
+## 1. Component Size Limits
+
+| النوع | الحد الأقصى |
+|---|---|
+| Page component | 100 سطر |
+| Feature component | 200 سطر |
+| Shared component | 150 سطر |
+| Custom hook | 80 سطر |
+| أي function | 40 سطر |
+
+لو أي ملف بيتعدى الحد — اتقسم فوراً.
+
+### كيفية التقسيم:
+
+```
+// مثال: GoalsPage اتكبرت عن 100 سطر
+
+// قبل التقسيم:
+src/pages/GoalsPage.tsx  ← 800 سطر ❌
+
+// بعد التقسيم:
+src/pages/GoalsPage.tsx                        ← 80 سطر (orchestration فقط) ✅
+src/components/features/goals/GoalsList.tsx    ← 120 سطر ✅
+src/components/features/goals/GoalCard.tsx     ← 80 سطر ✅
+src/components/features/goals/GoalFormModal.tsx ← 150 سطر ✅
+src/hooks/useGoals.ts                          ← 70 سطر ✅
+```
+
+---
+
+## 2. Page Components — Orchestration فقط
+
+Page = بيجمع الـ hooks والـ components بس. مفيش fetch. مفيش JSX معقد.
+
+```tsx
+// ✅ CORRECT — page خفيفة وواضحة
+export default function GoalsPage() {
+  const { goals, loading, error, refetch, addGoal } = useGoals();
+  const { t } = useTranslation('common');
+  const [addModalOpen, setAddModalOpen] = useState(false);
+
+  if (loading) return <SkeletonList count={4} />;
+  if (error)   return <ErrorMessage message={error} onRetry={refetch} />;
+  if (goals.length === 0) return (
+    <EmptyState
+      icon={Target}
+      title={t('goals.emptyTitle')}
+      description={t('goals.emptyDescription')}
+      actionLabel={t('goals.addFirst')}
+      onAction={() => setAddModalOpen(true)}
+    />
+  );
+
+  return (
+    <div className="space-y-6">
+      <GoalsList goals={goals} />
+      <GoalFormModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onSubmit={addGoal}
+      />
+    </div>
+  );
+}
+
+// ❌ WRONG — page فيها fetch + JSX معقد
+export default function GoalsPage() {
+  const [goals, setGoals] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/goals').then(res => setGoals(res.data.items)).finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div>
+      {loading ? <div className="animate-pulse h-10 bg-gray-200 rounded" /> : (
+        goals.map(goal => (
+          <div key={goal.id} className="bg-white border border-gray-200 rounded-xl p-4">
+            <h3 className="text-gray-900 font-semibold">{goal.title}</h3>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## 3. Custom Hooks — كل الـ Data Logic هنا
+
+كل fetch وstate logic لازم تكون في custom hook مش في الـ component.
+
+```ts
+// ✅ CORRECT
+// src/hooks/useGoals.ts
+export function useGoals() {
+  const [goals, setGoals]   = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]   = useState<string | null>(null);
+  const { accessToken }     = useAuthStore();
+  const { t }               = useTranslation('common');
+
+  const fetchGoals = useCallback(async (signal?: AbortSignal) => {
+    if (!accessToken) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get('/goals', { signal });
+      setGoals(res.data.items);
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'ERR_CANCELED') return;
+      setError(t('errors.loadFailed'));
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken, t]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchGoals(controller.signal);
+    return () => controller.abort();
+  }, [fetchGoals]);
+
+  const addGoal = useCallback(async (data: GoalCreateInput) => {
+    const res = await api.post('/goals', data);
+    setGoals(prev => [...prev, res.data.data]);
+  }, []);
+
+  return { goals, loading, error, refetch: fetchGoals, addGoal };
+}
+
+// ❌ WRONG — fetch داخل الـ component مباشرة
+function GoalsPage() {
+  const [goals, setGoals] = useState([]);
+  useEffect(() => {
+    api.get('/goals').then(res => setGoals(res.data.items)); // ❌
+  }, []);
+}
+```
+
+---
+
+## 4. Design System — ممنوع Hardcode Colors
+
+كل الألوان من CSS variables الموجودة في `index.css`. بدون استثناء.
+
+```tsx
+// ✅ CORRECT
+<div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-[var(--shadow-sm)]">
+<h2 className="text-[var(--text-primary)] font-bold">
+<p className="text-[var(--text-secondary)] text-sm">
+<span className="text-[var(--success)]">+2.5%</span>
+<span className="text-[var(--danger)]">-1.2%</span>
+<button className="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white">
+<div className="bg-[var(--success-bg)] text-[var(--success-text)]">
+<input className="bg-[var(--bg-input)] border-[var(--border)] focus:border-[var(--brand)]">
+
+// ❌ WRONG — hardcoded colors
+<div className="bg-white border-gray-200">
+<h2 className="text-gray-900">
+<span className="text-green-500">+2.5%</span>
+<span className="text-red-500">-1.2%</span>
+<button className="bg-purple-600 hover:bg-purple-700">
+<div style={{ color: '#7c3aed', background: '#fff' }}>
+<div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb' }}>
+```
+
+### CSS Variables المتاحة:
+
+```
+── Backgrounds ──────────────────────────────
+--bg-primary        الخلفية الرئيسية للصفحة
+--bg-secondary      خلفية ثانوية
+--bg-card           خلفية الكروت
+--bg-card-hover     hover على الكروت
+--bg-input          خلفية الـ inputs
+--bg-sidebar        خلفية الـ sidebar
+--bg-header         خلفية الـ header
+
+── Text ─────────────────────────────────────
+--text-primary      النص الرئيسي
+--text-secondary    النص الثانوي
+--text-muted        نص باهت
+--text-disabled     نص معطل
+--text-inverse      نص على خلفية داكنة
+
+── Brand ────────────────────────────────────
+--brand             اللون الأساسي (بنفسجي)
+--brand-hover       hover على الـ brand
+--brand-subtle      خلفية خفيفة brand
+--brand-text        نص على brand background
+
+── Status ───────────────────────────────────
+--success           أخضر (ارتفاع السعر)
+--success-bg        خلفية خضراء خفيفة
+--success-text      نص على success background
+--danger            أحمر (انخفاض السعر)
+--danger-bg         خلفية حمراء خفيفة
+--danger-text       نص على danger background
+--warning           برتقالي (تحذير)
+--warning-bg        خلفية برتقالية خفيفة
+--warning-text      نص على warning background
+
+── Borders & Shadows ────────────────────────
+--border            border عادي
+--border-subtle     border خفيف
+--border-strong     border قوي
+--shadow-sm         shadow صغير
+--shadow-md         shadow متوسط
+--shadow-lg         shadow كبير
+```
+
+---
+
+## 5. Design System Components — استخدم الموجود فقط
+
+ممنوع تعمل raw HTML لما يوجد component جاهز.
+
+```tsx
+// ✅ CORRECT — استخدم الـ shared components
+import { Button }       from '@/components/shared/Button';
+import { Input }        from '@/components/shared/Input';
+import { EmptyState }   from '@/components/shared/EmptyState';
+import { PageLoader }   from '@/components/shared/PageLoader';
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
+import { SkeletonList } from '@/components/shared/Skeleton';
+
+<Button variant="primary" loading={isSubmitting} disabled={isSubmitting}>
+  {t('goals.save')}
+</Button>
+
+<Button variant="secondary" onClick={onCancel}>
+  {t('common.cancel')}
+</Button>
+
+<Button variant="danger" onClick={onDelete}>
+  {t('common.delete')}
+</Button>
+
+<Input
+  {...register('email')}
+  type="email"
+  placeholder={t('auth.emailPlaceholder')}
+  error={errors.email?.message}
+  dir="ltr"
+/>
+
+// ❌ WRONG — raw HTML
+<button className="bg-purple-600 text-white px-4 py-2 rounded-lg">
+  حفظ
+</button>
+<input
+  type="email"
+  className="border border-gray-300 rounded px-3 py-2 w-full"
+  value={email}
+  onChange={e => setEmail(e.target.value)}
+/>
+```
+
+### جدول الـ Components المتاحة:
+
+| Component | الاستخدام |
+|---|---|
+| `<Button>` | كل الأزرار |
+| `<Input>` | كل الـ inputs |
+| `<EmptyState>` | القوائم الفارغة |
+| `<PageLoader>` | Lazy load fallback |
+| `<SkeletonList>` | Loading states |
+| `<ErrorBoundary>` | لف كل الـ routes |
+| `<ErrorMessage>` | عرض الأخطاء مع retry |
+| `<BottomNav>` | التنقل على الـ mobile |
+| `<SettingsLayout>` | صفحات الإعدادات |
+
+---
+
+## 6. Forms — react-hook-form + Zod دايماً
+
+```tsx
+// ✅ CORRECT
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const goalSchema = z.object({
+  title:        z.string().min(1, t('validation.required')).max(100),
+  targetAmount: z.number({ invalid_type_error: t('validation.mustBeNumber') })
+                 .positive(t('validation.mustBePositive'))
+                 .max(100_000_000),
+  category:     z.string().min(1, t('validation.required')),
+  deadline:     z.string().datetime().optional(),
+});
+
+type GoalFormData = z.infer<typeof goalSchema>;
+
+export function GoalFormModal({ onSubmit, onClose }: Props) {
+  const { t } = useTranslation('common');
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<GoalFormData>({ resolver: zodResolver(goalSchema) });
+
+  const handleFormSubmit = async (data: GoalFormData) => {
+    await onSubmit(data);
+    reset();
+    onClose();
+  };
+
+  return (
+    <form onSubmit={handleSubmit(handleFormSubmit)}>
+      <Input
+        {...register('title')}
+        placeholder={t('goals.titlePlaceholder')}
+        error={errors.title?.message}
+      />
+      <Input
+        {...register('targetAmount', { valueAsNumber: true })}
+        type="number"
+        error={errors.targetAmount?.message}
+      />
+      <Button type="submit" variant="primary" loading={isSubmitting}>
+        {t('common.save')}
+      </Button>
+    </form>
+  );
+}
+
+// ❌ WRONG — manual state للـ form
+const [title, setTitle]         = useState('');
+const [amount, setAmount]       = useState('');
+const [titleError, setTitleError] = useState('');
+const [loading, setLoading]     = useState(false);
+
+const handleSubmit = async () => {
+  if (!title) { setTitleError('مطلوب'); return; }
+  setLoading(true);
+  await createGoal({ title, amount: Number(amount) });
+  setLoading(false);
+};
+```
+
+---
+
+## 7. Loading / Error / Empty States — الثلاثة دايماً
+
+```tsx
+// ✅ CORRECT — الثلاث حالات موجودين
+export default function GoalsPage() {
+  const { goals, loading, error, refetch } = useGoals();
+
+  if (loading) return <SkeletonList count={4} />;
+
+  if (error) return (
+    <ErrorMessage
+      message={error}
+      onRetry={refetch}
+    />
+  );
+
+  if (goals.length === 0) return (
+    <EmptyState
+      icon={Target}
+      title={t('goals.emptyTitle')}
+      description={t('goals.emptyDescription')}
+      actionLabel={t('goals.addFirst')}
+      onAction={openAddModal}
+    />
+  );
+
+  return <GoalsList goals={goals} />;
+}
+
+// ❌ WRONG — مفيش handling للحالات
+export default function GoalsPage() {
+  const { goals } = useGoals();
+  return <div>{goals.map(g => <GoalCard key={g.id} goal={g} />)}</div>;
+}
+```
+
+---
+
+## 8. AbortController — في كل useEffect فيه fetch
+
+```tsx
+// ✅ CORRECT
+useEffect(() => {
+  const controller = new AbortController();
+
+  const load = async () => {
+    try {
+      const res = await api.get('/goals', { signal: controller.signal });
+      setGoals(res.data.items);
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'ERR_CANCELED') return;
+      setError(t('errors.loadFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  load();
+  return () => controller.abort(); // cleanup عند الـ unmount
+}, [accessToken]);
+
+// ❌ WRONG — بيعمل state update على component اتشال
+useEffect(() => {
+  api.get('/goals').then(res => {
+    setGoals(res.data.items); // ❌ ممكن component يكون اتشال
+    setLoading(false);
+  });
+}, []);
+```
+
+---
+
+## 9. Event Listeners والـ Timers — cleanup دايماً
+
+```tsx
+// ✅ CORRECT — event listener
+useEffect(() => {
+  const handleClickOutside = (e: MouseEvent) => {
+    if (ref.current && !ref.current.contains(e.target as Node)) {
+      setOpen(false);
+    }
+  };
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, []);
+
+// ✅ CORRECT — timeout
+useEffect(() => {
+  if (!visible) return;
+  const id = setTimeout(() => setVisible(false), TIMEOUTS.toast);
+  return () => clearTimeout(id);
+}, [visible]);
+
+// ✅ CORRECT — interval
+useEffect(() => {
+  const id = setInterval(fetchLivePrices, CACHE_TTL.prices * 1000);
+  return () => clearInterval(id);
+}, []);
+
+// ✅ CORRECT — WebSocket
+useEffect(() => {
+  const ws = new WebSocket(WS_URL);
+  ws.onmessage = handleMessage;
+  return () => ws.close(); // cleanup
+}, []);
+
+// ❌ WRONG — memory leak
+useEffect(() => {
+  window.addEventListener('resize', handleResize);    // ❌ مش بيتشال
+  setTimeout(() => setVisible(false), 3000);          // ❌ مش بيتكنسل
+  setInterval(fetchPrices, 60_000);                   // ❌ بيفضل شغال
+}, []);
+```
+
+---
+
+## 10. React.memo و useCallback و useMemo
+
+### memo — على الـ components اللي بتاخد props وممكن parent يـ re-render
+
+```tsx
+// ✅ CORRECT
+const StockCard = memo(function StockCard({
+  stock,
+  isInWatchlist,
+  onAdd,
+  onRemove,
+}: StockCardProps) {
+  return (
+    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4">
+      ...
+    </div>
+  );
+});
+
+// ✅ CORRECT — في الـ parent
+const handleAdd = useCallback((ticker: string) => {
+  addToWatchlist(ticker);
+}, [addToWatchlist]);
+
+const handleRemove = useCallback((ticker: string) => {
+  removeFromWatchlist(ticker);
+}, [removeFromWatchlist]);
+
+<StockCard
+  stock={stock}
+  isInWatchlist={watchlist.includes(stock.ticker)}
+  onAdd={handleAdd}
+  onRemove={handleRemove}
+/>
+
+// ❌ WRONG — بيكسر الـ memo لأن function جديدة في كل render
+<StockCard
+  onAdd={(ticker) => addToWatchlist(ticker)}    // ❌ new function كل render
+  onRemove={(ticker) => removeFromWatchlist(ticker)} // ❌
+/>
+```
+
+### useMemo — للعمليات الحسابية الثقيلة
+
+```tsx
+// ✅ CORRECT
+const sortedAndFilteredStocks = useMemo(() => {
+  return stocks
+    .filter(s => s.name.includes(search) || s.ticker.includes(search.toUpperCase()))
+    .sort((a, b) => {
+      if (sort === 'change') return b.changePercent - a.changePercent;
+      if (sort === 'volume') return b.volume - a.volume;
+      return a.name.localeCompare(b.name);
+    });
+}, [stocks, search, sort]);
+
+const portfolioStats = useMemo(() => {
+  const totalValue    = holdings.reduce((sum, h) => sum + h.currentValue, 0);
+  const totalCost     = holdings.reduce((sum, h) => sum + h.totalCost, 0);
+  const totalGainLoss = totalValue - totalCost;
+  const gainLossPercent = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
+  return { totalValue, totalCost, totalGainLoss, gainLossPercent };
+}, [holdings]);
+
+// ❌ WRONG — بتتحسب في كل render
+const sortedStocks = stocks
+  .filter(s => s.name.includes(search))
+  .sort((a, b) => b.changePercent - a.changePercent);
+```
+
+---
+
+## 11. State Management
+
+### Zustand للـ Global State — مش useContext
+
+```tsx
+// ✅ CORRECT — استخدم selector لتجنب re-renders غير ضرورية
+const user         = useAuthStore((s) => s.user);
+const accessToken  = useAuthStore((s) => s.accessToken);
+const logout       = useAuthStore((s) => s.logout);
+
+// ❌ WRONG — بيجيب كل الـ store وبيـ re-render عند أي تغيير
+const store = useAuthStore(); // ❌
+const { user, logout } = useAuthStore(); // ❌ destructure بدون selector
+```
+
+### ممنوع Prop Drilling أكتر من Level واحد
+
+```tsx
+// ✅ CORRECT — استخدم store مباشرة
+function ProfileMenu() {
+  const user   = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  return <button onClick={logout}>{user?.fullName}</button>;
+}
+
+// ❌ WRONG — prop drilling عبر 3 levels
+<App user={user} onLogout={logout}>
+  <Header user={user} onLogout={onLogout}>
+    <ProfileMenu user={user} onLogout={onLogout} />
+  </Header>
+</App>
+```
+
+### useState للـ Local State فقط
+
+```tsx
+// ✅ CORRECT — local UI state
+const [isOpen, setIsOpen]   = useState(false);
+const [search, setSearch]   = useState('');
+const [activeTab, setActiveTab] = useState<'overview' | 'financials' | 'ai'>('overview');
+
+// ❌ WRONG — data من API كـ useState عشوائي
+const [userData, setUserData] = useState(null); // ❌ يروح في custom hook
+const [stocks, setStocks]     = useState([]);   // ❌ يروح في useStocks hook
+```
+
+---
+
+## 12. i18n — مفيش نص hardcoded
+
+```tsx
+// ✅ CORRECT
+const { t } = useTranslation('common');
+
+<h1>{t('dashboard.title')}</h1>
+<p>{t('goals.emptyDescription')}</p>
+<button>{t('common.save')}</button>
+<span>{t('portfolio.totalValue')}</span>
+toast.error(t('errors.loadFailed'));
+toast.success(t('goals.created'));
+
+// ✅ مع variables
+<p>{t('goals.progress', { percent: 75 })}</p>
+<p>{t('stocks.results', { count: filteredStocks.length })}</p>
+
+// ❌ WRONG — hardcoded text
+<h1>لوحة التحكم</h1>
+<h1>Dashboard</h1>
+<button>حفظ</button>
+toast.error('فشل تحميل البيانات');
+toast.error('Failed to load data');
+```
+
+لازم الـ key موجود في:
+- `public/locales/ar/common.json`
+- `public/locales/en/common.json`
+
+---
+
+## 13. Numbers وAlignmentالأرقام المالية
+
+```tsx
+// ✅ CORRECT — تنسيق الأرقام المالية
+const formatPrice = (value: number, currency = 'EGP') =>
+  new Intl.NumberFormat(i18n.language, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+
+const formatPercent = (value: number) =>
+  `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+
+// ✅ CORRECT — tabular numbers لمحاذاة الأرقام
+<span className="font-mono tabular-nums text-[var(--text-primary)]">
+  {formatPrice(stock.price)}
+</span>
+
+<span className={`tabular-nums font-semibold ${
+  change >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'
+}`}>
+  {formatPercent(change)}
+</span>
+
+// ❌ WRONG
+<span>{stock.price}</span>
+<span className="text-green-500">{change}%</span>
+```
+
+---
+
+## 14. RTL/LTR Support
+
+```tsx
+// ✅ CORRECT — الـ layout يراعي الاتجاه
+const { i18n } = useTranslation();
+const isRTL = i18n.language.startsWith('ar');
+
+<div dir={isRTL ? 'rtl' : 'ltr'} className={isRTL ? 'font-arabic' : 'font-latin'}>
+
+// ✅ CORRECT — استخدم start/end بدل left/right
+<div className="ms-4">   {/* margin-start — يشتغل RTL وLTR */}
+<div className="pe-6">   {/* padding-end */}
+<div className="text-start">
+
+// ❌ WRONG — hardcoded direction
+<div className="ml-4">   {/* بيتكسر في RTL */}
+<div className="pr-6">
+<div className="text-left">
+
+// ✅ CORRECT — الأرقام والأسعار دايماً LTR
+<span dir="ltr" className="tabular-nums">
+  {formatPrice(1234.56)}
+</span>
+```
+
+---
+
+## 15. TypeScript — Props لازم تكون Typed
+
+```tsx
+// ✅ CORRECT
+interface GoalCardProps {
+  goal:         Goal;
+  onEdit:       (id: string) => void;
+  onDelete:     (id: string) => void;
+  onAddAmount:  (id: string, amount: number) => void;
+}
+
+const GoalCard = memo(function GoalCard({
+  goal,
+  onEdit,
+  onDelete,
+  onAddAmount,
+}: GoalCardProps) {
+  return <div>...</div>;
+});
+
+// ❌ WRONG
+function GoalCard({ goal, onEdit, onDelete }: any) { ... }
+function GoalCard(props: any) { ... }
+function GoalCard({ goal, ...rest }) { ... } // بدون types
+```
+
+---
+
+## 16. Constants — ممنوع Magic Numbers في الـ Frontend
+
+```tsx
+// ✅ CORRECT
+import { FREE_LIMITS, TIMEOUTS, PLAN_PRICES } from '@/lib/constants';
+
+if (holdings.length >= FREE_LIMITS.portfolioHoldings) {
+  toast.error(t('portfolio.limitReached'));
+}
+
+const id = setTimeout(() => setVisible(false), TIMEOUTS.toast);
+
+// ❌ WRONG
+if (holdings.length >= 5) { ... }         // ❌ magic number
+setTimeout(() => setVisible(false), 3000); // ❌ magic number
+if (watchlist.length >= 10) { ... }        // ❌ magic number
+```
+
+---
+
+## 17. Accessibility — a11y
+
+```tsx
+// ✅ CORRECT — كل button فيه icon بس لازم aria-label
+<button
+  onClick={handleClose}
+  aria-label={t('common.close')}
+  className="..."
+>
+  <X className="w-5 h-5" aria-hidden="true" />
+</button>
+
+// ✅ CORRECT — كل صورة لازم alt
+<img
+  src={user.avatarUrl}
+  alt={t('profile.avatarAlt', { name: user.fullName })}
+  className="w-10 h-10 rounded-full object-cover"
+/>
+
+// ✅ CORRECT — decorative images
+<img src="/pattern.svg" alt="" aria-hidden="true" />
+
+// ✅ CORRECT — loading state مع role
+<div role="status" aria-label={t('common.loading')}>
+  <PageLoader />
+</div>
+
+// ✅ CORRECT — active nav item
+<button aria-current={isActive ? 'page' : undefined}>
+  {t(item.labelKey)}
+</button>
+
+// ❌ WRONG
+<button onClick={handleClose}><X /></button>  // ❌ no aria-label
+<img src={url} />                             // ❌ no alt
+```
+
+---
+
+## 18. Console — ممنوع في الـ Frontend Production
+
+```tsx
+// ✅ CORRECT — بس في development
+if (import.meta.env.DEV) {
+  console.log('WebSocket message:', data);
+  console.error('Fetch error:', err);
+}
+
+// ✅ CORRECT — errors في catch مقبولة بالشرط ده
+} catch (err: unknown) {
+  if (import.meta.env.DEV) console.error('Failed to load goals:', err);
+  setError(t('errors.loadFailed'));
+}
+
+// ❌ WRONG — console بدون guard
+console.log('user:', user);
+console.log('stocks loaded:', stocks.length);
+console.error(err); // بيظهر في production
+```
+
+---
+
+## 19. Folder Structure
+
+```
+src/
+  pages/
+    DashboardPage.tsx
+    GoalsPage.tsx
+    MarketPage.tsx
+    StockDetailPage.tsx
+
+  components/
+    features/
+      goals/
+        GoalsList.tsx
+        GoalCard.tsx
+        GoalFormModal.tsx
+        GoalAmountModal.tsx
+      portfolio/
+        PortfolioTable.tsx
+        HoldingCard.tsx
+        AddHoldingModal.tsx
+      stocks/
+        StockCard.tsx
+        StockFilters.tsx
+        StockTable.tsx
+        StockDetailHeader.tsx
+    shared/
+      Button.tsx
+      Input.tsx
+      EmptyState.tsx
+      PageLoader.tsx
+      ErrorBoundary.tsx
+      ErrorMessage.tsx
+      Skeleton.tsx
+    layout/
+      Sidebar.tsx
+      Header.tsx
+      BottomNav.tsx
+      SettingsLayout.tsx
+
+  hooks/
+    useGoals.ts
+    usePortfolio.ts
+    useStockScreener.ts
+    useStockDetail.ts
+    useDashboardStats.ts
+    useNotifications.ts
+    useLivePrices.ts
+    useTheme.ts
+
+  lib/
+    constants.ts
+    validations.ts
+    api.ts
+    utils.ts
+
+  store/
+    authStore.ts
+
+  types/
+    index.ts
+```
+
+---
+
+## 20. Checklist قبل كل Component جديد
+
+```
+[ ] الـ component مش بيتعدى الـ size limit
+[ ] مفيش hardcoded colors — كل حاجة CSS variables
+[ ] مفيش raw <button> أو <input> — استخدم Button/Input
+[ ] مفيش نص عربي أو إنجليزي hardcoded — استخدم t()
+[ ] مفيش magic numbers — استخدم constants
+[ ] كل useEffect فيه fetch عنده AbortController وcleanup
+[ ] كل addEventListener عنده removeEventListener في الـ cleanup
+[ ] كل setTimeout عنده clearTimeout في الـ cleanup
+[ ] الـ form بيستخدم react-hook-form + Zod
+[ ] Loading / Error / Empty states موجودين
+[ ] Data logic في custom hook مش في الـ component
+[ ] Props مكتوبة بـ interface واضح مش any
+[ ] مفيش console.* بدون import.meta.env.DEV guard
+[ ] مفيش prop drilling أكتر من level واحد
+[ ] npx tsc --noEmit — صفر errors
+```

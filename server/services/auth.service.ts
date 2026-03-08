@@ -260,8 +260,9 @@ export async function twoFaAuthenticate(
     fail(401, 'invalid_or_expired_token');
   }
 
+  if (!userId) fail(401, 'unauthorized');
   const user = await prisma.user.findUnique({
-    where: { id: userId! },
+    where: { id: userId },
     select: {
       id: true,
       email: true,
@@ -614,8 +615,10 @@ export async function googleCallback(
   const refreshToken = generateRefreshToken();
   const refreshHash = hashRefreshToken(refreshToken);
   const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
-  const refreshData = await buildRefreshTokenData(user.id, refreshHash, expiresAt, ctx.ip, ctx.userAgent).catch(() =>
-    buildRefreshTokenData(user!.id, refreshHash, expiresAt, null, ctx.userAgent)
+  const userId = user?.id;
+  if (!userId) throw new Error('Unauthorized');
+  const refreshData = await buildRefreshTokenData(userId, refreshHash, expiresAt, ctx.ip, ctx.userAgent).catch(() =>
+    buildRefreshTokenData(userId, refreshHash, expiresAt, null, ctx.userAgent)
   );
   await prisma.refreshToken.create({ data: refreshData });
 

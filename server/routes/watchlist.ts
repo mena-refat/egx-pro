@@ -1,4 +1,5 @@
-import { Router, Response } from 'express';
+import { Router, Response, Request } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { prisma } from '../lib/prisma.ts';
 import { watchlistTickerSchema, watchlistCheckTargetsSchema } from '../../src/lib/validations.ts';
 import { AuthRequest } from './types';
@@ -10,11 +11,22 @@ import { logger } from '../lib/logger.ts';
 
 const router = Router();
 
+const watchlistAddLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req as AuthRequest).userId ?? (req as Request).ip ?? 'anon',
+  handler: (_req, res) => res.status(429).json({ error: 'Too many watchlist requests, try again later' }),
+});
+
 // Get watchlist
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     const watchlist = await prisma.watchlist.findMany({
-      where: { userId: req.userId },
+      where: { userId },
       orderBy: { createdAt: 'desc' },
     });
     res.json(watchlist);
@@ -24,8 +36,11 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 });
 
 // Add to watchlist
-router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
+router.post('/', authenticate, watchlistAddLimiter, async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
     const parsed = watchlistTickerSchema.safeParse(req.body);
     if (!parsed.success) {
       const msg = parsed.error.issues[0]?.message ?? 'Invalid ticker';
@@ -33,14 +48,13 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     }
     const { ticker, targetPrice: bodyTargetPrice } = parsed.data;
 
-    const userId = req.user?.id ?? req.userId;
     const user = await prisma.user.findUnique({
-      where: { id: userId! },
+      where: { id: userId },
       select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
     });
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     if (!isPro(user)) {
-      const count = await prisma.watchlist.count({ where: { userId: req.userId! } });
+      const count = await prisma.watchlist.count({ where: { userId } });
       if (count >= FREE_LIMITS.watchlistStocks) {
         return res.status(403).json({
           error: 'pro_required',
@@ -60,20 +74,20 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 
     // Check if already exists
     const existing = await prisma.watchlist.findFirst({
-      where: { userId: req.userId!, ticker }
+      where: { userId, ticker }
     });
     
     if (existing) return res.status(400).json({ error: 'Already in watchlist' });
 
-    const completedBefore = await getCompletedAchievementIds(req.userId!);
+    const completedBefore = await getCompletedAchievementIds(userId);
     const item = await prisma.watchlist.create({
       data: {
-        userId: req.userId!,
+        userId,
         ticker,
         targetPrice: bodyTargetPrice ?? undefined,
       },
     });
-    const newAchievements = await addNewlyUnlockedAchievements(req.userId!, completedBefore);
+    const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
     res.status(201).json({ ...item, newUnseenAchievements: newAchievements });
   } catch {
     res.status(500).json({ error: 'Internal server error' });
@@ -83,12 +97,15 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 // Update watchlist item (e.g. target price) — price alerts are Pro only
 router.patch('/:ticker', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
     const ticker = req.params.ticker?.toUpperCase();
     if (!ticker) return res.status(400).json({ error: 'Invalid ticker' });
     const targetPrice = typeof req.body?.targetPrice === 'number' ? req.body.targetPrice : null;
     if (targetPrice != null) {
       const user = await prisma.user.findUnique({
-        where: { id: req.userId! },
+        where: { id: userId },
         select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
       });
       if (!user || !isPro(user)) {
@@ -100,7 +117,7 @@ router.patch('/:ticker', authenticate, async (req: AuthRequest, res: Response) =
       }
     }
     await prisma.watchlist.updateMany({
-      where: { userId: req.userId!, ticker },
+      where: { userId, ticker },
       data: targetPrice != null ? { targetPrice } : { targetPrice: null, targetReachedNotifiedAt: null },
     });
     res.json({ success: true });
@@ -141,8 +158,10 @@ router.post('/check-targets', authenticate, async (req: AuthRequest, res: Respon
 // Remove from watchlist
 router.delete('/:ticker', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     await prisma.watchlist.deleteMany({
-      where: { userId: req.userId, ticker: req.params.ticker },
+      where: { userId, ticker: req.params.ticker },
     });
     res.status(204).send();
   } catch {

@@ -60,8 +60,7 @@ export default function ProfilePage() {
   };
 
   const tabProps = {
-    user: user!,
-    accessToken,
+    user,
     onUpdateProfile: updateProfile,
     onLogout: logout,
     setRequestStatus,

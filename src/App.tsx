@@ -31,20 +31,18 @@ export default function App() {
   const { i18n } = useTranslation('common');
   const { isAuthenticated, user, logout, updateUser, accessToken } = useAuthStore();
   const [theme, setTheme] = useTheme(user);
-  const { profileCompletion } = useProfileCompletion(isAuthenticated, accessToken);
+  const { profileCompletion } = useProfileCompletion(isAuthenticated);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => (typeof window !== 'undefined' && localStorage.getItem('sidebarCollapsed') === 'true'));
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
   const { notifications, unreadCount: notificationsUnread, notificationsLoading, fetchNotifications, markAllRead: markNotificationsRead, markOneRead: markOneNotificationRead, clearAll: clearAllNotifications } = useNotifications(isAuthenticated);
-  const stats = useDashboardStats(isAuthenticated, pathname, accessToken);
+  const stats = useDashboardStats(isAuthenticated, pathname);
 
   useEffect(() => { localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed)); }, [sidebarCollapsed]);
 
   const onToggleSidebar = useCallback(() => setSidebarCollapsed((c) => !c), []);
   const onCompleteOnboarding = useCallback(() => updateUser({ isFirstLogin: false, onboardingCompleted: true }), [updateUser]);
-  const onSelectStock = useCallback((s: { ticker: string }) => navigate(`/stocks/${s.ticker}`), [navigate]);
-
   const handleThemeChange = async (nextTheme: 'dark' | 'light' | 'system') => {
     setTheme(nextTheme);
     if (accessToken) {
@@ -90,7 +88,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row">
-      <Sidebar activeRoute={pathname} onNavigate={navigate} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />
+      <Sidebar activeRoute={pathname} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />
       <main className="flex-1 p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto">
         <Header
           user={user ?? null}
@@ -105,7 +103,6 @@ export default function App() {
           theme={theme}
           onThemeChange={handleThemeChange}
           profileCompletion={profileCompletion}
-          onNavigate={navigate}
         />
         <AnimatePresence mode="wait">
           <motion.div key={pathname} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
@@ -115,9 +112,9 @@ export default function App() {
                 <Route path="/" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
                 <Route path="/dashboard" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
                 <Route path="/portfolio" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><PortfolioTracker /></Suspense></ErrorBoundary>} />
-                <Route path="/stocks" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><StockScreener onSelectStock={(s) => navigate(`/stocks/${s.ticker}`)} /></Suspense></ErrorBoundary>} />
+                <Route path="/stocks" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><StockScreener /></Suspense></ErrorBoundary>} />
                 <Route path="/stocks/:ticker" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><StockDetailPage /></Suspense></ErrorBoundary>} />
-                <Route path="/market" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><MarketPage onSelectStock={onSelectStock} /></Suspense></ErrorBoundary>} />
+                <Route path="/market" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><MarketPage /></Suspense></ErrorBoundary>} />
                 <Route path="/calculator" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><InvestmentCalculator /></Suspense></ErrorBoundary>} />
                 <Route path="/goals" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><GoalsPage currentWealth={stats.totalValue} /></Suspense></ErrorBoundary>} />
                 <Route path="/settings" element={<ErrorBoundary><SettingsLayout /></ErrorBoundary>}>

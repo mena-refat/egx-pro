@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, Check, X, Pencil, Loader2 } from 'lucide-react';
+import { useAuthStore } from '../../../store/authStore';
 import { validateUsernameFormat, USERNAME_MAX_LENGTH } from '../../../lib/validations';
+import { TIMEOUTS } from '../../../lib/constants';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import type { ProfileTabProps } from './types';
@@ -12,7 +14,8 @@ function displayPhone(phone: string | null | undefined): string {
   return digits.startsWith('20') ? digits.slice(2) : digits;
 }
 
-export function AccountTab({ user, accessToken, onUpdateProfile, setRequestStatus }: ProfileTabProps) {
+export function AccountTab({ user, onUpdateProfile, setRequestStatus }: ProfileTabProps) {
+  const accessToken = useAuthStore((s) => s.accessToken);
   const { t, i18n } = useTranslation('common');
   const [editingField, setEditingField] = useState<'fullName' | 'username' | 'email' | 'phone' | null>(null);
   const [fullNameVal, setFullNameVal] = useState(user.fullName ?? '');
@@ -92,7 +95,7 @@ export function AccountTab({ user, accessToken, onUpdateProfile, setRequestStatu
         setUsernameStatus('error');
         setUsernameMessage(t('settings.usernameTaken'));
       }
-    }, 500);
+    }, TIMEOUTS.usernameCheckDebounce);
     return () => clearTimeout(h);
   }, [usernameVal, user.username, accessToken, t, usernameFormatError]);
 
@@ -156,7 +159,7 @@ export function AccountTab({ user, accessToken, onUpdateProfile, setRequestStatu
         successTimeoutRef.current = setTimeout(() => {
           setSuccessField(null);
           successTimeoutRef.current = null;
-        }, 2000);
+        }, TIMEOUTS.successFeedback);
       } catch (e) {
         setRequestStatus({ type: 'error', message: (e as Error).message || t('common.error') });
       } finally {

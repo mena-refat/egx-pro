@@ -6,6 +6,9 @@ import { logger } from '../lib/logger.ts';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
+import type { AuthRequest } from './types.ts';
+import { ONE_HOUR_MS } from '../lib/constants.ts';
+import { authenticate } from '../middleware/auth.middleware.ts';
 
 const router = Router();
 
@@ -19,11 +22,11 @@ function getFirstDayOfNextMonth(): Date {
 
 // Rate limit: 20 analysis per hour per user (network-level)
 const analysisLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: ONE_HOUR_MS,
   max: 20,
   message: { error: 'Too many analysis requests, please try again later.' },
   keyGenerator: (req) => {
-    const userId = (req as Request & { user?: { id: string } }).user?.id;
+    const userId = (req as AuthRequest).user?.id;
     if (userId) return userId;
     return ipKeyGenerator(req.ip ?? 'unknown');
   },
@@ -34,10 +37,10 @@ const analysisLimiter = rateLimit({
   }
 });
 
-router.post('/:ticker', analysisLimiter, async (req: Request, res: Response) => {
+router.post('/:ticker', authenticate, analysisLimiter, async (req: Request, res: Response) => {
   try {
     const { ticker } = req.params;
-    const userId = ('user' in req && (req as { user?: { id?: string } }).user?.id); // Ensure auth middleware sets this
+    const userId = (req as AuthRequest).user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: 'unauthorized' });

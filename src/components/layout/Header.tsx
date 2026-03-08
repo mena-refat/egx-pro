@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User as UserIcon, Settings as SettingsIcon, Sun, Moon, Monitor, Target, Bell, LogOut, Trophy, Briefcase, UserPlus as UserPlusIcon, ChevronRight } from 'lucide-react';
@@ -20,7 +21,6 @@ export type HeaderProps = {
   theme: 'dark' | 'light' | 'system';
   onThemeChange: (t: 'dark' | 'light' | 'system') => void;
   profileCompletion?: { percentage: number; missing: { field: string; route: string }[] } | null;
-  onNavigate: (path: string) => void;
 };
 
 export function Header({
@@ -36,9 +36,9 @@ export function Header({
   theme,
   onThemeChange,
   profileCompletion,
-  onNavigate,
 }: HeaderProps) {
   const { t, i18n } = useTranslation('common');
+  const navigate = useNavigate();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [profileCompletionOpen, setProfileCompletionOpen] = useState(false);
@@ -57,15 +57,15 @@ export function Header({
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  const goToSettings = () => { onNavigate('/settings'); setUserDropdownOpen(false); };
+  const goToSettings = () => { navigate('/settings'); setUserDropdownOpen(false); };
 
   const goToNotificationTarget = (type: string) => {
     setNotificationsOpen(false);
-    if (type === 'achievement') onNavigate('/settings?tab=achievements');
-    else if (type === 'stock_target') onNavigate('/stocks');
-    else if (type === 'referral') onNavigate('/settings?tab=referral');
-    else if (type === 'goal') onNavigate('/goals');
-    else if (type === 'portfolio') onNavigate('/portfolio');
+    if (type === 'achievement') navigate('/settings?tab=achievements');
+    else if (type === 'stock_target') navigate('/stocks');
+    else if (type === 'referral') navigate('/settings?tab=referral');
+    else if (type === 'goal') navigate('/goals');
+    else if (type === 'portfolio') navigate('/portfolio');
   };
 
   return (
@@ -116,7 +116,7 @@ export function Header({
                               type="button"
                               onClick={() => {
                                 setProfileCompletionOpen(false);
-                                onNavigate(m.route.startsWith('/profile') ? m.route.replace('/profile', '/settings') : m.route);
+                                navigate(m.route.startsWith('/profile') ? m.route.replace('/profile', '/settings') : m.route);
                               }}
                               className="text-xs font-medium text-[var(--brand-text)] hover:opacity-80 flex items-center gap-0.5"
                             >

@@ -183,9 +183,9 @@ export async function searchEgxStocks(query: string) {
     const quotes = (result.quotes || []) as Array<{ symbol?: string; shortname?: string; longname?: string }>;
 
     return quotes
-      .filter((q) => q.symbol && q.symbol.endsWith('.CA'))
+      .filter((q): q is typeof q & { symbol: string } => !!q.symbol && q.symbol.endsWith('.CA'))
       .map((q) => ({
-        ticker: q.symbol!.replace('.CA', ''),
+        ticker: q.symbol.replace('.CA', ''),
         name: q.shortname || q.longname || q.symbol,
         price: 0,
         change: 0,

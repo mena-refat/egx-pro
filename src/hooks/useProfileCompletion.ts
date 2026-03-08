@@ -1,9 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
 
 export type ProfileCompletion = { percentage: number; missing: { field: string; route: string }[] } | null;
 
-export function useProfileCompletion(isAuthenticated: boolean, accessToken: string | null) {
+export function useProfileCompletion(isAuthenticated: boolean) {
+  const accessToken = useAuthStore((s) => s.accessToken);
   const [profileCompletion, setProfileCompletion] = useState<ProfileCompletion>(null);
   const navigate = useNavigate();
   const location = useLocation();

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Stock } from '../types';
 import { getAccessToken } from '../lib/auth/tokens';
+import { TIMEOUTS } from '../lib/constants';
 
 export function useLivePrices() {
   const [prices, setPrices] = useState<Record<string, Stock>>({});
@@ -51,7 +52,7 @@ export function useLivePrices() {
         setIsConnected(false);
         if (import.meta.env.DEV) console.log('WebSocket disconnected. Reconnecting in 5s...');
         // Auto reconnect
-        reconnectTimeoutRef.current = setTimeout(connect, 5000);
+        reconnectTimeoutRef.current = setTimeout(connect, TIMEOUTS.reconnect);
       };
 
       ws.onerror = (error) => {

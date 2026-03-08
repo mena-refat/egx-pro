@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getAccessToken } from '../lib/auth/tokens';
+import { TIMEOUTS } from '../lib/constants';
 
 interface StockData {
   ticker: string;
@@ -63,7 +64,7 @@ export const useLiveStockPrices = () => {
       socketRef.current = null;
       reconnectTimeoutRef.current = setTimeout(() => {
         setRefreshTrigger(prev => prev + 1);
-      }, 5000);
+      }, TIMEOUTS.reconnect);
     };
 
     socket.onerror = (err) => {

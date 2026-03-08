@@ -1,0 +1,588 @@
+---
+description: API design rules, route structure, response format, middleware, and backend patterns for EGX Pro
+globs: ["server/**/*.ts"]
+alwaysApply: true
+---
+
+# API Rules — EGX Pro Backend
+
+---
+
+## 1. Route Structure
+
+كل route لازم يكون بالترتيب ده بالظبط: method → path → middleware → controller
+
+```ts
+// ✅ CORRECT
+import { Router } from 'express';
+import { authenticate } from '../middleware/auth';
+import { GoalsController } from '../controllers/goals.controller';
+
+const router = Router();
+
+router.get('/',              authenticate, GoalsController.list);
+router.post('/',             authenticate, GoalsController.create);
+router.put('/:id',           authenticate, GoalsController.update);
+router.patch('/:id/amount',  authenticate, GoalsController.updateAmount);
+router.delete('/:id',        authenticate, GoalsController.delete);
+
+export default router;
+
+// ❌ WRONG — business logic داخل الـ route مباشرة
+router.post('/', authenticate, async (req, res) => {
+  const count = await prisma.goal.count({ where: { userId: req.user.id } });
+  if (count >= 3) return res.status(403).json({ error: 'limit' });
+  const goal = await prisma.goal.create({ data: req.body });
+  res.json(goal);
+});
+```
+
+---
+
+## 2. Controller Rules
+
+Controller = request/response فقط. صفر business logic. صفر database calls.
+
+```ts
+// ✅ CORRECT
+export const GoalsController = {
+
+  async list(req: Request, res: Response) {
+    const { user } = req as AuthRequest;
+    const page = Number(req.query.page) || 1;
+    const result = await GoalsService.getUserGoals(user.id, page);
+    res.json(result);
+  },
+
+  async create(req: Request, res: Response) {
+    const { user } = req as AuthRequest;
+    const goal = await GoalsService.create(user, req.body);
+    res.status(201).json({ data: goal });
+  },
+
+  async update(req: Request, res: Response) {
+    const { user } = req as AuthRequest;
+    const goal = await GoalsService.update(user.id, req.params.id, req.body);
+    res.json({ data: goal });
+  },
+
+  async delete(req: Request, res: Response) {
+    const { user } = req as AuthRequest;
+    await GoalsService.delete(user.id, req.params.id);
+    res.json({ success: true });
+  },
+
+};
+
+// ❌ WRONG — database call داخل controller
+export const GoalsController = {
+  async create(req: Request, res: Response) {
+    const goal = await prisma.goal.create({ data: req.body }); // ❌
+    res.json(goal);
+  }
+};
+
+// ❌ WRONG — business logic داخل controller
+export const GoalsController = {
+  async create(req: Request, res: Response) {
+    const count = await prisma.goal.count({ where: { userId: req.user.id } }); // ❌
+    if (count >= 3) return res.status(403).json({ error: 'limit' }); // ❌
+    ...
+  }
+};
+```
+
+---
+
+## 3. Service Rules
+
+Service = كل الـ business logic. بيستخدم Repository. مش بيتعامل مع req أو res.
+
+```ts
+// ✅ CORRECT
+export const GoalsService = {
+
+  async getUserGoals(userId: string, page: number) {
+    return GoalsRepository.findByUser(userId, page, 10);
+  },
+
+  async create(user: AuthUser, body: unknown) {
+    const data = goalSchema.parse(body);
+    if (!isPro(user)) {
+      await GoalsRepository.enforceLimit(user.id);
+    }
+    const goal = await GoalsRepository.create(user.id, data);
+    await AchievementService.checkGoalAchievements(user.id);
+    return goal;
+  },
+
+  async update(userId: string, goalId: string, body: unknown) {
+    const data = goalUpdateSchema.parse(body);
+    const existing = await GoalsRepository.findOwned(goalId, userId);
+    if (!existing) throw new AppError('NOT_FOUND', 404);
+    return GoalsRepository.update(goalId, data);
+  },
+
+  async delete(userId: string, goalId: string) {
+    const existing = await GoalsRepository.findOwned(goalId, userId);
+    if (!existing) throw new AppError('NOT_FOUND', 404);
+    await GoalsRepository.delete(goalId);
+  },
+
+};
+
+// ❌ WRONG — prisma مباشرة داخل service
+export const GoalsService = {
+  async create(userId: string, body: unknown) {
+    return prisma.goal.create({ data: { userId, ...body } }); // ❌ يروح في repository
+  }
+};
+```
+
+---
+
+## 4. Repository Rules
+
+Repository = كل الـ database queries. مفيش logic. مفيش validation.
+
+```ts
+// ✅ CORRECT
+export const GoalsRepository = {
+
+  async findByUser(userId: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+    const [items, total] = await Promise.all([
+      prisma.goal.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.goal.count({ where: { userId } }),
+    ]);
+    return {
+      items,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  },
+
+  // ownership check مدمج في الـ query نفسه
+  async findOwned(id: string, userId: string) {
+    return prisma.goal.findUnique({ where: { id, userId } });
+  },
+
+  async create(userId: string, data: GoalCreateInput) {
+    return prisma.goal.create({ data: { userId, ...data } });
+  },
+
+  async update(id: string, data: GoalUpdateInput) {
+    return prisma.goal.update({ where: { id }, data });
+  },
+
+  async delete(id: string) {
+    return prisma.goal.delete({ where: { id } });
+  },
+
+  async enforceLimit(userId: string) {
+    const count = await prisma.goal.count({ where: { userId } });
+    if (count >= FREE_LIMITS.goals) {
+      throw new AppError('GOAL_LIMIT_REACHED', 403);
+    }
+  },
+
+};
+
+// ❌ WRONG — business logic داخل repository
+export const GoalsRepository = {
+  async create(userId: string, data: unknown) {
+    if (!isPro(user)) { // ❌ logic مش هنا
+      const count = await prisma.goal.count({ where: { userId } });
+      if (count >= 3) throw new Error('limit'); // ❌ magic number
+    }
+    return prisma.goal.create({ data: { userId, ...data } });
+  }
+};
+```
+
+---
+
+## 5. API Response Format
+
+كل الـ responses لازم تتبع الـ format ده بالظبط. بدون استثناء.
+
+```ts
+// ✅ Single item — GET /:id أو POST
+res.status(200).json({ data: goal });
+res.status(201).json({ data: goal });
+
+// ✅ List مع pagination — GET /
+res.status(200).json({
+  items: goals,
+  pagination: {
+    page: 1,
+    limit: 10,
+    total: 47,
+    totalPages: 5,
+  },
+});
+
+// ✅ Simple action — DELETE أو PATCH بدون return
+res.status(200).json({ success: true });
+
+// ✅ Errors — دايماً error code string، مش message
+res.status(400).json({ error: 'VALIDATION_ERROR' });
+res.status(401).json({ error: 'UNAUTHORIZED' });
+res.status(403).json({ error: 'FORBIDDEN' });
+res.status(403).json({ error: 'PLAN_LIMIT_REACHED' });
+res.status(403).json({ error: 'GOAL_LIMIT_REACHED' });
+res.status(404).json({ error: 'NOT_FOUND' });
+res.status(409).json({ error: 'EMAIL_ALREADY_EXISTS' });
+res.status(409).json({ error: 'PHONE_ALREADY_EXISTS' });
+res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' });
+res.status(500).json({ error: 'INTERNAL_ERROR' });
+
+// ❌ WRONG — inconsistent formats
+res.json(goal);                                          // no wrapper
+res.json({ success: true, data: goal, goal: goal });    // mixed keys
+res.status(400).json({ message: 'bad request' });       // message بدل error
+res.status(500).json({ error: err.message });           // بتكشف internals
+res.status(403).json({ error: 'limit reached' });       // string مش code
+```
+
+---
+
+## 6. Input Validation
+
+كل input لازم يتـ validate بـ Zod قبل أي حاجة تانية.
+
+```ts
+// ✅ CORRECT — validate في بداية الـ service
+export const GoalsService = {
+  async create(user: AuthUser, body: unknown) {
+    const data = goalSchema.parse(body); // ZodError لو invalid
+    ...
+  }
+};
+
+// ✅ Zod schemas في server/lib/validations.ts
+export const goalSchema = z.object({
+  title:          z.string().min(1).max(100),
+  targetAmount:   z.number().positive().max(100_000_000),
+  currentAmount:  z.number().min(0).max(100_000_000).default(0),
+  currency:       z.string().length(3).default('EGP'),
+  category:       z.string().min(1).max(50),
+  deadline:       z.string().datetime().optional(),
+  monthlyTarget:  z.number().positive().optional(),
+});
+
+export const goalUpdateSchema = goalSchema.partial();
+
+// ❌ WRONG — استخدام req.body مباشرة
+export const GoalsService = {
+  async create(userId: string, body: any) { // ❌
+    return GoalsRepository.create(userId, body); // ❌ unvalidated data
+  }
+};
+```
+
+---
+
+## 7. Authentication Middleware
+
+كل route محتاج auth لازم يكون عنده `authenticate` middleware.
+
+```ts
+// ✅ CORRECT
+router.get('/',     authenticate, GoalsController.list);
+router.post('/',    authenticate, GoalsController.create);
+router.put('/:id',  authenticate, GoalsController.update);
+router.delete('/:id', authenticate, GoalsController.delete);
+
+// ✅ Public routes — explicitly mark them
+router.post('/login',    AuthController.login);    // public intentionally
+router.post('/register', AuthController.register); // public intentionally
+
+// ❌ WRONG — route محمية بدون middleware
+router.post('/upgrade',   BillingController.upgrade);  // ❌ missing authenticate
+router.get('/profile',    ProfileController.get);       // ❌ missing authenticate
+router.delete('/:id',     GoalsController.delete);      // ❌ missing authenticate
+```
+
+---
+
+## 8. Ownership Verification
+
+كل query بـ id لازم تتحقق إن الـ resource بتاع الـ user الحالي.
+
+```ts
+// ✅ CORRECT — userId في الـ where clause نفسه
+const goal = await prisma.goal.findUnique({
+  where: { id: goalId, userId: req.user.id }
+});
+if (!goal) return res.status(404).json({ error: 'NOT_FOUND' });
+
+// ✅ CORRECT — في الـ Repository
+async findOwned(id: string, userId: string) {
+  return prisma.goal.findUnique({ where: { id, userId } });
+}
+
+// ❌ WRONG — بتجيب الـ resource وبعدين تتحقق
+const goal = await prisma.goal.findUnique({ where: { id: goalId } });
+if (goal?.userId !== req.user.id) { // ❌ timing issue + extra query
+  return res.status(403).json({ error: 'FORBIDDEN' });
+}
+
+// ❌ WRONG — مفيش تحقق خالص
+const goal = await prisma.goal.findUnique({ where: { id: goalId } });
+await prisma.goal.delete({ where: { id: goalId } }); // ❌ أي حد يقدر يمسح
+```
+
+---
+
+## 9. Error Handling
+
+```ts
+// server/lib/errors.ts
+export class AppError extends Error {
+  constructor(
+    public readonly code: string,
+    public readonly status: number,
+    message?: string
+  ) {
+    super(message ?? code);
+    this.name = 'AppError';
+  }
+}
+
+// ✅ CORRECT — throw من الـ service
+throw new AppError('NOT_FOUND', 404);
+throw new AppError('GOAL_LIMIT_REACHED', 403);
+throw new AppError('UNAUTHORIZED', 401);
+throw new AppError('PLAN_REQUIRED', 403);
+
+// ✅ CORRECT — centralized handler في server.ts
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof AppError) {
+    return res.status(err.status).json({ error: err.code });
+  }
+  if (err.name === 'ZodError') {
+    return res.status(400).json({ error: 'VALIDATION_ERROR' });
+  }
+  logger.error('Unhandled error', { message: err.message, stack: err.stack });
+  res.status(500).json({ error: 'INTERNAL_ERROR' });
+});
+
+// ❌ WRONG — try/catch في كل route
+router.post('/', async (req, res) => {
+  try {
+    ...
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message }); // ❌ بيكشف internals
+  }
+});
+```
+
+---
+
+## 10. Rate Limiting
+
+```ts
+// ✅ CORRECT — من constants
+import { RATE_LIMITS } from '../lib/constants';
+
+const loginLimiter = rateLimit({
+  windowMs: RATE_LIMITS.login.windowMs,
+  max:      RATE_LIMITS.login.max,
+  message:  { error: 'RATE_LIMIT_EXCEEDED' },
+  keyGenerator: (req) => {
+    // IPv6 fix
+    const ip = req.ip ?? '';
+    return ip.startsWith('::ffff:') ? ip.slice(7) : ip;
+  },
+});
+
+// Apply على الـ routes:
+router.post('/login',    loginLimiter,    AuthController.login);
+router.post('/register', registerLimiter, AuthController.register);
+router.post('/analysis', apiLimiter,      AnalysisController.generate);
+
+// ❌ WRONG — hardcoded values
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5 }); // ❌ magic numbers
+```
+
+---
+
+## 11. Logging
+
+```ts
+// ✅ CORRECT — winston logger دايماً
+import { logger } from '../lib/logger';
+
+logger.info('User created goal', { userId: user.id, goalId: goal.id });
+logger.warn('Plan limit reached', { userId: user.id, plan: user.plan });
+logger.error('Yahoo Finance failed', { ticker, error: err.message });
+
+// ✅ Log important events:
+// - User login/logout
+// - Resource creation (goal, portfolio holding, watchlist)
+// - Plan upgrade/downgrade
+// - AI analysis used
+// - Failed auth attempts
+// - External API errors
+
+// ❌ WRONG
+console.log('goal created');
+console.error(err);
+
+// ❌ WRONG — sensitive data في logs
+logger.info('Login', { password: req.body.password });
+logger.debug('Token', { accessToken, refreshToken });
+```
+
+---
+
+## 12. Database Rules
+
+### كل model لازم عنده index على userId
+
+```prisma
+// ✅ CORRECT
+model Goal {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+
+// ❌ WRONG — full table scan على كل request
+model Goal {
+  id     String @id
+  userId String
+  // missing @@index([userId])
+}
+```
+
+### ممنوع N+1 — استخدم bulk queries
+
+```ts
+// ✅ CORRECT
+const tickers = holdings.map(h => h.ticker);
+const prices = await getBulkPrices(tickers); // request واحد
+
+// ❌ WRONG
+for (const holding of holdings) {
+  holding.price = await getPrice(holding.ticker); // N requests
+}
+```
+
+### استخدم Redis للـ expensive queries
+
+```ts
+// ✅ CORRECT
+const cacheKey = `prices:${ticker}`;
+const cached = await getCache(cacheKey);
+if (cached) return cached;
+
+const fresh = await fetchFromYahoo(ticker);
+await setCache(cacheKey, fresh, CACHE_TTL.prices);
+return fresh;
+
+// ❌ WRONG — hit database/API على كل request
+return fetchFromYahoo(ticker);
+```
+
+---
+
+## 13. Constants — ممنوع Magic Numbers
+
+```ts
+// server/lib/constants.ts
+
+export const FREE_LIMITS = {
+  goals:               3,
+  portfolioHoldings:   5,
+  watchlist:           10,
+  aiAnalysisPerMonth:  3,
+} as const;
+
+export const PLAN_PRICES = {
+  pro:    149,
+  yearly: 999,
+} as const;
+
+export const CACHE_TTL = {
+  prices:        60,
+  delayedPrices: 600,
+  news:          300,
+  market:        300,
+  profile:       600,
+} as const;
+
+export const RATE_LIMITS = {
+  login:    { max: 5,   windowMs: 15 * 60 * 1000 },
+  register: { max: 3,   windowMs: 60 * 60 * 1000 },
+  refresh:  { max: 10,  windowMs: 60 * 1000 },
+  api:      { max: 100, windowMs: 60 * 1000 },
+} as const;
+
+export const ONE_MINUTE_MS  = 60 * 1000;
+export const ONE_HOUR_MS    = 60 * 60 * 1000;
+export const ONE_DAY_MS     = 24 * 60 * 60 * 1000;
+export const THIRTY_DAYS_MS = 30 * ONE_DAY_MS;
+export const ONE_YEAR_MS    = 365 * ONE_DAY_MS;
+```
+
+---
+
+## 14. TypeScript Rules
+
+```ts
+// ✅ CORRECT — استخدم AuthRequest type دايماً
+import type { AuthRequest } from '../middleware/auth';
+
+router.get('/', authenticate, async (req: Request, res: Response) => {
+  const { user } = req as AuthRequest;
+  ...
+});
+
+// ✅ CORRECT — explicit return types
+async function getGoal(id: string, userId: string): Promise<Goal | null> { ... }
+async function createGoal(userId: string, data: GoalCreateInput): Promise<Goal> { ... }
+
+// ❌ WRONG — any
+async function create(req: any, res: any) { ... }
+const userId = (req as any).user?.id;
+
+// ❌ WRONG — non-null assertion بدون guard
+const userId = req.user!.id; // ❌ crashes if user undefined
+
+// ✅ CORRECT — guard أولاً
+const { user } = req as AuthRequest;
+if (!user?.id) throw new AppError('UNAUTHORIZED', 401);
+const userId = user.id; // safe
+```
+
+---
+
+## 15. Checklist قبل كل Route جديد
+
+```
+[ ] Route فيه authenticate middleware (لو مش public)
+[ ] Input بيتـ validate بـ Zod في الـ service
+[ ] Business logic في الـ service مش الـ controller
+[ ] Database queries في الـ repository مش الـ service
+[ ] كل query بـ id بتتحقق من userId (ownership)
+[ ] Response بيتبع الـ format الـ standard
+[ ] Errors بـ AppError مش throw new Error
+[ ] مفيش magic numbers (استخدم constants)
+[ ] مفيش console.* (استخدم logger)
+[ ] الـ model الجديد عنده @@index([userId])
+[ ] npx tsc --noEmit — صفر errors
+```

@@ -1,10 +1,10 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 
 export type SidebarProps = {
   activeRoute: string;
-  onNavigate: (path: string) => void;
   collapsed: boolean;
   onToggle: () => void;
 };
@@ -20,8 +20,9 @@ const NAV_ITEMS = [
   { id: 'settings', path: '/settings/account', icon: Settings },
 ] as const;
 
-export function Sidebar({ activeRoute, onNavigate, collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ activeRoute, collapsed, onToggle }: SidebarProps) {
   const { t } = useTranslation('common');
+  const navigate = useNavigate();
 
   return (
     <aside
@@ -57,7 +58,7 @@ export function Sidebar({ activeRoute, onNavigate, collapsed, onToggle }: Sideba
             <button
               key={item.id}
               title={collapsed ? label : undefined}
-              onClick={() => onNavigate(item.path)}
+              onClick={() => navigate(item.path)}
               className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 ${collapsed ? 'justify-center' : ''} ${isActive ? 'bg-[var(--brand)] text-[var(--text-inverse)] shadow-md' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'}`}
             >
               <item.icon className="w-5 h-5 shrink-0" />
