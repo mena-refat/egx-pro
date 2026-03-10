@@ -428,6 +428,7 @@
   "stocks": {
     "title": "Stocks",
     "searchPlaceholder": "Search by name or symbol...",
+    "sectorLabel": "Sector:",
     "sortLabel": "Sort:",
     "loadError": "Failed to load stocks",
     "filterAll": "All",
@@ -535,6 +536,12 @@
     "addFirst": "Add stock",
     "invalidTicker": "Please enter a valid ticker",
     "sharesPositive": "Shares must be greater than zero",
+    "errors": {
+      "quantityRequired": "Enter quantity",
+      "quantityInt": "Quantity must be a whole number",
+      "quantityMin": "Quantity must be at least 1",
+      "quantityMax": "Quantity is too large"
+    },
     "pricePositive": "Price must be greater than zero",
     "deleteConfirm": "Are you sure you want to delete this holding?",
     "totalValue": "Total Value",

@@ -62,9 +62,12 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps = {}
         onSearchChange={screener.setSearch}
         filter={screener.filter}
         onFilterChange={screener.setFilter}
+        sector={screener.sector}
+        onSectorChange={screener.setSector}
         sort={screener.sort}
         onSortChange={screener.setSort}
         isPro={screener.isPro}
+        isAr={screener.isAr}
         t={screener.t}
       />
       <StockTable

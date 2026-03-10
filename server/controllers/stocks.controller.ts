@@ -28,7 +28,8 @@ export const StocksController = {
 
   getPrices: run(async (req, res) => {
     const delayed = await useDelayed(req);
-    const prices = await StocksService.getBulkPrices(delayed);
+    const sector = typeof req.query.sector === 'string' ? req.query.sector : undefined;
+    const prices = await StocksService.getBulkPrices(delayed, sector);
     res.json({ data: prices });
   }),
 

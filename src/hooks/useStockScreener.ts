@@ -7,10 +7,41 @@ import { searchStocks, getStockName, getStockInfo } from '../lib/egxStocks';
 import { getSector, isInEGX30, isInEGX70, isInEGX100 } from '../lib/egxIndicesSectors';
 import { Stock } from '../types';
 
+export const SECTOR_OPTIONS = [
+  { value: '', labelAr: 'كل القطاعات', labelEn: 'All Sectors' },
+  { value: 'INFORMATION_TECHNOLOGY', labelAr: 'تكنولوجيا المعلومات', labelEn: 'Information Technology' },
+  { value: 'HEALTH_CARE', labelAr: 'الرعاية الصحية', labelEn: 'Health Care' },
+  { value: 'FINANCIALS', labelAr: 'المالية', labelEn: 'Financials' },
+  { value: 'CONSUMER_DISCRETIONARY', labelAr: 'الاستهلاك التقديري', labelEn: 'Consumer Discretionary' },
+  { value: 'CONSUMER_STAPLES', labelAr: 'السلع الأساسية', labelEn: 'Consumer Staples' },
+  { value: 'ENERGY', labelAr: 'الطاقة', labelEn: 'Energy' },
+  { value: 'INDUSTRIALS', labelAr: 'الصناعة', labelEn: 'Industrials' },
+  { value: 'MATERIALS', labelAr: 'المواد الخام', labelEn: 'Materials' },
+  { value: 'UTILITIES', labelAr: 'المرافق', labelEn: 'Utilities' },
+  { value: 'REAL_ESTATE', labelAr: 'العقارات', labelEn: 'Real Estate' },
+  { value: 'COMMUNICATION_SERVICES', labelAr: 'خدمات الاتصالات', labelEn: 'Communication Services' },
+] as const;
+
+export const GICS_SECTOR_LABELS: Record<string, { ar: string; en: string }> = {
+  INFORMATION_TECHNOLOGY: { ar: 'تكنولوجيا المعلومات', en: 'Information Technology' },
+  HEALTH_CARE: { ar: 'الرعاية الصحية', en: 'Health Care' },
+  FINANCIALS: { ar: 'المالية', en: 'Financials' },
+  CONSUMER_DISCRETIONARY: { ar: 'الاستهلاك التقديري', en: 'Consumer Discretionary' },
+  CONSUMER_STAPLES: { ar: 'السلع الأساسية', en: 'Consumer Staples' },
+  ENERGY: { ar: 'الطاقة', en: 'Energy' },
+  INDUSTRIALS: { ar: 'الصناعة', en: 'Industrials' },
+  MATERIALS: { ar: 'المواد الخام', en: 'Materials' },
+  UTILITIES: { ar: 'المرافق', en: 'Utilities' },
+  REAL_ESTATE: { ar: 'العقارات', en: 'Real Estate' },
+  COMMUNICATION_SERVICES: { ar: 'خدمات الاتصالات', en: 'Communication Services' },
+};
+
 export interface StockWithMeta extends Stock {
   inEGX30?: boolean;
   inEGX70?: boolean;
   inEGX100?: boolean;
+  /** GICS sector from API when available */
+  gicsSector?: string | null;
 }
 
 export type FilterId =
@@ -58,6 +89,7 @@ export function useStockScreener() {
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterId>('all');
+  const [sector, setSector] = useState('');
   const [sort, setSort] = useState<SortId>('ticker');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +104,7 @@ export function useStockScreener() {
       setError(null);
       try {
         const [stocksRes, watchlistRes] = await Promise.all([
-          api.get('/stocks/prices', { signal }),
+          api.get('/stocks/prices', { params: sector ? { sector } : {}, signal }),
           api.get('/watchlist', { signal }),
         ]);
         if (signal?.aborted) return;
@@ -83,7 +115,8 @@ export function useStockScreener() {
           const info = getStockInfo(ticker);
           const nameAr = info?.nameAr ?? '';
           const nameEn = info?.nameEn ?? '';
-          const sector = getSector(ticker, nameAr, nameEn, lang);
+          const apiSector = typeof s.sector === 'string' ? s.sector : null;
+          const fallbackSector = getSector(ticker, nameAr, nameEn, lang);
           return {
             ticker,
             name: isAr ? nameAr : nameEn || ticker,
@@ -92,11 +125,12 @@ export function useStockScreener() {
             changePercent: Number(s.changePercent) || 0,
             volume: Number(s.volume) || 0,
             marketCap: Number(s.marketCap) || 0,
-            sector,
+            sector: apiSector ? (GICS_SECTOR_LABELS[apiSector] ? (isAr ? GICS_SECTOR_LABELS[apiSector].ar : GICS_SECTOR_LABELS[apiSector].en) : apiSector) : fallbackSector,
             description: '',
             inEGX30: isInEGX30(ticker),
             inEGX70: isInEGX70(ticker),
             inEGX100: isInEGX100(ticker),
+            gicsSector: apiSector,
           };
         });
         setStocks(withMeta);
@@ -117,7 +151,7 @@ export function useStockScreener() {
         if (!signal?.aborted) setLoading(false);
       }
     },
-    [lang, isAr, t]
+    [lang, isAr, sector, t]
   );
 
   useEffect(() => {
@@ -235,6 +269,8 @@ export function useStockScreener() {
     setSearch,
     filter,
     setFilter,
+    sector,
+    setSector,
     sort,
     setSort,
     loading,

@@ -431,6 +431,7 @@
   "stocks": {
     "title": "الأسهم",
     "searchPlaceholder": "ابحث عن سهم بالاسم أو الرمز...",
+    "sectorLabel": "القطاع:",
     "sortLabel": "ترتيب:",
     "loadError": "فشل تحميل الأسهم",
     "filterAll": "الكل",
@@ -537,6 +538,12 @@
     "addFirst": "أضف سهم",
     "invalidTicker": "يرجى إدخال رمز سهم صحيح",
     "sharesPositive": "الكمية يجب أن تكون أكبر من صفر",
+    "errors": {
+      "quantityRequired": "أدخل الكمية",
+      "quantityInt": "الكمية يجب أن تكون عدداً صحيحاً بدون كسور",
+      "quantityMin": "الكمية يجب أن تكون 1 على الأقل",
+      "quantityMax": "الكمية كبيرة جداً"
+    },
     "pricePositive": "السعر يجب أن يكون أكبر من صفر",
     "deleteConfirm": "هل أنت متأكد من حذف هذا السهم؟",
     "totalValue": "إجمالي القيمة",

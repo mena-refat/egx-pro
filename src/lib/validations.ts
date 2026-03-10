@@ -127,9 +127,22 @@ export const portfolioSchema = z.object({
   buyDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
 });
 
+/** Message keys for portfolio quantity validation (use t(key) when displaying). */
+export const PORTFOLIO_QUANTITY_ERROR_KEYS = {
+  quantityRequired: 'portfolio.errors.quantityRequired',
+  quantityInt: 'portfolio.errors.quantityInt',
+  quantityMin: 'portfolio.errors.quantityMin',
+  quantityMax: 'portfolio.errors.quantityMax',
+} as const;
+
 export const addHoldingSchema = z.object({
   ticker: z.string().min(2).max(20).transform((s) => s.toUpperCase()),
-  shares: z.coerce.number().positive('Shares must be positive'),
+  shares: z
+    .coerce
+    .number({ message: PORTFOLIO_QUANTITY_ERROR_KEYS.quantityRequired })
+    .int(PORTFOLIO_QUANTITY_ERROR_KEYS.quantityInt)
+    .min(1, PORTFOLIO_QUANTITY_ERROR_KEYS.quantityMin)
+    .max(1_000_000, PORTFOLIO_QUANTITY_ERROR_KEYS.quantityMax),
   purchasePrice: z.coerce.number().positive('Price must be positive'),
   purchaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
 });

@@ -7,6 +7,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum GicsSector {
+  INFORMATION_TECHNOLOGY
+  HEALTH_CARE
+  FINANCIALS
+  CONSUMER_DISCRETIONARY
+  CONSUMER_STAPLES
+  ENERGY
+  INDUSTRIALS
+  MATERIALS
+  UTILITIES
+  REAL_ESTATE
+  COMMUNICATION_SERVICES
+}
+
+model Stock {
+  id      String       @id @default(cuid())
+  ticker  String       @unique
+  nameAr  String
+  nameEn  String
+  sector  GicsSector?
+
+  @@index([sector])
+}
+
 model User {
   id                String    @id @default(uuid())
   email             String?   @unique

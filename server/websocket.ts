@@ -4,13 +4,26 @@ import { getBulkPrices } from './lib/yahoo.ts';
 import { getCache } from './lib/redis.ts';
 import { EGX_TICKERS } from './lib/egxTickers.ts';
 import { logger } from './lib/logger.ts';
+import type { StockQuote } from './services/market-data/types.ts';
 
 const UPDATE_INTERVAL = 60000;
 const PING_INTERVAL = 30000;
 
-export function setupWebSocket(server: Server) {
+export function setupWebSocket(server: Server): { broadcastPrices: (quotes: Map<string, StockQuote>) => void } {
   const wss = new WebSocketServer({ server });
   logger.info('✅ WebSocket Server initialized');
+
+  function broadcastPrices(quotes: Map<string, StockQuote>) {
+    const payload = { type: 'PRICE_UPDATE' as const, data: Object.fromEntries(quotes) };
+    let count = 0;
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        safeSend(client, payload);
+        count++;
+      }
+    });
+    if (count > 0) logger.info(`📡 Price update broadcast to ${count} clients`);
+  }
 
   // Ping كل 30 ثانية للتأكد إن الـ clients لسه متصلين
   const pingInterval = setInterval(() => {
@@ -98,6 +111,8 @@ export function setupWebSocket(server: Server) {
       logger.error('❌ WebSocket broadcast error', { error: err });
     }
   }, UPDATE_INTERVAL);
+
+  return { broadcastPrices };
 }
 
 // Safe send — مش بيكسر لو الـ connection اتقطع

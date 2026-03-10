@@ -36,6 +36,8 @@ import notificationsRoutes from './server/routes/notifications.ts';
 import billingRoutes from './server/routes/billing.ts';
 import newsRoutes from './server/routes/news.ts';
 import referralRoutes from './server/routes/referral.ts';
+import marketDataRoutes from './server/routes/market-data.ts';
+import { marketDataService } from './server/services/market-data/market-data.service.ts';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './server/lib/swagger.ts';
 
@@ -172,6 +174,7 @@ async function startServer() {
   app.use('/api/billing', billingRoutes);
   app.use('/api/news', newsRoutes);
   app.use('/api/referral', referralRoutes);
+  app.use('/api/market', marketDataRoutes);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -279,9 +282,21 @@ async function startServer() {
     });
   }
 
-  server.listen(PORT, '0.0.0.0', () => {
+  server.listen(PORT, '0.0.0.0', async () => {
     logger.info(`🚀 EGX Pro Server running on http://localhost:${PORT}`);
-    setupWebSocket(server);
+    const wsHandlers = setupWebSocket(server);
+    marketDataService.setBroadcastFn(wsHandlers.broadcastPrices);
+
+    try {
+      const { prisma } = await import('./server/lib/prisma.ts');
+      const { EGX_TICKERS } = await import('./server/lib/egxTickers.ts');
+      const stocks = await prisma.stock.findMany({ select: { ticker: true } });
+      const symbols = stocks.length > 0 ? stocks.map(s => s.ticker) : [...EGX_TICKERS];
+      logger.info(`Starting market data polling for ${symbols.length} symbols`);
+      marketDataService.startPolling(symbols);
+    } catch (err) {
+      logger.error('Failed to start market polling', { error: err });
+    }
   });
 
   // أرشفة الحسابات المحذوفة بعد 30 يوم + انتهاء الـ refresh tokens (يومي)

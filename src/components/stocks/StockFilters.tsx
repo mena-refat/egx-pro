@@ -1,16 +1,19 @@
 import React from 'react';
 import { Search, Circle, Timer } from 'lucide-react';
 import type { FilterId, SortId } from '../../hooks/useStockScreener';
-import { FILTERS } from '../../hooks/useStockScreener';
+import { FILTERS, SECTOR_OPTIONS } from '../../hooks/useStockScreener';
 
 export interface StockFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
   filter: FilterId;
   onFilterChange: (id: FilterId) => void;
+  sector: string;
+  onSectorChange: (value: string) => void;
   sort: SortId;
   onSortChange: (id: SortId) => void;
   isPro: boolean;
+  isAr: boolean;
   t: (key: string) => string;
 }
 
@@ -19,9 +22,12 @@ export function StockFilters({
   onSearchChange,
   filter,
   onFilterChange,
+  sector,
+  onSectorChange,
   sort,
   onSortChange,
   isPro,
+  isAr,
   t,
 }: StockFiltersProps) {
   return (
@@ -73,18 +79,35 @@ export function StockFilters({
         ))}
       </div>
 
-      <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
-        <span>{t('stocks.sortLabel')}</span>
-        <select
-          value={sort}
-          onChange={(e) => onSortChange(e.target.value as SortId)}
-          className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-1.5 text-[var(--text-primary)]"
-        >
-          <option value="ticker">{t('stocks.sortByTicker')}</option>
-          <option value="price">{t('stocks.sortByPrice')}</option>
-          <option value="change">{t('stocks.sortByChange')}</option>
-          <option value="volume">{t('stocks.sortByVolume')}</option>
-        </select>
+      <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--text-muted)]">
+        <div className="flex items-center gap-2">
+          <span>{t('stocks.sectorLabel')}</span>
+          <select
+            value={sector}
+            onChange={(e) => onSectorChange(e.target.value)}
+            className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-1.5 text-[var(--text-primary)] min-w-[140px]"
+            aria-label={isAr ? 'القطاع' : 'Sector'}
+          >
+            {SECTOR_OPTIONS.map((opt) => (
+              <option key={opt.value || 'all'} value={opt.value}>
+                {isAr ? opt.labelAr : opt.labelEn}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>{t('stocks.sortLabel')}</span>
+          <select
+            value={sort}
+            onChange={(e) => onSortChange(e.target.value as SortId)}
+            className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-1.5 text-[var(--text-primary)]"
+          >
+            <option value="ticker">{t('stocks.sortByTicker')}</option>
+            <option value="price">{t('stocks.sortByPrice')}</option>
+            <option value="change">{t('stocks.sortByChange')}</option>
+            <option value="volume">{t('stocks.sortByVolume')}</option>
+          </select>
+        </div>
       </div>
     </>
   );

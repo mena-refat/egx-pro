@@ -2,7 +2,7 @@ import React from 'react';
 import { TrendingUp, TrendingDown, Star, Plus } from 'lucide-react';
 import { getStockName } from '../../lib/egxStocks';
 import type { StockWithMeta } from '../../hooks/useStockScreener';
-import { formatVolume } from '../../hooks/useStockScreener';
+import { formatVolume, GICS_SECTOR_LABELS } from '../../hooks/useStockScreener';
 
 export interface StockCardProps {
   stock: StockWithMeta;
@@ -36,7 +36,14 @@ export function StockCard({
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-label uppercase tracking-wider">{stock.ticker}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-label uppercase tracking-wider">{stock.ticker}</p>
+            {stock.gicsSector && GICS_SECTOR_LABELS[stock.gicsSector] && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand)] font-medium">
+                {lang === 'ar' ? GICS_SECTOR_LABELS[stock.gicsSector].ar : GICS_SECTOR_LABELS[stock.gicsSector].en}
+              </span>
+            )}
+          </div>
           <p className="font-medium text-body text-[var(--text-primary)] truncate">
             {getStockName(stock.ticker, lang as 'ar' | 'en')}
           </p>

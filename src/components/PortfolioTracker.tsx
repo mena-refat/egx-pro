@@ -62,18 +62,31 @@ export default function PortfolioTracker() {
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setAddError(null);
-    const sharesNum = parseFloat(newHolding.shares);
+    const sharesRaw = newHolding.shares.trim();
+    const sharesNum = parseInt(sharesRaw, 10);
     const priceNum = parseFloat(newHolding.avgPrice);
 
     if (!newHolding.ticker || newHolding.ticker.length < 2) {
       setAddError(t('portfolio.invalidTicker'));
       return;
     }
-    if (isNaN(sharesNum) || sharesNum <= 0) {
-      setAddError(t('portfolio.sharesPositive'));
+    if (sharesRaw === '' || Number.isNaN(sharesNum)) {
+      setAddError(t('portfolio.errors.quantityRequired'));
       return;
     }
-    if (isNaN(priceNum) || priceNum <= 0) {
+    if (!Number.isInteger(parseFloat(sharesRaw)) || parseFloat(sharesRaw) !== sharesNum) {
+      setAddError(t('portfolio.errors.quantityInt'));
+      return;
+    }
+    if (sharesNum < 1) {
+      setAddError(t('portfolio.errors.quantityMin'));
+      return;
+    }
+    if (sharesNum > 1_000_000) {
+      setAddError(t('portfolio.errors.quantityMax'));
+      return;
+    }
+    if (Number.isNaN(priceNum) || priceNum <= 0) {
       setAddError(t('portfolio.pricePositive'));
       return;
     }
@@ -367,7 +380,24 @@ export default function PortfolioTracker() {
                   </AnimatePresence>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <Input label={t('portfolio.shares')} type="number" required step="any" value={newHolding.shares} onChange={e => setNewHolding({ ...newHolding, shares: e.target.value })} inputClassName="input-base" />
+                  <Input
+                  label={t('portfolio.shares')}
+                  type="number"
+                  required
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  value={newHolding.shares}
+                  onChange={e => setNewHolding({ ...newHolding, shares: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (['.', '-', '+', 'e', 'E'].includes(e.key)) e.preventDefault();
+                  }}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData('text');
+                    if (!/^\d+$/.test(pasted)) e.preventDefault();
+                  }}
+                  inputClassName="input-base"
+                />
                   <Input label={t('portfolio.buyPrice')} type="number" required step="any" value={newHolding.avgPrice} onChange={e => setNewHolding({ ...newHolding, avgPrice: e.target.value })} inputClassName="input-base" />
                 </div>
                 <Input label={isRTL ? 'تاريخ الشراء' : 'Buy Date'} type="date" required value={newHolding.buyDate} onChange={e => setNewHolding({ ...newHolding, buyDate: e.target.value })} inputClassName="input-base" />
