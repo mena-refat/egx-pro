@@ -11,7 +11,7 @@ const analysisLimiter = rateLimit({
   windowMs: ONE_HOUR_MS,
   max: 20,
   message: { error: 'RATE_LIMIT_EXCEEDED' },
-  keyGenerator: (req) => {
+  keyGenerator: (req, res) => {
     const userId = (req as AuthRequest).user?.id;
     if (userId) return userId;
     return ipKeyGenerator(req.ip ?? 'unknown');

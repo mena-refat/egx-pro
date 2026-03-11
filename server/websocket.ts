@@ -1,10 +1,9 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
-import { getBulkPrices } from './lib/yahoo.ts';
-import { getCache } from './lib/redis.ts';
 import { EGX_TICKERS } from './lib/egxTickers.ts';
 import { logger } from './lib/logger.ts';
 import type { StockQuote } from './services/market-data/types.ts';
+import { marketDataService } from './services/market-data/market-data.service.ts';
 
 const UPDATE_INTERVAL = 60000;
 const PING_INTERVAL = 30000;
@@ -126,15 +125,18 @@ function safeSend(ws: WebSocket, data: unknown) {
   }
 }
 
-async function fetchAndCachePrices() {
+async function fetchAndCachePrices(): Promise<Array<{ ticker: string; price: number; change: number; changePercent: number; volume: number }>> {
   try {
-    const prices = await getBulkPrices(EGX_TICKERS);
-    return prices;
+    const quotes = await marketDataService.getQuotes([...EGX_TICKERS]);
+    return Array.from(quotes.values()).map((q) => ({
+      ticker: q.symbol,
+      price: q.price,
+      change: q.change,
+      changePercent: q.changePercent,
+      volume: q.volume,
+    }));
   } catch (error) {
-    logger.error('Yahoo Finance fetch error, using cache', { error });
-    const cachedPrices = await Promise.all(
-      EGX_TICKERS.map(ticker => getCache(`stock:price:${ticker}`))
-    );
-    return cachedPrices.filter(Boolean);
+    logger.error('Market data fetch error', { error });
+    return [];
   }
 }

@@ -1,5 +1,5 @@
 import { Router, Request } from 'express';
-import { rateLimit } from 'express-rate-limit';
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { authenticate } from '../middleware/auth.middleware.ts';
 import { GoalsController } from '../controllers/goals.controller.ts';
 import type { AuthRequest } from './types.ts';
@@ -13,7 +13,11 @@ const goalsCreateLimiter = rateLimit({
   max: GOALS_CREATE_MAX_PER_MIN,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => (req as AuthRequest).userId ?? (req as Request).ip ?? 'anon',
+  keyGenerator: (req: Request) => {
+    const userId = (req as AuthRequest).userId;
+    if (userId) return userId;
+    return ipKeyGenerator(req.ip ?? 'unknown');
+  },
   handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
 });
 

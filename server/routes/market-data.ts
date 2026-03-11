@@ -35,4 +35,31 @@ router.get('/health', async (_req: Request, res: Response) => {
   });
 });
 
+if (process.env.NODE_ENV !== 'production') {
+  router.get('/debug/:symbol', async (req: Request, res: Response) => {
+    const symbol = (req.params.symbol ?? '').toUpperCase();
+    if (!symbol) {
+      return res.status(400).json({ error: 'symbol required' });
+    }
+    const results: Record<string, unknown> = {};
+
+    const { EgxScraperSource } = await import('../services/market-data/sources/egx-scraper.ts');
+    const { YahooFinanceSource } = await import('../services/market-data/sources/yahoo-source.ts');
+
+    const sources = [new EgxScraperSource(), new YahooFinanceSource()];
+
+    for (const source of sources) {
+      try {
+        const r = await source.fetchQuotes([symbol]);
+        const quote = r.quotes.get(symbol);
+        results[source.name] = quote ?? { error: 'not found', failed: r.failed };
+      } catch (err: unknown) {
+        results[source.name] = { error: (err as Error).message };
+      }
+    }
+
+    res.json({ symbol, results });
+  });
+}
+
 export default router;

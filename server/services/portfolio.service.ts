@@ -1,4 +1,4 @@
-import { getBulkPrices, getBulkPricesDelayed } from '../lib/yahoo.ts';
+import { marketDataService } from './market-data/market-data.service.ts';
 import { addHoldingSchema } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
@@ -20,12 +20,10 @@ export const PortfolioService = {
 
     const tickers = holdings.map((h) => h.ticker);
     const priceMap = new Map<string, { price: number; isDelayed?: boolean; priceTime?: string }>();
-    const prices = delayed ? await getBulkPricesDelayed(tickers) : await getBulkPrices(tickers);
-    if (Array.isArray(prices)) {
-      prices.forEach((p: { ticker: string; price: number; isDelayed?: boolean; priceTime?: string }) =>
-        priceMap.set(p.ticker, { price: p.price, ...(p.isDelayed != null && { isDelayed: p.isDelayed }), ...(p.priceTime && { priceTime: p.priceTime }) })
-      );
-    }
+    const quotes = await marketDataService.getQuotes(tickers);
+    quotes.forEach((q, symbol) => {
+      priceMap.set(symbol, { price: q.price, isDelayed: false, priceTime: new Date().toISOString().slice(11, 19) });
+    });
 
     let totalValue = 0;
     let totalCost = 0;

@@ -52,6 +52,34 @@ export class MarketDataService {
   /** Called after each poll to broadcast to WebSocket clients; set from server.ts */
   private broadcastFn: ((quotes: Map<string, StockQuote>) => void) | null = null;
 
+  private symbolFailCount  = new Map<string, number>();
+  private symbolSkipUntil  = new Map<string, number>();
+  private readonly MAX_FAILURES_BEFORE_DEPRIORITIZE = 3;
+  private readonly DEPRIORITIZE_FOR_MS = 60 * 60 * 1000;
+
+  private shouldSkipSymbol(symbol: string): boolean {
+    const skipUntil = this.symbolSkipUntil.get(symbol);
+    if (skipUntil && Date.now() < skipUntil) return true;
+    return false;
+  }
+
+  private recordSymbolFailure(symbol: string): void {
+    const count = (this.symbolFailCount.get(symbol) ?? 0) + 1;
+    this.symbolFailCount.set(symbol, count);
+
+    if (count >= this.MAX_FAILURES_BEFORE_DEPRIORITIZE) {
+      this.symbolSkipUntil.set(symbol, Date.now() + this.DEPRIORITIZE_FOR_MS);
+      if (count === this.MAX_FAILURES_BEFORE_DEPRIORITIZE) {
+        logger.info(`Deprioritizing ${symbol} — failed ${count} times, skipping for 1hr`);
+      }
+    }
+  }
+
+  private recordSymbolSuccess(symbol: string): void {
+    this.symbolFailCount.delete(symbol);
+    this.symbolSkipUntil.delete(symbol);
+  }
+
   constructor() {
     this.sources = [
       new EgxlyticsSource(),
@@ -88,11 +116,23 @@ export class MarketDataService {
   }
 
   async getQuotes(symbols: string[]): Promise<Map<string, StockQuote>> {
-    const result     = new Map<string, StockQuote>();
-    const needsFetch = new Set<string>();
+    const result = new Map<string, StockQuote>();
+
+    const activeSymbols     = symbols.filter(s => !this.shouldSkipSymbol(s));
+    const deprioritizedSyms = symbols.filter(s => this.shouldSkipSymbol(s));
 
     await Promise.all(
-      symbols.map(async (symbol) => {
+      deprioritizedSyms.map(async (symbol) => {
+        const stale = await this.getFromCache(symbol, true);
+        if (stale) result.set(symbol, { ...stale, source: 'CACHE' });
+      })
+    );
+
+    if (activeSymbols.length === 0) return result;
+
+    const needsFetch = new Set<string>();
+    await Promise.all(
+      activeSymbols.map(async (symbol) => {
         const cached = await this.getFromCache(symbol);
         if (cached) {
           result.set(symbol, cached);
@@ -102,7 +142,13 @@ export class MarketDataService {
       })
     );
 
-    if (needsFetch.size === 0) return result;
+    if (needsFetch.size === 0) {
+      for (const symbol of activeSymbols) {
+        if (result.has(symbol)) this.recordSymbolSuccess(symbol);
+        else this.recordSymbolFailure(symbol);
+      }
+      return result;
+    }
 
     const symbolsToFetch = Array.from(needsFetch);
     let remaining = [...symbolsToFetch];
@@ -135,6 +181,12 @@ export class MarketDataService {
       }
 
       for (const [symbol, quote] of sourceResult.quotes) {
+        const sane = await this.isSanePriceChange(symbol, quote.price, source.name);
+        if (!sane) {
+          sourceResult.failed.push(symbol);
+          sourceResult.quotes.delete(symbol);
+          continue;
+        }
         result.set(symbol, quote);
         await this.saveToCache(symbol, quote);
       }
@@ -156,6 +208,14 @@ export class MarketDataService {
           }
         })
       );
+    }
+
+    for (const symbol of activeSymbols) {
+      if (result.has(symbol)) {
+        this.recordSymbolSuccess(symbol);
+      } else {
+        this.recordSymbolFailure(symbol);
+      }
     }
 
     return result;
@@ -201,6 +261,34 @@ export class MarketDataService {
       };
     });
     return report;
+  }
+
+  /**
+   * Reject prices that are obviously wrong.
+   * If we have a cached price and the new price differs by more than 15%,
+   * the new price is likely garbage (wrong ticker, stale foreign data, etc.)
+   */
+  private async isSanePriceChange(
+    symbol: string,
+    newPrice: number,
+    source: string
+  ): Promise<boolean> {
+    if (source === 'EGX') return true;
+
+    const lastKnown = await this.getFromCache(symbol, true);
+    if (!lastKnown) return true;
+
+    const lastPrice = lastKnown.price;
+    if (lastPrice <= 0) return true;
+
+    const changePct = Math.abs((newPrice - lastPrice) / lastPrice) * 100;
+
+    if (changePct > 15) {
+      logger.warn(`Sanity check FAILED: ${symbol} ${source} price=${newPrice} vs last=${lastPrice} (${changePct.toFixed(1)}% diff) — REJECTED`);
+      return false;
+    }
+
+    return true;
   }
 
   private async getFromCache(symbol: string, stale = false): Promise<StockQuote | null> {

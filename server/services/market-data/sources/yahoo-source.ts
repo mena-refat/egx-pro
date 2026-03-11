@@ -6,6 +6,34 @@ import { logger } from '../../../lib/logger.ts';
 const CONCURRENCY_LIMIT = 5;
 const BATCH_SIZE        = 20;
 
+// EGX symbol → Yahoo Finance symbol (verified mappings)
+const EGX_TO_YAHOO_MAP: Record<string, string> = {
+  'COMI':  'COMI.CA',
+  'ADIB':  'ADIB.CA',
+  'CIBE':  'CIBE.CA',
+  'DCBL':  'DCBL.CA',
+  'FAWB':  'FAWB.CA',
+  'HRHO':  'HRHO.CA',
+  'MCQE':  'MCQE.CA',
+  'ABUK':  'ABUK.CA',
+  'MOPCO': 'MOPCO.CA',
+  'EFIC':  'EFIC.CA',
+  'TMGH':  'TMGH.CA',
+  'OCDI':  'OCDI.CA',
+  'MNHD':  'MNHD.CA',
+  'PHDC':  'PHDC.CA',
+  'IGAS':  'IGAS.CA',
+  'ETEL':  'ETEL.CA',
+  'ORTE':  'ORTE.CA',
+  'JUFO':  'JUFO.CA',
+  'DOMTY': 'DOMTY.CA',
+  'OLFI':  'OLFI.CA',
+};
+
+const YAHOO_TO_EGX_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(EGX_TO_YAHOO_MAP).map(([egx, yahoo]) => [yahoo, egx])
+);
+
 const yahooFinance = new YahooFinance();
 
 export class YahooFinanceSource implements IMarketDataSource {
@@ -27,12 +55,28 @@ export class YahooFinanceSource implements IMarketDataSource {
   }
 
   private toYahooSymbol(symbol: string): string {
-    if (symbol.includes('.')) return symbol;
-    return `${symbol}.CA`;
+    return EGX_TO_YAHOO_MAP[symbol] ?? `${symbol}.CA`;
   }
 
   private fromYahooSymbol(yahooSymbol: string): string {
-    return yahooSymbol.replace('.CA', '').replace('.EGX', '');
+    return YAHOO_TO_EGX_MAP[yahooSymbol] ?? yahooSymbol.replace(/\.(CA|EGX)$/i, '');
+  }
+
+  private isStaleQuote(quote: Record<string, unknown>): boolean {
+    const price = quote.regularMarketPrice as number;
+
+    if (!price || price <= 0) return true;
+
+    const lastUpdate = quote.regularMarketTime as number | undefined;
+    if (lastUpdate) {
+      const ageHours = (Date.now() / 1000 - lastUpdate) / 3600;
+      if (ageHours > 120) {
+        logger.warn(`Yahoo very stale: ${quote.symbol ?? '?'} last updated ${ageHours.toFixed(0)}h ago`);
+        return true;
+      }
+    }
+
+    return false;
   }
 
   async fetchQuotes(symbols: string[]): Promise<DataSourceResult> {
@@ -68,16 +112,33 @@ export class YahooFinanceSource implements IMarketDataSource {
                 return;
               }
               const originalSymbol = batch[idx];
+              const currency = quote.currency as string | undefined;
+              const price = quote.regularMarketPrice as number;
+
+              if (currency === 'USD') {
+                logger.warn(`Yahoo returned USD price for ${originalSymbol}, rejecting`);
+                return;
+              }
+              if (price < 0.01 || price > 500_000) {
+                logger.warn(`Yahoo price out of EGP range for ${originalSymbol}: ${price} ${currency ?? '?'}`);
+                return;
+              }
+
+              if (this.isStaleQuote(quote)) {
+                logger.warn(`Yahoo stale data rejected for ${originalSymbol}: volume=${quote.regularMarketVolume}, price=${quote.regularMarketPrice}`);
+                return;
+              }
+
               quotes.set(originalSymbol, {
                 symbol:        originalSymbol,
-                price:         quote.regularMarketPrice as number,
+                price,
                 change:        (quote.regularMarketChange as number) ?? 0,
                 changePercent: (quote.regularMarketChangePercent as number) ?? 0,
-                open:          (quote.regularMarketOpen as number) ?? (quote.regularMarketPrice as number),
-                high:          (quote.regularMarketDayHigh as number) ?? (quote.regularMarketPrice as number),
-                low:           (quote.regularMarketDayLow as number) ?? (quote.regularMarketPrice as number),
+                open:          (quote.regularMarketOpen as number) ?? price,
+                high:          (quote.regularMarketDayHigh as number) ?? price,
+                low:           (quote.regularMarketDayLow as number) ?? price,
                 volume:        (quote.regularMarketVolume as number) ?? 0,
-                previousClose: (quote.regularMarketPreviousClose as number) ?? (quote.regularMarketPrice as number),
+                previousClose: (quote.regularMarketPreviousClose as number) ?? price,
                 timestamp:     now,
                 source:        'YAHOO',
               });

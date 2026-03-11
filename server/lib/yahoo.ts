@@ -25,33 +25,23 @@ export type StockPriceData = {
   priceTime?: string;
 };
 
+/** Reads from market-data cache only. Price updates come from MarketDataService polling. */
 export async function getStockPrice(ticker: string): Promise<(StockPriceData & { delayedAt?: number }) | null> {
-  const cacheKey = `stock:price:${ticker}`;
-  const cached = await getCache<StockPriceData & { delayedAt?: number }>(cacheKey);
-  if (cached) return cached;
-
-  try {
-    const result = await yahooFinance.quote(`${ticker}.CA`);
-    const data: StockPriceData & { delayedAt?: number } = {
-      ticker,
-      price: result.regularMarketPrice,
-      change: result.regularMarketChange,
-      changePercent: result.regularMarketChangePercent,
-      volume: result.regularMarketVolume,
-      high: result.regularMarketDayHigh,
-      low: result.regularMarketDayLow,
-      high52w: result.fiftyTwoWeekHigh,
-      low52w: result.fiftyTwoWeekLow,
-      open: result.regularMarketOpen,
-      previousClose: result.regularMarketPreviousClose,
-      name: result.longName || result.shortName || ticker,
-    };
-    await setCache(cacheKey, data, 60);
-    return data;
-  } catch (error) {
-    logger.error('Error fetching price', { ticker, error });
-    return null;
-  }
+  const cacheKey = `stock:quote:${ticker}`;
+  const cached = await getCache<{ symbol: string; price: number; change: number; changePercent: number; volume: number; high?: number; low?: number; open?: number; previousClose?: number }>(cacheKey);
+  if (!cached) return null;
+  return {
+    ticker: cached.symbol,
+    price: cached.price,
+    change: cached.change,
+    changePercent: cached.changePercent,
+    volume: cached.volume ?? null,
+    high: cached.high,
+    low: cached.low,
+    open: cached.open,
+    previousClose: cached.previousClose,
+    name: cached.symbol,
+  };
 }
 
 /** للخطة المجانية: سعر متأخر 10 دقائق من الكاش */
