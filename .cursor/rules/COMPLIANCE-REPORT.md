@@ -4,6 +4,13 @@
 
 ---
 
+## تحديث الرولز ليتوافق مع الكود (مراجعة 2025)
+
+- **مصدر بيانات السوق**: تم استبدال كل مراجع "Yahoo Finance" و"fetchFromYahoo" في `engineering.mdc` و`api.mdc` بـ "market data" / `marketDataService.getQuote()` لأن المصدر الوحيد حاليًا هو **Twelve Data**.
+- **console في السيرفر**: لا يوجد `console.*` في كود التطبيق (routes, services, lib). الاستثناء الوحيد: **سكربتات CLI** في `server/scripts/` (مثل seed-sectors.ts و backfill-referral-codes.ts) تستخدم `console.log` للخرج — وهذا مقبول لسكربتات تشغيل من الطرفية.
+
+---
+
 ## ✅ تم تنفيذه (آخر تحديث)
 
 1. **استيراد RATE_LIMITS و ONE_* من constants** — `server.ts` يستخدم `RATE_LIMITS` من `server/lib/constants.ts`؛ و`watchlist` و`goals` routes تستخدم `ONE_MINUTE_MS`. رسالة الـ rate limit موحّدة: `RATE_LIMIT_EXCEEDED`.

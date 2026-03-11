@@ -1,8 +1,8 @@
-import YahooFinance from 'yahoo-finance2';
 import { getCache, setCache } from './redis.ts';
 import { logger } from './logger.ts';
 
-const yahooFinance = new YahooFinance();
+const stubIndex = () => ({ value: 0, change: 0, changePercent: 0 });
+const stubCommodity = () => ({ value: 0, change: 0, changePercent: 0 });
 
 export async function getMarketOverview() {
   const cacheKey = 'market:overview';
@@ -10,73 +10,36 @@ export async function getMarketOverview() {
   if (cached) return cached;
 
   try {
-    // Fetch USD/EGP rate
     let usdEgp = { value: 0, change: 0, changePercent: 0 };
     try {
       const apiKey = process.env.EXCHANGERATE_API_KEY;
-      const url = apiKey 
+      const url = apiKey
         ? `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`
         : 'https://api.exchangerate-api.com/v4/latest/USD';
-      
+
       const exchangeResponse = await fetch(url);
       if (exchangeResponse.ok) {
-        const exchangeData = await exchangeResponse.json();
-        const rate = apiKey ? exchangeData.conversion_rates.EGP : exchangeData.rates.EGP;
-        usdEgp = {
-          value: rate,
-          change: 0, // Mock change for now as the API doesn't provide historical data directly
-          changePercent: 0,
-        };
+        const exchangeData = await exchangeResponse.json() as { conversion_rates?: { EGP?: number }; rates?: { EGP?: number } };
+        const rate = apiKey ? exchangeData.conversion_rates?.EGP : exchangeData.rates?.EGP;
+        if (rate != null) {
+          usdEgp = { value: rate, change: 0, changePercent: 0 };
+        }
       }
     } catch (error) {
       logger.error('Error fetching exchange rate', { error });
     }
 
-    // Fetch EGX Indices — EGX 30, 30 Capped, 70 EWI, 100 EWI, 33 Shariah, 35 LV
-    const indexTickers = ['^EGX30', '^EGX70', '^EGX100', '^EGX33', '^EGX35'];
-    const indicesData = await Promise.allSettled(
-      indexTickers.map(ticker => yahooFinance.quote(ticker))
-    );
-
-    const formatIndex = (result: PromiseSettledResult<unknown>) => {
-      if (result.status === 'fulfilled' && result.value) {
-        const val = result.value as { regularMarketPrice: number; regularMarketChange: number; regularMarketChangePercent: number };
-        return {
-          value: val.regularMarketPrice,
-          change: val.regularMarketChange,
-          changePercent: val.regularMarketChangePercent,
-        };
-      }
-      return { value: 0, change: 0, changePercent: 0 };
-    };
-
-    const egx30 = formatIndex(indicesData[0]);
-    const egx70 = formatIndex(indicesData[1]);
-    const egx100 = formatIndex(indicesData[2]);
-    const egx33 = formatIndex(indicesData[3]);
-    const egx35 = formatIndex(indicesData[4]);
-
-    // Gold (GC=F) and Silver (SI=F) in USD per troy oz
-    const commodities = ['GC=F', 'SI=F'];
-    const commoditiesData = await Promise.allSettled(
-      commodities.map((ticker) => yahooFinance.quote(ticker))
-    );
-    const formatCommodity = (result: PromiseSettledResult<unknown>) => {
-      if (result.status === 'fulfilled' && result.value) {
-        const val = result.value as { regularMarketPrice: number; regularMarketChange: number; regularMarketChangePercent: number };
-        return {
-          value: val.regularMarketPrice,
-          change: val.regularMarketChange,
-          changePercent: val.regularMarketChangePercent,
-        };
-      }
-      return { value: 0, change: 0, changePercent: 0 };
-    };
-    const goldUsd = formatCommodity(commoditiesData[0]);
-    const silverUsd = formatCommodity(commoditiesData[1]);
+    // EGX indices and commodities — stubbed; plug in Twelve Data or another source later
+    const egx30 = stubIndex();
+    const egx70 = stubIndex();
+    const egx100 = stubIndex();
+    const egx33 = stubIndex();
+    const egx35 = stubIndex();
+    const goldUsd = stubCommodity();
+    const silverUsd = stubCommodity();
     const ozToGram = 1 / 31.1035;
     const usdRate = usdEgp.value || 1;
-    const spread = 0.02; // ~2% فرق شراء/بيع
+    const spread = 0.02;
     const goldMid = goldUsd.value * ozToGram * usdRate;
     const gold = {
       value: goldUsd.value,
@@ -99,7 +62,7 @@ export async function getMarketOverview() {
     const data = {
       usdEgp,
       egx30,
-      egx30Capped: egx30, // نفس بيانات EGX 30 حتى يتوفر مصدر منفصل لـ Capped
+      egx30Capped: egx30,
       egx70,
       egx100,
       egx33,
@@ -109,7 +72,7 @@ export async function getMarketOverview() {
       lastUpdated: Date.now(),
     };
 
-    await setCache(cacheKey, data, 300); // Cache for 5 minutes
+    await setCache(cacheKey, data, 300);
     return data;
   } catch (error) {
     logger.error('Error fetching market overview', { error });

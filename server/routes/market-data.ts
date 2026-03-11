@@ -9,12 +9,12 @@ const router = Router();
 router.get('/quotes', authenticate, async (req: Request, res: Response) => {
   const symbolsParam = (req as AuthRequest).query.symbols as string;
   if (!symbolsParam) {
-    return res.status(400).json({ error: 'symbols param required' });
+    return res.status(400).json({ error: 'VALIDATION_ERROR' });
   }
 
   const symbols = symbolsParam.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
   if (symbols.length > 50) {
-    return res.status(400).json({ error: 'Max 50 symbols per request' });
+    return res.status(400).json({ error: 'VALIDATION_ERROR' });
   }
 
   try {
@@ -39,14 +39,13 @@ if (process.env.NODE_ENV !== 'production') {
   router.get('/debug/:symbol', async (req: Request, res: Response) => {
     const symbol = (req.params.symbol ?? '').toUpperCase();
     if (!symbol) {
-      return res.status(400).json({ error: 'symbol required' });
+      return res.status(400).json({ error: 'VALIDATION_ERROR' });
     }
     const results: Record<string, unknown> = {};
 
-    const { EgxScraperSource } = await import('../services/market-data/sources/egx-scraper.ts');
-    const { YahooFinanceSource } = await import('../services/market-data/sources/yahoo-source.ts');
-
-    const sources = [new EgxScraperSource(), new YahooFinanceSource()];
+    const { TwelveDataSource } = await import('../services/market-data/sources/twelve-data-source.ts');
+    const { EgxlyticsSource } = await import('../services/market-data/sources/egxlytics-source.ts');
+    const sources = [new TwelveDataSource(), new EgxlyticsSource()];
 
     for (const source of sources) {
       try {

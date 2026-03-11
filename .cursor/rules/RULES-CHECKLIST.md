@@ -2,6 +2,8 @@
 
 تم إنشاؤها للمطابقة الكاملة مع engineering.mdc و api.mdc و components.mdc.
 
+**تحديث**: تم توحيد الرولز مع الكود — مراجع Yahoo في engineering.mdc و api.mdc استُبدلت بـ market data / Twelve Data. سكربتات `server/scripts/` تستخدم console للخرج (مقبول).
+
 ---
 
 ## engineering.mdc

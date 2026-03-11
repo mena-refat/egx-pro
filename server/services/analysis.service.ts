@@ -1,4 +1,4 @@
-import { getStockPrice, getStockHistory, getFinancials } from '../lib/yahoo.ts';
+import { getStockPrice, getStockHistory, getFinancials } from '../lib/stockData.ts';
 import { getStockNews } from '../lib/news.ts';
 import { prisma } from '../lib/prisma.ts';
 import { logger } from '../lib/logger.ts';

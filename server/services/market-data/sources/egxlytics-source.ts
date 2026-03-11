@@ -7,7 +7,7 @@ const EGXLYTICS_API_KEY = process.env.EGXLYTICS_API_KEY ?? '';
 
 export class EgxlyticsSource implements IMarketDataSource {
   name     = 'EGXLYTICS';
-  priority = 0; // أعلى priority — هيكون Source #1 لما يتفعّل
+  priority = 1;
 
   async isAvailable(): Promise<boolean> {
     if (!EGXLYTICS_API_URL || !EGXLYTICS_API_KEY) return false;

@@ -1,4 +1,4 @@
-import { getStockHistory, getFinancials, searchEgxStocks } from '../lib/yahoo.ts';
+import { getStockHistory, getFinancials, searchEgxStocks } from '../lib/stockData.ts';
 import { getStockNews } from '../lib/news.ts';
 import { EGX_TICKERS } from '../lib/egxTickers.ts';
 import { prisma } from '../lib/prisma.ts';

@@ -420,7 +420,7 @@ import { logger } from '../lib/logger';
 
 logger.info('User created goal', { userId: user.id, goalId: goal.id });
 logger.warn('Plan limit reached', { userId: user.id, plan: user.plan });
-logger.error('Yahoo Finance failed', { ticker, error: err.message });
+logger.error('Market data failed', { ticker, error: err.message });
 
 // ✅ Log important events:
 // - User login/logout
@@ -490,12 +490,12 @@ const cacheKey = `prices:${ticker}`;
 const cached = await getCache(cacheKey);
 if (cached) return cached;
 
-const fresh = await fetchFromYahoo(ticker);
-await setCache(cacheKey, fresh, CACHE_TTL.prices);
+const fresh = await marketDataService.getQuote(ticker);
+if (fresh) await setCache(cacheKey, quoteToCached(fresh), CACHE_TTL.prices);
 return fresh;
 
-// ❌ WRONG — hit database/API على كل request
-return fetchFromYahoo(ticker);
+// ❌ WRONG — hit API on every request
+return marketDataService.getQuote(ticker);
 ```
 
 ---

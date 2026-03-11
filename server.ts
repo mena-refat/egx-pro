@@ -1,7 +1,4 @@
-import { config } from 'dotenv';
-// Load base .env first, then override with .env.local if it exists
-config();
-config({ path: '.env.local', override: true });
+import './server/lib/dotenv.ts';
 
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
@@ -52,6 +49,11 @@ async function startServer() {
   }
 
   validateEnv();
+
+  logger.info('TwelveData API key status', {
+    keySet:    !!process.env.TWELVE_DATA_API_KEY,
+    keyPrefix: process.env.TWELVE_DATA_API_KEY ? process.env.TWELVE_DATA_API_KEY.slice(0, 8) + '...' : '(not set)',
+  });
 
   const app = express();
   app.set('trust proxy', 1);
@@ -370,7 +372,7 @@ async function startServer() {
   const TEN_MIN_MS = 10 * 60 * 1000;
   const pricesInterval = setInterval(async () => {
     try {
-      const { getStockPrice } = await import('./server/lib/yahoo.ts');
+      const { getStockPrice } = await import('./server/lib/stockData.ts');
       const { setCache } = await import('./server/lib/redis.ts');
       const { EGX_TICKERS } = await import('./server/lib/egxTickers.ts');
       const { prisma } = await import('./server/lib/prisma.ts');

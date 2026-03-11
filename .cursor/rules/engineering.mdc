@@ -46,7 +46,7 @@ server/
   repositories/    ← ALL database queries live here
   middleware/      ← auth, validation, rate limiting
   lib/             ← shared utilities (logger, redis, prisma, constants)
-  services/        ← external services (email, AI, yahoo finance)
+  services/        ← external services (email, AI, market data)
 ```
 
 #### Controller — request/response only:
@@ -735,14 +735,14 @@ export async function getStockPrice(ticker: string) {
   const cached = await getCache(cacheKey);
   if (cached) return cached as StockPrice;
 
-  const fresh = await fetchFromYahoo(ticker);
-  await setCache(cacheKey, fresh, CACHE_TTL.prices);
+  const fresh = await marketDataService.getQuote(ticker);
+  if (fresh) await setCache(cacheKey, quoteToCached(fresh), CACHE_TTL.prices);
   return fresh;
 }
 
-// ❌ WRONG — hits Yahoo Finance on every request
+// ❌ WRONG — hits external API on every request without cache
 export async function getStockPrice(ticker: string) {
-  return fetchFromYahoo(ticker);
+  return marketDataService.getQuote(ticker);
 }
 ```
 
@@ -779,7 +779,7 @@ import MarketPage from './pages/MarketPage';
 import { logger } from '../lib/logger';
 logger.info('Goal created', { userId, goalId: goal.id });
 logger.warn('Rate limit approached', { userId, endpoint: '/analysis' });
-logger.error('Yahoo Finance failed', { ticker, error: err.message });
+logger.error('Market data failed', { ticker, error: err.message });
 
 // ✅ CORRECT — frontend (only in development)
 if (import.meta.env.DEV) {
