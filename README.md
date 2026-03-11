@@ -1,24 +1,31 @@
-<<<<<<< HEAD
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# EGX Pro
 
-# Run and deploy your AI Studio app
+Egyptian Exchange (EGX) stock tracking and portfolio app with AI analysis, goals, referrals, and real-time market data.
 
-This contains everything you need to run your app locally.
+## Documentation
 
-View your app in AI Studio: https://ai.studio/apps/303f37ee-c29a-4bd1-b7d8-b4f22437d549
+| Section | Description |
+|---------|-------------|
+| [docs/guides/getting-started.md](docs/guides/getting-started.md) | Prerequisites, install, env, DB, run |
+| [docs/guides/environment-variables.md](docs/guides/environment-variables.md) | All environment variables |
+| [docs/api/README.md](docs/api/README.md) | API overview and route summary |
+| [docs/api/auth.md](docs/api/auth.md) | Auth endpoints and examples |
+| [docs/api/market.md](docs/api/market.md) | Market data endpoints |
+| [docs/architecture/database.md](docs/architecture/database.md) | Prisma models and schema |
+| [docs/features/](docs/features/) | Market data, subscription, referral, achievements |
+| [docs/decisions/market-data-strategy.md](docs/decisions/market-data-strategy.md) | Why Twelve Data, migration path |
 
-## Run Locally
+## Quick start
 
-**Prerequisites:**  Node.js
+1. **Prerequisites:** Node.js 18+, PostgreSQL 15+
+2. **Install:** `npm install`
+3. **Env:** `cp .env.example .env.local` and set required variables (see [environment-variables](docs/guides/environment-variables.md))
+4. **DB:** `npx prisma migrate dev` then `npx prisma db seed` (if seed exists)
+5. **Run:** `npm run dev`
+6. **Open:** [http://localhost:3000](http://localhost:3000)
 
+## Tech stack
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
-=======
-# egx-pro
->>>>>>> 556d42094d5162f5f9629236300119f257faa642
+- **Backend:** Express, Prisma, PostgreSQL, Upstash Redis, JWT
+- **Frontend:** React, Vite, Tailwind
+- **Market data:** Twelve Data (EGX/XCAI) with optional EGXlytics fallback
