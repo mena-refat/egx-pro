@@ -160,12 +160,12 @@ export const watchlistCheckTargetsSchema = z.object({
   })),
 });
 
-/** Username: 3–20 chars, English letters (upper/lower), numbers, _ and - only; stored lowercase for uniqueness */
-export const USERNAME_MAX_LENGTH = 20;
+/** Username: 6–18 chars, English letters (upper/lower), numbers, _ and - only; stored lowercase for uniqueness */
+export const USERNAME_MAX_LENGTH = 18;
 const USERNAME_REGEX = /^[a-zA-Z0-9_-]+$/;
 
 export const usernameSchema = z.string()
-  .min(3, 'Username must be at least 3 characters')
+  .min(6, 'Username must be at least 6 characters')
   .max(USERNAME_MAX_LENGTH, `Username must be at most ${USERNAME_MAX_LENGTH} characters`)
   .regex(USERNAME_REGEX, 'Username: English letters, numbers, _ and - only')
   .transform((s) => s.trim().toLowerCase());
@@ -175,7 +175,7 @@ export function validateUsernameFormat(value: string): string | null {
   const s = value.trim();
   if (s.length === 0) return null;
   if (s.length > USERNAME_MAX_LENGTH) return 'settings.usernameMax20';
-  if (s.length < 3) return 'settings.usernameMin3';
+  if (s.length < 6) return 'settings.usernameMin3';
   if (!USERNAME_REGEX.test(s)) return 'settings.usernameInvalidChars';
   return null;
 }

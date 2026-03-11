@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export type PredictionStatus = 'ACTIVE' | 'HIT' | 'MISSED' | 'EXPIRED';
 export type PredictionDir = 'UP' | 'DOWN';
-export type PredictionTime = 'WEEK' | 'MONTH' | 'THREE_MONTHS';
+export type PredictionTime = 'WEEK' | 'MONTH' | 'THREE_MONTHS' | 'SIX_MONTHS' | 'NINE_MONTHS' | 'YEAR';
 export type UserRank = 'BEGINNER' | 'ANALYST' | 'SENIOR' | 'EXPERT' | 'LEGEND';
 
 export interface FeedPrediction {

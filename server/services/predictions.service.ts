@@ -27,6 +27,15 @@ function getExpiresAt(timeframe: PredictionTime): Date {
     case 'THREE_MONTHS':
       now.setMonth(now.getMonth() + 3);
       break;
+    case 'SIX_MONTHS':
+      now.setMonth(now.getMonth() + 6);
+      break;
+    case 'NINE_MONTHS':
+      now.setMonth(now.getMonth() + 9);
+      break;
+    case 'YEAR':
+      now.setFullYear(now.getFullYear() + 1);
+      break;
     default:
       now.setDate(now.getDate() + 7);
   }
@@ -124,7 +133,7 @@ export const PredictionsService = {
     const direction = body.direction as PredictionDir;
     const targetPrice = Number(body.targetPrice);
     const timeframe = (body.timeframe || 'WEEK') as PredictionTime;
-    const reason = body.reason != null ? String(body.reason).slice(0, 500) : null;
+    const rawReason = typeof body.reason === 'string' ? body.reason : '';
     const isPublic = body.isPublic !== false;
 
     if (!ticker || !['UP', 'DOWN'].includes(direction) || !['WEEK', 'MONTH', 'THREE_MONTHS'].includes(timeframe)) {
@@ -132,6 +141,23 @@ export const PredictionsService = {
     }
     if (typeof targetPrice !== 'number' || targetPrice <= 0) {
       throw new AppError('TARGET_PRICE_INVALID', 400, 'السعر المستهدف غير صالح');
+    }
+
+    const trimmedReason = rawReason.trim();
+    if (!trimmedReason) {
+      throw new AppError('VALIDATION_ERROR', 400, 'يرجى كتابة سبب توقعك');
+    }
+    const wordCount = trimmedReason.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 10) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        400,
+        'السبب قصير جداً — اكتب على الأقل 10 كلمات توضح رأيك',
+        { wordCount, required: 10 }
+      );
+    }
+    if (trimmedReason.length > 500) {
+      throw new AppError('VALIDATION_ERROR', 400, 'السبب طويل جداً (الحد الأقصى 500 حرف)');
     }
 
     const accountAge = Date.now() - new Date(user.createdAt).getTime();
@@ -183,7 +209,7 @@ export const PredictionsService = {
       targetPrice,
       priceAtCreation,
       timeframe,
-      reason,
+      reason: trimmedReason,
       expiresAt,
       isPublic,
     });

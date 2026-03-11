@@ -59,7 +59,13 @@ export const PredictionCard = memo(function PredictionCard({
       ? 'predictions.timeframeWeek'
       : prediction.timeframe === 'MONTH'
         ? 'predictions.timeframeMonth'
-        : 'predictions.timeframeThreeMonths';
+        : prediction.timeframe === 'THREE_MONTHS'
+          ? 'predictions.timeframeThreeMonths'
+          : prediction.timeframe === 'SIX_MONTHS'
+            ? 'predictions.timeframeSixMonths'
+            : prediction.timeframe === 'NINE_MONTHS'
+              ? 'predictions.timeframeNineMonths'
+              : 'predictions.timeframeYear';
 
   return (
     <motion.div

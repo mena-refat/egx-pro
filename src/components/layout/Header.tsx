@@ -122,7 +122,7 @@ export function Header({
                               type="button"
                               onClick={() => {
                                 setProfileCompletionOpen(false);
-                                navigate(m.route.startsWith('/profile') ? m.route.replace('/profile', '/settings') : m.route);
+                                navigate(m.route);
                               }}
                               className="text-xs font-medium text-[var(--brand-text)] hover:opacity-80 flex items-center gap-0.5"
                             >

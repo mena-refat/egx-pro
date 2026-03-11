@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,7 +9,7 @@ import { useAuthStore } from '../../store/authStore';
 import { searchStocks, getStockName } from '../../lib/egxStocks';
 import api from '../../lib/api';
 
-const TIMEFRAMES = ['WEEK', 'MONTH', 'THREE_MONTHS'] as const;
+const TIMEFRAMES = ['WEEK', 'MONTH', 'THREE_MONTHS', 'SIX_MONTHS', 'NINE_MONTHS', 'YEAR'] as const;
 
 export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
   const { t, i18n } = useTranslation('common');
@@ -19,17 +19,43 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
   const { createPrediction, fetchMy, fetchLimits } = usePredictionsApi();
   const [stockSearch, setStockSearch] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const lang = (i18n.language?.startsWith('ar') ? 'ar' : 'en') as 'ar' | 'en';
   const stockSuggestions = useMemo(
     () => searchStocks(stockSearch.trim(), lang).slice(0, 20),
     [stockSearch, lang]
   );
+
+  const updateDropdownPosition = () => {
+    if (!inputRef.current) return;
+    const rect = inputRef.current.getBoundingClientRect();
+    setDropdownRect({
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+    });
+  };
+
+  useEffect(() => {
+    if (!showSuggestions) return;
+    const handleWindowChange = () => {
+      // لو حصل scroll أو resize نقفل الليست عشان متبقاش في مكان غلط
+      setShowSuggestions(false);
+    };
+    window.addEventListener('scroll', handleWindowChange, true);
+    window.addEventListener('resize', handleWindowChange);
+    return () => {
+      window.removeEventListener('scroll', handleWindowChange, true);
+      window.removeEventListener('resize', handleWindowChange);
+    };
+  }, [showSuggestions]);
 
   useEffect(() => {
     if (!draft.ticker || !accessToken) { setCurrentPrice(null); return; }
@@ -72,16 +98,16 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose} role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose} role="dialog" aria-modal="true">
       <motion.div
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 25 }}
-        className="w-full max-w-lg max-h-[90vh] overflow-auto rounded-t-2xl bg-[var(--bg-card)] border border-[var(--border)]"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ type: 'spring', damping: 20 }}
+        className="w-full max-w-lg max-h-[90vh] rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-visible"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 max-h-[80vh] overflow-y-auto">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-[var(--text-primary)]">{t('predictions.newPrediction')}</h2>
             <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-[var(--bg-card-hover)]" aria-label={t('common.close')}>×</button>
@@ -94,44 +120,20 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                 <div className="relative">
                   <input
                     type="text"
+                    ref={inputRef}
                     value={stockSearch}
-                    onFocus={() => setShowSuggestions(true)}
-                    onChange={(e) => { setStockSearch(e.target.value); setShowSuggestions(true); }}
+                    onFocus={() => {
+                      setShowSuggestions(true);
+                      updateDropdownPosition();
+                    }}
+                    onChange={(e) => {
+                      setStockSearch(e.target.value);
+                      setShowSuggestions(true);
+                      updateDropdownPosition();
+                    }}
                     placeholder={t('predictions.searchStock')}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] text-[var(--text-primary)]"
                   />
-                  <AnimatePresence>
-                    {showSuggestions && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-xl"
-                      >
-                        {stockSuggestions.length > 0 ? (
-                          stockSuggestions.map((eg) => (
-                            <button
-                              key={eg.ticker}
-                              type="button"
-                              onClick={() => {
-                                updateDraft({ ticker: eg.ticker, stockName: getStockName(eg.ticker, lang) });
-                                setNewPredictionStep(2);
-                                setShowSuggestions(false);
-                              }}
-                              className="w-full text-right px-4 py-3 flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] last:border-0 rounded-none hover:bg-[var(--bg-card-hover)]"
-                            >
-                              <span className="text-sm text-[var(--text-muted)] truncate flex-1">{getStockName(eg.ticker, lang)}</span>
-                              <span className="font-bold text-sm shrink-0">{eg.ticker}</span>
-                            </button>
-                          ))
-                        ) : (
-                          <div className="px-4 py-3 text-sm text-[var(--text-muted)] text-center">
-                            {stockSearch.trim() ? t('portfolio.noResults') : t('portfolio.typeToSearch')}
-                          </div>
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
                 {draft.ticker && <p className="text-sm text-[var(--brand)]">✓ {draft.ticker} {draft.stockName}</p>}
               </motion.div>
@@ -177,7 +179,19 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                           onClick={() => updateDraft({ timeframe: tf })}
                           className={`px-3 py-1.5 rounded-lg text-sm ${draft.timeframe === tf ? 'bg-[var(--brand)] text-white' : 'bg-[var(--bg-secondary)]'}`}
                         >
-                          {t(tf === 'WEEK' ? 'predictions.timeframeWeek' : tf === 'MONTH' ? 'predictions.timeframeMonth' : 'predictions.timeframeThreeMonths')}
+                          {t(
+                            tf === 'WEEK'
+                              ? 'predictions.timeframeWeek'
+                              : tf === 'MONTH'
+                                ? 'predictions.timeframeMonth'
+                                : tf === 'THREE_MONTHS'
+                                  ? 'predictions.timeframeThreeMonths'
+                                  : tf === 'SIX_MONTHS'
+                                    ? 'predictions.timeframeSixMonths'
+                                    : tf === 'NINE_MONTHS'
+                                      ? 'predictions.timeframeNineMonths'
+                                      : 'predictions.timeframeYear'
+                          )}
                         </button>
                       ))}
                     </div>
@@ -199,12 +213,31 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                   rows={3}
                   className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] text-[var(--text-primary)]"
                 />
-                <p className="text-xs text-[var(--text-muted)]">{(draft.reason ?? '').length}/500</p>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={draft.isPublic !== false} onChange={(e) => updateDraft({ isPublic: e.target.checked })} />
-                  <span className="text-sm">{t('predictions.publishPublic')}</span>
-                </label>
-                <Button onClick={() => setNewPredictionStep(4)}>{t('predictions.next')}</Button>
+                {(() => {
+                  const text = draft.reason ?? '';
+                  const words = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+                  const hasMin = words >= 10;
+                  return (
+                    <>
+                      <p className={`text-xs font-medium ${hasMin ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {t('predictions.reasonMinWordsLabel', { count: words, required: 10 })}
+                      </p>
+                      <p className="text-[10px] text-[var(--text-muted)]">
+                        {t('predictions.reasonHint')}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">{text.length}/500</p>
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={draft.isPublic !== false} onChange={(e) => updateDraft({ isPublic: e.target.checked })} />
+                        <span className="text-sm">{t('predictions.publishPublic')}</span>
+                      </label>
+                      <span title={!hasMin ? t('predictions.reasonTooltip') : undefined}>
+                        <Button onClick={() => setNewPredictionStep(4)} disabled={!hasMin}>
+                          {t('predictions.next')}
+                        </Button>
+                      </span>
+                    </>
+                  );
+                })()}
               </motion.div>
             )}
 
@@ -213,8 +246,29 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                 <button type="button" onClick={() => setNewPredictionStep(3)} className="text-sm text-[var(--brand)]">← {t('common.back')}</button>
                 <p className="text-sm text-[var(--text-secondary)]">{t('predictions.step4Title')}</p>
                 <div className="p-3 rounded-xl bg-[var(--bg-secondary)] text-sm">
-                  <p>{draft.ticker} · {draft.direction === 'UP' ? t('predictions.directionUp') : t('predictions.directionDown')} → {draft.targetPrice} ج.م · {t(draft.timeframe === 'WEEK' ? 'predictions.timeframeWeek' : draft.timeframe === 'MONTH' ? 'predictions.timeframeMonth' : 'predictions.timeframeThreeMonths')}</p>
+                  <p>
+                    {draft.ticker} · {draft.direction === 'UP' ? t('predictions.directionUp') : t('predictions.directionDown')}
+                    {' '}→ {draft.targetPrice} ج.م ·{' '}
+                    {t(
+                      draft.timeframe === 'WEEK'
+                        ? 'predictions.timeframeWeek'
+                        : draft.timeframe === 'MONTH'
+                          ? 'predictions.timeframeMonth'
+                          : draft.timeframe === 'THREE_MONTHS'
+                            ? 'predictions.timeframeThreeMonths'
+                            : draft.timeframe === 'SIX_MONTHS'
+                              ? 'predictions.timeframeSixMonths'
+                              : draft.timeframe === 'NINE_MONTHS'
+                                ? 'predictions.timeframeNineMonths'
+                                : 'predictions.timeframeYear'
+                    )}
+                  </p>
                 </div>
+                {draft.reason && (
+                  <div className="p-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-xs text-[var(--text-secondary)]">
+                    “{draft.reason}”
+                  </div>
+                )}
                 <p className="text-xs text-[var(--text-muted)]">{t('predictions.termsWarning')}</p>
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} />
@@ -226,6 +280,41 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
             )}
           </AnimatePresence>
         </div>
+        {/* Floating stock suggestions overlay (outside scroll flow) */}
+        <AnimatePresence>
+          {showSuggestions && dropdownRect && stockSuggestions.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ type: 'spring', damping: 20 }}
+              className="fixed z-[9999] max-h-64 overflow-y-auto bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-xl text-right"
+              style={{
+                top: dropdownRect.top,
+                left: dropdownRect.left,
+                width: dropdownRect.width,
+              }}
+            >
+              {stockSuggestions.map((eg) => (
+                <button
+                  key={eg.ticker}
+                  type="button"
+                  onClick={() => {
+                    updateDraft({ ticker: eg.ticker, stockName: getStockName(eg.ticker, lang) });
+                    setNewPredictionStep(2);
+                    setShowSuggestions(false);
+                  }}
+                  className="w-full px-4 py-3 flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] last:border-0 rounded-none hover:bg-[var(--bg-card-hover)]"
+                >
+                  <div className="flex flex-col items-end flex-1 min-w-0">
+                    <span className="font-semibold text-sm truncate">{getStockName(eg.ticker, lang)}</span>
+                    <span className="text-xs text-[var(--text-muted)]">{eg.ticker}</span>
+                  </div>
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );
