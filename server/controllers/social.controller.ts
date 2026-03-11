@@ -137,5 +137,17 @@ export const SocialController = {
     const list = await SocialService.search(userId, q);
     res.json({ data: list });
   }),
+
+  usernameSearch: run(async (req, res) => {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
+    }
+    const q = String(req.query.q ?? '').trim();
+    const limit = Math.min(5, Math.max(1, parseInt(String(req.query.limit), 10) || 5));
+    const list = await SocialService.usernameSearch(userId, q, limit);
+    res.json(list);
+  }),
 };
 

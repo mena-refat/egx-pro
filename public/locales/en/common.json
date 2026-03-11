@@ -476,7 +476,8 @@
     "cancelRequest": "Cancel",
     "portfolioAllocation": "Portfolio allocation (%)",
     "watchlist": "Watchlist",
-    "noResults": "No users found."
+    "noResults": "No users found.",
+    "noUsernameAutocomplete": "No user with this name"
   },
   "overview": {
     "tabLabel": "Overview",

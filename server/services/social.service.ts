@@ -328,6 +328,71 @@ export const SocialService = {
     };
   },
 
+  /** GET /username-search: prefix autocomplete, min 5 chars, max 5 results, exclude self. */
+  async usernameSearch(
+    currentUserId: string,
+    q: string,
+    limit: number = 5
+  ): Promise<
+    Array<{
+      username: string;
+      avatarUrl: string | null;
+      rank: string;
+      accuracyRate: number;
+      totalPredictions: number;
+      isPrivate: boolean;
+      followStatus: 'NONE' | 'FOLLOWING' | 'PENDING';
+    }>
+  > {
+    const term = q.trim().toLowerCase();
+    if (term.length < 5) return [];
+
+    const take = Math.min(10, Math.max(1, limit));
+    const users = await prisma.user.findMany({
+      where: {
+        isDeleted: false,
+        id: { not: currentUserId },
+        username: { not: null, startsWith: term, mode: 'insensitive' },
+      },
+      select: {
+        id: true,
+        username: true,
+        avatarUrl: true,
+        isPrivate: true,
+        predictionStats: { select: { rank: true, accuracyRate: true, totalPredictions: true } },
+      },
+      take,
+      orderBy: { username: 'asc' },
+    });
+
+    const sliced = users;
+    const ids = sliced.map((u) => u.id).filter(Boolean);
+    const followRows = await prisma.follow.findMany({
+      where: { followerId: currentUserId, followingId: { in: ids } },
+      select: { followingId: true, status: true },
+    });
+    const statusByTarget = new Map<string, 'NONE' | 'FOLLOWING' | 'PENDING'>(
+      followRows.map((r) => [
+        r.followingId,
+        r.status === 'ACCEPTED' ? 'FOLLOWING' : 'PENDING',
+      ])
+    );
+
+    return sliced.map((u) => {
+      const un = u.username ?? '';
+      const stats = u.predictionStats;
+      return {
+        username: un,
+        avatarUrl: u.avatarUrl ?? null,
+        rank: (stats?.rank ?? 'BEGINNER') as string,
+        accuracyRate: Math.round(stats?.accuracyRate ?? 0),
+        totalPredictions: stats?.totalPredictions ?? 0,
+        isPrivate: u.isPrivate ?? false,
+        followStatus: (u.id ? statusByTarget.get(u.id) : null) ?? 'NONE',
+      };
+    });
+  },
+
   async search(currentUserId: string, q: string) {
     const term = q.trim().toLowerCase();
     if (!term || term.length < 2) return [];

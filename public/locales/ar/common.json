@@ -479,7 +479,8 @@
     "cancelRequest": "إلغاء",
     "portfolioAllocation": "توزيع المحفظة (%)",
     "watchlist": "قائمة المراقبة",
-    "noResults": "لا يوجد مستخدمون."
+    "noResults": "لا يوجد مستخدمون.",
+    "noUsernameAutocomplete": "لا يوجد مستخدم بهذا الاسم"
   },
   "overview": {
     "tabLabel": "نظرة عامة",
