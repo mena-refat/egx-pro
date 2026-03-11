@@ -210,3 +210,9 @@ export const goalUpdateSchema = z.object({
 export const goalAmountSchema = z.object({
   currentAmount: z.number().min(0),
 });
+
+/** Username search autocomplete query (GET /api/social/username-search) */
+export const usernameSearchQuerySchema = z.object({
+  q: z.string().max(100),
+  limit: z.coerce.number().int().min(1).max(5).default(5),
+});

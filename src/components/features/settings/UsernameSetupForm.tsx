@@ -1,0 +1,71 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { Input } from '../../ui/Input';
+import { Button } from '../../ui/Button';
+
+type Props = {
+  value: string;
+  maxLength: number;
+  status: 'idle' | 'checking' | 'available' | 'taken' | 'error';
+  formatError: string | null;
+  message: string | null;
+  saving: boolean;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+};
+
+export function UsernameSetupForm({
+  value,
+  maxLength,
+  status,
+  formatError,
+  message,
+  saving,
+  onChange,
+  onSubmit,
+}: Props) {
+  const { t } = useTranslation('common');
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)] text-[var(--text-primary)] p-4">
+      <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-sm">
+        <h1 className="text-xl font-bold mb-2">
+          {t('settings.chooseUsername', { defaultValue: 'Choose your username' })}
+        </h1>
+        <p className="text-sm text-[var(--text-secondary)] mb-4">
+          {t('settings.usernameOnce', {
+            defaultValue:
+              'Pick a unique username (3–20 English letters, numbers, and _). Your followers will find you by this name.',
+          })}
+        </p>
+        <div className="space-y-2 mb-4">
+          <label className="text-xs font-medium text-[var(--text-secondary)]">
+            {t('settings.username', { defaultValue: 'Username' })}
+          </label>
+          <Input
+            value={value}
+            maxLength={maxLength}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="egx_trader"
+          />
+          {formatError && <p className="text-xs text-[var(--danger)]">{formatError}</p>}
+          {message && !formatError && <p className="text-xs text-[var(--danger)]">{message}</p>}
+          {status === 'available' && !formatError && !message && (
+            <p className="text-xs text-[var(--success)]">
+              {t('settings.usernameAvailable', { defaultValue: 'Username is available' })}
+            </p>
+          )}
+        </div>
+        <Button
+          onClick={onSubmit}
+          disabled={saving || !value || Boolean(formatError) || status === 'taken'}
+          className="w-full"
+        >
+          {saving
+            ? t('common.loading', { defaultValue: 'Saving...' })
+            : t('settings.saveUsername', { defaultValue: 'Save username' })}
+        </Button>
+      </div>
+    </div>
+  );
+}

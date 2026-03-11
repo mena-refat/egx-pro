@@ -34,3 +34,9 @@ export const PAGINATION = {
   defaultLimit: 20,
   maxLimit: 50,
 } as const;
+
+/** Discover / username search autocomplete */
+export const DISCOVER = {
+  minUsernameLength: 5,
+  autocompleteLimit: 5,
+} as const;

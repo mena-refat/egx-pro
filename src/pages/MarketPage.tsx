@@ -1,223 +1,76 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  BarChart3,
-  Newspaper,
-  RefreshCw,
-  ChevronDown,
-  ChevronRight,
-  Moon,
-  Circle,
-  Timer,
-  ChevronLeft,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import api from '../lib/api';
-import { getStockName } from '../lib/egxStocks';
-import { Stock } from '../types';
+import { Moon } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { MarketIndicesGrid } from '../components/market/MarketIndicesGrid';
-
-type DataPoint = { value: number; change: number; changePercent: number };
-
-interface MarketOverview {
-  usdEgp: DataPoint;
-  egx30: DataPoint;
-  egx30Capped?: DataPoint;
-  egx70: DataPoint;
-  egx100: DataPoint;
-  egx33?: DataPoint;
-  egx35?: DataPoint;
-  gold: DataPoint & { valueEgxPerGram?: number; buyEgxPerGram?: number; sellEgxPerGram?: number; isDelayed?: boolean };
-  silver: DataPoint & { valueEgxPerGram?: number; buyEgxPerGram?: number; sellEgxPerGram?: number; isDelayed?: boolean };
-  lastUpdated: number;
-  egxStatus?: { status: string; label?: { ar: string; en: string } };
-  goldMarketStatus?: { isOpen: boolean; label?: { ar: string; en: string } };
-}
-
-interface NewsItem {
-  title: string;
-  summary?: string;
-  source: string;
-  publishedAt: string;
-  url: string;
-}
-
-function formatValue(n: number, decimals = 2): string {
-  if (!Number.isFinite(n) || n === 0) return '—';
-  return n.toLocaleString(undefined, { maximumFractionDigits: decimals, minimumFractionDigits: 0 });
-}
-
-function formatChange(changePercent: number): string {
-  if (!Number.isFinite(changePercent)) return '—';
-  const sign = changePercent > 0 ? '+' : '';
-  return `${sign}${changePercent.toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
-}
-
-function minutesAgo(ts: number): number {
-  return Math.max(0, Math.floor((Date.now() - ts) / 60000));
-}
+import { MarketPageHeader } from '../components/market/MarketPageHeader';
+import { MarketForexCommodities } from '../components/market/MarketForexCommodities';
+import { MarketGainersLosers } from '../components/market/MarketGainersLosers';
+import { MarketNewsSection } from '../components/market/MarketNewsSection';
+import { useMarketPage } from '../hooks/useMarketPage';
+import { minutesAgo } from '../components/market/utils';
 
 export default function MarketPage() {
   const { t, i18n } = useTranslation('common');
-  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const isPro = user?.plan === 'pro' || user?.plan === 'yearly';
   const isAr = i18n.language.startsWith('ar');
-  const [overview, setOverview] = useState<MarketOverview | null>(null);
-  const [stocks, setStocks] = useState<Stock[]>([]);
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [loadingOverview, setLoadingOverview] = useState(true);
-  const [loadingStocks, setLoadingStocks] = useState(true);
-  const [loadingNews, setLoadingNews] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [goldExpanded, setGoldExpanded] = useState(false);
-  const [silverExpanded, setSilverExpanded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchOverview = async (signal?: AbortSignal) => {
-    setLoadingOverview(true);
-    setError(null);
-    try {
-      const res = await api.get<MarketOverview | { data: MarketOverview }>('/stocks/market/overview', { signal });
-      if (!signal?.aborted) setOverview((res.data as { data?: MarketOverview })?.data ?? res.data);
-    } catch (err: unknown) {
-      if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
-      if (!signal?.aborted) setError(t('market.loadError'));
-    } finally {
-      if (!signal?.aborted) setLoadingOverview(false);
-    }
-  };
-
-  const fetchStocks = async (signal?: AbortSignal) => {
-    setLoadingStocks(true);
-    try {
-      const res = await api.get<Stock[] | { data: Stock[] }>('/stocks/prices', { signal });
-      const raw = (res.data as { data?: Stock[] })?.data ?? res.data;
-      if (!signal?.aborted) setStocks(Array.isArray(raw) ? raw : []);
-    } catch (err: unknown) {
-      if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
-      if (!signal?.aborted) setStocks([]);
-    } finally {
-      if (!signal?.aborted) setLoadingStocks(false);
-    }
-  };
-
-  const fetchNews = async (signal?: AbortSignal) => {
-    setLoadingNews(true);
-    try {
-      const res = await api.get<NewsItem[] | { data: NewsItem[] }>('/news/market', { signal });
-      const raw = (res.data as { data?: NewsItem[] })?.data ?? res.data;
-      if (!signal?.aborted) setNews(Array.isArray(raw) ? raw : []);
-    } catch {
-      if (!signal?.aborted) setNews([]);
-    } finally {
-      if (!signal?.aborted) setLoadingNews(false);
-    }
-  };
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchOverview(controller.signal);
-    fetchStocks(controller.signal);
-    fetchNews(controller.signal);
-    return () => controller.abort();
-  }, []);
-
-  const refreshAll = async () => {
-    setRefreshing(true);
-    await Promise.all([fetchOverview(), fetchStocks(), fetchNews()]);
-    setRefreshing(false);
-  };
+  const {
+    overview,
+    stocks,
+    news,
+    loadingOverview,
+    loadingStocks,
+    loadingNews,
+    refreshing,
+    error,
+    refreshAll,
+  } = useMarketPage();
 
   const lastUpdateTs = overview?.lastUpdated ?? 0;
   const updatedMinutes = lastUpdateTs ? minutesAgo(lastUpdateTs) : 0;
   const updatedLabel = updatedMinutes === 0 ? t('market.updatedNow') : t('market.updatedAgo', { m: updatedMinutes });
 
-  const topGainers = useMemo(() => {
-    return [...stocks]
-      .filter((s) => s.changePercent != null && Number.isFinite(s.changePercent))
-      .sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0))
-      .slice(0, 10);
-  }, [stocks]);
+  const topGainers = useMemo(
+    () =>
+      [...stocks]
+        .filter((s) => s.changePercent != null && Number.isFinite(s.changePercent))
+        .sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0))
+        .slice(0, 10),
+    [stocks]
+  );
 
-  const topLosers = useMemo(() => {
-    return [...stocks]
-      .filter((s) => s.changePercent != null && Number.isFinite(s.changePercent))
-      .sort((a, b) => (a.changePercent ?? 0) - (b.changePercent ?? 0))
-      .slice(0, 10);
-  }, [stocks]);
+  const topLosers = useMemo(
+    () =>
+      [...stocks]
+        .filter((s) => s.changePercent != null && Number.isFinite(s.changePercent))
+        .sort((a, b) => (a.changePercent ?? 0) - (b.changePercent ?? 0))
+        .slice(0, 10),
+    [stocks]
+  );
 
-  const gold24 = overview?.gold?.valueEgxPerGram ?? 0;
-  const goldBuy24 = overview?.gold?.buyEgxPerGram ?? gold24 * 1.02;
-  const goldSell24 = overview?.gold?.sellEgxPerGram ?? gold24 * 0.98;
-  const goldRates = useMemo(() => ({
-    '24': gold24,
-    '21': gold24 * (21 / 24),
-    '18': gold24 * (18 / 24),
-    '14': gold24 * (14 / 24),
-  }), [gold24]);
-  const goldRatesBuy = useMemo(() => ({
-    '24': goldBuy24,
-    '21': goldBuy24 * (21 / 24),
-    '18': goldBuy24 * (18 / 24),
-    '14': goldBuy24 * (14 / 24),
-  }), [goldBuy24]);
-  const goldRatesSell = useMemo(() => ({
-    '24': goldSell24,
-    '21': goldSell24 * (21 / 24),
-    '18': goldSell24 * (18 / 24),
-    '14': goldSell24 * (14 / 24),
-  }), [goldSell24]);
-
-  const silver999 = overview?.silver?.valueEgxPerGram ?? 0;
-  const silverBuy999 = overview?.silver?.buyEgxPerGram ?? silver999 * 1.02;
-  const silverSell999 = overview?.silver?.sellEgxPerGram ?? silver999 * 0.98;
-  const silverRates = useMemo(() => ({
-    '999': silver999,
-    '925': silver999 * (925 / 999),
-    '800': silver999 * (800 / 999),
-  }), [silver999]);
-  const silverRatesBuy = useMemo(() => ({
-    '999': silverBuy999,
-    '925': silverBuy999 * (925 / 999),
-    '800': silverBuy999 * (800 / 999),
-  }), [silverBuy999]);
-  const silverRatesSell = useMemo(() => ({
-    '999': silverSell999,
-    '925': silverSell999 * (925 / 999),
-    '800': silverSell999 * (800 / 999),
-  }), [silverSell999]);
-
-  const usdVal = overview?.usdEgp?.value ?? 0;
-  const buyRate = usdVal * 0.995;
-  const sellRate = usdVal * 1.005;
-
-  const indices = useMemo(() => [
-    { key: 'egx30', label: t('market.egx30'), data: overview?.egx30, icon: null },
-    { key: 'egx30Capped', label: t('market.egx30Capped'), data: overview?.egx30Capped, icon: null },
-    { key: 'egx70', label: t('market.egx70'), data: overview?.egx70, icon: null },
-    { key: 'egx100', label: t('market.egx100'), data: overview?.egx100, icon: null },
-    { key: 'egx33', label: t('market.egx33Sharia'), data: overview?.egx33, icon: Moon },
-    { key: 'egx35', label: t('market.egx35lv'), data: overview?.egx35, icon: null },
-  ], [overview, t]);
+  const indices = useMemo(
+    () => [
+      { key: 'egx30', label: t('market.egx30'), data: overview?.egx30, icon: null },
+      { key: 'egx30Capped', label: t('market.egx30Capped'), data: overview?.egx30Capped, icon: null },
+      { key: 'egx70', label: t('market.egx70'), data: overview?.egx70, icon: null },
+      { key: 'egx100', label: t('market.egx100'), data: overview?.egx100, icon: null },
+      { key: 'egx33', label: t('market.egx33Sharia'), data: overview?.egx33, icon: Moon },
+      { key: 'egx35', label: t('market.egx35lv'), data: overview?.egx35, icon: null },
+    ],
+    [overview, t]
+  );
 
   const dir = isAr ? 'rtl' : 'ltr';
-  const loading = loadingOverview;
 
-  if (loading) {
+  if (loadingOverview && !overview) {
     return (
-      <div className="grid grid-cols-2 gap-3 p-4">
+      <div className="grid grid-cols-2 gap-3 p-4" dir={dir}>
         {[1, 2, 3, 4].map((i) => (
-          <React.Fragment key={i}>
-            <Skeleton height={96} className="w-full rounded-xl" />
-          </React.Fragment>
+          <Skeleton key={i} height={96} className="w-full rounded-xl" />
         ))}
       </div>
     );
@@ -225,58 +78,19 @@ export default function MarketPage() {
 
   return (
     <div className="space-y-8" dir={dir}>
-      {/* Top: title + subtitle (Live vs delayed) + refresh */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-            {t('market.title')}
-          </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[var(--text-muted)]">
-            {isPro ? (
-              <span className="inline-flex items-center gap-1 text-[var(--success)]">
-                <Circle className="w-3.5 h-3.5 fill-[var(--success)]" aria-hidden />
-                {t('market.allPricesLive')}
-              </span>
-            ) : (
-              <>
-                <span className="inline-flex items-center gap-1">
-                  <Timer className="w-3.5 h-3.5" aria-hidden />
-                  {t('market.stocksDelayed10')}
-                </span>
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))}
-                  className="inline-flex items-center gap-0.5 text-[var(--brand)]"
-                >
-                  {t('market.upgradeToLivePrices')}
-                  <ChevronLeft className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} aria-hidden />
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={refreshAll}
-          disabled={refreshing}
-          icon={<RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />}
-          className="self-start sm:self-center p-2 min-w-0"
-          aria-label={t('market.refresh')}
-        >
-          <span className="sr-only">{t('market.refresh')}</span>
-        </Button>
-      </div>
+      <MarketPageHeader isPro={isPro} isAr={isAr} refreshing={refreshing} onRefresh={refreshAll} />
 
       {error && (
-        <div className="rounded-xl border border-[var(--danger)]/30 bg-[var(--danger-bg)] px-4 py-3 text-[var(--danger)] text-sm flex items-center justify-between">
-          <span>{error}</span>
-          <button type="button" onClick={fetchOverview} className="text-[var(--danger)] hover:underline">
+        <div className="rounded-xl border border-[var(--danger)]/30 bg-[var(--danger)]/10 p-4 flex items-center justify-between gap-4">
+          <p className="text-sm text-[var(--danger)]">{error}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => refreshAll()}
+          >
             {t('common.retry')}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -288,284 +102,14 @@ export default function MarketPage() {
         lastUpdatedPrefix={t('market.lastUpdated')}
       />
 
-      {/* [2] العملات والسلع — تفاصيل فقط (بدون تكرار الأرقام الكبيرة) */}
       <section>
-        <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">
-          {t('market.forexCommodities')}
-        </h2>
-        {loadingOverview ? (
-          <div className="space-y-4">
-            <Skeleton height={96} className="w-full rounded-xl" />
-            <Skeleton height={80} className="w-full rounded-xl" />
-            <Skeleton height={80} className="w-full rounded-xl" />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* USD/EGP */}
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <p className="text-sm font-medium text-[var(--text-secondary)]">$ USD / EGP</p>
-                <span className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--success)]">
-                  <Circle className="w-3 h-3 fill-[var(--success)]" aria-hidden /> {t('delay.liveBadge')}
-                </span>
-              </div>
-              <p className="text-xl font-bold text-[var(--text-primary)]">{formatValue(usdVal, 2)} ج.م</p>
-              <p className={`text-sm font-semibold mt-1 ${(overview?.usdEgp?.changePercent ?? 0) > 0 ? 'text-[var(--success)]' : (overview?.usdEgp?.changePercent ?? 0) < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
-                {formatChange(overview?.usdEgp?.changePercent ?? 0)}
-              </p>
-              <p className="text-sm text-[var(--text-secondary)] mt-2">
-                {t('market.buy')}: {formatValue(buyRate, 2)} &nbsp; {t('market.sell')}: {formatValue(sellRate, 2)}
-              </p>
-            </div>
-
-            {/* Gold expandable */}
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden shadow-sm">
-              <button
-                type="button"
-                onClick={() => setGoldExpanded(!goldExpanded)}
-                className="w-full flex items-center justify-between gap-2 p-4 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
-              >
-                <span className="font-medium text-[var(--text-secondary)]">{t('market.gold24k')} <ChevronDown className={`w-4 h-4 inline-block align-middle transition-transform ${goldExpanded ? 'rotate-180' : ''}`} /></span>
-                <span className="flex items-center gap-3 flex-wrap justify-end">
-                  {overview?.goldMarketStatus?.isOpen === false ? (
-                    <span className="text-xs font-medium text-[var(--text-muted)]">{t('delay.lastPrice')} · {t('delay.goldClosedUntil')}</span>
-                  ) : overview?.gold?.isDelayed ? (
-                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--text-muted)]"><Timer className="w-3 h-3" aria-hidden /> {t('delay.delayedBadge')}</span>
-                  ) : (
-                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--success)]"><Circle className="w-3 h-3 fill-[var(--success)]" aria-hidden /> {t('delay.liveBadge')}</span>
-                  )}
-                  <span className={`text-xs font-semibold ${(overview?.gold?.changePercent ?? 0) > 0 ? 'text-[var(--success)]' : (overview?.gold?.changePercent ?? 0) < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
-                    {formatChange(overview?.gold?.changePercent ?? 0)}
-                  </span>
-                  <span className="text-xs text-[var(--text-muted)]">{t('market.perGram')}: {formatValue(gold24, 0)} ج.م</span>
-                </span>
-              </button>
-              <AnimatePresence>
-                {goldExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="border-t border-[var(--border)] overflow-hidden"
-                  >
-                    <ul className="p-4 space-y-2">
-                      {(['24', '21', '18', '14'] as const).map((k, i) => (
-                        <li key={k} className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-2">
-                            {i === 0 && <span className="text-[var(--success)]">✓</span>}
-                            <span className={i === 0 ? 'font-medium text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}>
-                              {t(`market.karat${k}` as 'market.karat24')}
-                            </span>
-                          </span>
-                          <span className="text-[var(--text-secondary)]">
-                            {t('market.buy')}: <span className="font-medium text-[var(--text-primary)]">{formatValue(goldRatesBuy[k], 0)}</span>
-                            {' · '}
-                            {t('market.sell')}: <span className="font-medium text-[var(--text-primary)]">{formatValue(goldRatesSell[k], 0)}</span> {t('market.perGram')}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Silver expandable */}
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden shadow-sm">
-              <button
-                type="button"
-                onClick={() => setSilverExpanded(!silverExpanded)}
-                className="w-full flex items-center justify-between gap-2 p-4 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
-              >
-                <span className="font-medium text-[var(--text-secondary)]">{t('market.silver999')} <ChevronDown className={`w-4 h-4 inline-block align-middle transition-transform ${silverExpanded ? 'rotate-180' : ''}`} /></span>
-                <span className="flex items-center gap-3 flex-wrap justify-end">
-                  {overview?.goldMarketStatus?.isOpen === false ? (
-                    <span className="text-xs font-medium text-[var(--text-muted)]">{t('delay.lastPrice')} · {t('delay.goldClosedUntil')}</span>
-                  ) : overview?.silver?.isDelayed ? (
-                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--text-muted)]"><Timer className="w-3 h-3" aria-hidden /> {t('delay.delayedBadge')}</span>
-                  ) : (
-                    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--success)]"><Circle className="w-3 h-3 fill-[var(--success)]" aria-hidden /> {t('delay.liveBadge')}</span>
-                  )}
-                  <span className={`text-xs font-semibold ${(overview?.silver?.changePercent ?? 0) > 0 ? 'text-[var(--success)]' : (overview?.silver?.changePercent ?? 0) < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
-                    {formatChange(overview?.silver?.changePercent ?? 0)}
-                  </span>
-                  <span className="text-xs text-[var(--text-muted)]">{t('market.perGram')}: {formatValue(silver999, 2)} ج.م</span>
-                </span>
-              </button>
-              <AnimatePresence>
-                {silverExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="border-t border-[var(--border)] overflow-hidden"
-                  >
-                    <ul className="p-4 space-y-2">
-                      {(['999', '925', '800'] as const).map((k, i) => (
-                        <li key={k} className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-2">
-                            {i === 0 && <span className="text-[var(--success)]">✓</span>}
-                            <span className={i === 0 ? 'font-medium text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}>
-                              {t(`market.purity${k}` as 'market.purity999')}
-                            </span>
-                          </span>
-                          <span className="text-[var(--text-secondary)]">
-                            {t('market.buy')}: <span className="font-medium text-[var(--text-primary)]">{formatValue(silverRatesBuy[k], 2)}</span>
-                            {' · '}
-                            {t('market.sell')}: <span className="font-medium text-[var(--text-primary)]">{formatValue(silverRatesSell[k], 2)}</span> {t('market.perGram')}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        )}
+        <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">{t('market.forexCommodities')}</h2>
+        <MarketForexCommodities overview={overview} loading={loadingOverview} />
       </section>
 
-      {/* [3] أكثر الأسهم ارتفاعاً وانخفاضاً */}
-      <section>
-        <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">
-          {t('market.gainersLosers')}
-        </h2>
-        {loadingStocks ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-3">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <React.Fragment key={i}>
-                  <Skeleton height={48} className="w-full" />
-                </React.Fragment>
-              ))}
-            </div>
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-3">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <React.Fragment key={i}>
-                  <Skeleton height={48} className="w-full" />
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden shadow-sm">
-              <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2 text-[var(--success)]">
-                <TrendingUp className="w-4 h-4" />
-                <span className="font-semibold text-sm">{t('market.topGainers')}</span>
-              </div>
-              <ul className="divide-y divide-[var(--border)]">
-                {topGainers.length === 0 ? (
-                  <li className="px-4 py-6 text-center text-[var(--text-muted)] text-sm">{t('market.noData')}</li>
-                ) : (
-                  topGainers.map((s) => (
-                    <li key={s.ticker}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/stocks/${s.ticker}`)}
-                        className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-medium text-[var(--text-primary)] truncate">{getStockName(s.ticker, isAr ? 'ar' : 'en')}</p>
-                          <p className="text-xs text-[var(--text-muted)]">{s.ticker}</p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="font-medium text-[var(--text-secondary)]">{formatValue(s.price ?? 0, 2)}</span>
-                          <span className="text-xs font-semibold text-[var(--success)] flex items-center gap-0.5">
-                            {formatChange(s.changePercent ?? 0)}
-                            <TrendingUp className="w-3.5 h-3.5" />
-                          </span>
-                        </div>
-                      </button>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </div>
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden shadow-sm">
-              <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2 text-[var(--danger)]">
-                <TrendingDown className="w-4 h-4" />
-                <span className="font-semibold text-sm">{t('market.topLosers')}</span>
-              </div>
-              <ul className="divide-y divide-[var(--border)]">
-                {topLosers.length === 0 ? (
-                  <li className="px-4 py-6 text-center text-[var(--text-muted)] text-sm">{t('market.noData')}</li>
-                ) : (
-                  topLosers.map((s) => (
-                    <li key={s.ticker}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/stocks/${s.ticker}`)}
-                        className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-medium text-[var(--text-primary)] truncate">{getStockName(s.ticker, isAr ? 'ar' : 'en')}</p>
-                          <p className="text-xs text-[var(--text-muted)]">{s.ticker}</p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="font-medium text-[var(--text-secondary)]">{formatValue(s.price ?? 0, 2)}</span>
-                          <span className="text-xs font-semibold text-[var(--danger)] flex items-center gap-0.5">
-                            {formatChange(s.changePercent ?? 0)}
-                            <TrendingDown className="w-3.5 h-3.5" />
-                          </span>
-                        </div>
-                      </button>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </div>
-          </div>
-        )}
-      </section>
+      <MarketGainersLosers topGainers={topGainers} topLosers={topLosers} loading={loadingStocks} isAr={isAr} />
 
-      {/* [4] أخبار السوق */}
-      <section>
-        <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">
-          {t('market.newsTitle')}
-        </h2>
-        {loadingNews ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-2">
-                <Skeleton height={18} className="w-full" />
-                <Skeleton height={14} className="w-4/5" />
-                <Skeleton height={12} className="w-1/3" />
-              </div>
-            ))}
-          </div>
-        ) : news.length === 0 ? (
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-12 text-center">
-            <Newspaper className="w-12 h-12 mx-auto text-[var(--text-muted)] mb-4" />
-            <p className="font-medium text-[var(--text-secondary)]">{t('market.newsEmptyTitle')}</p>
-            <p className="text-sm text-[var(--text-muted)] mt-1">{t('market.newsEmptyDesc')}</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {news.slice(0, 9).map((item, idx) => (
-              <a
-                key={idx}
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-sm hover:border-[var(--brand)] hover:shadow-md transition-all"
-              >
-                <div className="flex items-center justify-between gap-2 text-xs text-[var(--text-muted)] mb-2">
-                  <span>{item.source}</span>
-                  <span>{item.publishedAt ? new Date(item.publishedAt).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' }) : ''}</span>
-                </div>
-                <h3 className="font-medium text-[var(--text-primary)] line-clamp-2 mb-2">{item.title}</h3>
-                <span className="text-sm text-[var(--brand)] font-medium inline-flex items-center gap-1">
-                  {t('market.readMore')}
-                  <ChevronRight className="w-4 h-4" />
-                </span>
-              </a>
-            ))}
-          </div>
-        )}
-      </section>
+      <MarketNewsSection news={news} loading={loadingNews} locale={i18n.language} />
     </div>
   );
 }

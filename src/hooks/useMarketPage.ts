@@ -1,0 +1,89 @@
+import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import api from '../lib/api';
+import type { MarketOverview } from '../components/market/types';
+import type { Stock } from '../types';
+import type { MarketNewsItem } from '../components/market/types';
+
+export function useMarketPage() {
+  const { t } = useTranslation('common');
+  const [overview, setOverview] = useState<MarketOverview | null>(null);
+  const [stocks, setStocks] = useState<Stock[]>([]);
+  const [news, setNews] = useState<MarketNewsItem[]>([]);
+  const [loadingOverview, setLoadingOverview] = useState(true);
+  const [loadingStocks, setLoadingStocks] = useState(true);
+  const [loadingNews, setLoadingNews] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchOverview = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoadingOverview(true);
+      setError(null);
+      try {
+        const res = await api.get<MarketOverview | { data: MarketOverview }>('/stocks/market/overview', { signal });
+        if (!signal?.aborted) setOverview((res.data as { data?: MarketOverview })?.data ?? res.data);
+      } catch (err: unknown) {
+        if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
+        if (!signal?.aborted) setError(t('market.loadError'));
+      } finally {
+        if (!signal?.aborted) setLoadingOverview(false);
+      }
+    },
+    [t]
+  );
+
+  const fetchStocks = useCallback(async (signal?: AbortSignal) => {
+    setLoadingStocks(true);
+    try {
+      const res = await api.get<Stock[] | { data: Stock[] }>('/stocks/prices', { signal });
+      const raw = (res.data as { data?: Stock[] })?.data ?? res.data;
+      if (!signal?.aborted) setStocks(Array.isArray(raw) ? raw : []);
+    } catch (err: unknown) {
+      if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
+      if (!signal?.aborted) setStocks([]);
+    } finally {
+      if (!signal?.aborted) setLoadingStocks(false);
+    }
+  }, []);
+
+  const fetchNews = useCallback(async (signal?: AbortSignal) => {
+    setLoadingNews(true);
+    try {
+      const res = await api.get<MarketNewsItem[] | { data: MarketNewsItem[] }>('/news/market', { signal });
+      const raw = (res.data as { data?: MarketNewsItem[] })?.data ?? res.data;
+      if (!signal?.aborted) setNews(Array.isArray(raw) ? raw : []);
+    } catch {
+      if (!signal?.aborted) setNews([]);
+    } finally {
+      if (!signal?.aborted) setLoadingNews(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchOverview(controller.signal);
+    fetchStocks(controller.signal);
+    fetchNews(controller.signal);
+    return () => controller.abort();
+  }, [fetchOverview, fetchStocks, fetchNews]);
+
+  const refreshAll = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchOverview(), fetchStocks(), fetchNews()]);
+    setRefreshing(false);
+  }, [fetchOverview, fetchStocks, fetchNews]);
+
+  return {
+    overview,
+    stocks,
+    news,
+    loadingOverview,
+    loadingStocks,
+    loadingNews,
+    refreshing,
+    error,
+    refreshAll,
+    fetchOverview,
+  };
+}

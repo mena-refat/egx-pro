@@ -153,7 +153,7 @@ export function Header({
           </button>
           <AnimatePresence>
             {notificationsOpen && (
-              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="absolute left-0 top-full mt-2 w-80 max-h-96 overflow-auto rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] flex flex-col">
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className={`absolute left-0 top-full mt-2 w-80 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] flex flex-col ${notifications.length > 0 ? 'max-h-96 overflow-hidden' : ''}`}>
                 <div className="shrink-0 border-b border-[var(--border-subtle)] px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-[var(--text-secondary)]">{t('settings.notifications')}</span>
@@ -170,7 +170,7 @@ export function Header({
                     </div>
                   )}
                 </div>
-                <div className="p-2 overflow-auto min-h-0">
+                <div className={`p-2 min-h-0 ${notifications.length > 0 ? 'overflow-y-auto flex-1' : 'overflow-hidden'}`}>
                   <NotificationDropdown
                     notifications={notifications}
                     loading={notificationsLoading}

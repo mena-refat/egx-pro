@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { SocialService } from '../services/social.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
+import { usernameSearchQuerySchema } from '../../src/lib/validations.ts';
 
 function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -144,8 +145,10 @@ export const SocialController = {
       res.status(401).json({ error: 'UNAUTHORIZED' });
       return;
     }
-    const q = String(req.query.q ?? '').trim();
-    const limit = Math.min(5, Math.max(1, parseInt(String(req.query.limit), 10) || 5));
+    const { q, limit } = usernameSearchQuerySchema.parse({
+      q: String(req.query.q ?? '').trim(),
+      limit: req.query.limit ?? 5,
+    });
     const list = await SocialService.usernameSearch(userId, q, limit);
     res.json(list);
   }),

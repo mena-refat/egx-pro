@@ -28,3 +28,15 @@ export interface ProfileTabProps {
   onLogout: () => void;
   setRequestStatus: (s: { type: 'success' | 'error'; message: string } | null) => void;
 }
+
+export interface SocialProfile {
+  username?: string | null;
+  joinDate?: string;
+  followersCount?: number;
+  followingCount?: number;
+  isPrivate?: boolean;
+  showPortfolio?: boolean;
+  myFollowStatus?: 'none' | 'pending' | 'following';
+  portfolio?: Array<{ ticker: string; percentage: number }>;
+  watchlist?: Array<{ ticker: string }>;
+}

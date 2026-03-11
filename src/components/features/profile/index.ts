@@ -5,5 +5,5 @@ export { NotificationsTab } from './NotificationsTab';
 export { DangerZoneTab } from './DangerZoneTab';
 export { FollowersFollowingModal } from './FollowersFollowingModal';
 export { ProfileCounterRow } from './ProfileCounterRow';
-export type { ProfileUser, ProfileTabProps } from './types';
+export type { ProfileUser, ProfileTabProps, SocialProfile } from './types';
 export type { ProfileCounterRowProps } from './ProfileCounterRow';
