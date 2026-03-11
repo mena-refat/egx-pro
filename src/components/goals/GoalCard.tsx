@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { MoreVertical, Check, Home, Car, Umbrella, TrendingUp, Compass, Target } from 'lucide-react';
 import type { GoalRecord } from '../../hooks/useGoals';
 import { formatMoney, formatDeadline, formatTimeLeft, getProgressColor } from './goalsUtils';
@@ -25,7 +25,7 @@ export interface GoalCardProps {
   onMarkComplete: () => void;
 }
 
-export function GoalCard({
+export const GoalCard = memo(function GoalCard({
   goal,
   t,
   locale,
@@ -156,4 +156,4 @@ export function GoalCard({
       </div>
     </div>
   );
-}
+});

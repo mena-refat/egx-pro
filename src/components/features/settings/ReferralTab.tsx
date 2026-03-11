@@ -1,4 +1,4 @@
-import { memo, useEffect, useState, useCallback, Fragment } from 'react';
+import { memo, useEffect, useState, useCallback, useRef, Fragment } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
@@ -17,6 +17,7 @@ import api from '../../../lib/api';
 import { Button } from '../../ui/Button';
 import EmptyState from '../../shared/EmptyState';
 import { Skeleton } from '../../ui/Skeleton';
+import { TIMEOUTS } from '../../../lib/constants';
 
 interface ReferralData {
   referralCode: string;
@@ -40,6 +41,13 @@ function ReferralTabInner() {
   const [error, setError] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [shared, setShared] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shareTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+  }, []);
 
   const fetchReferrals = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -76,7 +84,8 @@ function ReferralTabInner() {
     const link = `${window.location.origin}/register?ref=${data.referralCode}`;
     await navigator.clipboard.writeText(link);
     setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => setCopiedLink(false), TIMEOUTS.copiedFeedback);
   }, [data?.referralCode]);
 
   const handleShare = useCallback(async () => {
@@ -100,7 +109,8 @@ function ReferralTabInner() {
 
     await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
     setShared(true);
-    setTimeout(() => setShared(false), 2000);
+    if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+    shareTimeoutRef.current = setTimeout(() => setShared(false), TIMEOUTS.copiedFeedback);
   }, [data?.referralCode, t]);
 
   if (loading) {

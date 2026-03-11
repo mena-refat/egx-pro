@@ -62,9 +62,9 @@ export default function AuthPage() {
             const payload = data?.data ?? data;
             setAuth(payload?.user, payload?.accessToken);
           }
-        } catch (err) {
-          console.error('Failed to sync after Google login', err);
-        }
+} catch (err: unknown) {
+            if (import.meta.env.DEV) console.error('Failed to sync after Google login', err);
+          }
       }
     };
     window.addEventListener('message', handleMessage);
