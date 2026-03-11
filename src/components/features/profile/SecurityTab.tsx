@@ -351,60 +351,55 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6">
         <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2 mb-4">
           <Lock className="w-5 h-5 text-[var(--text-muted)]" />
-          {t('settings.privacy', { defaultValue: 'Privacy' })}
+          {t('settings.privacy')}
         </h3>
-        <div className="space-y-3 text-sm text-[var(--text-secondary)]">
-          <label className="flex items-center justify-between gap-4">
-            <span>{t('settings.privateAccount', { defaultValue: 'Private account' })}</span>
+        <div className="space-y-0 divide-y divide-[var(--border-subtle)]">
+          <div className="flex items-center justify-between gap-4 py-4 first:pt-0">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-[var(--text-primary)]">{t('settings.privateAccount')}</p>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5" dir="auto">
+                {t('settings.privateAccountHint')}
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => setIsPrivate((v) => !v)}
-              className={`w-11 h-6 rounded-full flex items-center px-1 transition-colors ${
-                isPrivate ? 'bg-[var(--success)]' : 'bg-[var(--border)]'
-              }`}
+              aria-label={t('settings.privateAccount')}
+              className={`relative w-11 h-6 rounded-full px-1 transition-colors flex items-center shrink-0 ${isPrivate ? 'bg-[var(--brand)]' : 'bg-[var(--border-strong)]'}`}
             >
-              <span
-                className={`w-4 h-4 rounded-full bg-white shadow transform transition-transform ${
-                  isPrivate ? 'translate-x-4' : 'translate-x-0'
-                }`}
-              />
+              <span className={`absolute w-4 h-4 rounded-full bg-white shadow transition-transform ${isPrivate ? 'translate-x-6 rtl:-translate-x-6' : 'translate-x-0'}`} />
             </button>
-          </label>
-          <p className="text-xs text-[var(--text-muted)]">
-            {t('settings.privateAccountHint', {
-              defaultValue:
-                'When your account is private, people must send a follow request to see your portfolio and watchlist.',
-            })}
-          </p>
+          </div>
           {!isPrivate && (
-            <label className="flex items-center justify-between gap-4 mt-3">
-              <span>{t('settings.showPortfolioToFollowers', { defaultValue: 'Show my portfolio to followers' })}</span>
+            <div className="flex items-center justify-between gap-4 py-4 first:pt-0">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">{t('settings.showPortfolioToFollowers')}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5" dir="auto">
+                  {t('settings.showPortfolioToFollowersHint')}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowPortfolio((v) => !v)}
-                className={`w-11 h-6 rounded-full flex items-center px-1 transition-colors ${
-                  showPortfolio ? 'bg-[var(--success)]' : 'bg-[var(--border)]'
-                }`}
+                aria-label={t('settings.showPortfolioToFollowers')}
+                className={`relative w-11 h-6 rounded-full px-1 transition-colors flex items-center shrink-0 ${showPortfolio ? 'bg-[var(--brand)]' : 'bg-[var(--border-strong)]'}`}
               >
-                <span
-                  className={`w-4 h-4 rounded-full bg-white shadow transform transition-transform ${
-                    showPortfolio ? 'translate-x-4' : 'translate-x-0'
-                  }`}
-                />
+                <span className={`absolute w-4 h-4 rounded-full bg-white shadow transition-transform ${showPortfolio ? 'translate-x-6 rtl:-translate-x-6' : 'translate-x-0'}`} />
               </button>
-            </label>
+            </div>
           )}
-          <div className="mt-4">
-            <button
-              type="button"
-              disabled={privacySaving}
-              onClick={savePrivacy}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand)] text-[var(--text-primary)] text-xs font-bold disabled:opacity-60"
-            >
-              {privacySaving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {t('settings.savePrivacy', { defaultValue: 'Save privacy settings' })}
-            </button>
-          </div>
+        </div>
+        <div className="pt-4 border-t border-[var(--border-subtle)]">
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            disabled={privacySaving}
+            loading={privacySaving}
+            onClick={savePrivacy}
+          >
+            {t('settings.savePrivacy')}
+          </Button>
         </div>
       </div>
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6">
