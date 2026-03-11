@@ -13,3 +13,12 @@ export const RATE_LIMITS = {
 
 /** Plan prices (EGP) — for billing display/calculation */
 export const PLAN_PRICES = { pro: 149, yearly: 1399 } as const;
+
+/** Predictions: daily limits per plan, rate limit for create */
+export const PREDICTION_LIMITS = {
+  freeDaily: 3,
+  proDaily: 10,
+  createRatePerMin: 5,
+  deletionWindowMinutes: 5,
+  minAccountAgeHours: 24,
+} as const;

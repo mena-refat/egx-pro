@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight, Settings, Users } from 'lucide-react';
+import { TrendingUp, LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight, Settings, Users, Crosshair } from 'lucide-react';
 
 export type SidebarProps = {
   activeRoute: string;
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { id: 'market', path: '/market', icon: BarChart3 },
   { id: 'stocks', path: '/stocks', icon: Search },
   { id: 'goals', path: '/goals', icon: Target },
+  { id: 'predictions', path: '/predictions', icon: Crosshair },
   { id: 'calculator', path: '/calculator', icon: Calculator },
   { id: 'discover', path: '/discover', icon: Users },
   { id: 'profile', path: '/profile', icon: UserIcon },
@@ -53,7 +54,7 @@ export function Sidebar({ activeRoute, collapsed, onToggle }: SidebarProps) {
 
       <nav className="flex-1 px-3 space-y-1">
         {NAV_ITEMS.map((item) => {
-          const isActive = item.path === '/' ? (activeRoute === '/' || activeRoute === '/dashboard') : (item.path === '/settings/account' ? activeRoute.startsWith('/settings') : (activeRoute === item.path || activeRoute.startsWith(item.path + '/')));
+          const isActive = item.path === '/' ? (activeRoute === '/' || activeRoute === '/dashboard') : (item.path === '/settings/account' ? activeRoute.startsWith('/settings') : (item.path === '/predictions' ? activeRoute === '/predictions' : (activeRoute === item.path || activeRoute.startsWith(item.path + '/'))));
           const label = t(`nav.${item.id}`);
           return (
             <button

@@ -28,3 +28,9 @@ export const CACHE_TTL = {
   news: 300,
   profile: 600,
 } as const;
+
+/** Pagination defaults */
+export const PAGINATION = {
+  defaultLimit: 20,
+  maxLimit: 50,
+} as const;

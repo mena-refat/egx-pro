@@ -7,6 +7,7 @@ import {
   TrendingUp,
   Target,
   BarChart2,
+  Crosshair,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
   { path: '/market', labelKey: 'nav.market', icon: TrendingUp },
   { path: '/stocks', labelKey: 'nav.stocks', icon: BarChart2 },
   { path: '/goals', labelKey: 'nav.goals', icon: Target },
+  { path: '/predictions', labelKey: 'nav.predictions', icon: Crosshair },
 ];
 
 const BottomNav = memo(function BottomNav() {

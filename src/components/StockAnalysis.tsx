@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BrainCircuit,
   TrendingUp,
@@ -13,6 +14,7 @@ import {
   Crown,
   Circle,
   Timer,
+  Target,
 } from 'lucide-react';
 import { StockPriceChart } from './features/stocks/StockPriceChart';
 import { getStockName, getStockInfo } from '../lib/egxStocks';
@@ -47,6 +49,7 @@ const CHART_RANGES: { id: ChartRange; labelKey: string }[] = [
 ];
 
 export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
+  const navigate = useNavigate();
   const api = useStockAnalysis(stock);
   const {
     activeTab,
@@ -264,6 +267,22 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.pe')}</span><span>{(financials as { pe?: number })?.pe != null ? `${Number((financials as { pe?: number }).pe).toFixed(1)}x` : '—'}</span></div>
               <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.avgDailyVolume')}</span><span>{formatBig(volume)} ج</span></div>
                   </div>
+          </section>
+
+          {/* Analyst predictions */}
+          <section>
+            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">
+              <Target className="w-4 h-4 text-[var(--brand)]" aria-hidden />
+              {t('predictions.analystPredictions')}
+            </h3>
+            <button
+              type="button"
+              onClick={() => navigate(`/predictions?ticker=${encodeURIComponent(stock.ticker)}`)}
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-start hover:bg-[var(--bg-card-hover)] transition-colors flex items-center justify-between gap-2"
+            >
+              <span className="text-sm font-medium text-[var(--text-secondary)]">{t('predictions.viewAllPredictions')}</span>
+              <ChevronLeft className={`w-5 h-5 text-[var(--text-muted)] ${isRTL ? 'rotate-180' : ''}`} aria-hidden />
+            </button>
           </section>
 
           {/* Order depth — Pro for full data */}

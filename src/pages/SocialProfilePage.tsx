@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
-import { Lock, User as UserIcon, Users, Loader2 } from 'lucide-react';
+import { Lock, User as UserIcon, Loader2 } from 'lucide-react';
+import { FollowersFollowingModal, ProfileCounterRow } from '../components/features/profile';
 
 type SocialProfile = {
   username?: string | null;
@@ -200,17 +201,12 @@ export default function SocialProfilePage() {
             )}
           </div>
         </div>
-        <div className="flex gap-4 text-sm text-[var(--text-secondary)]">
-          <div className="flex items-center gap-1">
-            <Users className="w-4 h-4" />
-            <span className="font-bold text-[var(--text-primary)]">{data.followersCount ?? 0}</span>
-            <span>{t('social.followers', { defaultValue: 'Followers' })}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="font-bold text-[var(--text-primary)]">{data.followingCount ?? 0}</span>
-            <span>{t('social.following', { defaultValue: 'Following' })}</span>
-          </div>
-        </div>
+        <ProfileCounterRow
+          profileUsername={data.username ?? username ?? ''}
+          followersCount={data.followersCount ?? 0}
+          followingCount={data.followingCount ?? 0}
+          canOpenModals={false}
+        />
         <div className="flex flex-col items-center justify-center text-center text-[var(--text-secondary)] py-6 rounded-xl border border-[var(--border)] bg-[var(--bg-card)]">
           <Lock className="w-10 h-10 mb-3 text-[var(--text-muted)]" />
           <p className="font-bold mb-1">
@@ -251,6 +247,7 @@ export default function SocialProfilePage() {
             </div>
           )}
         </div>
+        <FollowersFollowingModal />
       </div>
     );
   }
@@ -326,17 +323,12 @@ export default function SocialProfilePage() {
         )}
       </div>
 
-      <div className="flex gap-4 text-sm text-[var(--text-secondary)]">
-        <div className="flex items-center gap-1">
-          <Users className="w-4 h-4" />
-          <span className="font-bold text-[var(--text-primary)]">{data.followersCount ?? 0}</span>
-          <span>{t('social.followers', { defaultValue: 'Followers' })}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="font-bold text-[var(--text-primary)]">{data.followingCount ?? 0}</span>
-          <span>{t('social.following', { defaultValue: 'Following' })}</span>
-        </div>
-      </div>
+      <ProfileCounterRow
+        profileUsername={data.username ?? username ?? ''}
+        followersCount={data.followersCount ?? 0}
+        followingCount={data.followingCount ?? 0}
+        canOpenModals={true}
+      />
 
       {data.portfolio && data.portfolio.length > 0 && data.showPortfolio !== false && (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
@@ -364,6 +356,7 @@ export default function SocialProfilePage() {
           </div>
         </div>
       )}
+      <FollowersFollowingModal />
     </div>
   );
 }

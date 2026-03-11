@@ -14,6 +14,8 @@ router.get('/requests', authenticate, SocialController.requests);
 router.post('/requests/:followerId/accept', authenticate, SocialController.acceptRequest);
 router.post('/requests/:followerId/decline', authenticate, SocialController.declineRequest);
 
+router.get('/profile/:username/followers', authenticate, SocialController.profileFollowers);
+router.get('/profile/:username/following', authenticate, SocialController.profileFollowing);
 router.get('/profile/:username', optionalAuth, SocialController.profile);
 
 router.patch('/settings', authenticate, SocialController.settings);

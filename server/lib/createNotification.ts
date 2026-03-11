@@ -9,7 +9,11 @@ export type NotificationType =
   | 'portfolio'
   | 'social_follow'
   | 'social_request'
-  | 'social_accept';
+  | 'social_accept'
+  | 'prediction_hit'
+  | 'prediction_missed'
+  | 'prediction_liked'
+  | 'rank_up';
 
 export async function createNotification(
   userId: string,

@@ -34,6 +34,7 @@ import billingRoutes from './server/routes/billing.ts';
 import newsRoutes from './server/routes/news.ts';
 import referralRoutes from './server/routes/referral.ts';
 import socialRoutes from './server/routes/social.ts';
+import predictionsRoutes from './server/routes/predictions.ts';
 import marketDataRoutes from './server/routes/market-data.ts';
 import { marketDataService } from './server/services/market-data/market-data.service.ts';
 import swaggerUi from 'swagger-ui-express';
@@ -179,6 +180,7 @@ async function startServer() {
   app.use('/api/referral', referralRoutes);
   app.use('/api/market', marketDataRoutes);
   app.use('/api/social', socialRoutes);
+  app.use('/api/predictions', predictionsRoutes);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -294,8 +296,21 @@ async function startServer() {
     try {
       const { prisma } = await import('./server/lib/prisma.ts');
       const { EGX_TICKERS } = await import('./server/lib/egxTickers.ts');
-      const stocks = await prisma.stock.findMany({ select: { ticker: true } });
-      const symbols = stocks.length > 0 ? stocks.map(s => s.ticker) : [...EGX_TICKERS];
+
+      let symbols: string[] = [...EGX_TICKERS];
+      try {
+        // Use DB stocks if the model exists on the generated Prisma client
+        const anyPrisma = prisma as unknown as { stock?: { findMany: (args: { select: { ticker: true } }) => Promise<{ ticker: string }[]> } };
+        if (anyPrisma.stock?.findMany) {
+          const stocks = await anyPrisma.stock.findMany({ select: { ticker: true } });
+          if (stocks.length > 0) {
+            symbols = stocks.map((s) => s.ticker);
+          }
+        }
+      } catch {
+        // إذا ما كانش فيه موديل Stock في Prisma client هنكمل باستخدام EGX_TICKERS
+      }
+
       logger.info(`Starting market data polling for ${symbols.length} symbols`);
       marketDataService.startPolling(symbols);
     } catch (err) {
@@ -420,10 +435,26 @@ async function startServer() {
     }
   }, TEN_MIN_MS);
 
+  const ONE_HOUR_MS = 60 * 60 * 1000;
+  let lastPredictionResolveRun = '';
+  const resolvePredictionsInterval = setInterval(async () => {
+    try {
+      const { runResolvePredictions, isCairoMarketCloseHour } = await import('./server/jobs/resolve-predictions.ts');
+      if (!isCairoMarketCloseHour()) return;
+      const dayKey = new Date().toISOString().slice(0, 10);
+      if (lastPredictionResolveRun === dayKey) return;
+      lastPredictionResolveRun = dayKey;
+      await runResolvePredictions();
+    } catch (err) {
+      logger.error('Resolve predictions job error', { error: err });
+    }
+  }, ONE_HOUR_MS);
+
   process.on('SIGTERM', () => {
     clearInterval(archiveInterval);
     clearInterval(aiResetInterval);
     clearInterval(pricesInterval);
+    clearInterval(resolvePredictionsInterval);
     server.close();
   });
 }

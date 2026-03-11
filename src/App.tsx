@@ -29,6 +29,7 @@ const ProfilePage = lazy(() => import('./components/ProfilePage'));
 const UsernameSetupPage = lazy(() => import('./pages/UsernameSetupPage'));
 const SocialProfilePage = lazy(() => import('./pages/SocialProfilePage'));
 const DiscoverPage = lazy(() => import('./pages/DiscoverPage'));
+const PredictionsPage = lazy(() => import('./pages/PredictionsPage'));
 
 export default function App() {
   const { i18n } = useTranslation('common');
@@ -134,6 +135,7 @@ export default function App() {
                 <Route path="/profile/:username" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><SocialProfilePage /></Suspense></ErrorBoundary>} />
                 <Route path="/setup-username" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><UsernameSetupPage /></Suspense></ErrorBoundary>} />
                 <Route path="/discover" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><DiscoverPage /></Suspense></ErrorBoundary>} />
+                <Route path="/predictions" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><PredictionsPage /></Suspense></ErrorBoundary>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>

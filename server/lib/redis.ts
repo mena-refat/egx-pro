@@ -64,3 +64,42 @@ export const setCache = async (key: string, value: unknown, expireSeconds: numbe
     }
   }
 };
+
+/** Increment key by 1, return new value. Optionally set expiry at Unix timestamp (seconds). */
+export const incrWithExpire = async (key: string, expireAtUnixSeconds?: number): Promise<number> => {
+  if (!redis) return 0;
+  try {
+    const count = await redis.incr(key);
+    if (expireAtUnixSeconds != null && count === 1) {
+      await redis.expireat(key, expireAtUnixSeconds);
+    }
+    return count;
+  } catch (err) {
+    logger.warn('Redis Incr Error', { key, err });
+    return 0;
+  }
+};
+
+/** Get integer value of key. */
+export const getCount = async (key: string): Promise<number> => {
+  if (!redis) return 0;
+  try {
+    const val = await redis.get<number>(key);
+    return typeof val === 'number' ? val : 0;
+  } catch (err) {
+    logger.warn('Redis Get Error', { key, err });
+    return 0;
+  }
+};
+
+/** Decrement key by 1; do not go below 0. Returns new value. */
+export const decrCount = async (key: string): Promise<number> => {
+  if (!redis) return 0;
+  try {
+    const val = await redis.decr(key);
+    return val < 0 ? 0 : val;
+  } catch (err) {
+    logger.warn('Redis Decr Error', { key, err });
+    return 0;
+  }
+};

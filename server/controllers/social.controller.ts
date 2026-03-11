@@ -90,6 +90,32 @@ export const SocialController = {
     res.json({ data });
   }),
 
+  profileFollowers: run(async (req, res) => {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
+    }
+    const username = req.params.username ?? '';
+    const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
+    const result = await SocialService.getProfileFollowers(username, userId, page, limit);
+    res.json({ data: result });
+  }),
+
+  profileFollowing: run(async (req, res) => {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
+    }
+    const username = req.params.username ?? '';
+    const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
+    const result = await SocialService.getProfileFollowing(username, userId, page, limit);
+    res.json({ data: result });
+  }),
+
   settings: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {

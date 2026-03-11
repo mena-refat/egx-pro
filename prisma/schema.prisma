@@ -102,6 +102,89 @@ model User {
 
   followers Follow[] @relation("FollowingRelation")
   following Follow[] @relation("FollowerRelation")
+
+  predictions         Prediction[]
+  predictionLikes    PredictionLike[]
+  predictionStats    UserPredictionStats?
+}
+
+enum PredictionDir {
+  UP
+  DOWN
+}
+
+enum PredictionTime {
+  WEEK
+  MONTH
+  THREE_MONTHS
+}
+
+enum PredictionStatus {
+  ACTIVE
+  HIT
+  MISSED
+  EXPIRED
+}
+
+enum UserRank {
+  BEGINNER
+  ANALYST
+  SENIOR
+  EXPERT
+  LEGEND
+}
+
+model Prediction {
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticker           String
+  direction        PredictionDir
+  targetPrice      Float
+  priceAtCreation  Float
+  timeframe        PredictionTime
+  reason           String?           @db.VarChar(500)
+  status           PredictionStatus  @default(ACTIVE)
+  pointsEarned     Int?
+  accuracyPct      Float?
+  resolvedPrice    Float?
+  createdAt        DateTime          @default(now())
+  expiresAt        DateTime
+  resolvedAt       DateTime?
+  isPublic         Boolean           @default(true)
+  likes            PredictionLike[]
+
+  @@index([ticker, status])
+  @@index([userId, status])
+}
+
+model PredictionLike {
+  id           String     @id @default(cuid())
+  predictionId String
+  prediction   Prediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([predictionId, userId])
+  @@index([predictionId])
+  @@index([userId])
+}
+
+model UserPredictionStats {
+  id                  Int      @id @default(autoincrement())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalPredictions    Int      @default(0)
+  correctPredictions  Int      @default(0)
+  totalPoints         Int      @default(0)
+  accuracyRate        Float    @default(0)
+  currentStreak       Int      @default(0)
+  bestStreak          Int      @default(0)
+  rank                UserRank @default(BEGINNER)
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
 }
 
 enum FollowStatus {

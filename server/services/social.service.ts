@@ -104,6 +104,100 @@ export const SocialService = {
     }));
   },
 
+  async getProfileFollowers(profileUsername: string, viewerId: string, page: number, limit: number) {
+    const profile = await prisma.user.findFirst({
+      where: { username: profileUsername.trim().toLowerCase(), isDeleted: false },
+      select: { id: true, isPrivate: true },
+    });
+    if (!profile) throw new AppError('NOT_FOUND', 404);
+    const isOwner = viewerId === profile.id;
+    if (profile.isPrivate && !isOwner) {
+      const rel = await prisma.follow.findUnique({
+        where: { followerId_followingId: { followerId: viewerId, followingId: profile.id } },
+      });
+      if (rel?.status !== 'ACCEPTED') throw new AppError('FORBIDDEN', 403);
+    }
+    const skip = Math.max(0, (page - 1) * limit);
+    const take = limit + 1;
+    const rows = await prisma.follow.findMany({
+      where: { followingId: profile.id, status: 'ACCEPTED' },
+      include: {
+        follower: { select: { id: true, username: true, createdAt: true, isPrivate: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+    });
+    const followerIds = rows.map((r) => r.follower.id).filter(Boolean);
+    const viewerFollows = viewerId
+      ? await prisma.follow.findMany({
+          where: { followerId: viewerId, followingId: { in: followerIds } },
+          select: { followingId: true, status: true },
+        })
+      : [];
+    const statusByTarget = new Map<string, 'none' | 'pending' | 'following'>(
+      viewerFollows.map((r) => [
+        r.followingId,
+        r.status === 'ACCEPTED' ? 'following' : 'pending',
+      ])
+    );
+    const items = rows.slice(0, limit).map((row) => ({
+      id: row.follower.id,
+      username: row.follower.username,
+      joinDate: row.follower.createdAt,
+      isPrivate: row.follower.isPrivate,
+      followStatus: (statusByTarget.get(row.follower.id) ?? 'none') as 'none' | 'pending' | 'following',
+    }));
+    return { items, hasMore: rows.length > limit, page };
+  },
+
+  async getProfileFollowing(profileUsername: string, viewerId: string, page: number, limit: number) {
+    const profile = await prisma.user.findFirst({
+      where: { username: profileUsername.trim().toLowerCase(), isDeleted: false },
+      select: { id: true, isPrivate: true },
+    });
+    if (!profile) throw new AppError('NOT_FOUND', 404);
+    const isOwner = viewerId === profile.id;
+    if (profile.isPrivate && !isOwner) {
+      const rel = await prisma.follow.findUnique({
+        where: { followerId_followingId: { followerId: viewerId, followingId: profile.id } },
+      });
+      if (rel?.status !== 'ACCEPTED') throw new AppError('FORBIDDEN', 403);
+    }
+    const skip = Math.max(0, (page - 1) * limit);
+    const take = limit + 1;
+    const rows = await prisma.follow.findMany({
+      where: { followerId: profile.id, status: 'ACCEPTED' },
+      include: {
+        following: { select: { id: true, username: true, createdAt: true, isPrivate: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+    });
+    const followingIds = rows.map((r) => r.following.id).filter(Boolean);
+    const viewerFollows = viewerId
+      ? await prisma.follow.findMany({
+          where: { followerId: viewerId, followingId: { in: followingIds } },
+          select: { followingId: true, status: true },
+        })
+      : [];
+    const statusByTarget = new Map<string, 'none' | 'pending' | 'following'>(
+      viewerFollows.map((r) => [
+        r.followingId,
+        r.status === 'ACCEPTED' ? 'following' : 'pending',
+      ])
+    );
+    const items = rows.slice(0, limit).map((row) => ({
+      id: row.following.id,
+      username: row.following.username,
+      joinDate: row.following.createdAt,
+      isPrivate: row.following.isPrivate,
+      followStatus: (statusByTarget.get(row.following.id) ?? 'none') as 'none' | 'pending' | 'following',
+    }));
+    return { items, hasMore: rows.length > limit, page };
+  },
+
   async getRequests(currentUserId: string) {
     const rows = await prisma.follow.findMany({
       where: { followingId: currentUserId, status: 'PENDING' },
