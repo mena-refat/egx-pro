@@ -33,7 +33,7 @@ export function useProfileCompletion(isAuthenticated: boolean) {
   }, [fetchProfileCompletion]);
 
   useEffect(() => {
-    const handler = () => navigate('/settings?tab=subscription');
+    const handler = () => navigate('/settings/subscription');
     window.addEventListener('navigate-to-subscription', handler);
     return () => window.removeEventListener('navigate-to-subscription', handler);
   }, [navigate]);
