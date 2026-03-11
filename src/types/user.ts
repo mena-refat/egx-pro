@@ -19,6 +19,8 @@ export interface User {
   salt?: string | null;
   fullName: string | null;
   username: string | null;
+  isPrivate?: boolean;
+  showPortfolio?: boolean;
   isEmailVerified?: boolean;
   twoFactorEnabled?: boolean;
   twoFactorEnabledAt?: string | null;

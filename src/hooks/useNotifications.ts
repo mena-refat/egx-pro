@@ -6,6 +6,7 @@ export type NotificationItem = {
   type: string;
   title: string;
   body: string;
+  route?: string | null;
   isRead: boolean;
   createdAt: string;
 };

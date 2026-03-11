@@ -1,7 +1,15 @@
 import { prisma } from './prisma.ts';
 import { logger } from './logger.ts';
 
-export type NotificationType = 'achievement' | 'stock_target' | 'referral' | 'goal' | 'portfolio';
+export type NotificationType =
+  | 'achievement'
+  | 'stock_target'
+  | 'referral'
+  | 'goal'
+  | 'portfolio'
+  | 'social_follow'
+  | 'social_request'
+  | 'social_accept';
 
 export async function createNotification(
   userId: string,

@@ -60,13 +60,18 @@ export function Header({
 
   const goToSettings = () => { navigate('/settings'); setUserDropdownOpen(false); };
 
-  const goToNotificationTarget = (type: string) => {
+  const goToNotificationTarget = (type: string, route?: string | null) => {
     setNotificationsOpen(false);
+    if (route) {
+      navigate(route);
+      return;
+    }
     if (type === 'achievement') navigate('/settings?tab=achievements');
     else if (type === 'stock_target') navigate('/stocks');
     else if (type === 'referral') navigate('/settings?tab=referral');
     else if (type === 'goal') navigate('/goals');
     else if (type === 'portfolio') navigate('/portfolio');
+    else if (type === 'social_follow' || type === 'social_request' || type === 'social_accept') navigate('/profile');
   };
 
   return (
@@ -169,7 +174,7 @@ export function Header({
                   <NotificationDropdown
                     notifications={notifications}
                     loading={notificationsLoading}
-                    onItemClick={(id, type, isRead) => { if (!isRead) markOneRead(id); goToNotificationTarget(type); }}
+                    onItemClick={(id, type, isRead, route) => { if (!isRead) markOneRead(id); goToNotificationTarget(type, route); }}
                   />
                 </div>
               </motion.div>

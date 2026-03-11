@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bell, Trophy, TrendingUp, UserPlus as UserPlusIcon, Target, Briefcase, Circle } from 'lucide-react';
+import { Bell, Trophy, TrendingUp, UserPlus as UserPlusIcon, Target, Briefcase, Circle, UserCheck } from 'lucide-react';
 import { Skeleton } from '../../ui/Skeleton';
 import EmptyState from '../../shared/EmptyState';
 import type { NotificationItem } from '../../../hooks/useNotifications';
@@ -8,7 +8,7 @@ import type { NotificationItem } from '../../../hooks/useNotifications';
 type NotificationDropdownProps = {
   notifications: NotificationItem[];
   loading: boolean;
-  onItemClick: (id: string, type: string, isRead: boolean) => void;
+  onItemClick: (id: string, type: string, isRead: boolean, route?: string | null) => void;
 };
 
 export function NotificationDropdown({ notifications, loading, onItemClick }: NotificationDropdownProps) {
@@ -39,7 +39,14 @@ export function NotificationDropdown({ notifications, loading, onItemClick }: No
   return (
     <>
       {notifications.map((n) => {
-        const Icon = n.type === 'achievement' ? Trophy : n.type === 'stock_target' ? TrendingUp : n.type === 'referral' ? UserPlusIcon : n.type === 'goal' ? Target : Briefcase;
+        const Icon =
+          n.type === 'achievement' ? Trophy
+          : n.type === 'stock_target' ? TrendingUp
+          : n.type === 'referral' ? UserPlusIcon
+          : n.type === 'goal' ? Target
+          : n.type === 'portfolio' ? Briefcase
+          : n.type === 'social_follow' || n.type === 'social_request' || n.type === 'social_accept' ? UserCheck
+          : Briefcase;
         const timeAgo = (() => {
           const d = new Date(n.createdAt);
           const diff = (Date.now() - d.getTime()) / 1000;
@@ -52,7 +59,7 @@ export function NotificationDropdown({ notifications, loading, onItemClick }: No
           <button
             key={n.id}
             type="button"
-            onClick={() => onItemClick(n.id, n.type, n.isRead)}
+            onClick={() => onItemClick(n.id, n.type, n.isRead, n.route)}
             className={`w-full flex gap-2 px-3 py-2.5 rounded-lg text-left transition-colors ${!n.isRead ? 'bg-[var(--brand-subtle)] hover:opacity-90' : 'hover:bg-[var(--bg-card-hover)]'}`}
           >
             <span className="w-2 shrink-0 flex items-start justify-center pt-2">

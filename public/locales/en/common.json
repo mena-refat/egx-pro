@@ -27,6 +27,7 @@
   },
   "nav": {
     "bottomNavLabel": "Bottom navigation",
+    "discover": "Discover",
     "dashboard": "Dashboard",
     "portfolio": "Portfolio",
     "stocks": "Stocks",

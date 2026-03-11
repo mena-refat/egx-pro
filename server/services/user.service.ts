@@ -17,6 +17,8 @@ const profileSelect = {
   phone: true,
   fullName: true,
   username: true,
+  isPrivate: true,
+  showPortfolio: true,
   avatarUrl: true,
   riskTolerance: true,
   investmentHorizon: true,

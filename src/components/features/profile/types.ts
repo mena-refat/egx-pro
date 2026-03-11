@@ -2,6 +2,8 @@ export interface ProfileUser {
   id: string;
   fullName?: string | null;
   username?: string | null;
+  isPrivate?: boolean;
+  showPortfolio?: boolean;
   email?: string | null;
   isEmailVerified?: boolean;
   phone?: string | null;

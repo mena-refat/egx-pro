@@ -39,6 +39,8 @@ model User {
   salt              String?
   fullName          String?
   username          String?   @unique
+  isPrivate         Boolean   @default(false)
+  showPortfolio     Boolean   @default(true)
   isEmailVerified   Boolean   @default(false)
   twoFactorEnabled   Boolean   @default(false)
   twoFactorSecret    String?
@@ -97,6 +99,30 @@ model User {
   referralsReceived  Referral[] @relation("ReferralsReceived")
   notifications      Notification[]
   discountUsages   DiscountUsage[]
+
+  followers Follow[] @relation("FollowingRelation")
+  following Follow[] @relation("FollowerRelation")
+}
+
+enum FollowStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+model Follow {
+  id          String       @id @default(cuid())
+  followerId  String
+  followingId String
+  status      FollowStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+
+  follower  User @relation("FollowerRelation", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("FollowingRelation", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
 }
 
 model RefreshToken {

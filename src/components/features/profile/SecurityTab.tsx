@@ -91,6 +91,9 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokeAllOtherLoading, setRevokeAllOtherLoading] = useState(false);
+  const [isPrivate, setIsPrivate] = useState<boolean>(Boolean(user.isPrivate));
+  const [showPortfolio, setShowPortfolio] = useState<boolean>(user.showPortfolio ?? true);
+  const [privacySaving, setPrivacySaving] = useState(false);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -151,6 +154,31 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);
+
+  const savePrivacy = useCallback(async () => {
+    if (!accessToken) return;
+    setPrivacySaving(true);
+    try {
+      const res = await fetch('/api/social/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ isPrivate, showPortfolio }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRequestStatus({ type: 'error', message: data?.error || t('common.error') });
+        return;
+      }
+      const payload = (data as { data?: { isPrivate?: boolean; showPortfolio?: boolean } }).data ?? data;
+      setIsPrivate(Boolean(payload.isPrivate));
+      setShowPortfolio(payload.showPortfolio ?? true);
+      setRequestStatus({ type: 'success', message: t('settings.savedSuccess') });
+    } catch {
+      setRequestStatus({ type: 'error', message: t('common.error') });
+    } finally {
+      setPrivacySaving(false);
+    }
+  }, [accessToken, isPrivate, showPortfolio, setRequestStatus]);
 
   const handleChangePassword = async () => {
     if (!accessToken) return;
@@ -323,9 +351,67 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6">
         <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2 mb-4">
           <Lock className="w-5 h-5 text-[var(--text-muted)]" />
+          {t('settings.privacy', { defaultValue: 'Privacy' })}
+        </h3>
+        <div className="space-y-3 text-sm text-[var(--text-secondary)]">
+          <label className="flex items-center justify-between gap-4">
+            <span>{t('settings.privateAccount', { defaultValue: 'Private account' })}</span>
+            <button
+              type="button"
+              onClick={() => setIsPrivate((v) => !v)}
+              className={`w-11 h-6 rounded-full flex items-center px-1 transition-colors ${
+                isPrivate ? 'bg-[var(--success)]' : 'bg-[var(--border)]'
+              }`}
+            >
+              <span
+                className={`w-4 h-4 rounded-full bg-white shadow transform transition-transform ${
+                  isPrivate ? 'translate-x-4' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </label>
+          <p className="text-xs text-[var(--text-muted)]">
+            {t('settings.privateAccountHint', {
+              defaultValue:
+                'When your account is private, people must send a follow request to see your portfolio and watchlist.',
+            })}
+          </p>
+          {!isPrivate && (
+            <label className="flex items-center justify-between gap-4 mt-3">
+              <span>{t('settings.showPortfolioToFollowers', { defaultValue: 'Show my portfolio to followers' })}</span>
+              <button
+                type="button"
+                onClick={() => setShowPortfolio((v) => !v)}
+                className={`w-11 h-6 rounded-full flex items-center px-1 transition-colors ${
+                  showPortfolio ? 'bg-[var(--success)]' : 'bg-[var(--border)]'
+                }`}
+              >
+                <span
+                  className={`w-4 h-4 rounded-full bg-white shadow transform transition-transform ${
+                    showPortfolio ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </label>
+          )}
+          <div className="mt-4">
+            <button
+              type="button"
+              disabled={privacySaving}
+              onClick={savePrivacy}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand)] text-[var(--text-primary)] text-xs font-bold disabled:opacity-60"
+            >
+              {privacySaving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {t('settings.savePrivacy', { defaultValue: 'Save privacy settings' })}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6">
+        <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2 mb-4">
+          <Lock className="w-5 h-5 text-[var(--text-muted)]" />
           {t('settings.securityPrivacy')}
         </h3>
-
         <div className="space-y-6">
           <div>
             <div className="flex flex-wrap items-center justify-between gap-2">

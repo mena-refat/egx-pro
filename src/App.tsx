@@ -26,6 +26,9 @@ const GoalsPage = lazy(() => import('./pages/GoalsPage'));
 const InvestmentCalculator = lazy(() => import('./components/InvestmentCalculator'));
 const StockDetailPage = lazy(() => import('./pages/StockDetailPage'));
 const ProfilePage = lazy(() => import('./components/ProfilePage'));
+const UsernameSetupPage = lazy(() => import('./pages/UsernameSetupPage'));
+const SocialProfilePage = lazy(() => import('./pages/SocialProfilePage'));
+const DiscoverPage = lazy(() => import('./pages/DiscoverPage'));
 
 export default function App() {
   const { i18n } = useTranslation('common');
@@ -83,6 +86,9 @@ export default function App() {
   if (isAuthenticated && user?.isFirstLogin) {
     return <OnboardingWizard onComplete={onCompleteOnboarding} />;
   }
+  if (isAuthenticated && !user?.username) {
+    return <Navigate to="/setup-username" replace />;
+  }
   if (!isAuthenticated && pathname !== '/') return <Navigate to="/" replace />;
   if (!isAuthenticated) return <AuthPage />;
 
@@ -125,6 +131,9 @@ export default function App() {
                   <Route path="achievements" element={<AchievementsTab />} />
                 </Route>
                 <Route path="/profile" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><ProfilePage /></Suspense></ErrorBoundary>} />
+                <Route path="/profile/:username" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><SocialProfilePage /></Suspense></ErrorBoundary>} />
+                <Route path="/setup-username" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><UsernameSetupPage /></Suspense></ErrorBoundary>} />
+                <Route path="/discover" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><DiscoverPage /></Suspense></ErrorBoundary>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>

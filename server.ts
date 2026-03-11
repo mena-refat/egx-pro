@@ -33,6 +33,7 @@ import notificationsRoutes from './server/routes/notifications.ts';
 import billingRoutes from './server/routes/billing.ts';
 import newsRoutes from './server/routes/news.ts';
 import referralRoutes from './server/routes/referral.ts';
+import socialRoutes from './server/routes/social.ts';
 import marketDataRoutes from './server/routes/market-data.ts';
 import { marketDataService } from './server/services/market-data/market-data.service.ts';
 import swaggerUi from 'swagger-ui-express';
@@ -177,6 +178,7 @@ async function startServer() {
   app.use('/api/news', newsRoutes);
   app.use('/api/referral', referralRoutes);
   app.use('/api/market', marketDataRoutes);
+  app.use('/api/social', socialRoutes);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

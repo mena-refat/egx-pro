@@ -26,12 +26,14 @@ The app uses **PostgreSQL** with **Prisma**. Schema is in `prisma/schema.prisma`
 | **DiscountUsage** | Per-user usage of discount codes: userId, codeId (unique pair) |
 | **Notification** | In-app notifications: userId, type, title, body, route, isRead |
 | **ArchivedUser** | Soft-deleted users: originalId, archived userData |
+| **Follow** | Social graph: followerId, followingId, status (PENDING/ACCEPTED/BLOCKED) |
 
 ## Enums
 
 | Enum | Values |
 |------|--------|
 | **GicsSector** | INFORMATION_TECHNOLOGY, HEALTH_CARE, FINANCIALS, CONSUMER_DISCRETIONARY, CONSUMER_STAPLES, ENERGY, INDUSTRIALS, MATERIALS, UTILITIES, REAL_ESTATE, COMMUNICATION_SERVICES |
+| **FollowStatus** | PENDING, ACCEPTED, BLOCKED |
 
 Used on `Stock.sector`.
 

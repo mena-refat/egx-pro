@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { TrendingUp, LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight, Settings, Users } from 'lucide-react';
 
 export type SidebarProps = {
   activeRoute: string;
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { id: 'stocks', path: '/stocks', icon: Search },
   { id: 'goals', path: '/goals', icon: Target },
   { id: 'calculator', path: '/calculator', icon: Calculator },
+  { id: 'discover', path: '/discover', icon: Users },
   { id: 'profile', path: '/profile', icon: UserIcon },
   { id: 'settings', path: '/settings/account', icon: Settings },
 ] as const;
