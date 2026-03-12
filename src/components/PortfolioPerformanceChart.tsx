@@ -112,8 +112,8 @@ function getTimelineDatesDaily(range: string): { dates: Date[]; showTickAt: (d: 
     }
   }
 
-  // نضيف نقطة \"اليوم\" فقط للفترات الأكبر من يوم (لضمان وجود القيمة الحالية) وليس للأسبوع/اليوم لأنهم مبنيين بالفعل على اليوم الحالي
-  if (range !== '1D' && range !== '1W') {
+  // نضيف نقطة \"اليوم\" فقط للفترات الأكبر من شهر (6M, 1Y, 3Y, 5Y) لضمان وجود القيمة الحالية
+  if (!['1D', '1W', '1M'].includes(range)) {
     out.push(new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), 0, 0));
   }
 
@@ -132,7 +132,15 @@ function getTimelineDatesDaily(range: string): { dates: Date[]; showTickAt: (d: 
   return { dates: out, showTickAt };
 }
 
-type ChartPoint = { date: string; value: number; showTick: boolean; tooltipLabel: string; tooltipLabelEn: string };
+type ChartPoint = {
+  date: string;
+  value: number;
+  showTick: boolean;
+  /** الطابع الزمني الفعلي للنقطة لضمان دقة التاريخ في الـ Tooltip */
+  ts: number;
+  tooltipLabel: string;
+  tooltipLabelEn: string;
+};
 
 /** بناء بيانات الرسم: نقطة لكل يوم (أو ساعة في 1D) + قيم حقيقية، مع showTick لعرض تسميات المحور */
 function buildChartData(
@@ -175,10 +183,32 @@ function buildChartData(
     const value = isLast ? totalValue : getValueAt(d);
     const showTick = showTickAt(d, i);
     const dateStr = isLast ? currentLabel : showTick ? formatDateLabelShort(d, range, locale) : ' ';
+
+    // Tooltip labels: عربي حسب لغة الموقع، وإنجليزي ثابت بالتاريخ الكامل
+    const ts = d.getTime();
+
+    // نسجل التاريخ الفعلي للتفسير لاحقًا في الـ Tooltip (حسب لغة الواجهة أو بالإنجليزي الثابت)
     const tooltipLabel = isLast ? currentLabel : formatDateLabel(d, range, locale);
-    let tooltipLabelEn = isLast ? currentLabelEn : formatDateLabel(d, range, 'en-GB');
+    const dateForEn = new Date(ts);
+    let tooltipLabelEn: string;
+    if (isLast) {
+      tooltipLabelEn = currentLabelEn;
+    } else if (range === '1D') {
+      tooltipLabelEn = dateForEn.toLocaleTimeString('en-GB', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      tooltipLabelEn = dateForEn.toLocaleDateString('en-GB', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    }
     tooltipLabelEn = tooltipLabelEn.replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
-    return { date: dateStr, value, showTick, tooltipLabel, tooltipLabelEn };
+
+    return { date: dateStr, value, showTick, ts, tooltipLabel, tooltipLabelEn };
   });
 }
 
