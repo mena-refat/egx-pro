@@ -112,8 +112,9 @@ function getTimelineDatesDaily(range: string): { dates: Date[]; showTickAt: (d: 
     }
   }
 
-  // نضيف نقطة \"اليوم\" فقط للفترات الأكبر من شهر (6M, 1Y, 3Y, 5Y) لضمان وجود القيمة الحالية
-  if (!['1D', '1W', '1M'].includes(range)) {
+  // نضيف نقطة \"اليوم\" فقط للفترات الكبيرة (1Y, 3Y, 5Y) لضمان وجود القيمة الحالية
+  // 6M مبني بالفعل على آخر 180 يوم من ضمنهم اليوم، فلا نكرر نقطة اليوم
+  if (['1Y', '3Y', '5Y'].includes(range)) {
     out.push(new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), 0, 0));
   }
 
@@ -236,6 +237,8 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart({
   const padding = maxVal > minVal ? (maxVal - minVal) * 0.1 : minVal * 0.05 || 1;
   const minDomain = Math.max(0, minVal - padding);
   const maxDomain = maxVal + padding;
+  const firstX = data[0]?.x ?? 0;
+  const lastX = data[data.length - 1]?.x ?? 0;
 
   return (
     <div className="space-y-4">
@@ -277,9 +280,59 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart({
                   tickLine={false}
                   axisLine={false}
                   tick={{ fill: 'var(--text-muted)' }}
-                  tickFormatter={(_value, index) =>
-                    data[index] && data[index].showTick ? data[index].label : ''
-                  }
+                  tickFormatter={(value: number) => {
+                    if (!data.length) return '';
+
+                    const firstX = data[0].x;
+                    const lastX = data[data.length - 1].x;
+
+                    // لا نكتب أي نص عند أول نقطة (تلاقي X مع Y)
+                    if (value === firstX) return '';
+
+                    const d = new Date(value);
+
+                    // آخر نقطة = "القيمة الحالية"
+                    if (value === lastX) return currentLabel;
+
+                    if (selectedRange === '1D') {
+                      // اليوم: نعرض كل ساعة من بعد 12 AM (أول نقطة مخفية بالفعل)
+                      return formatDateLabelShort(d, selectedRange, locale);
+                    }
+
+                    if (selectedRange === '1W') {
+                      // الأسبوع: نكتب كل يوم (عدا الأول)
+                      return formatDateLabelShort(d, selectedRange, locale);
+                    }
+
+                    if (selectedRange === '1M') {
+                      // الشهر: نكتب كل 7 أيام تقريباً
+                      const daysFromStart = Math.round((value - firstX) / 86400000);
+                      if (daysFromStart % 7 === 0) {
+                        return formatDateLabelShort(d, selectedRange, locale);
+                      }
+                      return '';
+                    }
+
+                    if (selectedRange === '6M' || selectedRange === '1Y') {
+                      // 6 شهور / سنة: نعرض اسم الشهر كل ~30 يوماً لضمان وجود بيانات على X حتى لو مفيش أول الشهر
+                      const daysFromStart = Math.round((value - firstX) / 86400000);
+                      if (daysFromStart % 30 === 0) {
+                        return d.toLocaleDateString('en-GB', { month: 'short' });
+                      }
+                      return '';
+                    }
+
+                    if (selectedRange === '3Y' || selectedRange === '5Y') {
+                      // 3 / 5 سنوات: نعرض السنة (مختصرة) كل حوالي سنة (كل 365 يوماً)
+                      const daysFromStart = Math.round((value - firstX) / 86400000);
+                      if (daysFromStart % 365 === 0) {
+                        return "'" + d.getFullYear().toString().slice(-2);
+                      }
+                      return '';
+                    }
+
+                    return '';
+                  }}
                 />
                 <YAxis
                   stroke="var(--text-muted)"
