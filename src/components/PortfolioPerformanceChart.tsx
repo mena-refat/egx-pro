@@ -115,7 +115,7 @@ function getTimelineDatesDaily(range: string): { dates: Date[]; showTickAt: (d: 
   return { dates: out, showTickAt };
 }
 
-type ChartPoint = { date: string; value: number; showTick: boolean; tooltipLabel: string };
+type ChartPoint = { date: string; value: number; showTick: boolean; tooltipLabel: string; tooltipLabelEn: string };
 
 /** بناء بيانات الرسم: نقطة لكل يوم (أو ساعة في 1D) + قيم حقيقية، مع showTick لعرض تسميات المحور */
 function buildChartData(
@@ -152,13 +152,16 @@ function buildChartData(
   };
 
   const lastIndex = timeline.length - 1;
+  const currentLabelEn = 'Current Value';
   return timeline.map((d, i) => {
     const isLast = i === lastIndex;
     const value = isLast ? totalValue : getValueAt(d);
     const showTick = showTickAt(d, i);
     const dateStr = isLast ? currentLabel : showTick ? formatDateLabelShort(d, range, locale) : ' ';
     const tooltipLabel = isLast ? currentLabel : formatDateLabel(d, range, locale);
-    return { date: dateStr, value, showTick, tooltipLabel };
+    let tooltipLabelEn = isLast ? currentLabelEn : formatDateLabel(d, range, 'en-GB');
+    tooltipLabelEn = tooltipLabelEn.replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
+    return { date: dateStr, value, showTick, tooltipLabel, tooltipLabelEn };
   });
 }
 
@@ -240,22 +243,16 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart({
                   dx={-20}
                 />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'var(--bg-card)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '12px',
-                    color: 'var(--text-primary)',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
-                  itemStyle={{ color: 'var(--text-primary)' }}
+                  contentStyle={{ background: 'transparent', border: 'none', padding: 0 }}
+                  itemStyle={{ display: 'none' }}
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
                     const p = payload[0].payload as ChartPoint;
                     return (
-                      <div className="px-3 py-2">
-                        <div className="text-label text-[var(--text-muted)]">{p.tooltipLabel}</div>
-                        <div className="font-number tabular-nums">
-                          {typeof p.value === 'number' ? `${p.value.toLocaleString(locale, { maximumFractionDigits: 0 })} EGP` : p.value}
+                      <div dir="ltr" className="px-4 py-2.5 rounded-xl bg-black/75 dark:bg-white/15 backdrop-blur-md border border-white/20 shadow-lg text-white dark:text-[var(--text-primary)] text-left">
+                        <div className="text-xs font-medium opacity-90">{p.tooltipLabelEn}</div>
+                        <div className="font-number tabular-nums text-sm font-semibold mt-0.5">
+                          {typeof p.value === 'number' ? `${p.value.toLocaleString('en-GB', { maximumFractionDigits: 0 })} EGP` : p.value}
                         </div>
                       </div>
                     );
