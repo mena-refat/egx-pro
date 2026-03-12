@@ -27,8 +27,8 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
 
   if (loading) {
     return (
-      <div className="space-y-5">
-        <h3 className="text-header font-semibold text-[var(--text-primary)]">{t('dashboard.yourStocks')}</h3>
+      <div className="card-base card-elevated p-8 rounded-2xl">
+        <h3 className="text-header font-semibold mb-6 text-[var(--text-primary)]">{t('dashboard.yourStocks')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-28 w-full rounded-2xl" />
@@ -39,8 +39,8 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
   }
 
   return (
-    <div className="space-y-5">
-      <h3 className="text-header font-semibold text-[var(--text-primary)]">{t('dashboard.yourStocks')}</h3>
+    <div className="card-base card-elevated p-8 rounded-2xl">
+      <h3 className="text-header font-semibold mb-6 text-[var(--text-primary)]">{t('dashboard.yourStocks')}</h3>
 
       {sortedHoldings.length === 0 ? (
         <EmptyState
