@@ -24,9 +24,14 @@ function formatDateLabel(date: Date, range: string, locale: string): string {
 function formatDateLabelShort(date: Date, range: string, locale: string): string {
   const isAr = locale.startsWith('ar');
   if (range === '1D') {
-    const h = date.getHours();
+    let h = date.getHours();
     const m = date.getMinutes();
-    if (m === 0) return h <= 11 ? `${h}${isAr ? 'ص' : 'AM'}` : `${h === 12 ? 12 : h - 12}${isAr ? 'م' : 'PM'}`;
+    if (m === 0) {
+      const isAm = h < 12;
+      if (h === 0) h = 12;
+      if (h > 12) h = h - 12;
+      return `${h}${isAr ? (isAm ? 'ص' : 'م') : isAm ? 'AM' : 'PM'}`;
+    }
     return date.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true });
   }
   if (range === '1W') return String(date.getDate());
@@ -44,18 +49,23 @@ function formatDateLabelShort(date: Date, range: string, locale: string): string
   return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
-/** إنشاء تواريخ يومية للرسم (في الخفاء أيام كثيرة) — دقة أعلى */
+/** إنشاء تواريخ يومية/ساعة للرسم (في الخفاء) — دقة أعلى */
 function getTimelineDatesDaily(range: string): { dates: Date[]; showTickAt: (d: Date, i: number) => boolean } {
   const now = new Date();
   const out: Date[] = [];
 
   if (range === '1D') {
-    for (let hour = 9; hour <= 15; hour++) {
+    const endHour = now.getHours();
+    for (let hour = 0; hour <= endHour; hour++) {
       const d = new Date(now);
       d.setHours(hour, 0, 0, 0);
       out.push(d);
     }
-    return { dates: out, showTickAt: (_, i) => i === 0 || i === out.length - 1 };
+    return {
+      dates: out,
+      // لا نعرض عند نقطة الأصل (0 على المحورين)، نبدأ من 12 AM (index 0) حتى الآن، كل ساعة، لكن بدون كتابة عند التلاقي مع محور Y
+      showTickAt: (_d, i) => i > 0,
+    };
   }
 
   if (range === '1W') {
@@ -87,16 +97,16 @@ function getTimelineDatesDaily(range: string): { dates: Date[]; showTickAt: (d: 
       out.push(d);
     }
   } else if (range === '3Y') {
-    for (let i = 0; i < 365; i++) {
+    for (let i = 365 * 3 - 1; i >= 0; i--) {
       const d = new Date(now);
-      d.setDate(now.getDate() - (365 * 3 - 1 - i * 3));
+      d.setDate(now.getDate() - i);
       d.setHours(0, 0, 0, 0);
       out.push(d);
     }
   } else if (range === '5Y') {
-    for (let i = 0; i < 365; i++) {
+    for (let i = 365 * 5 - 1; i >= 0; i--) {
       const d = new Date(now);
-      d.setDate(now.getDate() - (365 * 5 - 1 - i * 5));
+      d.setDate(now.getDate() - i);
       d.setHours(0, 0, 0, 0);
       out.push(d);
     }
@@ -107,7 +117,8 @@ function getTimelineDatesDaily(range: string): { dates: Date[]; showTickAt: (d: 
   const showTickAt = (d: Date, i: number): boolean => {
     if (i === 0 || i === out.length - 1) return true;
     if (range === '1W') return true;
-    if (range === '1M') return d.getDate() === 1 || i === 0 || i === out.length - 1;
+    // في الشهر: تيك كل أسبوع تقريباً (كل 7 أيام) + النهاية
+    if (range === '1M') return i % 7 === 0 || i === out.length - 1;
     if (range === '6M' || range === '1Y') return d.getDate() === 1;
     if (range === '3Y' || range === '5Y') return d.getDate() === 1 && d.getMonth() === 0;
     return false;
@@ -172,9 +183,10 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart({
   totalCost,
   totalValue,
 }: Props) {
-  const { t, i18n } = useTranslation('common');
+  const { t } = useTranslation('common');
   const [selectedRange, setSelectedRange] = useState('1M');
-  const locale = i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB';
+  // نستخدم إنجليزي دائمًا للأرقام والتواريخ على المحاور والـ Tooltip
+  const locale = 'en-GB';
 
   const purchaseLabel = t('dashboard.chartPurchaseValue');
   const currentLabel = t('dashboard.chartCurrentValue');
