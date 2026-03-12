@@ -1,6 +1,6 @@
 import type { IMarketDataSource, StockQuote } from './types.ts';
-import { TwelveDataSource } from './sources/twelve-data-source.ts';
 import { EgxlyticsSource } from './sources/egxlytics-source.ts';
+import { YahooFinanceSource } from './sources/yahoo-finance-source.ts';
 import { logger } from '../../lib/logger.ts';
 import { getCache, setCache } from '../../lib/redis.ts';
 import { EGX_TICKERS } from '../../lib/egxTickers.ts';
@@ -81,7 +81,7 @@ export class MarketDataService {
 
   constructor() {
     this.sources = [
-      new TwelveDataSource(),
+      new YahooFinanceSource(),
       new EgxlyticsSource(),
     ].sort((a, b) => a.priority - b.priority);
 

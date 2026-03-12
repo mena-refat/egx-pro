@@ -84,4 +84,14 @@ export const StocksController = {
   tradingStats: (_req: AuthRequest, res: Response) => {
     res.json({ data: { available: false, message: 'Trading stats not available' } });
   },
+
+  getQuote: run(async (req, res) => {
+    const { ticker } = req.params;
+    const quote = await StocksService.getQuote(ticker);
+    if (!quote) {
+      res.status(500).json({ error: 'Failed to fetch quote' });
+      return;
+    }
+    res.json({ data: quote });
+  }),
 };

@@ -9,7 +9,7 @@ export interface StockQuote {
   volume:        number;
   previousClose: number;
   timestamp:     Date;
-  source:        'TWELVEDATA' | 'EGXLYTICS' | 'CACHE';
+  source:        'TWELVEDATA' | 'EGXLYTICS' | 'YAHOO' | 'CACHE';
 }
 
 export interface DataSourceResult {

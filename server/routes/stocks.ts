@@ -10,6 +10,7 @@ router.get('/market/status', MarketController.getStatus);
 router.get('/market/overview', optionalAuth, MarketController.getOverview);
 router.get('/prices', optionalAuth, StocksController.getPrices);
 router.get('/search', StocksController.search);
+router.get('/quote/:ticker', StocksController.getQuote);
 router.get('/:ticker/price', optionalAuth, StocksController.getPrice);
 router.get('/:ticker/history', StocksController.getHistory);
 router.get('/:ticker/financials', StocksController.getFinancials);

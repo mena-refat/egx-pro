@@ -4,6 +4,8 @@ import { EGX_TICKERS } from '../lib/egxTickers.ts';
 import { prisma } from '../lib/prisma.ts';
 import type { GicsSector } from '@prisma/client';
 import { marketDataService } from './market-data/market-data.service.ts';
+import yahooFinance from 'yahoo-finance2';
+import { AllByAttribute } from '@testing-library/dom';
 
 const GICS_VALUES: GicsSector[] = [
   'INFORMATION_TECHNOLOGY', 'HEALTH_CARE', 'FINANCIALS', 'CONSUMER_DISCRETIONARY',
@@ -79,4 +81,27 @@ export const StocksService = {
   getNews(ticker: string) {
     return getStockNews(ticker);
   },
-};
+  
+  async getQuote(ticker: string) {
+    try {
+      const quote:any = await yahooFinance.quote(ticker);
+      console.log(quote,"QUTE");
+      
+      return {
+        price: quote.regularMarketPrice ?? null,
+        change: quote.regularMarketChange ?? null,
+        changePercent: quote.regularMarketChangePercent ?? null,
+        time: quote.regularMarketTime ?? null,
+        currency: quote.currency ?? null,
+        symbol: quote.symbol,
+        longName: quote.longName ?? null,
+        high: quote.regularMarketDayHigh ?? null,
+        low: quote.regularMarketDayLow ?? null,
+        open: quote.regularMarketOpen ?? null,
+        previousClose: quote.regularMarketPreviousClose ?? null,
+        volume: quote.volume ?? null,
+      };
+    } catch (error) {
+      return null;
+    }
+  },};
