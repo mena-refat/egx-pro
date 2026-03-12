@@ -298,7 +298,10 @@
     "unitPrice": "سعر الوحدة",
     "lastPrice": "آخر سعر",
     "marketValue": "القيمة السوقية",
-    "unrealizedReturn": "عائد غير محقق"
+    "unrealizedReturn": "عائد غير محقق",
+    "chartPurchaseValue": "قيمة الشراء",
+    "chartCurrentValue": "القيمة الحالية",
+    "noPerformanceData": "أضف أسهم للمحفظة لرؤية أداء المحفظة"
   },
   "achievements": {
     "congrats": "مبروك!",

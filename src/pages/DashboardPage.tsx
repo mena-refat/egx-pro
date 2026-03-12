@@ -98,7 +98,11 @@ export default function DashboardPage() {
 
           <div className="card-base card-elevated p-8 rounded-2xl">
             <h3 className="text-header font-semibold mb-6">{t('dashboard.portfolioPerformance')}</h3>
-            <PortfolioPerformanceChart />
+            <PortfolioPerformanceChart
+              holdings={holdings}
+              totalCost={stats.totalCost}
+              totalValue={stats.totalValue}
+            />
           </div>
 
           <div className="card-base card-elevated p-8 rounded-2xl">

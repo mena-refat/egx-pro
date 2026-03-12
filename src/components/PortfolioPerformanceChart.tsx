@@ -1,150 +1,238 @@
 import { memo, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const generateMockData = (range: string) => {
-  const data = [];
+type Holding = { buyDate: string; shares: number; avgPrice: number };
+
+type Props = {
+  holdings: Holding[];
+  totalCost: number;
+  totalValue: number;
+};
+
+/** تنسيق التاريخ للمحور الأفقي حسب الفترة */
+function formatDateLabel(date: Date, range: string, locale: string): string {
+  if (range === '1D') return date.toLocaleTimeString(locale, { hour: 'numeric', hour12: true });
+  if (range === '1W' || range === '1M') return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  if (range === '6M' || range === '1Y') return date.toLocaleDateString(locale, { month: 'short' });
+  if (range === '3Y') return date.toLocaleDateString(locale, { month: 'short', year: '2-digit' });
+  if (range === '5Y') return date.toLocaleDateString(locale, { year: 'numeric' });
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+}
+
+/** إنشاء تواريخ المحور حسب الفترة المختارة (نفس شكل الرسم الأصلي) */
+function getTimelineDates(range: string, locale: string): Date[] {
   const now = new Date();
+  const out: Date[] = [];
 
   if (range === '1D') {
-    // 9 AM to 3 PM (15:00)
     for (let hour = 9; hour <= 15; hour++) {
-      const date = new Date(now);
-      date.setHours(hour, 0, 0, 0);
-      data.push({
-        date: date.toLocaleTimeString([], { hour: 'numeric', hour12: true }),
-        value: 100000 + Math.random() * 50000,
-      });
+      const d = new Date(now);
+      d.setHours(hour, 0, 0, 0);
+      out.push(d);
     }
   } else if (range === '1W') {
-    // 7 days
     for (let i = 6; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(now.getDate() - i);
-      data.push({
-        date: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
-        value: 100000 + Math.random() * 50000,
-      });
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      out.push(d);
     }
   } else if (range === '1M') {
-    // 1 month ago to now, 4 points
     for (let i = 3; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(now.getDate() - i * 7);
-      data.push({
-        date: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
-        value: 100000 + Math.random() * 50000,
-      });
+      const d = new Date(now);
+      d.setDate(now.getDate() - i * 7);
+      d.setHours(0, 0, 0, 0);
+      out.push(d);
     }
   } else if (range === '6M') {
-    // 6 months, 1 point per month
     for (let i = 5; i >= 0; i--) {
-      const date = new Date(now);
-      date.setMonth(now.getMonth() - i);
-      data.push({
-        date: date.toLocaleDateString([], { month: 'short' }),
-        value: 100000 + Math.random() * 50000,
-      });
+      const d = new Date(now);
+      d.setMonth(now.getMonth() - i);
+      d.setDate(1);
+      d.setHours(0, 0, 0, 0);
+      out.push(d);
     }
   } else if (range === '1Y') {
-    // 12 months, 1 point per month
     for (let i = 11; i >= 0; i--) {
-      const date = new Date(now);
-      date.setMonth(now.getMonth() - i);
-      data.push({
-        date: date.toLocaleDateString([], { month: 'short' }),
-        value: 100000 + Math.random() * 50000,
-      });
+      const d = new Date(now);
+      d.setMonth(now.getMonth() - i);
+      d.setDate(1);
+      d.setHours(0, 0, 0, 0);
+      out.push(d);
     }
   } else if (range === '3Y') {
-    // 3 years, 6 points (every 6 months)
     for (let i = 5; i >= 0; i--) {
-      const date = new Date(now);
-      date.setMonth(now.getMonth() - i * 6);
-      data.push({
-        date: date.toLocaleDateString([], { month: 'short', year: '2-digit' }),
-        value: 100000 + Math.random() * 50000,
-      });
+      const d = new Date(now);
+      d.setMonth(now.getMonth() - i * 6);
+      d.setDate(1);
+      d.setHours(0, 0, 0, 0);
+      out.push(d);
     }
   } else if (range === '5Y') {
-    // 5 years, 5 points (every year)
     for (let i = 4; i >= 0; i--) {
-      const date = new Date(now);
-      date.setFullYear(now.getFullYear() - i);
-      data.push({
-        date: date.toLocaleDateString([], { year: 'numeric' }),
-        value: 100000 + Math.random() * 50000,
-      });
+      const d = new Date(now);
+      d.setFullYear(now.getFullYear() - i);
+      d.setMonth(0);
+      d.setDate(1);
+      d.setHours(0, 0, 0, 0);
+      out.push(d);
     }
   }
-  return data;
-};
+  return out;
+}
+
+/** بناء بيانات الرسم: جدول زمني على محور X + قيم حقيقية من تواريخ الشراء والقيمة الحالية */
+function buildChartData(
+  holdings: Holding[],
+  totalCost: number,
+  totalValue: number,
+  range: string,
+  locale: string,
+  purchaseLabel: string,
+  currentLabel: string
+): Array<{ date: string; value: number }> {
+  const now = new Date();
+  const timeline = getTimelineDates(range, locale);
+  if (timeline.length === 0) return [];
+
+  const sorted = [...holdings].sort(
+    (a, b) => new Date(a.buyDate).getTime() - new Date(b.buyDate).getTime()
+  );
+
+  const getValueAt = (t: Date): number => {
+    const tMs = t.getTime();
+    const nowMs = now.getTime();
+    if (tMs >= nowMs) return totalValue;
+    if (!sorted.length) return tMs <= nowMs - 86400000 ? totalCost : totalValue;
+    const firstMs = new Date(sorted[0].buyDate).getTime();
+    if (tMs < firstMs) return 0;
+    let cumulative = 0;
+    for (const h of sorted) {
+      const dMs = new Date(h.buyDate).getTime();
+      if (tMs >= dMs) cumulative += h.shares * h.avgPrice;
+      else break;
+    }
+    return cumulative;
+  };
+
+  const lastTimelineMs = timeline[timeline.length - 1]?.getTime() ?? 0;
+  const isLastToday = Math.abs(lastTimelineMs - now.getTime()) < 86400000;
+
+  return timeline.map((d, i) => {
+    const isLast = i === timeline.length - 1;
+    const value = isLast && isLastToday ? totalValue : getValueAt(d);
+    let dateStr = formatDateLabel(d, range, locale);
+    if (isLast && isLastToday && sorted.length > 0) dateStr = currentLabel;
+    return { date: dateStr, value };
+  });
+}
 
 const ranges = ['1D', '1W', '1M', '6M', '1Y', '3Y', '5Y'];
 
-const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart() {
+const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart({
+  holdings,
+  totalCost,
+  totalValue,
+}: Props) {
+  const { t, i18n } = useTranslation('common');
   const [selectedRange, setSelectedRange] = useState('1M');
-  const data = useMemo(() => generateMockData(selectedRange), [selectedRange]);
+  const locale = i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB';
+
+  const purchaseLabel = t('dashboard.chartPurchaseValue');
+  const currentLabel = t('dashboard.chartCurrentValue');
+  const data = useMemo(
+    () => buildChartData(holdings, totalCost, totalValue, selectedRange, locale, purchaseLabel, currentLabel),
+    [holdings, totalCost, totalValue, selectedRange, locale, purchaseLabel, currentLabel]
+  );
+
+  const hasData = data.length > 0 && (totalCost > 0 || totalValue > 0);
+  const values = data.map((d) => d.value).filter((v) => Number.isFinite(v));
+  const minVal = values.length ? Math.min(...values, totalCost, totalValue) : 0;
+  const maxVal = values.length ? Math.max(...values, totalCost, totalValue) : 1;
+  const padding = maxVal > minVal ? (maxVal - minVal) * 0.1 : minVal * 0.05 || 1;
+  const minDomain = Math.max(0, minVal - padding);
+  const maxDomain = maxVal + padding;
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        {ranges.map((range) => (
-          <button
-            key={range}
-            onClick={() => setSelectedRange(range)}
-            className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-              selectedRange === range
-                ? 'bg-[var(--brand)] text-[var(--text-inverse)]'
-                : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'
-            }`}
-          >
-            {range}
-          </button>
-        ))}
-      </div>
-      <div className="h-64 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
-            <defs>
-              <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.4}/>
-                <stop offset="100%" stopColor="#7c3aed" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-            <XAxis
-              dataKey="date"
-              stroke="var(--text-muted)"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value, index) => index === 0 ? '' : value}
-            />
-            <YAxis
-              stroke="var(--text-muted)"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-              domain={['auto', 'auto']}
-              dx={-20}
-            />
-            <Tooltip
-              contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}
-              itemStyle={{ color: 'var(--text-primary)' }}
-              formatter={(value: unknown) => [typeof value === 'number' ? value.toLocaleString('ar-EG', { maximumFractionDigits: 0 }) : value, '']}
-            />
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke="#7c3aed"
-              fillOpacity={1}
-              fill="url(#colorValue)"
-              strokeWidth={3}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+      {!hasData ? (
+        <p className="text-body text-[var(--text-muted)] py-8 text-center rounded-xl bg-[var(--bg-secondary)]">
+          {t('dashboard.noPerformanceData')}
+        </p>
+      ) : (
+        <>
+          <div className="flex gap-2 flex-wrap">
+            {ranges.map((range) => (
+              <button
+                key={range}
+                onClick={() => setSelectedRange(range)}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                  selectedRange === range
+                    ? 'bg-[var(--brand)] text-[var(--text-inverse)]'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'
+                }`}
+              >
+                {range}
+              </button>
+            ))}
+          </div>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                <defs>
+                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#7c3aed" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  stroke="var(--text-muted)"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  interval="preserveStartEnd"
+                  tick={{ fill: 'var(--text-muted)' }}
+                />
+                <YAxis
+                  stroke="var(--text-muted)"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  domain={[minDomain, maxDomain]}
+                  dx={-20}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '12px',
+                    color: 'var(--text-primary)',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                  itemStyle={{ color: 'var(--text-primary)' }}
+                  labelFormatter={(label) => label}
+                  formatter={(value: unknown) => [
+                    typeof value === 'number' ? `${value.toLocaleString(locale, { maximumFractionDigits: 0 })} EGP` : value,
+                    '',
+                  ]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#7c3aed"
+                  fillOpacity={1}
+                  fill="url(#colorValue)"
+                  strokeWidth={3}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </>
+      )}
     </div>
   );
 });

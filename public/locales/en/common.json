@@ -310,6 +310,9 @@
     "lastPrice": "Last Price",
     "marketValue": "Market Value",
     "unrealizedReturn": "Unrealized Return",
+    "chartPurchaseValue": "Purchase Value",
+    "chartCurrentValue": "Current Value",
+    "noPerformanceData": "Add stocks to your portfolio to see performance",
     "connecting": "Connecting...",
     "showIndicators": "Show Indicators",
     "hideIndicators": "Hide Indicators"
