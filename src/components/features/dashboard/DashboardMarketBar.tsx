@@ -31,55 +31,57 @@ export function DashboardMarketBar({ egx30, locale }: Props) {
   const change = egx30?.changePercent ?? 0;
   const hasChange = Number.isFinite(change) && change !== 0;
   const positive = change > 0;
-  const valueColor = hasChange ? (positive ? 'text-[var(--success)]' : 'text-[var(--danger)]') : 'text-[var(--text-primary)]';
+  const hasData = value > 0;
+  const egx30ValueColor = hasData
+    ? hasChange
+      ? positive
+        ? 'text-green-400'
+        : 'text-red-400'
+      : 'text-white/80'
+    : 'text-white/40';
 
   return (
     <div
-      className="sticky top-0 z-10 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 px-4 py-2.5 text-sm text-[var(--text-secondary)] bg-[var(--bg-secondary)] border-b border-[var(--border)] shadow-sm"
+      className="sticky top-0 z-10 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 px-4 py-2.5 text-sm text-white/60 bg-white/5 border-b border-white/10"
       dir="rtl"
     >
       <span className="shrink-0 flex items-center gap-2">
-        <span className="text-[var(--text-muted)]">السوق:</span>
+        <span>السوق:</span>
         {open ? (
           <>
-            مفتوح{' '}
-            <span
-              className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse"
-              aria-hidden
-            />
+            <span className="text-green-400 font-medium">مفتوح</span>
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" aria-hidden />
           </>
         ) : (
           <>
-            مغلق{' '}
-            <span
-              className="w-2 h-2 rounded-full bg-[var(--danger)] animate-pulse"
-              aria-hidden
-            />
+            <span className="text-red-400 font-medium">مغلق</span>
+            <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" aria-hidden />
           </>
         )}
       </span>
-      <span className="text-[var(--border)] select-none" aria-hidden>|</span>
+      <span className="text-white/10 select-none" aria-hidden>|</span>
       <span className="shrink-0 flex items-center gap-2 tabular-nums">
-        <span className="text-[var(--text-muted)]">EGX30:</span>
-        {value > 0 ? (
+        <span>EGX30:</span>
+        {hasData ? (
           <>
-            <span className="text-[var(--text-primary)] font-medium">{formatNum(value, locale)}</span>
+            <span className={`font-medium ${egx30ValueColor}`}>{formatNum(value, locale)}</span>
             {hasChange && (
-              <span className={valueColor}>
+              <span className={positive ? 'text-green-400' : 'text-red-400'}>
                 {positive ? '▲' : '▼'} {positive ? '+' : ''}{change.toLocaleString(locale, { maximumFractionDigits: 1 })}%
               </span>
             )}
           </>
         ) : (
-          <span className="text-[var(--text-muted)]">—</span>
+          <span className="text-white/40">—</span>
         )}
       </span>
-      <span className="text-[var(--border)] select-none" aria-hidden>|</span>
-      <span className="shrink-0 flex items-center gap-0.5">
-        <span className="text-[var(--text-muted)]">الوقت:</span>
+      <span className="text-white/10 select-none" aria-hidden>|</span>
+      <span className="shrink-0 flex items-center gap-1">
+        <span>الوقت:</span>
         <span
-          className="tabular-nums text-[var(--text-primary)] font-medium"
+          className="tabular-nums font-medium text-white/90"
           aria-label="Cairo time"
+          dir="ltr"
         >
           {timeParts.hour}
           <span
@@ -89,7 +91,7 @@ export function DashboardMarketBar({ egx30, locale }: Props) {
             :
           </span>
           {timeParts.minute}
-          <span className="ml-1 text-[var(--text-muted)] font-normal">{timeParts.ampm}</span>
+          <span className="ml-0.5 text-white/70">{timeParts.ampm}</span>
         </span>
       </span>
     </div>

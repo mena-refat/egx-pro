@@ -27,6 +27,11 @@ export function formatCairoTime(now: Date = new Date()): string {
   return now.toLocaleString('ar-EG', { timeZone: CAIRO_TZ, hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
+/** Cairo time for display — English 12h, e.g. "02:35 AM" or "2:35 PM" */
+export function formatCairoTimeDisplay(now: Date = new Date()): string {
+  return now.toLocaleTimeString('en-US', { timeZone: CAIRO_TZ, hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
 /** Cairo time in English 12h — returns hour, minute and AM/PM for live colon */
 export function formatCairoTimeEn(now: Date = new Date()): { hour: string; minute: string; ampm: 'AM' | 'PM' } {
   const { hour, minute } = getCairoParts(now);
