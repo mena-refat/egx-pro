@@ -42,7 +42,7 @@ export function DashboardMarketBar({ egx30, locale }: Props) {
 
   return (
     <div
-      className="sticky top-0 z-10 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 px-4 py-2.5 text-sm text-white/60 bg-white/5 border-b border-white/10"
+      className="sticky top-0 z-10 flex flex-wrap items-center justify-center gap-x-16 gap-y-2 px-10 py-3.5 text-sm text-white/60 bg-white/5 border border-white/10 rounded-2xl mx-3 mt-2"
       dir="rtl"
     >
       <span className="shrink-0 flex items-center gap-2">
@@ -59,7 +59,7 @@ export function DashboardMarketBar({ egx30, locale }: Props) {
           </>
         )}
       </span>
-      <span className="text-white/10 select-none" aria-hidden>|</span>
+      <span className="text-white/10 select-none mx-4" aria-hidden>|</span>
       <span className="shrink-0 flex items-center gap-2 tabular-nums">
         <span>EGX30:</span>
         {hasData ? (
@@ -75,7 +75,7 @@ export function DashboardMarketBar({ egx30, locale }: Props) {
           <span className="text-white/40">—</span>
         )}
       </span>
-      <span className="text-white/10 select-none" aria-hidden>|</span>
+      <span className="text-white/10 select-none mx-4" aria-hidden>|</span>
       <span className="shrink-0 flex items-center gap-1">
         <span>الوقت:</span>
         <span
