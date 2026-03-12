@@ -112,11 +112,17 @@ function getTimelineDatesDaily(range: string): { dates: Date[]; showTickAt: (d: 
     }
   }
 
-  out.push(new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), 0, 0));
+  // نضيف نقطة \"اليوم\" فقط للفترات الأكبر من يوم (لضمان وجود القيمة الحالية) وليس للأسبوع/اليوم لأنهم مبنيين بالفعل على اليوم الحالي
+  if (range !== '1D' && range !== '1W') {
+    out.push(new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), 0, 0));
+  }
 
   const showTickAt = (d: Date, i: number): boolean => {
-    if (i === 0 || i === out.length - 1) return true;
-    if (range === '1W') return true;
+    // لا نعرض أي نص على محور X عند النقطة 0 (تلاقيه مع محور Y)
+    if (i === 0) return false;
+    if (i === out.length - 1) return true;
+    // الأسبوع: كل نقطة = يوم، لكن لا نكتب عند نقطة الأصل (index 0)
+    if (range === '1W') return i > 0;
     // في الشهر: تيك كل أسبوع تقريباً (كل 7 أيام) + النهاية
     if (range === '1M') return i % 7 === 0 || i === out.length - 1;
     if (range === '6M' || range === '1Y') return d.getDate() === 1;
