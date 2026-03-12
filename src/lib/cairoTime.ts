@@ -26,3 +26,15 @@ export function isEgyptMarketOpen(now: Date = new Date()): boolean {
 export function formatCairoTime(now: Date = new Date()): string {
   return now.toLocaleString('ar-EG', { timeZone: CAIRO_TZ, hour: '2-digit', minute: '2-digit', hour12: false });
 }
+
+/** Cairo time in English 12h — returns hour, minute and AM/PM for live colon */
+export function formatCairoTimeEn(now: Date = new Date()): { hour: string; minute: string; ampm: 'AM' | 'PM' } {
+  const { hour, minute } = getCairoParts(now);
+  const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  const ampm: 'AM' | 'PM' = hour < 12 ? 'AM' : 'PM';
+  return {
+    hour: hour12.toString().padStart(2, '0'),
+    minute: minute.toString().padStart(2, '0'),
+    ampm,
+  };
+}
