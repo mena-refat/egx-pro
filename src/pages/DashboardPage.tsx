@@ -35,19 +35,24 @@ export default function DashboardPage() {
     api.post('/watchlist/check-targets', { items }).catch(() => {});
   }, [watchlist, livePrices]);
 
-  const topPerformer = useMemo(() => {
-    if (!holdings.length) return { ticker: '--', change: 0 };
-    let best = holdings[0];
-    let bestChange = -Infinity;
+  const { topGainer, topLoser } = useMemo(() => {
+    type SessionStock = { ticker: string; changePercent: number } | null;
+    let gainer: SessionStock = null;
+    let loser: SessionStock = null;
+    let bestGain = -Infinity;
+    let worstLoss = Infinity;
     holdings.forEach((h) => {
-      const currentPrice = livePrices[h.ticker]?.price || h.avgPrice;
-      const change = ((currentPrice - h.avgPrice) / h.avgPrice) * 100;
-      if (change > bestChange) {
-        bestChange = change;
-        best = h;
+      const sessionChange = livePrices[h.ticker]?.changePercent ?? 0;
+      if (sessionChange > 0 && sessionChange > bestGain) {
+        bestGain = sessionChange;
+        gainer = { ticker: h.ticker, changePercent: sessionChange };
+      }
+      if (sessionChange < 0 && sessionChange < worstLoss) {
+        worstLoss = sessionChange;
+        loser = { ticker: h.ticker, changePercent: sessionChange };
       }
     });
-    return { ticker: best.ticker, change: bestChange === -Infinity ? 0 : bestChange };
+    return { topGainer: gainer, topLoser: loser };
   }, [holdings, livePrices]);
 
   const isRTL = i18n.language.startsWith('ar');
@@ -86,8 +91,8 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-3 space-y-8">
           <DashboardTopPerformer
-            ticker={topPerformer.ticker}
-            change={topPerformer.change}
+            topGainer={topGainer}
+            topLoser={topLoser}
             loading={portfolioLoading}
           />
 

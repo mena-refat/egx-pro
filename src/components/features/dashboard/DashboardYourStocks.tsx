@@ -58,7 +58,10 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
         <div className="overflow-x-auto -mx-1">
           <div className="flex flex-col gap-4 min-w-[640px]" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="grid grid-cols-6 gap-4 items-center text-label font-semibold text-[var(--text-muted)] px-4 py-2 min-w-0">
-            <span className="text-start">{t('dashboard.stockName')}</span>
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="w-10 shrink-0" aria-hidden />
+              <span>{t('dashboard.stockName')}</span>
+            </div>
             <span className="text-center tabular-nums">{t('dashboard.sharesOwned')}</span>
             <span className="text-center tabular-nums">{t('dashboard.unitPrice')}</span>
             <span className="text-center tabular-nums">{t('dashboard.lastPrice')}</span>
