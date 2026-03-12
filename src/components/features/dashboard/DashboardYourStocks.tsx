@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { PieChart } from 'lucide-react';
+import { PieChart, TrendingUp, TrendingDown } from 'lucide-react';
 import { Skeleton } from '../../ui/Skeleton';
 import EmptyState from '../../shared/EmptyState';
 import type { PortfolioHolding } from '../../../types/portfolio';
@@ -16,6 +16,10 @@ function formatEgp(n: number): string {
   return n.toLocaleString(undefined, { maximumFractionDigits: 0, minimumFractionDigits: 0 });
 }
 
+function formatPrice(p: number): string {
+  return p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
   const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
@@ -28,10 +32,10 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
   if (loading) {
     return (
       <div className="card-base card-elevated p-8 rounded-2xl">
-        <h3 className="text-header font-semibold mb-6 text-[var(--text-primary)]">{t('dashboard.yourStocks')}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-28 w-full rounded-2xl" />
+        <h3 className="text-header font-semibold mb-6 text-[var(--text-primary)]">{t('dashboard.ownedStocks')}</h3>
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-lg" />
           ))}
         </div>
       </div>
@@ -40,7 +44,7 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
 
   return (
     <div className="card-base card-elevated p-8 rounded-2xl">
-      <h3 className="text-header font-semibold mb-6 text-[var(--text-primary)]">{t('dashboard.yourStocks')}</h3>
+      <h3 className="text-header font-semibold mb-6 text-[var(--text-primary)]">{t('dashboard.ownedStocks')}</h3>
 
       {sortedHoldings.length === 0 ? (
         <EmptyState
@@ -51,7 +55,16 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
           onAction={() => navigate('/portfolio')}
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="overflow-x-auto -mx-1">
+          <div className="flex flex-col gap-4 min-w-[640px]" dir={isRTL ? 'rtl' : 'ltr'}>
+          <div className="grid grid-cols-6 gap-4 items-center text-label font-semibold text-[var(--text-muted)] px-4 py-2 min-w-0">
+            <span className="text-start">{t('dashboard.stockName')}</span>
+            <span className="text-end tabular-nums">{t('dashboard.sharesOwned')}</span>
+            <span className="text-end tabular-nums">{t('dashboard.unitPrice')}</span>
+            <span className="text-end tabular-nums">{t('dashboard.lastPrice')}</span>
+            <span className="text-end tabular-nums">{t('dashboard.marketValue')}</span>
+            <span className="text-end tabular-nums">{t('dashboard.unrealizedReturn')}</span>
+          </div>
           {sortedHoldings.map((holding) => {
             const currentPrice = livePrices[holding.ticker]?.price ?? holding.avgPrice;
             const totalValue = currentPrice * holding.shares;
@@ -60,7 +73,7 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
             const gainPercent = cost > 0 ? (gainEgp / cost) * 100 : 0;
             const isProfit = gainEgp > 0;
             const isLoss = gainEgp < 0;
-            const colorClass = isProfit
+            const returnColor = isProfit
               ? 'text-emerald-700 dark:text-emerald-400'
               : isLoss
                 ? 'text-red-700 dark:text-red-400'
@@ -69,30 +82,41 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
             return (
               <div
                 key={holding.id}
-                className="card-base card-elevated p-5 rounded-2xl flex items-center gap-4 transition-transform duration-200 hover:-translate-y-0.5 cursor-pointer"
+                className="grid grid-cols-6 gap-4 items-center py-4 px-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--text-muted)]/30 transition-colors cursor-pointer min-w-0"
                 onClick={() => navigate(`/stocks/${holding.ticker}`)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => e.key === 'Enter' && navigate(`/stocks/${holding.ticker}`)}
               >
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-[var(--bg-secondary)] text-[var(--text-primary)] font-bold text-sm"
-                  aria-hidden
-                >
-                  {holding.ticker.slice(0, 2)}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[var(--bg-primary)] text-[var(--text-primary)] font-bold text-sm"
+                    aria-hidden
+                  >
+                    {holding.ticker.slice(0, 2)}
+                  </div>
+                  <span className="text-body font-semibold text-[var(--text-primary)] truncate">{holding.ticker}</span>
                 </div>
-                <div className="min-w-0 flex-1" dir={isRTL ? 'rtl' : 'ltr'}>
-                  <p className="text-header font-bold text-[var(--text-primary)] truncate">{holding.ticker}</p>
-                  <p className="text-body font-number tabular-nums text-[var(--text-primary)] mt-0.5">
-                    {formatEgp(totalValue)} <span className="text-label text-[var(--text-muted)]">EGP</span>
-                  </p>
-                  <p className={`text-label font-semibold tabular-nums mt-1 ${colorClass}`}>
-                    {isProfit ? '+' : ''}{formatEgp(gainEgp)} EGP ({isProfit ? '+' : ''}{gainPercent.toFixed(2)}%)
-                  </p>
-                </div>
+                <span className="text-end font-number tabular-nums text-[var(--text-primary)]">
+                  {holding.shares.toLocaleString()}
+                </span>
+                <span className="text-end font-number tabular-nums text-[var(--text-primary)]">
+                  {formatPrice(holding.avgPrice)} <span className="text-label text-[var(--text-muted)]">EGP</span>
+                </span>
+                <span className="text-end font-number tabular-nums text-[var(--text-primary)]">
+                  {formatPrice(currentPrice)} <span className="text-label text-[var(--text-muted)]">EGP</span>
+                </span>
+                <span className="text-end font-number tabular-nums text-[var(--text-primary)]">
+                  {formatEgp(totalValue)} <span className="text-label text-[var(--text-muted)]">EGP</span>
+                </span>
+                <span className={`text-end inline-flex items-center justify-end gap-1 font-semibold tabular-nums ${returnColor}`}>
+                  {isProfit ? <TrendingUp className="w-4 h-4 shrink-0" /> : isLoss ? <TrendingDown className="w-4 h-4 shrink-0" /> : null}
+                  ({isProfit ? '+' : ''}{gainPercent.toFixed(2)}%) {isProfit ? '+' : ''}{formatEgp(gainEgp)} EGP
+                </span>
               </div>
             );
           })}
+          </div>
         </div>
       )}
     </div>

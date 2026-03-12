@@ -285,7 +285,15 @@
     "topPerformer": "أفضل سهم",
     "portfolioPerformance": "أداء المحفظة",
     "watchlist": "قائمة المتابعة",
-    "yourStocks": "اسهمك"
+    "yourStocks": "اسهمك",
+    "ownedStocks": "الأسهم المملوكة",
+    "stockColumn": "الورقة",
+    "stockName": "اسم السهم",
+    "sharesOwned": "وحدات مملوكة",
+    "unitPrice": "سعر الوحدة",
+    "lastPrice": "آخر سعر",
+    "marketValue": "القيمة السوقية",
+    "unrealizedReturn": "عائد غير محقق"
   },
   "achievements": {
     "congrats": "مبروك!",
