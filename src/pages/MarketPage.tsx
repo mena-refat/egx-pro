@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Moon } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
@@ -70,7 +70,10 @@ export default function MarketPage() {
     return (
       <div className="grid grid-cols-2 gap-3 p-4" dir={dir}>
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} height={96} className="w-full rounded-xl" />
+          <Fragment  key={i}>
+
+            <Skeleton height={96} className="w-full rounded-xl" />
+          </Fragment>
         ))}
       </div>
     );
@@ -85,7 +88,7 @@ export default function MarketPage() {
           <p className="text-sm text-[var(--danger)]">{error}</p>
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => refreshAll()}
           >
