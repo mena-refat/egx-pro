@@ -59,11 +59,11 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
           <div className="flex flex-col gap-4 min-w-[640px]" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="grid grid-cols-6 gap-4 items-center text-label font-semibold text-[var(--text-muted)] px-4 py-2 min-w-0">
             <span className="text-start">{t('dashboard.stockName')}</span>
-            <span className="text-end tabular-nums">{t('dashboard.sharesOwned')}</span>
-            <span className="text-end tabular-nums">{t('dashboard.unitPrice')}</span>
-            <span className="text-end tabular-nums">{t('dashboard.lastPrice')}</span>
-            <span className="text-end tabular-nums">{t('dashboard.marketValue')}</span>
-            <span className="text-end tabular-nums">{t('dashboard.unrealizedReturn')}</span>
+            <span className="text-center tabular-nums">{t('dashboard.sharesOwned')}</span>
+            <span className="text-center tabular-nums">{t('dashboard.unitPrice')}</span>
+            <span className="text-center tabular-nums">{t('dashboard.lastPrice')}</span>
+            <span className="text-center tabular-nums">{t('dashboard.marketValue')}</span>
+            <span className="text-center tabular-nums">{t('dashboard.unrealizedReturn')}</span>
           </div>
           {sortedHoldings.map((holding) => {
             const currentPrice = livePrices[holding.ticker]?.price ?? holding.avgPrice;
@@ -97,19 +97,19 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
                   </div>
                   <span className="text-body font-semibold text-[var(--text-primary)] truncate">{holding.ticker}</span>
                 </div>
-                <span className="text-end font-number tabular-nums text-[var(--text-primary)]">
+                <span className="text-center font-number tabular-nums text-[var(--text-primary)]">
                   {holding.shares.toLocaleString()}
                 </span>
-                <span className="text-end font-number tabular-nums text-[var(--text-primary)]">
+                <span className="text-center font-number tabular-nums text-[var(--text-primary)]">
                   {formatPrice(holding.avgPrice)} <span className="text-label text-[var(--text-muted)]">EGP</span>
                 </span>
-                <span className="text-end font-number tabular-nums text-[var(--text-primary)]">
+                <span className="text-center font-number tabular-nums text-[var(--text-primary)]">
                   {formatPrice(currentPrice)} <span className="text-label text-[var(--text-muted)]">EGP</span>
                 </span>
-                <span className="text-end font-number tabular-nums text-[var(--text-primary)]">
+                <span className="text-center font-number tabular-nums text-[var(--text-primary)]">
                   {formatEgp(totalValue)} <span className="text-label text-[var(--text-muted)]">EGP</span>
                 </span>
-                <span className={`text-end inline-flex items-center justify-end gap-1 font-semibold tabular-nums ${returnColor}`}>
+                <span className={`text-center inline-flex items-center justify-center gap-1 font-semibold tabular-nums ${returnColor}`}>
                   {isProfit ? <TrendingUp className="w-4 h-4 shrink-0" /> : isLoss ? <TrendingDown className="w-4 h-4 shrink-0" /> : null}
                   ({isProfit ? '+' : ''}{gainPercent.toFixed(2)}%) {isProfit ? '+' : ''}{formatEgp(gainEgp)} EGP
                 </span>
