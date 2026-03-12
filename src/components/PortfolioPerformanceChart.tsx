@@ -10,13 +10,37 @@ type Props = {
   totalValue: number;
 };
 
-/** تنسيق التاريخ للمحور الأفقي حسب الفترة */
+/** تنسيق كامل (للـ Tooltip) */
 function formatDateLabel(date: Date, range: string, locale: string): string {
-  if (range === '1D') return date.toLocaleTimeString(locale, { hour: 'numeric', hour12: true });
+  if (range === '1D') return date.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true });
   if (range === '1W' || range === '1M') return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   if (range === '6M' || range === '1Y') return date.toLocaleDateString(locale, { month: 'short' });
   if (range === '3Y') return date.toLocaleDateString(locale, { month: 'short', year: '2-digit' });
   if (range === '5Y') return date.toLocaleDateString(locale, { year: 'numeric' });
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+}
+
+/** تنسيق مختصر للمحور X فقط */
+function formatDateLabelShort(date: Date, range: string, locale: string): string {
+  const isAr = locale.startsWith('ar');
+  if (range === '1D') {
+    const h = date.getHours();
+    const m = date.getMinutes();
+    if (m === 0) return h <= 11 ? `${h}${isAr ? 'ص' : 'AM'}` : `${h === 12 ? 12 : h - 12}${isAr ? 'م' : 'PM'}`;
+    return date.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true });
+  }
+  if (range === '1W') return String(date.getDate());
+  if (range === '1M') return `${date.getDate()}/${date.getMonth() + 1}`;
+  if (range === '6M' || range === '1Y') {
+    const short = date.toLocaleDateString(locale, { month: 'short' });
+    return isAr && short.length > 3 ? short.slice(0, 3) : short;
+  }
+  if (range === '3Y') {
+    const m = date.toLocaleDateString(locale, { month: 'short' });
+    const y = date.getFullYear().toString().slice(-2);
+    return isAr && m.length > 3 ? `${m.slice(0, 3)} ${y}` : `${m} ${y}`;
+  }
+  if (range === '5Y') return "'" + date.getFullYear().toString().slice(-2);
   return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
@@ -132,7 +156,7 @@ function buildChartData(
     const isLast = i === lastIndex;
     const value = isLast ? totalValue : getValueAt(d);
     const showTick = showTickAt(d, i);
-    const dateStr = isLast ? currentLabel : showTick ? formatDateLabel(d, range, locale) : ' ';
+    const dateStr = isLast ? currentLabel : showTick ? formatDateLabelShort(d, range, locale) : ' ';
     const tooltipLabel = isLast ? currentLabel : formatDateLabel(d, range, locale);
     return { date: dateStr, value, showTick, tooltipLabel };
   });
