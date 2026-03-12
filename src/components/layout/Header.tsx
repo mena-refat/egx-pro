@@ -102,7 +102,7 @@ export function Header({
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-50 overflow-hidden rtl:right-auto rtl:left-0"
+                  className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-50 overflow-hidden ltr:right-auto ltr:left-0"
                 >
                   <div className="p-3 border-b border-[var(--border-subtle)]">
                     <p className="text-sm font-medium text-[var(--text-secondary)]">{t('overview.profileCompletePercent', { p: profileCompletion.percentage })}</p>
@@ -153,7 +153,7 @@ export function Header({
           </button>
           <AnimatePresence>
             {notificationsOpen && (
-              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className={`absolute left-0 top-full mt-2 w-80 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] flex flex-col ${notifications.length > 0 ? 'max-h-96 overflow-hidden' : ''}`}>
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className={`absolute left-0 top-full mt-2 w-80 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] flex flex-col ${notifications.length > 0 ? 'max-h-96 overflow-hidden' : ''} ltr:left-auto ltr:right-0`}>
                 <div className="shrink-0 border-b border-[var(--border-subtle)] px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-[var(--text-secondary)]">{t('settings.notifications')}</span>
@@ -190,7 +190,7 @@ export function Header({
           </button>
           <AnimatePresence>
             {userDropdownOpen && (
-              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="absolute left-0 top-full mt-2 w-[200px] rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] overflow-hidden">
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="absolute left-0 ltr:right-0 ltr:-left-40 top-full mt-2 w-[200px] rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] overflow-hidden">
                 <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
                   <p className="font-medium text-[var(--text-secondary)] truncate">{user?.fullName || '—'}</p>
                   <p className="text-sm text-[var(--text-muted)] truncate">{user?.username ? `@${user.username}` : '—'}</p>
