@@ -20,8 +20,8 @@ function formatDateLabel(date: Date, range: string, locale: string): string {
   return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
-/** إنشاء تواريخ المحور حسب الفترة المختارة (نفس شكل الرسم الأصلي) */
-function getTimelineDates(range: string, locale: string): Date[] {
+/** إنشاء تواريخ يومية للرسم (في الخفاء أيام كثيرة) — دقة أعلى */
+function getTimelineDatesDaily(range: string): { dates: Date[]; showTickAt: (d: Date, i: number) => boolean } {
   const now = new Date();
   const out: Date[] = [];
 
@@ -31,7 +31,10 @@ function getTimelineDates(range: string, locale: string): Date[] {
       d.setHours(hour, 0, 0, 0);
       out.push(d);
     }
-  } else if (range === '1W') {
+    return { dates: out, showTickAt: (_, i) => i === 0 || i === out.length - 1 };
+  }
+
+  if (range === '1W') {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(now.getDate() - i);
@@ -39,53 +42,58 @@ function getTimelineDates(range: string, locale: string): Date[] {
       out.push(d);
     }
   } else if (range === '1M') {
-    for (let i = 3; i >= 0; i--) {
+    for (let i = 29; i >= 0; i--) {
       const d = new Date(now);
-      d.setDate(now.getDate() - i * 7);
+      d.setDate(now.getDate() - i);
       d.setHours(0, 0, 0, 0);
       out.push(d);
     }
   } else if (range === '6M') {
-    for (let i = 5; i >= 0; i--) {
+    for (let i = 179; i >= 0; i--) {
       const d = new Date(now);
-      d.setMonth(now.getMonth() - i);
-      d.setDate(1);
+      d.setDate(now.getDate() - i);
       d.setHours(0, 0, 0, 0);
       out.push(d);
     }
   } else if (range === '1Y') {
-    for (let i = 11; i >= 0; i--) {
+    for (let i = 364; i >= 0; i--) {
       const d = new Date(now);
-      d.setMonth(now.getMonth() - i);
-      d.setDate(1);
+      d.setDate(now.getDate() - i);
       d.setHours(0, 0, 0, 0);
       out.push(d);
     }
   } else if (range === '3Y') {
-    for (let i = 5; i >= 0; i--) {
+    for (let i = 0; i < 365; i++) {
       const d = new Date(now);
-      d.setMonth(now.getMonth() - i * 6);
-      d.setDate(1);
+      d.setDate(now.getDate() - (365 * 3 - 1 - i * 3));
       d.setHours(0, 0, 0, 0);
       out.push(d);
     }
   } else if (range === '5Y') {
-    for (let i = 4; i >= 0; i--) {
+    for (let i = 0; i < 365; i++) {
       const d = new Date(now);
-      d.setFullYear(now.getFullYear() - i);
-      d.setMonth(0);
-      d.setDate(1);
+      d.setDate(now.getDate() - (365 * 5 - 1 - i * 5));
       d.setHours(0, 0, 0, 0);
       out.push(d);
     }
   }
-  if (['6M', '1Y', '3Y', '5Y'].includes(range)) {
-    out.push(new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), 0, 0));
-  }
-  return out;
+
+  out.push(new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), 0, 0));
+
+  const showTickAt = (d: Date, i: number): boolean => {
+    if (i === 0 || i === out.length - 1) return true;
+    if (range === '1W') return true;
+    if (range === '1M') return d.getDate() === 1 || i === 0 || i === out.length - 1;
+    if (range === '6M' || range === '1Y') return d.getDate() === 1;
+    if (range === '3Y' || range === '5Y') return d.getDate() === 1 && d.getMonth() === 0;
+    return false;
+  };
+  return { dates: out, showTickAt };
 }
 
-/** بناء بيانات الرسم: جدول زمني على محور X + قيم حقيقية من تواريخ الشراء والقيمة الحالية */
+type ChartPoint = { date: string; value: number; showTick: boolean; tooltipLabel: string };
+
+/** بناء بيانات الرسم: نقطة لكل يوم (أو ساعة في 1D) + قيم حقيقية، مع showTick لعرض تسميات المحور */
 function buildChartData(
   holdings: Holding[],
   totalCost: number,
@@ -94,9 +102,9 @@ function buildChartData(
   locale: string,
   purchaseLabel: string,
   currentLabel: string
-): Array<{ date: string; value: number }> {
+): ChartPoint[] {
   const now = new Date();
-  const timeline = getTimelineDates(range, locale);
+  const { dates: timeline, showTickAt } = getTimelineDatesDaily(range);
   if (timeline.length === 0) return [];
 
   const sorted = [...holdings].sort(
@@ -123,8 +131,10 @@ function buildChartData(
   return timeline.map((d, i) => {
     const isLast = i === lastIndex;
     const value = isLast ? totalValue : getValueAt(d);
-    const dateStr = isLast ? currentLabel : formatDateLabel(d, range, locale);
-    return { date: dateStr, value };
+    const showTick = showTickAt(d, i);
+    const dateStr = isLast ? currentLabel : showTick ? formatDateLabel(d, range, locale) : ' ';
+    const tooltipLabel = isLast ? currentLabel : formatDateLabel(d, range, locale);
+    return { date: dateStr, value, showTick, tooltipLabel };
   });
 }
 
@@ -193,8 +203,8 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart({
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
-                  interval="preserveStartEnd"
                   tick={{ fill: 'var(--text-muted)' }}
+                  tickFormatter={(value, index) => (data[index]?.showTick ? value : '')}
                 />
                 <YAxis
                   stroke="var(--text-muted)"
@@ -214,11 +224,18 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart({
                     fontVariantNumeric: 'tabular-nums',
                   }}
                   itemStyle={{ color: 'var(--text-primary)' }}
-                  labelFormatter={(label) => label}
-                  formatter={(value: unknown) => [
-                    typeof value === 'number' ? `${value.toLocaleString(locale, { maximumFractionDigits: 0 })} EGP` : value,
-                    '',
-                  ]}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const p = payload[0].payload as ChartPoint;
+                    return (
+                      <div className="px-3 py-2">
+                        <div className="text-label text-[var(--text-muted)]">{p.tooltipLabel}</div>
+                        <div className="font-number tabular-nums">
+                          {typeof p.value === 'number' ? `${p.value.toLocaleString(locale, { maximumFractionDigits: 0 })} EGP` : p.value}
+                        </div>
+                      </div>
+                    );
+                  }}
                 />
                 <Area
                   type="monotone"
