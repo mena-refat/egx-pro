@@ -79,6 +79,9 @@ function getTimelineDates(range: string, locale: string): Date[] {
       out.push(d);
     }
   }
+  if (['6M', '1Y', '3Y', '5Y'].includes(range)) {
+    out.push(new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), 0, 0));
+  }
   return out;
 }
 
@@ -116,14 +119,11 @@ function buildChartData(
     return cumulative;
   };
 
-  const lastTimelineMs = timeline[timeline.length - 1]?.getTime() ?? 0;
-  const isLastToday = Math.abs(lastTimelineMs - now.getTime()) < 86400000;
-
+  const lastIndex = timeline.length - 1;
   return timeline.map((d, i) => {
-    const isLast = i === timeline.length - 1;
-    const value = isLast && isLastToday ? totalValue : getValueAt(d);
-    let dateStr = formatDateLabel(d, range, locale);
-    if (isLast && isLastToday && sorted.length > 0) dateStr = currentLabel;
+    const isLast = i === lastIndex;
+    const value = isLast ? totalValue : getValueAt(d);
+    const dateStr = isLast ? currentLabel : formatDateLabel(d, range, locale);
     return { date: dateStr, value };
   });
 }
