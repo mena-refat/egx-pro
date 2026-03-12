@@ -133,12 +133,13 @@ function getTimelineDatesDaily(range: string): { dates: Date[]; showTickAt: (d: 
 }
 
 type ChartPoint = {
-  date: string;
+  /** القيمة الفعلية على محور X (timestamp) */
+  x: number;
+  /** النص المعروض على محور X (قد يكون فارغ لإخفاء التكة) */
+  label: string;
   value: number;
   showTick: boolean;
-  /** الطابع الزمني الفعلي للنقطة لضمان دقة التاريخ في الـ Tooltip */
-  ts: number;
-  tooltipLabel: string;
+  /** نص التاريخ/الوقت بالإنجليزي للـ Tooltip فقط */
   tooltipLabelEn: string;
 };
 
@@ -148,8 +149,8 @@ function buildChartData(
   totalCost: number,
   totalValue: number,
   range: string,
-  locale: string,
-  purchaseLabel: string,
+  locale: string, // يُستخدم فقط لتحديد شكل التكة (اختصار عربي/إنجليزي)
+  purchaseLabel: string, // متروك للمستقبل لو أحببنا استعماله
   currentLabel: string
 ): ChartPoint[] {
   const now = new Date();
@@ -182,14 +183,11 @@ function buildChartData(
     const isLast = i === lastIndex;
     const value = isLast ? totalValue : getValueAt(d);
     const showTick = showTickAt(d, i);
-    const dateStr = isLast ? currentLabel : showTick ? formatDateLabelShort(d, range, locale) : ' ';
+    const x = d.getTime();
+    const label = isLast ? currentLabel : showTick ? formatDateLabelShort(d, range, locale) : '';
 
-    // Tooltip labels: عربي حسب لغة الموقع، وإنجليزي ثابت بالتاريخ الكامل
-    const ts = d.getTime();
-
-    // نسجل التاريخ الفعلي للتفسير لاحقًا في الـ Tooltip (حسب لغة الواجهة أو بالإنجليزي الثابت)
-    const tooltipLabel = isLast ? currentLabel : formatDateLabel(d, range, locale);
-    const dateForEn = new Date(ts);
+    // Tooltip label بالإنجليزي فقط
+    const dateForEn = new Date(x);
     let tooltipLabelEn: string;
     if (isLast) {
       tooltipLabelEn = currentLabelEn;
@@ -208,7 +206,7 @@ function buildChartData(
     }
     tooltipLabelEn = tooltipLabelEn.replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
 
-    return { date: dateStr, value, showTick, ts, tooltipLabel, tooltipLabelEn };
+    return { x, label, value, showTick, tooltipLabelEn };
   });
 }
 
@@ -273,13 +271,15 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart({
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis
-                  dataKey="date"
+                  dataKey="x"
                   stroke="var(--text-muted)"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
                   tick={{ fill: 'var(--text-muted)' }}
-                  tickFormatter={(value, index) => (data[index]?.showTick ? value : '')}
+                  tickFormatter={(_value, index) =>
+                    data[index] && data[index].showTick ? data[index].label : ''
+                  }
                 />
                 <YAxis
                   stroke="var(--text-muted)"
@@ -297,10 +297,15 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart({
                     if (!active || !payload?.length) return null;
                     const p = payload[0].payload as ChartPoint;
                     return (
-                      <div dir="ltr" className="px-4 py-2.5 rounded-xl bg-black/75 dark:bg-white/15 backdrop-blur-md border border-white/20 shadow-lg text-white dark:text-[var(--text-primary)] text-left">
+                      <div
+                        dir="ltr"
+                        className="px-4 py-2.5 rounded-xl bg-black/75 dark:bg-white/15 backdrop-blur-md border border-white/20 shadow-lg text-white dark:text-[var(--text-primary)] text-left"
+                      >
                         <div className="text-xs font-medium opacity-90">{p.tooltipLabelEn}</div>
                         <div className="font-number tabular-nums text-sm font-semibold mt-0.5">
-                          {typeof p.value === 'number' ? `${p.value.toLocaleString('en-GB', { maximumFractionDigits: 0 })} EGP` : p.value}
+                          {typeof p.value === 'number'
+                            ? `${p.value.toLocaleString('en-GB', { maximumFractionDigits: 0 })} EGP`
+                            : p.value}
                         </div>
                       </div>
                     );
