@@ -276,9 +276,16 @@
     "liveWatchlist": "قائمة المتابعة اللحظية",
     "watchlistEmpty": "لا توجد أسهم في قائمة المتابعة",
     "totalValue": "إجمالي القيمة",
+    "totalInvested": "إجمالي المستثمر",
+    "purchaseValue": "قيمة شراء الأسهم",
+    "profitLoss": "الربح / الخسارة",
+    "currentValue": "القيمة الحالية",
+    "profitPercent": "نسبة الربح",
+    "profitEgp": "الربح",
     "topPerformer": "أفضل سهم",
     "portfolioPerformance": "أداء المحفظة",
-    "watchlist": "قائمة المتابعة"
+    "watchlist": "قائمة المتابعة",
+    "yourStocks": "اسهمك"
   },
   "achievements": {
     "congrats": "مبروك!",

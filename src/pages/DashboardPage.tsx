@@ -7,7 +7,7 @@ import PortfolioPerformanceChart from '../components/PortfolioPerformanceChart';
 import {
   DashboardMarketBar,
   DashboardPortfolioHero,
-  DashboardLiveWatchlist,
+  DashboardYourStocks,
   DashboardTopPerformer,
   DashboardWatchlistList,
 } from '../components/features/dashboard';
@@ -34,11 +34,6 @@ export default function DashboardPage() {
     if (items.length === 0) return;
     api.post('/watchlist/check-targets', { items }).catch(() => {});
   }, [watchlist, livePrices]);
-
-  const liveWatchlistStocks = useMemo(
-    () => watchlist.map((w) => livePrices[w.ticker] || w).slice(0, 4),
-    [watchlist, livePrices]
-  );
 
   const topPerformer = useMemo(() => {
     if (!holdings.length) return { ticker: '--', change: 0 };
@@ -74,17 +69,18 @@ export default function DashboardPage() {
       <DashboardMarketBar egx30={marketOverview?.egx30 ?? null} locale={i18n.language} />
 
       <DashboardPortfolioHero
+        totalInvested={stats.totalCost}
         totalValue={stats.totalValue}
+        totalGain={stats.totalGain}
         gainPercent={gainPercent}
         loading={portfolioLoading}
         error={portfolioError}
       />
 
-      <DashboardLiveWatchlist
-        stocks={liveWatchlistStocks}
-        loading={watchlistLoading}
-        isConnected={isConnected}
-        onGoToStocks={goToStocks}
+      <DashboardYourStocks
+        holdings={holdings}
+        livePrices={livePrices}
+        loading={portfolioLoading}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
