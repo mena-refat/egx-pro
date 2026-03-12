@@ -5,9 +5,8 @@ import api from '../lib/api';
 import { Skeleton } from '../components/ui/Skeleton';
 import PortfolioPerformanceChart from '../components/PortfolioPerformanceChart';
 import {
+  DashboardMarketBar,
   DashboardPortfolioHero,
-  DashboardMarketStatusBar,
-  DashboardMarketOverview,
   DashboardLiveWatchlist,
   DashboardTopPerformer,
   DashboardWatchlistList,
@@ -21,16 +20,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { prices: livePrices, isConnected } = useLivePrices();
   const { holdings, stats, isLoading: portfolioLoading, error: portfolioError } = usePortfolio(livePrices);
-  const {
-    marketOverview,
-    marketLoading,
-    marketError,
-    showMarketOverview,
-    toggleMarketOverview,
-    retryMarketOverview,
-    watchlist,
-    watchlistLoading,
-  } = useDashboardMarketWatchlist();
+  const { marketOverview, watchlist, watchlistLoading } = useDashboardMarketWatchlist();
 
   useEffect(() => {
     const items = watchlist
@@ -81,28 +71,14 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8" dir={isRTL ? 'rtl' : 'ltr'}>
+      <DashboardMarketBar egx30={marketOverview?.egx30 ?? null} locale={i18n.language} />
+
       <DashboardPortfolioHero
         totalValue={stats.totalValue}
         gainPercent={gainPercent}
         loading={portfolioLoading}
         error={portfolioError}
       />
-
-      <DashboardMarketStatusBar
-        isConnected={isConnected}
-        showMarketOverview={showMarketOverview}
-        onToggle={toggleMarketOverview}
-        isRTL={isRTL}
-      />
-
-      {showMarketOverview && (
-        <DashboardMarketOverview
-          overview={marketOverview}
-          loading={marketLoading}
-          error={marketError}
-          onRetry={retryMarketOverview}
-        />
-      )}
 
       <DashboardLiveWatchlist
         stocks={liveWatchlistStocks}
