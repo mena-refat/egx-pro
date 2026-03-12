@@ -12,11 +12,11 @@ alwaysApply: true
 
 | النوع | الحد الأقصى |
 |---|---|
-| Page component | 100 سطر |
+| Page component | 200 سطر |
 | Feature component | 200 سطر |
-| Shared component | 150 سطر |
-| Custom hook | 80 سطر |
-| أي function | 40 سطر |
+| Shared component | 200 سطر |
+| Custom hook | 200 سطر |
+| أي function | 60 سطر |
 
 لو أي ملف بيتعدى الحد — اتقسم فوراً.
 
@@ -29,12 +29,36 @@ alwaysApply: true
 src/pages/GoalsPage.tsx  ← 800 سطر ❌
 
 // بعد التقسيم:
-src/pages/GoalsPage.tsx                        ← 80 سطر (orchestration فقط) ✅
+src/pages/GoalsPage.tsx                        ← 150 سطر (orchestration فقط) ✅
 src/components/features/goals/GoalsList.tsx    ← 120 سطر ✅
 src/components/features/goals/GoalCard.tsx     ← 80 سطر ✅
 src/components/features/goals/GoalFormModal.tsx ← 150 سطر ✅
 src/hooks/useGoals.ts                          ← 70 سطر ✅
 ```
+
+## SASS / SCSS Module Rules
+
+- كل ملف component (`*.tsx`) لازم يكون معاه ملف `*.module.scss` في نفس المجلد.
+- الـ design tokens العالمية (colors, spacing, radii) تفضل في `src/styles/_variables.scss` كـ CSS custom properties.
+- ممنوع `style={{ }}` إلا لو القيمة ديناميكية فعلًا (زي width من JavaScript).
+- ممنوع استخدام Tailwind utility classes تمامًا — لا في `className` ولا في `clsx()` ولا في `cn()`.
+- الألوان دايمًا عبر CSS variables: `var(--bg-card)`, `var(--brand)`, `var(--text-primary)`... إلخ.
+- استخدم SASS mixins للـ breakpoints:
+  ```scss
+  @include mobile { ... }
+  @include tablet { ... }
+  @include rtl { ... }
+  ```
+- استخدم CSS Modules `composes` للـ patterns المشتركة:
+  ```scss
+  .card {
+    composes: surfaceCard from '../styles/shared.module.scss';
+  }
+  ```
+- مسموح استخدام `clsx()` لدمج classes من module:
+  ```tsx
+  className={clsx(styles.btn, isActive && styles.btnActive)}
+  ```
 
 ---
 
@@ -42,7 +66,34 @@ src/hooks/useGoals.ts                          ← 70 سطر ✅
 
 Page = بيجمع الـ hooks والـ components بس. مفيش fetch. مفيش JSX معقد.
 
+## Page = Component Rule (MANDATORY)
+
+كل صفحة لازم تكون pure composition component — مفيش logic، مفيش fetch، مفيش state تقيل.
+
+الهيكل القياسي لأي صفحة:
+
+```
+src/pages/GoalsPage/
+  index.tsx               ← page entry (max 200 سطر، orchestration فقط)
+  GoalsList.tsx           ← feature sub-component
+  GoalFormModal.tsx       ← feature sub-component
+  GoalCard.tsx            ← أصغر وحدة عرض
+  useGoals.ts             ← كل data logic بتاع الصفحة دي
+  GoalsPage.module.scss   ← page-level styles
+  GoalCard.module.scss    ← card styles
+```
+
+القواعد:
+- كل صفحة تعيش في فولدر خاص بيها تحت `src/pages/PageName/`.
+- `index.tsx` بس هو اللي بينادي الـ hooks وبيجمع الـ sub-components.
+- الـ sub-components تبقى في نفس فولدر الصفحة إلا لو بتتكرر في صفحات تانية.
+- لو sub-component بيتستخدم في 2+ صفحات → يطلع لـ `src/components/features/`.
+- لو sub-component بيتستخدم عبر أكثر من feature → يطلع لـ `src/components/shared/`.
+- ممنوع صفحة تستورد مباشرة من فولدر صفحة تانية.
+
 ```tsx
+import styles from './GoalsPage.module.scss';
+
 // ✅ CORRECT — page خفيفة وواضحة
 export default function GoalsPage() {
   const { goals, loading, error, refetch, addGoal } = useGoals();
@@ -62,7 +113,7 @@ export default function GoalsPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className={styles.page}>
       <GoalsList goals={goals} />
       <GoalFormModal
         open={addModalOpen}
@@ -154,27 +205,55 @@ function GoalsPage() {
 
 ## 4. Design System — ممنوع Hardcode Colors
 
-كل الألوان من CSS variables الموجودة في `index.css`. بدون استثناء.
+كل الألوان من CSS variables الموجودة في `src/styles/_variables.scss`، وتُستخدم عبر SCSS modules. بدون استثناء.
 
 ```tsx
 // ✅ CORRECT
-<div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-[var(--shadow-sm)]">
-<h2 className="text-[var(--text-primary)] font-bold">
-<p className="text-[var(--text-secondary)] text-sm">
-<span className="text-[var(--success)]">+2.5%</span>
-<span className="text-[var(--danger)]">-1.2%</span>
-<button className="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white">
-<div className="bg-[var(--success-bg)] text-[var(--success-text)]">
-<input className="bg-[var(--bg-input)] border-[var(--border)] focus:border-[var(--brand)]">
+import styles from './PortfolioCard.module.scss';
 
-// ❌ WRONG — hardcoded colors
+<div className={styles.card}>
+  <h2 className={styles.title}>العنوان</h2>
+  <p className={styles.subtitle}>الوصف</p>
+  <span className={styles.positive}>+2.5%</span>
+  <span className={styles.negative}>-1.2%</span>
+</div>
+
+// ❌ WRONG — hardcoded colors أو Tailwind classes
 <div className="bg-white border-gray-200">
-<h2 className="text-gray-900">
-<span className="text-green-500">+2.5%</span>
-<span className="text-red-500">-1.2%</span>
-<button className="bg-purple-600 hover:bg-purple-700">
-<div style={{ color: '#7c3aed', background: '#fff' }}>
-<div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb' }}>
+  <h2 className="text-gray-900">Title</h2>
+  <span className="text-green-500">+2.5%</span>
+  <span className="text-red-500">-1.2%</span>
+</div>
+<div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb' }} />
+```
+
+```scss
+/* PortfolioCard.module.scss */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.title {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.positive {
+  color: var(--success);
+}
+
+.negative {
+  color: var(--danger);
+}
 ```
 
 ### CSS Variables المتاحة:
@@ -224,40 +303,38 @@ function GoalsPage() {
 
 ---
 
-## 5. Design System Components — استخدم الموجود فقط
+## 5. Design System Components — استخدم الموجود فقط + SCSS Modules
 
 ممنوع تعمل raw HTML لما يوجد component جاهز.
 
 ```tsx
-// ✅ CORRECT — استخدم الـ shared components
+// ✅ CORRECT — استخدم الـ shared components + SCSS Modules
 import { Button }       from '@/components/shared/Button';
 import { Input }        from '@/components/shared/Input';
 import { EmptyState }   from '@/components/shared/EmptyState';
 import { PageLoader }   from '@/components/shared/PageLoader';
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 import { SkeletonList } from '@/components/shared/Skeleton';
+import styles from './AuthForm.module.scss';
 
-<Button variant="primary" loading={isSubmitting} disabled={isSubmitting}>
+<Button className={styles.primaryBtn} variant="primary" loading={isSubmitting} disabled={isSubmitting}>
   {t('goals.save')}
 </Button>
 
-<Button variant="secondary" onClick={onCancel}>
+<Button className={styles.secondaryBtn} variant="secondary" onClick={onCancel}>
   {t('common.cancel')}
-</Button>
-
-<Button variant="danger" onClick={onDelete}>
-  {t('common.delete')}
 </Button>
 
 <Input
   {...register('email')}
+  className={styles.input}
   type="email"
   placeholder={t('auth.emailPlaceholder')}
   error={errors.email?.message}
   dir="ltr"
 />
 
-// ❌ WRONG — raw HTML
+// ❌ WRONG — raw HTML + Tailwind
 <button className="bg-purple-600 text-white px-4 py-2 rounded-lg">
   حفظ
 </button>
@@ -875,3 +952,66 @@ src/
 [ ] مفيش prop drilling أكتر من level واحد
 [ ] npx tsc --noEmit — صفر errors
 ```
+
+---
+
+## Memory Management (MANDATORY for all useEffect)
+
+### Rule 1 — Fetch with AbortController
+كل `useEffect` فيه API call لازم يستخدم `AbortController`:
+
+```ts
+useEffect(() => {
+  const controller = new AbortController();
+  fetchData(controller.signal);
+  return () => controller.abort();
+}, [fetchData]);
+```
+
+### Rule 2 — Event Listeners Cleanup
+
+```ts
+useEffect(() => {
+  const handler = (e: Event) => { ... };
+  window.addEventListener('resize', handler);
+  return () => window.removeEventListener('resize', handler);
+}, []);
+```
+
+### Rule 3 — Timers via Ref
+
+```ts
+const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+// usage:
+timerRef.current = setTimeout(() => { ... }, TIMEOUTS.notification);
+
+// cleanup:
+useEffect(() => () => {
+  if (timerRef.current) clearTimeout(timerRef.current);
+}, []);
+```
+
+### Rule 4 — WebSocket Cleanup
+
+```ts
+useEffect(() => {
+  const ws = new WebSocket(url);
+  ws.onmessage = handleMessage;
+  return () => ws.close();
+}, [url]);
+```
+
+### Rule 5 — No setState After Unmount
+لازم تتحقق إن الـ component لسه mounted قبل ما تنادي `setState` جوه async callbacks:
+
+```ts
+const mountedRef = useRef(true);
+useEffect(() => () => {
+  mountedRef.current = false;
+}, []);
+
+// in async:
+if (mountedRef.current) setState(data);
+```
+

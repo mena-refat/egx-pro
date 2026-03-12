@@ -11,7 +11,7 @@ alwaysApply: true
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 19, TypeScript, Tailwind CSS 4, Vite 6 |
+| Frontend | React 19, TypeScript, SASS (SCSS Modules), Vite 6 |
 | State | Zustand 5 |
 | Forms | react-hook-form + Zod |
 | Routing | react-router-dom v7 |
@@ -117,23 +117,28 @@ export const GoalsRepository = {
 
 ```
 src/
-  pages/            ← route-level components, max 100 lines, orchestration only
+  styles/
+    _variables.scss   ← CSS custom properties + SASS variables
+    _mixins.scss      ← reusable SASS mixins (breakpoints, flex, rtl)
+    _reset.scss       ← global reset
+    global.scss       ← imports all partials
+  pages/              ← route-level components, max 200 lines, orchestration only
   components/
-    features/       ← feature-specific components (goals/, portfolio/, stocks/)
-    shared/         ← reusable: Button, Input, EmptyState, PageLoader, ErrorBoundary
-    layout/         ← Sidebar, Header, BottomNav, SettingsLayout
-  hooks/            ← ALL data fetching and state logic (useGoals, usePortfolio...)
+    features/         ← feature-specific components (goals/, portfolio/, stocks/)
+    shared/           ← reusable: Button, Input, EmptyState, PageLoader, ErrorBoundary
+    layout/           ← Sidebar, Header, BottomNav, SettingsLayout
+  hooks/              ← ALL data fetching and state logic (useGoals, usePortfolio...)
   lib/
-    constants.ts    ← ALL magic numbers and config values
-    validations.ts  ← ALL Zod schemas
-    api.ts          ← axios instance
-    auth/           ← token management
+    constants.ts      ← ALL magic numbers and config values
+    validations.ts    ← ALL Zod schemas
+    api.ts            ← axios instance
+    auth/             ← token management
   store/
-    authStore.ts    ← Zustand auth store
-  types/            ← shared TypeScript interfaces
+    authStore.ts      ← Zustand auth store
+  types/              ← shared TypeScript interfaces
 ```
 
-#### Page — orchestration only, max 100 lines:
+#### Page — orchestration only, max 200 lines:
 ```tsx
 // ✅ CORRECT
 export default function GoalsPage() {
@@ -206,60 +211,150 @@ export function useGoals() {
 
 | Component Type | Max Lines |
 |---|---|
-| Page component | 100 |
+| Page component | 200 |
 | Feature component | 200 |
-| Shared component | 150 |
-| Custom hook | 80 |
-| Any function | 40 |
-| Controller method | 15 |
-| Service method | 30 |
-| Repository method | 20 |
+| Shared component | 200 |
+| Custom hook | 200 |
+| Any function | 60 |
+| Controller method | 25 |
+| Service method | 50 |
+| Repository method | 30 |
 
 If a file exceeds the limit — split it.
 
-### 2.2 Always Use Design System Components
+## Page = Component Rule (MANDATORY)
+
+Every page must be a pure composition component — no logic, no fetch, no heavy state.
+
+Structure every page as follows:
+
+```
+src/pages/GoalsPage/
+  index.tsx               ← page entry (max 200 lines, orchestration only)
+  GoalsList.tsx           ← feature sub-component
+  GoalFormModal.tsx       ← feature sub-component
+  GoalCard.tsx            ← smallest unit
+  useGoals.ts             ← all data logic for this page
+  GoalsPage.module.scss   ← page-level styles
+  GoalCard.module.scss    ← card styles
+```
+
+Rules:
+- Each page lives in its own folder under `src/pages/PageName/`.
+- `index.tsx` only calls hooks and renders sub-components.
+- Sub-components are colocated in the same page folder unless reused elsewhere.
+- If a sub-component is used in 2+ pages → move to `src/components/features/`.
+- If a sub-component is used across feature boundaries → move to `src/components/shared/`.
+- No page imports directly from another page's folder.
+
+### 2.2 Always Use Design System Components + SCSS Modules
 
 ```tsx
 // ✅ CORRECT
 import { Button } from '@/components/shared/Button';
 import { Input } from '@/components/shared/Input';
+import styles from './GoalForm.module.scss';
 
-<Button variant="primary" loading={isSubmitting} disabled={isSubmitting}>
-  {t('goals.save')}
-</Button>
-<Input
-  {...register('title')}
-  error={errors.title?.message}
-  placeholder={t('goals.titlePlaceholder')}
-/>
+export function GoalForm() {
+  return (
+    <form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+      <Input
+        {...register('title')}
+        className={styles.input}
+        error={errors.title?.message}
+        placeholder={t('goals.titlePlaceholder')}
+      />
+      <Button
+        className={styles.submitBtn}
+        variant="primary"
+        loading={isSubmitting}
+        disabled={isSubmitting}
+      >
+        {t('goals.save')}
+      </Button>
+    </form>
+  );
+}
 
-// ❌ WRONG — raw HTML with hardcoded styles
+// ❌ WRONG — raw HTML with Tailwind/utility classes
 <button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
   حفظ
 </button>
 <input className="border border-gray-300 rounded px-3 py-2 w-full" />
 ```
 
+```scss
+/* GoalForm.module.scss */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.submitBtn {
+  background: var(--brand);
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  &:hover {
+    background: var(--brand-hover);
+  }
+}
+```
+
 ### 2.3 Always Use CSS Variables — Never Hardcode Colors
 
-All colors must come from the design tokens defined in `index.css`.
+All colors must come from the design tokens defined in `src/styles/_variables.scss` as CSS custom properties.
 
 ```tsx
 // ✅ CORRECT
-<div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl">
-<p className="text-[var(--text-primary)]">عنوان</p>
-<p className="text-[var(--text-secondary)]">وصف</p>
-<span className="text-[var(--success)]">+2.5%</span>
-<span className="text-[var(--danger)]">-1.2%</span>
-<button className="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white">
-<div className="bg-[var(--success-bg)] text-[var(--success-text)]">
+import styles from './Card.module.scss';
 
-// ❌ WRONG — hardcoded colors anywhere
-<div className="bg-white border-gray-200">
-<span className="text-green-500">+2.5%</span>
-<span className="text-red-500">-1.2%</span>
-<button className="bg-purple-600 hover:bg-purple-700">
-<div style={{ color: '#7c3aed', background: '#fff' }}>
+<div className={styles.card}>
+  <p className={styles.title}>عنوان</p>
+  <p className={styles.subtitle}>وصف</p>
+  <span className={styles.positive}>+2.5%</span>
+  <span className={styles.negative}>-1.2%</span>
+</div>
+
+// ❌ WRONG — inline styles أو ألوان صريحة
+<div style={{ backgroundColor: 'white', border: '1px solid #e5e7eb' }}>
+  <span style={{ color: 'green' }}>+2.5%</span>
+</div>
+```
+
+```scss
+/* Card.module.scss */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.title {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.positive {
+  color: var(--success);
+}
+
+.negative {
+  color: var(--danger);
+}
 ```
 
 Available CSS variables:
@@ -623,6 +718,36 @@ const goalSchema = z.object({
 });
 ```
 
+### 5.6 Input Validation (Backend)
+- ALL `req.body` و `req.params` و `req.query` لازم تتـ parse بـ Zod قبل أي استخدام.
+- ممنوع تمرير `req.body` الخام لـ Prisma مباشرة.
+- استخدم `.strict()` على Zod schemas لرفض أي حقول غير معروفة.
+
+### 5.7 Ownership Check (Backend)
+- كل query بالـ id لازم يشمل `userId` في الـ `where` clause.
+- ممنوع تعتمد على `userId` جاي من الـ client — دايماً استخدم `req.user.id` من JWT middleware.
+
+### 5.8 JWT & Auth
+- الـ tokens هي RS256 JWT في HttpOnly cookies فقط — ممنوع localStorage.
+- عمر الـ access token: حد أقصى 15 دقيقة.
+- عمر الـ refresh token: 7 أيام مع rotation في كل استخدام.
+- عند تسجيل الخروج: لازم يتم إبطال refresh token في Redis.
+
+### 5.9 Rate Limiting
+- كل mutation endpoints (`POST`, `PUT`, `DELETE`) لازم يكون عليها rate limiting middleware.
+- حدود الـ rate موجودة في `server/lib/constants.ts` تحت `RATE_LIMITS`.
+- لما الـ limit يتعدى، رجّع 429 مع `{ error: 'RATE_LIMIT_EXCEEDED' }`.
+
+### 5.10 Error Exposure
+- ممنوع ترجع `err.message` أو stack traces للـ client في production.
+- دايمًا رجّع error code strings بالشكل `{ error: 'INTERNAL_ERROR' }`.
+- الـ error الكامل يتسجّل داخليًا بـ `logger.error()` فقط.
+
+### 5.11 Secrets
+- ممنوع تسجّل في الـ logs أي tokens أو passwords أو PII.
+- كل الـ secrets بتيجي من `process.env` فقط — ممنوع hardcode.
+- ملفات `.env` عمرها ما تتـ commit — استخدم `.env.example` كمرجع.
+
 ---
 
 ## 6. Error Handling
@@ -943,22 +1068,96 @@ Every push to `main` or `develop` must pass:
 Before submitting any code, verify:
 
 ```
-[ ] No file exceeds its line limit
-[ ] No hardcoded colors (use CSS variables)
-[ ] No magic numbers (use constants.ts)
-[ ] No raw <button> or <input> (use Button/Input components)
-[ ] No console.* in server code (use logger)
-[ ] No console.log in frontend (use import.meta.env.DEV guard)
-[ ] Every useEffect with fetch has AbortController cleanup
-[ ] Every addEventListener has removeEventListener cleanup
-[ ] Every setTimeout has clearTimeout cleanup
+[ ] No file exceeds 200 lines (split into sub-components + hooks if needed)
+[ ] Page is in its own folder with colocated sub-components and hook
+[ ] No Tailwind classes — all styling via SCSS modules
+[ ] No hardcoded colors — CSS variables only (var(--brand), var(--bg-card), etc.)
+[ ] No magic numbers — use constants.ts
+[ ] No raw <button> or <input> — use Button/Input design system components
+[ ] No console.* in server — use logger
+[ ] No console.log in frontend — use import.meta.env.DEV guard
+[ ] Every useEffect with fetch has AbortController + cleanup
+[ ] Every addEventListener has removeEventListener in cleanup
+[ ] Every setTimeout/setInterval uses ref + clearTimeout/clearInterval in cleanup
+[ ] No setState after unmount (use mountedRef pattern)
 [ ] Every protected route has authenticate middleware
-[ ] Every resource query checks userId ownership
-[ ] Every form uses react-hook-form + Zod
-[ ] Every list has loading/error/empty state handling
+[ ] Every resource query includes userId ownership check
+[ ] Every form uses react-hook-form + Zod with .strict()
+[ ] Every list has loading / error / empty state handling
 [ ] Every user-facing text uses t() from i18next
 [ ] Every new Prisma model has @@index([userId])
 [ ] TypeScript: zero errors (npx tsc --noEmit)
 [ ] No non-null assertions (!.) without a guard above
 [ ] No prop drilling beyond 1 level
+[ ] Secrets only via process.env — never hardcoded
+[ ] Rate limiting on all mutation endpoints
+[ ] Error responses never expose err.message — use error code strings
+```
+
+---
+
+## 16. Memory Management (MANDATORY for all useEffect)
+
+### Rule 1 — Fetch with AbortController
+Every `useEffect` that calls an API must use `AbortController`:
+
+```ts
+useEffect(() => {
+  const controller = new AbortController();
+  fetchData(controller.signal);
+  return () => controller.abort();
+}, [fetchData]);
+```
+
+### Rule 2 — Event Listeners Cleanup
+
+```ts
+useEffect(() => {
+  const handler = (e: Event) => { ... };
+  window.addEventListener('resize', handler);
+  return () => window.removeEventListener('resize', handler);
+}, []);
+```
+
+### Rule 3 — Timers via Ref
+
+```ts
+const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+// usage:
+timerRef.current = setTimeout(() => { ... }, TIMEOUTS.notification);
+
+// cleanup:
+useEffect(
+  () => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  },
+  [],
+);
+```
+
+### Rule 4 — WebSocket Cleanup
+
+```ts
+useEffect(() => {
+  const ws = new WebSocket(url);
+  ws.onmessage = handleMessage;
+  return () => ws.close();
+}, [url]);
+```
+
+### Rule 5 — No setState After Unmount
+Always check if component is still mounted before calling `setState` في async callbacks:
+
+```ts
+const mountedRef = useRef(true);
+useEffect(
+  () => () => {
+    mountedRef.current = false;
+  },
+  [],
+);
+
+// in async:
+if (mountedRef.current) setState(data);
 ```

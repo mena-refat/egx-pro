@@ -43,6 +43,8 @@ router.post('/', authenticate, async (req, res) => {
 
 Controller = request/response فقط. صفر business logic. صفر database calls.
 
+يفضل ألا يزيد أي method في الـ controller عن 25 سطر — لو زاد، قسّمه لدوال أصغر في الـ service.
+
 ```ts
 // ✅ CORRECT
 export const GoalsController = {
@@ -98,6 +100,8 @@ export const GoalsController = {
 
 Service = كل الـ business logic. بيستخدم Repository. مش بيتعامل مع req أو res.
 
+يفضل ألا يزيد أي method في الـ service عن 50 سطر — لو زاد، split المنطق لأكثر من method.
+
 ```ts
 // ✅ CORRECT
 export const GoalsService = {
@@ -144,6 +148,8 @@ export const GoalsService = {
 ## 4. Repository Rules
 
 Repository = كل الـ database queries. مفيش logic. مفيش validation.
+
+يفضل ألا يزيد أي method في الـ repository عن 30 سطر — queries معقدة تتقسم لجزء build للـ where/filters وجزء التنفيذ.
 
 ```ts
 // ✅ CORRECT
