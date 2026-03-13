@@ -5,18 +5,18 @@
 
 export const FREE_LIMITS = {
   aiAnalysisPerMonth: 3,
-  portfolioStocks: 10,
-  watchlistStocks: 20,
-  goals: 3,
+  portfolioStocks: 3,
+  watchlistStocks: 0,
+  goals: 1,
   priceAlerts: false,
 } as const;
 
 /** Pro: higher limits than free, still capped */
 export const PRO_LIMITS = {
   aiAnalysisPerMonth: 30,
-  portfolioStocks: 50,
-  watchlistStocks: 50,
-  goals: 10,
+  portfolioStocks: 10,
+  watchlistStocks: 5,
+  goals: 3,
   priceAlerts: true,
 } as const;
 

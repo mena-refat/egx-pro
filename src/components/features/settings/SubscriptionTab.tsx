@@ -47,7 +47,7 @@ declare global {
 // ─── FeatureItem (with optional icon, animated check) ─────────────────────────
 
 const FEATURE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
-  freeWatchlist: BarChart3,
+  freeNoWatchlist: BarChart3,
   freePortfolio: BarChart3,
   freeGoals: BarChart3,
   proWatchlist: BarChart3,
@@ -488,6 +488,57 @@ function CheckoutModal({
   );
 }
 
+// ─── Feature explain modal (مقارنة الخطط) ───────────────────────────────────
+
+function CompareFeatureModal({
+  featureKey,
+  onClose,
+  t,
+}: {
+  featureKey: string;
+  onClose: () => void;
+  t: (k: string) => string;
+}) {
+  const title = t(`billing.${featureKey}`);
+  const descKey = `${featureKey}Desc`;
+  const description = t(`billing.${descKey}`);
+  return (
+    <AnimatePresence>
+      <div
+        className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="feature-explain-title"
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+          className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3 id="feature-explain-title" className="text-lg font-bold text-[var(--text-primary)] mb-3">
+            {title}
+          </h3>
+          <p className="text-[var(--text-secondary)] text-[15px] leading-[1.6]">
+            {description}
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            className="mt-4 w-full"
+            onClick={onClose}
+          >
+            {t('billing.compareFeatureClose')}
+          </Button>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}
+
 // ─── Plans config ───────────────────────────────────────────────────────────
 
 function getBasePriceForPlan(planId: PaidPlanId): number {
@@ -511,7 +562,7 @@ function getPlansConfig(): PlanConfig[] {
       id: 'free',
       nameKey: 'billing.planFreeName',
       features: [
-        { key: 'freeWatchlist' },
+        { key: 'freeNoWatchlist' },
         { key: 'freePortfolio' },
         { key: 'freeGoals' },
         { key: 'freeAi' },
@@ -574,6 +625,7 @@ export function SubscriptionTab() {
   const [modalPlan, setModalPlan] = useState<PaidPlanId | null>(null);
   const [billingMessage, setBillingMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly');
+  const [compareFeatureModal, setCompareFeatureModal] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -784,14 +836,44 @@ export function SubscriptionTab() {
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-card)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareWatchlist')}</td><td className="text-center py-0 px-4 h-14 align-middle">20</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><span>50</span></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center font-medium">{t('billing.compareUnlimited')}</div></td></tr>
-              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-secondary)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.comparePortfolio')}</td><td className="text-center py-0 px-4 h-14 align-middle">10</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center">50</div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center font-medium">{t('billing.compareUnlimited')}</div></td></tr>
-              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-card)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareGoals')}</td><td className="text-center py-0 px-4 h-14 align-middle">3</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center">10</div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center font-medium">{t('billing.compareUnlimited')}</div></td></tr>
-              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-secondary)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareAi')}</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center">3</div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center">30</div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center font-medium">{t('billing.compareUnlimited')}</div></td></tr>
-              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-card)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareRealtime')}</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><X className="w-4 h-4 text-[var(--text-muted)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td></tr>
-              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-secondary)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareAlerts')}</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><X className="w-4 h-4 text-[var(--text-muted)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td></tr>
-              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-card)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareSharia')}</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td></tr>
-              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-secondary)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareSupport')}</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><X className="w-4 h-4 text-[var(--text-muted)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><X className="w-4 h-4 text-[var(--text-muted)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td></tr>
+              {[
+                { featureKey: 'compareWatchlist', free: '—', pro: '5', ultra: 'unlimited' },
+                { featureKey: 'comparePortfolio', free: '3', pro: '10', ultra: 'unlimited' },
+                { featureKey: 'compareGoals', free: '1', pro: '3', ultra: 'unlimited' },
+                { featureKey: 'compareAi', free: '3', pro: '30', ultra: 'unlimited' },
+                { featureKey: 'compareRealtime', free: 'x', pro: 'check', ultra: 'check' },
+                { featureKey: 'compareAlerts', free: 'x', pro: 'check', ultra: 'check' },
+                { featureKey: 'compareSharia', free: 'check', pro: 'check', ultra: 'check' },
+                { featureKey: 'compareSupport', free: 'x', pro: 'x', ultra: 'check' },
+              ].map((row, i) => (
+                <tr key={row.featureKey} className={`border-b border-[var(--border-subtle)] h-14 ${i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-secondary)]'}`}>
+                  <td className="py-0 px-4 h-14 align-middle">
+                    <button
+                      type="button"
+                      onClick={() => setCompareFeatureModal(row.featureKey)}
+                      className="text-start text-[var(--brand)] font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--brand)] focus:ring-offset-2 rounded px-1 -ms-1"
+                      aria-label={t('billing.compareFeature')}
+                    >
+                      {t(`billing.${row.featureKey}`)}
+                    </button>
+                  </td>
+                  <td className="text-center py-0 px-4 h-14 align-middle">
+                    <div className="flex justify-center items-center">
+                      {row.free === 'check' ? <Check className="w-4 h-4 text-[var(--success)]" aria-hidden /> : row.free === 'x' ? <X className="w-4 h-4 text-[var(--text-muted)]" aria-hidden /> : row.free}
+                    </div>
+                  </td>
+                  <td className="py-0 px-4 h-14 align-middle">
+                    <div className="flex justify-center items-center">
+                      {row.pro === 'check' ? <Check className="w-4 h-4 text-[var(--success)]" aria-hidden /> : row.pro === 'x' ? <X className="w-4 h-4 text-[var(--text-muted)]" aria-hidden /> : row.pro === 'unlimited' ? t('billing.compareUnlimited') : row.pro}
+                    </div>
+                  </td>
+                  <td className="py-0 px-4 h-14 align-middle">
+                    <div className="flex justify-center items-center font-medium">
+                      {row.ultra === 'check' ? <Check className="w-4 h-4 text-[var(--success)]" aria-hidden /> : row.ultra === 'x' ? <X className="w-4 h-4 text-[var(--text-muted)]" aria-hidden /> : row.ultra === 'unlimited' ? t('billing.compareUnlimited') : row.ultra}
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -837,6 +919,14 @@ export function SubscriptionTab() {
         onSuccessMessage={handleBillingSuccess}
         t={t}
       />
+
+      {compareFeatureModal && (
+        <CompareFeatureModal
+          featureKey={compareFeatureModal}
+          onClose={() => setCompareFeatureModal(null)}
+          t={t}
+        />
+      )}
 
       {billingMessage && (
         <p
