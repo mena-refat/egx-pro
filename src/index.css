@@ -47,6 +47,9 @@
   --warning-text: #b45309;
   --positive: #22c55e;
   --negative: #ef4444;
+  /* Cream / لبني (badges) */
+  --cream: #8b6914;
+  --cream-bg: #fef9e7;
 
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -92,6 +95,8 @@
   --warning-text: #fbbf24;
   --positive: #22c55e;
   --negative: #ef4444;
+  --cream: #c9a227;
+  --cream-bg: #2d2812;
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);

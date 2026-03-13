@@ -38,9 +38,28 @@ export function StockCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-label uppercase tracking-wider">{stock.ticker}</p>
-            {stock.gicsSector && GICS_SECTOR_LABELS[stock.gicsSector] && (
+            {(stock.sector && stock.sector.trim()) ? (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand)] font-medium">
+                {stock.sector}
+              </span>
+            ) : stock.gicsSector && GICS_SECTOR_LABELS[stock.gicsSector] ? (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand)] font-medium">
                 {lang === 'ar' ? GICS_SECTOR_LABELS[stock.gicsSector].ar : GICS_SECTOR_LABELS[stock.gicsSector].en}
+              </span>
+            ) : null}
+            {stock.inEGX30 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--success-bg)] text-[var(--success)] font-medium" title={lang === 'ar' ? 'مؤشر EGX 30' : 'EGX 30 Index'}>
+                {t('stocks.index30')}
+              </span>
+            )}
+            {stock.inEGX70 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--warning-bg)] text-[var(--warning)] font-medium" title={lang === 'ar' ? 'مؤشر EGX 70' : 'EGX 70 Index'}>
+                {t('stocks.index70')}
+              </span>
+            )}
+            {stock.inEGX100 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--cream-bg)] text-[var(--cream)] font-medium" title={lang === 'ar' ? 'مؤشر EGX 100' : 'EGX 100 Index'}>
+                {t('stocks.index100')}
               </span>
             )}
           </div>
