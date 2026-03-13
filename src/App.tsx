@@ -30,6 +30,10 @@ const UsernameSetupPage = lazy(() => import('./pages/UsernameSetupPage'));
 const SocialProfilePage = lazy(() => import('./pages/SocialProfilePage'));
 const DiscoverPage = lazy(() => import('./pages/DiscoverPage'));
 const PredictionsPage = lazy(() => import('./pages/PredictionsPage'));
+const AIPage = lazy(() => import('./pages/AIPage'));
+const AIAnalyzePage = lazy(() => import('./pages/AIAnalyzePage'));
+const AIComparePage = lazy(() => import('./pages/AIComparePage'));
+const AIRecommendationsPage = lazy(() => import('./pages/AIRecommendationsPage'));
 
 export default function App() {
   const { i18n } = useTranslation('common');
@@ -136,6 +140,10 @@ export default function App() {
                 <Route path="/setup-username" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><UsernameSetupPage /></Suspense></ErrorBoundary>} />
                 <Route path="/discover" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><DiscoverPage /></Suspense></ErrorBoundary>} />
                 <Route path="/predictions" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><PredictionsPage /></Suspense></ErrorBoundary>} />
+                <Route path="/ai" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><AIPage /></Suspense></ErrorBoundary>} />
+                <Route path="/ai/analyze" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><AIAnalyzePage /></Suspense></ErrorBoundary>} />
+                <Route path="/ai/compare" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><AIComparePage /></Suspense></ErrorBoundary>} />
+                <Route path="/ai/recommendations" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><AIRecommendationsPage /></Suspense></ErrorBoundary>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>

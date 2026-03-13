@@ -53,26 +53,49 @@ export function AnalysisResult({ analysis, t }: AnalysisResultProps) {
           </div>
         </div>
       </div>
+      {(analysis.shortTermOutlook || analysis.mediumTermOutlook || analysis.longTermOutlook) && (
+        <div className="p-6 bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] space-y-4">
+          <h4 className="text-[var(--text-primary)] font-bold">{t('ai.outlookByTerm')}</h4>
+          {analysis.shortTermOutlook && (
+            <div>
+              <span className="text-xs font-semibold text-[var(--brand)]">{t('ai.shortTerm')}</span>
+              <p className="text-sm text-[var(--text-secondary)] mt-1">{analysis.shortTermOutlook}</p>
+            </div>
+          )}
+          {analysis.mediumTermOutlook && (
+            <div>
+              <span className="text-xs font-semibold text-[var(--brand)]">{t('ai.mediumTerm')}</span>
+              <p className="text-sm text-[var(--text-secondary)] mt-1">{analysis.mediumTermOutlook}</p>
+            </div>
+          )}
+          {analysis.longTermOutlook && (
+            <div>
+              <span className="text-xs font-semibold text-[var(--brand)]">{t('ai.longTerm')}</span>
+              <p className="text-sm text-[var(--text-secondary)] mt-1">{analysis.longTermOutlook}</p>
+            </div>
+          )}
+        </div>
+      )}
       <div className="p-6 bg-[var(--bg-secondary)] rounded-2xl">
-        <p className="text-[var(--text-secondary)] mb-4">{analysis.sentiment}</p>
+        {analysis.sentiment && <p className="text-[var(--text-secondary)] mb-4">{analysis.sentiment}</p>}
         <div
           className={`text-2xl font-black ${
-            analysis.verdict?.includes('Buy')
+            analysis.verdict?.includes('Buy') || analysis.verdict?.includes('شراء')
               ? 'text-[var(--success)]'
-              : analysis.verdict?.includes('Sell')
+              : analysis.verdict?.includes('Sell') || analysis.verdict?.includes('بيع')
                 ? 'text-[var(--danger)]'
                 : 'text-[var(--warning)]'
           }`}
         >
           {analysis.verdict}
         </div>
-        <div className="flex justify-between mt-4 text-sm">
-          <span className="text-[var(--danger)] font-bold">{analysis.priceTarget?.low}</span>
-          <span className="font-bold text-[var(--text-primary)]">
-            {analysis.priceTarget?.base}
-          </span>
-          <span className="text-[var(--success)] font-bold">{analysis.priceTarget?.high}</span>
-        </div>
+        {analysis.priceTarget && (
+          <div className="flex justify-between mt-4 text-sm">
+            <span className="text-[var(--danger)] font-bold">{analysis.priceTarget.low}</span>
+            <span className="font-bold text-[var(--text-primary)]">{analysis.priceTarget.base}</span>
+            <span className="text-[var(--success)] font-bold">{analysis.priceTarget.high}</span>
+          </div>
+        )}
       </div>
       <div className="p-6 bg-[var(--danger-bg)] border border-[var(--danger)]/10 rounded-2xl">
         <div className="flex items-center gap-2 text-[var(--danger)] font-bold mb-2">

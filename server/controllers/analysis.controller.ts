@@ -25,4 +25,27 @@ export const AnalysisController = {
       },
     });
   }),
+
+  compare: run(async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
+    }
+    const { ticker1, ticker2 } = req.body ?? {};
+    const t1 = typeof ticker1 === 'string' ? ticker1.trim().toUpperCase() : '';
+    const t2 = typeof ticker2 === 'string' ? ticker2.trim().toUpperCase() : '';
+    const result = await AnalysisService.compare(userId, t1, t2);
+    res.json({ data: { comparison: result.comparison, id: result.id } });
+  }),
+
+  recommendations: run(async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
+    }
+    const result = await AnalysisService.recommendations(userId, req.body);
+    res.json({ data: { recommendations: result.recommendations, id: result.id } });
+  }),
 };

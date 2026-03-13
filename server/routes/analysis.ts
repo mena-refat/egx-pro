@@ -23,6 +23,8 @@ const analysisLimiter = rateLimit({
   },
 });
 
+router.post('/compare', authenticate, analysisLimiter, AnalysisController.compare);
+router.post('/recommendations', authenticate, analysisLimiter, AnalysisController.recommendations);
 router.post('/:ticker', authenticate, analysisLimiter, AnalysisController.create);
 
 export default router;

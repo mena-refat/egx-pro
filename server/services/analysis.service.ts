@@ -2,10 +2,12 @@ import { getStockPrice, getStockHistory, getFinancials } from '../lib/stockData.
 import { getStockNews } from '../lib/news.ts';
 import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
+import { PortfolioRepository } from '../repositories/portfolio.repository.ts';
 import { logger } from '../lib/logger.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { getLimit } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';
+import { SINGLE_ANALYSIS_SYSTEM } from '../lib/analysisPrompts.ts';
 
 function getFirstDayOfNextMonth(): Date {
   const d = new Date();
@@ -15,75 +17,94 @@ function getFirstDayOfNextMonth(): Date {
   return d;
 }
 
-const CLAUDE_SYSTEM = `أنت محلل مالي خبير متخصص في تحليل الأسهم.
-تحلل الأسهم بدقة عالية للمستثمر العادي.
+/** يتحقق من الحصة فقط (بدون خصم). استخدم consumeQuota بعد نجاح العملية. */
+async function ensureQuota(userId: string, pointsRequired: number): Promise<void> {
+  const user = await UserRepository.getForBillingPlan(userId);
+  if (!user) throw new AppError('NOT_FOUND', 404);
+  const quota = getLimit(user, 'aiAnalysisPerMonth') as number;
+  const now = new Date();
+  let usedThisMonth = user.aiAnalysisUsedThisMonth ?? 0;
+  const resetDate = user.aiAnalysisResetDate;
+  if (resetDate == null || now >= resetDate) {
+    usedThisMonth = 0;
+    await UserRepository.update({
+      where: { id: userId },
+      data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: getFirstDayOfNextMonth() },
+    });
+  }
+  if (usedThisMonth + pointsRequired > quota) {
+    throw new AppError('ANALYSIS_LIMIT_REACHED', 402, 'تم استنفاد حصة التحليلات لهذا الشهر', {
+      code: 'ANALYSIS_LIMIT_REACHED',
+      used: usedThisMonth,
+      quota,
+    });
+  }
+}
 
-مهم جداً: ردك يكون JSON فقط بدون أي نص خارجه.
-بدون backticks. بدون شرح. JSON فقط.
+/** يخصم نقاط التحليل بعد نجاح العملية. */
+async function consumeQuota(userId: string, points: number): Promise<void> {
+  const user = await UserRepository.getForBillingPlan(userId);
+  if (!user) return;
+  const now = new Date();
+  let used = user.aiAnalysisUsedThisMonth ?? 0;
+  const resetDate = user.aiAnalysisResetDate;
+  if (resetDate == null || now >= resetDate) {
+    used = 0;
+    await UserRepository.update({
+      where: { id: userId },
+      data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: getFirstDayOfNextMonth() },
+    });
+  }
+  await UserRepository.update({
+    where: { id: userId },
+    data: { aiAnalysisUsedThisMonth: used + points },
+  });
+}
 
-الشكل المطلوب بالضبط:
-{
-  "summary": "ملخص شامل للسهم في 3 جمل",
-  "fundamental": {
-    "outlook": "النظرة المستقبلية للشركة",
-    "ratios": "تحليل المؤشرات المالية P/E وROE وهامش الربح",
-    "verdict": "قوي / متوسط / ضعيف"
-  },
-  "technical": {
-    "signal": "صاعد / هابط / محايد",
-    "indicators": "تحليل RSI والمتوسطات المتحركة",
-    "levels": "مستويات الدعم والمقاومة المهمة"
-  },
-  "sentiment": "تحليل تأثير الأخبار على السهم",
-  "verdict": "شراء قوي / شراء / انتظار / بيع / بيع قوي",
-  "priceTarget": {
-    "low": 0,
-    "base": 0,
-    "high": 0
-  },
-  "suitability": "مناسب لمن يبحث عن...",
-  "disclaimer": "هذا التحليل للأغراض التعليمية فقط وليس توصية استثمارية مرخصة"
-}`;
+async function callClaude(system: string, userMessage: string, maxTokens = 2000): Promise<string> {
+  if (!process.env.CLAUDE_API_KEY) throw new AppError('SERVICE_UNAVAILABLE', 503);
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.CLAUDE_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: maxTokens,
+      system,
+      messages: [{ role: 'user', content: userMessage }],
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    logger.error('Claude API Error', { errText });
+    throw new AppError('INTERNAL_ERROR', 500);
+  }
+  const data = (await res.json()) as { content: Array<{ text: string }> };
+  const raw = data.content[0]?.text;
+  if (!raw) throw new AppError('INTERNAL_ERROR', 500);
+  return raw;
+}
+
+function parseAnalysisJson(rawText: string): unknown {
+  const cleaned = rawText.replace(/```json|```/g, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    logger.error('Failed to parse Claude JSON', { e });
+    throw new AppError('INTERNAL_ERROR', 500);
+  }
+}
 
 export const AnalysisService = {
   async create(
     userId: string,
     ticker: string
   ): Promise<{ analysis: unknown; id: string; newUnseenAchievements: string[] }> {
-    if (!userId) {
-      throw new AppError('UNAUTHORIZED', 401);
-    }
-
-    const now = new Date();
-    const user = await UserRepository.getForBillingPlan(userId);
-
-    if (!user) {
-      throw new AppError('NOT_FOUND', 404);
-    }
-
-    const effectivePro = isPro(user);
-    const quota = effectivePro ? Infinity : FREE_LIMITS.aiAnalysisPerMonth;
-
-    let usedThisMonth = user.aiAnalysisUsedThisMonth ?? 0;
-    const resetDate = user.aiAnalysisResetDate;
-    if (resetDate == null || now >= resetDate) {
-      usedThisMonth = 0;
-      const nextReset = getFirstDayOfNextMonth();
-      await UserRepository.update({
-        where: { id: userId },
-        data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: nextReset },
-      });
-    }
-
-    if (usedThisMonth >= quota) {
-      throw new AppError('ANALYSIS_LIMIT_REACHED', 402, 'هذه الميزة متاحة في Pro', {
-        code: 'ANALYSIS_LIMIT_REACHED',
-        plan: 'free',
-        used: usedThisMonth,
-        quota,
-      });
-    }
-
+    if (!userId) throw new AppError('UNAUTHORIZED', 401);
+    await ensureQuota(userId, 1);
     const completedBefore = await getCompletedAchievementIds(userId);
 
     const [priceData, , financials, news] = (await Promise.all([
@@ -94,108 +115,163 @@ export const AnalysisService = {
     ])) as [
       { price: number; changePercent: number; volume: number | null } | null,
       unknown,
-      {
-        pe: number | null;
-        roe: number | null;
-        profitMargin: number | null;
-        revenue: number | null;
-      } | null,
+      { pe: number | null; roe: number | null; profitMargin: number | null; revenue: number | null } | null,
       Array<{ title: string }>,
     ];
 
-    if (!priceData || !financials) {
-      throw new AppError('NOT_FOUND', 404);
-    }
+    if (!priceData || !financials) throw new AppError('NOT_FOUND', 404);
 
     const prompt = `
-      حلل السهم التالي وقدم تقرير شامل:
-      
-      ═══ بيانات السهم ═══
-      الاسم: ${ticker}
-      السعر: ${priceData.price} جنيه
-      التغير: ${priceData.changePercent}%
-      الحجم: ${priceData.volume}
-      
-      ═══ التحليل المالي ═══
-      P/E: ${financials.pe ?? 'غير متوفر'}
-      ROE: ${financials.roe != null ? (financials.roe * 100).toFixed(2) : 'غير متوفر'}%
-      هامش الربح: ${financials.profitMargin != null ? (financials.profitMargin * 100).toFixed(2) : 'غير متوفر'}%
-      الإيرادات: ${financials.revenue ?? 'غير متوفر'}
-      
-      ═══ آخر الأخبار ═══
-      ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'لا توجد أخبار حديثة'}
-      
-      المطلوب:
-      1. التحليل الفني (صاعد/هابط/محايد)
-      2. التحليل الأساسي (الشركة قوية؟)
-      3. تأثير الأخبار
-      4. المخاطر الرئيسية
-      5. التوصية: شراء / انتظار / بيع
-      6. هدف سعري للـ 3 شهور
-      7. تقييم من 5 نجوم
-      
-      في الآخر: تنبيه أن التحليل للأغراض التعليمية فقط
-    `;
+حلل السهم التالي وفق العوامل الـ 42 (تحليل فني، موجي، أساسي، قطاع، اقتصاد كلي، جيوسياسي، سلوكي، تقني، وعوامل مصر).
+قدم في النهاية shortTermOutlook و mediumTermOutlook و longTermOutlook واضحة.
 
-    if (!process.env.CLAUDE_API_KEY) {
-      throw new AppError('SERVICE_UNAVAILABLE', 503);
-    }
+═══ بيانات السهم ═══
+الرمز: ${ticker}
+السعر: ${priceData.price} جنيه
+التغير: ${priceData.changePercent}%
+الحجم: ${priceData.volume ?? '—'}
 
-    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': process.env.CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-opus-4-6',
-        max_tokens: 1500,
-        system: CLAUDE_SYSTEM,
-        messages: [{ role: 'user', content: prompt }],
-      }),
+═══ التحليل المالي ═══
+P/E: ${financials.pe ?? 'غير متوفر'}
+ROE: ${financials.roe != null ? (financials.roe * 100).toFixed(2) : 'غير متوفر'}%
+هامش الربح: ${financials.profitMargin != null ? (financials.profitMargin * 100).toFixed(2) : 'غير متوفر'}%
+الإيرادات: ${financials.revenue ?? 'غير متوفر'}
+
+═══ آخر الأخبار ═══
+${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'لا توجد أخبار حديثة'}
+
+المطلوب: نفس شكل الـ JSON المحدد (summary, fundamental, technical, sentiment, verdict, priceTarget, shortTermOutlook, mediumTermOutlook, longTermOutlook, suitability, disclaimer).
+`;
+
+    const rawText = await callClaude(SINGLE_ANALYSIS_SYSTEM, prompt, 2500);
+    const analysisJson = parseAnalysisJson(rawText);
+
+    await consumeQuota(userId, 1);
+    const saved = await prisma.analysis.create({
+      data: { userId, ticker, content: JSON.stringify(analysisJson) },
     });
+    const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
+    return { analysis: analysisJson, id: saved.id, newUnseenAchievements: newAchievements };
+  },
 
-    if (!claudeResponse.ok) {
-      const errorData = await claudeResponse.text();
-      logger.error('Claude API Error', { errorData });
-      throw new AppError('INTERNAL_ERROR', 500);
+  /** مقارنة سهمين — تستهلك 2 نقطة تحليل */
+  async compare(
+    userId: string,
+    ticker1: string,
+    ticker2: string
+  ): Promise<{ comparison: unknown; id: string }> {
+    if (!userId) throw new AppError('UNAUTHORIZED', 401);
+    if (!ticker1 || !ticker2 || ticker1 === ticker2) {
+      throw new AppError('VALIDATION_ERROR', 400);
     }
+    await ensureQuota(userId, 2);
 
-    const claudeData = (await claudeResponse.json()) as { content: Array<{ text: string }> };
-    const rawText = claudeData.content[0]?.text;
-    if (!rawText) {
-      throw new AppError('INTERNAL_ERROR', 500);
-    }
+    const [p1, p2, f1, f2, news1, news2] = await Promise.all([
+      getStockPrice(ticker1),
+      getStockPrice(ticker2),
+      getFinancials(ticker1),
+      getFinancials(ticker2),
+      getStockNews(ticker1),
+      getStockNews(ticker2),
+    ]);
+    if (!p1 || !f1) throw new AppError('NOT_FOUND', 404);
+    if (!p2 || !f2) throw new AppError('NOT_FOUND', 404);
 
-    let analysisJson: unknown;
-    try {
-      const cleaned = rawText.replace(/```json|```/g, '').trim();
-      analysisJson = JSON.parse(cleaned);
-    } catch (parseError) {
-      logger.error('Failed to parse Claude JSON response', { parseError });
-      throw new AppError('INTERNAL_ERROR', 500);
-    }
+    const system = `أنت محلل مالي خبير. قارن بين السهمين المذكورين من حيث: القوة النسبية، التحليل الأساسي، المخاطر، والفرص.
+ردك JSON فقط بدون نص خارجي. الشكل:
+{
+  "summary": "ملخص مقارنة في 2–3 جمل",
+  "ticker1": { "verdict": "شراء/انتظار/بيع", "strengths": ["..."], "weaknesses": ["..."] },
+  "ticker2": { "verdict": "شراء/انتظار/بيع", "strengths": ["..."], "weaknesses": ["..."] },
+  "winner": "TICKER1 أو TICKER2 أو تعادل",
+  "reason": "سبب التفضيل",
+  "disclaimer": "هذا التحليل للأغراض التعليمية فقط وليس توصية استثمارية"
+}`;
 
-    const savedAnalysis = await prisma.analysis.create({
+    const prompt = `
+السهم الأول: ${ticker1}
+السعر: ${p1.price} جنيه، التغير: ${p1.changePercent}%
+P/E: ${f1.pe ?? '—'}, ROE: ${f1.roe != null ? (f1.roe * 100).toFixed(2) : '—'}%, هامش الربح: ${f1.profitMargin != null ? (f1.profitMargin * 100).toFixed(2) : '—'}%
+أخبار: ${news1.length ? news1.slice(0, 3).map((n) => n.title).join(' | ') : '—'}
+
+السهم الثاني: ${ticker2}
+السعر: ${p2.price} جنيه، التغير: ${p2.changePercent}%
+P/E: ${f2.pe ?? '—'}, ROE: ${f2.roe != null ? (f2.roe * 100).toFixed(2) : '—'}%, هامش الربح: ${f2.profitMargin != null ? (f2.profitMargin * 100).toFixed(2) : '—'}%
+أخبار: ${news2.length ? news2.slice(0, 3).map((n) => n.title).join(' | ') : '—'}
+
+قارن واعطِ التوصية في الحقل winner و reason.
+`;
+
+    const raw = await callClaude(system, prompt, 1500);
+    const comparison = parseAnalysisJson(raw);
+    await consumeQuota(userId, 2);
+    const saved = await prisma.analysis.create({
       data: {
         userId,
-        ticker,
-        content: JSON.stringify(analysisJson),
+        ticker: `${ticker1}|${ticker2}`,
+        content: JSON.stringify(comparison),
       },
     });
+    return { comparison, id: saved.id };
+  },
 
-    await UserRepository.update({
-      where: { id: userId },
-      data: { aiAnalysisUsedThisMonth: usedThisMonth + 1 },
+  /** توصيات شخصية بناءً على المحفظة وملف المستخدم — نقطة واحدة */
+  async recommendations(
+    userId: string,
+    _body?: { riskTolerance?: string; investmentHorizon?: number; interestedSectors?: string[] }
+  ): Promise<{ recommendations: unknown; id: string }> {
+    if (!userId) throw new AppError('UNAUTHORIZED', 401);
+    await ensureQuota(userId, 1);
+
+    const [[portfolioList], profile] = await Promise.all([
+      PortfolioRepository.findByUser(userId),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { riskTolerance: true, investmentHorizon: true, interestedSectors: true },
+      }),
+    ]);
+    const risk = _body?.riskTolerance ?? profile?.riskTolerance ?? 'moderate';
+    const horizon = _body?.investmentHorizon ?? profile?.investmentHorizon ?? 5;
+    let sectors: string[] = [];
+    try {
+      sectors = _body?.interestedSectors ?? (profile?.interestedSectors ? JSON.parse(profile.interestedSectors) : []);
+    } catch {
+      // ignore invalid JSON
+    }
+    const tickers = (portfolioList ?? []).map((h: { ticker: string }) => h.ticker);
+
+    const system = `أنت مستشار استثماري. بناءً على محفظة المستخدم وملفه (تحمل المخاطر، الأفق الزمني، القطاعات)، قدم توصيات شخصية قصيرة.
+ردك JSON فقط:
+{
+  "summary": "ملخص توصياتك في 2–3 جمل",
+  "recommendations": [
+    { "ticker": "رمز", "action": "شراء/احتفاظ/بيع/مراقبة", "reason": "سبب مختصر" }
+  ],
+  "portfolioAdvice": "نصيحة عامة للمحفظة",
+  "disclaimer": "هذا التحليل للأغراض التعليمية فقط وليس توصية استثمارية"
+}`;
+
+    const prompt = `
+ملف المستخدم:
+- تحمل المخاطر: ${risk}
+- الأفق الزمني (سنوات): ${horizon}
+- قطاعات مهتم بها: ${Array.isArray(sectors) ? sectors.join(', ') : sectors}
+
+أسهم في المحفظة حالياً: ${tickers.length ? tickers.join(', ') : 'لا يوجد'}
+
+قدم توصيات شخصية (توصيات array حتى لو المحفظة فاضية: اقترح أسهم أو تحركات).
+`;
+
+    const raw = await callClaude(system, prompt, 1500);
+    const recommendations = parseAnalysisJson(raw);
+    await consumeQuota(userId, 1);
+    const saved = await prisma.analysis.create({
+      data: {
+        userId,
+        ticker: '_recommendations',
+        content: JSON.stringify(recommendations),
+      },
     });
-
-    const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
-
-    return {
-      analysis: analysisJson,
-      id: savedAnalysis.id,
-      newUnseenAchievements: newAchievements,
-    };
+    return { recommendations, id: saved.id };
   },
 };
