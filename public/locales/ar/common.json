@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "EGX Pro",
+    "appName": "Borsa",
     "loading": "جاري التحميل...",
     "error": "حدث خطأ ما",
     "save": "حفظ",
@@ -326,7 +326,7 @@
       "week-with-us": "أسبوع معنا", "active-analyst": "محلل نشط", "wealth-builder": "باني ثروة", "long-list": "قائمة طويلة",
       "planner": "مخطط", "loyal": "وفي", "network": "شبكة", "diversified": "متنوع", "decision-maker": "صانع قرار",
       "first-goal-achieved": "أول هدف محقق", "devoted": "مخلص", "expert-analyst": "محلل خبير", "diverse-portfolio": "محفظة متنوعة",
-      "strategist": "استراتيجي", "egx-ambassador": "سفير EGX Pro", "big-portfolio": "محفظة كبيرة", "patient": "صابر",
+      "strategist": "استراتيجي", "egx-ambassador": "سفير Borsa", "big-portfolio": "محفظة كبيرة", "patient": "صابر",
       "daily-follower": "متابع يومي", "researcher": "باحث", "annual-subscriber": "مشترك سنوي", "leader": "قائد",
       "legend-analyst": "محلل أسطوري", "kings-portfolio": "محفظة الملوك", "full-year": "سنة كاملة", "mega-referrer": "داعم ضخم",
       "referral-legend": "أسطورة الدعوات", "community-leader": "قائد المجتمع", "the-1000": "الـ 1000", "overachiever": "فائز",
@@ -549,7 +549,7 @@
     "currencyShort": "ج",
     "msgStart": "بداية رائعة! الاستمرارية هي السر.",
     "msgMid": "أنت في طريقك لتحقيق الاستقلال المالي!",
-    "msgMillion": "مليونير في المستقبل! EGX Pro يساعدك تصل.",
+    "msgMillion": "مليونير في المستقبل! Borsa يساعدك تصل.",
     "msgTop": "هذا المستوى يحققه أقل من 1% من المستثمرين!",
     "chartWealth": "إجمالي الثروة",
     "chartPrincipal": "رأس المال فقط",
@@ -840,7 +840,7 @@
     "codeNote": "هذا الكود خاص بك ولن يتغير أبداً",
     "howItWorks": "كيف يعمل النظام؟",
     "step1": "انسخ كودك الشخصي أو رابط الدعوة",
-    "step2": "شاركه مع أصدقائك ليسجلوا في EGX Pro",
+    "step2": "شاركه مع أصدقائك ليسجلوا في Borsa",
     "step3": "بمجرد تفعيل 5 حسابات تحصل على شهر Pro مجاناً تلقائياً",
     "recentReferrals": "آخر الدعوات",
     "user": "مستخدم",
@@ -849,7 +849,7 @@
     "emptyTitle": "لا توجد دعوات بعد",
     "emptyDescription": "انسخ رابط دعوتك وشاركه مع أصدقائك الآن",
     "share": "مشاركة",
-    "shareText": "انضم إلى EGX Pro واستثمر في البورصة المصرية بذكاء! استخدم كودي {{code}} عند التسجيل"
+    "shareText": "انضم إلى Borsa واستثمر في البورصة المصرية بذكاء! استخدم كودي {{code}} عند التسجيل"
   },
   "plan": {
     "analysisLimitTitle": "أنت مستثمر جاد!",

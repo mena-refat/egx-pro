@@ -1,14 +1,14 @@
 /**
- * OpenAPI 3.0 — EGX Pro API Documentation
+ * OpenAPI 3.0 — Borsa API Documentation
  * جميع الاستجابات الناجحة تُغلّف في { data }؛ الأخطاء تُرجع كـ { error: "CODE" }.
  */
 export const swaggerDocument = {
   openapi: '3.0.3',
   info: {
-    title: 'EGX Pro API',
+    title: 'Borsa API',
     version: '1.0.0',
     description: `
-واجهة برمجة التطبيقات لمنصة **EGX Pro** — منصة ذكية لمتابعة البورصة المصرية والاستثمار.
+واجهة برمجة التطبيقات لمنصة **Borsa** — منصة ذكية لمتابعة البورصة المصرية والاستثمار.
 
 ## تنسيق الاستجابة الموحّد
 - **مورد واحد**: \`{ "data": { ... } }\`
@@ -20,7 +20,7 @@ export const swaggerDocument = {
 معظم المسارات تتطلب رأس \`Authorization: Bearer <accessToken>\`. استخدم \`POST /auth/login\` أو \`POST /auth/register\` للحصول على الـ token، و\`POST /auth/refresh\` (مع cookie) لتجديده.
     `.trim(),
     contact: {
-      name: 'EGX Pro',
+      name: 'Borsa',
       url: 'https://egxpro.run.app',
     },
     license: { name: 'Proprietary' },

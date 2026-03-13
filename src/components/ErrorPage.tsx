@@ -78,7 +78,7 @@ export function ErrorPage({ code, onPrimaryAction }: ErrorPageProps) {
       <header className="w-full border-b border-[var(--border)] px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <TrendingUp className="text-[var(--brand)] w-7 h-7" />
-          <span className="text-xl font-bold tracking-tight">EGX Pro</span>
+          <span className="text-xl font-bold tracking-tight">{t('common.appName')}</span>
         </div>
       </header>
 

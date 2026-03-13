@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "EGX Pro",
+    "appName": "Borsa",
     "loading": "Loading...",
     "error": "Something went wrong",
     "save": "Save",
@@ -546,7 +546,7 @@
     "currencyShort": "EGP",
     "msgStart": "Great start! Consistency is the key.",
     "msgMid": "You're on your way to financial independence!",
-    "msgMillion": "Future millionaire! EGX Pro helps you get there.",
+    "msgMillion": "Future millionaire! Borsa helps you get there.",
     "msgTop": "Less than 1% of investors reach this level!",
     "chartWealth": "Total wealth",
     "chartPrincipal": "Principal only",
@@ -837,7 +837,7 @@
     "codeNote": "This code is unique to you and will never change",
     "howItWorks": "How does it work?",
     "step1": "Copy your personal code or invite link",
-    "step2": "Share it with friends to sign up on EGX Pro",
+    "step2": "Share it with friends to sign up on Borsa",
     "step3": "When 5 accounts activate you automatically get 1 free Pro month",
     "recentReferrals": "Recent referrals",
     "user": "User",
@@ -846,7 +846,7 @@
     "emptyTitle": "No referrals yet",
     "emptyDescription": "Copy your invite link and share it with friends now",
     "share": "Share",
-    "shareText": "Join EGX Pro and invest in the Egyptian stock market smartly! Use my code {{code}} when signing up"
+    "shareText": "Join Borsa and invest in the Egyptian stock market smartly! Use my code {{code}} when signing up"
   },
   "plan": {
     "analysisLimitTitle": "You're a serious investor!",
@@ -911,7 +911,7 @@
       "expert-analyst": "Expert Analyst",
       "diverse-portfolio": "Diverse Portfolio",
       "strategist": "Strategist",
-      "egx-ambassador": "EGX Pro Ambassador",
+      "egx-ambassador": "Borsa Ambassador",
       "big-portfolio": "Big Portfolio",
       "patient": "Patient",
       "daily-follower": "Daily Follower",

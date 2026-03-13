@@ -357,7 +357,7 @@ export async function twoFaSetup(userId: string): Promise<{ secret: string; qrCo
     base32 = user.twoFactorSecret;
   } else {
     const secret = speakeasy.generateSecret({
-      name: `EGX Pro (${label})`,
+      name: `Borsa (${label})`,
       length: 20,
     });
     base32 = secret.base32 ?? '';
@@ -366,7 +366,7 @@ export async function twoFaSetup(userId: string): Promise<{ secret: string; qrCo
       data: { twoFactorSecret: base32, twoFactorEnabled: false },
     });
   }
-  const otpauthUrl = `otpauth://totp/EGX%20Pro:${encodeURIComponent(label)}?secret=${base32}&issuer=EGX%20Pro`;
+  const otpauthUrl = `otpauth://totp/Borsa:${encodeURIComponent(label)}?secret=${base32}&issuer=Borsa`;
   const qrCodeUrl = await qrcode.toDataURL(otpauthUrl);
   const manualCode = base32.replace(/(.{4})/g, '$1 ').trim();
   return { secret: base32, qrCodeUrl, manualCode };

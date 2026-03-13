@@ -652,7 +652,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
         return (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">كيف سمعت عن EGX Pro؟</h2>
+              <h2 className="text-2xl font-bold">كيف سمعت عن Borsa؟</h2>
               <p className="text-[var(--text-secondary)] text-sm">اختر المصدر الأقرب (اختياري)</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -734,7 +734,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
             <TrendingUp className="text-[var(--brand)] w-6 h-6" />
-            <span className="font-bold text-lg">EGX Pro</span>
+            <span className="font-bold text-lg">Borsa</span>
           </div>
         </div>
 

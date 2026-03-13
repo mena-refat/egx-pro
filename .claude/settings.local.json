@@ -7,7 +7,18 @@
       "Bash(node --input-type=module:*)",
       "WebFetch(domain:finance.yahoo.com)",
       "WebFetch(domain:query1.finance.yahoo.com)",
-      "WebFetch(domain:query2.finance.yahoo.com)"
+      "WebFetch(domain:query2.finance.yahoo.com)",
+      "Bash(gh issue:*)",
+      "Bash(gh api:*)",
+      "Bash(python3 -c \"import json,sys; issues=json.load\\(sys.stdin\\); [print\\(i[''''number''''], i[''''title'''']\\) for i in issues]\")",
+      "Bash(python3 -c \"import json,sys; data=sys.stdin.read\\(\\); issues=json.loads\\(data\\); [print\\(i[''''number''''], i[''''title'''']\\) for i in issues]\")",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:www.reddit.com)",
+      "WebFetch(domain:old.reddit.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:news.ycombinator.com)",
+      "WebFetch(domain:www.npmjs.com)"
     ]
   }
 }

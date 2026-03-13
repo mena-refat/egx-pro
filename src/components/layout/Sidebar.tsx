@@ -40,7 +40,7 @@ export function Sidebar({ activeRoute, collapsed, onToggle }: SidebarProps) {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--brand)] to-[var(--brand-hover)] flex items-center justify-center shrink-0">
             <TrendingUp className="text-[var(--text-inverse)] w-5 h-5" />
           </div>
-          <h1 className={`text-xl font-bold tracking-tight truncate transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>EGX Pro</h1>
+          <h1 className={`text-xl font-bold tracking-tight truncate transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>{t('common.appName')}</h1>
         </div>
         <button
           type="button"

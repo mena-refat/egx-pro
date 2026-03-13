@@ -15,14 +15,14 @@ export interface AchievementDef {
 
 export const ACHIEVEMENT_DEFS: AchievementDef[] = [
   // المستوى الأول — الناشئ
-  { id: 'first-step', level: 'beginner', title: 'الخطوة الأولى', shortDescription: 'أول خطواتك في عالم الاستثمار', longDescription: 'أنشأت حسابك وبدأت رحلتك مع EGX Pro. كل مستثمر عظيم يبدأ بخطوة واحدة.', route: null },
+  { id: 'first-step', level: 'beginner', title: 'الخطوة الأولى', shortDescription: 'أول خطواتك في عالم الاستثمار', longDescription: 'أنشأت حسابك وبدأت رحلتك مع Borsa. كل مستثمر عظيم يبدأ بخطوة واحدة.', route: null },
   { id: 'know-yourself', level: 'beginner', title: 'اعرف نفسك', shortDescription: 'حدّد شخصيتك الاستثمارية', longDescription: 'عبر تحديد شخصيتك الاستثمارية تعرف كيف تتعامل مع المخاطر والفرص. هذا أساس كل قرار استثماري سليم.', route: '/onboarding' },
   { id: 'profile-complete', level: 'beginner', title: 'الملف المكتمل', shortDescription: 'أكمل بياناتك وابدأ رحلتك', longDescription: 'إكمال ملفك الشخصي يفتح لك كل مميزات التطبيق ويُظهر توصيات مخصصة لك. البيانات الكاملة = قرارات أوضح.', route: '/account?tab=settings' },
   { id: 'first-look', level: 'beginner', title: 'أول نظرة', shortDescription: 'حلّل سهمك الأول بالذكاء الاصطناعي', longDescription: 'أول تحليل بالذكاء الاصطناعي يضعك على أول الطريق لفهم الأسهم. الاستمرار يبني الخبرة.', route: '/stocks' },
   { id: 'watcher', level: 'beginner', title: 'المراقب', shortDescription: 'ابدأ بمتابعة الأسهم', longDescription: 'إضافة أول سهم لقائمة المراقبة يعني أنك بدأت تتابع السوق بوعي. المراقبة تسبق القرار.', route: '/stocks' },
   { id: 'investor', level: 'beginner', title: 'المستثمر', shortDescription: 'ضع أول استثمار في محفظتك', longDescription: 'أول سهم في المحفظة هو بداية بناء الثروة. كل رحلة طويلة تبدأ بخطوة.', route: '/portfolio' },
   { id: 'dreamer', level: 'beginner', title: 'الحالم', shortDescription: 'حدد هدفك المالي الأول', longDescription: 'الأهداف المالية تحوّل الأحلام إلى أرقام وخطة. من يحدد هدفه يصل أسرع.', route: '/goals' },
-  { id: 'first-referrer', level: 'beginner', title: 'الداعي الأول', shortDescription: 'شارك EGX Pro مع صديق', longDescription: 'مشاركة EGX Pro مع صديق تعني أنك تثق بالتطبيق وتريد نشر الفائدة. الدعوة الصادقة تُكسب الجميع.', route: '/account?tab=referral' },
+  { id: 'first-referrer', level: 'beginner', title: 'الداعي الأول', shortDescription: 'شارك Borsa مع صديق', longDescription: 'مشاركة Borsa مع صديق تعني أنك تثق بالتطبيق وتريد نشر الفائدة. الدعوة الصادقة تُكسب الجميع.', route: '/account?tab=referral' },
   { id: 'subscriber', level: 'beginner', title: 'المشترك', shortDescription: 'انضم لمجتمع المحترفين', longDescription: 'الاشتراك في خطة Pro يعني استثمارك في أدوات أفضل وقرارات أوضح. المجتمع يبنيه من يدفع قدماً.', route: '/account?tab=subscription' },
   { id: 'week-with-us', level: 'beginner', title: 'أسبوع معنا', shortDescription: 'سبعة أيام متتالية من النمو', longDescription: 'سبعة أيام متتالية من المتابعة تبني عادة الاستثمار الواعي. الاتساق يخلق النتائج.', route: null },
   // المستوى الثاني — المستثمر
@@ -40,7 +40,7 @@ export const ACHIEVEMENT_DEFS: AchievementDef[] = [
   { id: 'expert-analyst', level: 'pro', title: 'المحلل الخبير', shortDescription: '50 تحليلاً من علامات الاحتراف', longDescription: 'خمسون تحليلاً تضعك بين المحترفين. الخبرة تتراكم تحليلًا بعد تحليل.', route: '/stocks' },
   { id: 'diverse-portfolio', level: 'pro', title: 'محفظة متنوعة', shortDescription: '5 قطاعات تعني توازناً حقيقياً', longDescription: 'خمسة قطاعات في محفظتك تعني تنويعاً حقيقياً يقلل الصدمات ويفتح آفاقاً أوسع.', route: '/stocks' },
   { id: 'strategist', level: 'pro', title: 'الاستراتيجي', shortDescription: '5 أهداف محققة لا تكذب', longDescription: 'خمسة أهداف محققة تثبت أنك لا تحلم فقط بل تنفذ. الاستراتيجية بدون تنفيذ وهم.', route: '/goals' },
-  { id: 'egx-ambassador', level: 'pro', title: 'سفير EGX Pro', shortDescription: '20 شخصاً آمنوا بتوصيتك', longDescription: 'عشرون شخصاً انضموا بفضلك يعني أنك سفير حقيقي للاستثمار الواعي. التأثير يُقاس بالأثر.', route: '/account?tab=referral' },
+  { id: 'egx-ambassador', level: 'pro', title: 'سفير Borsa', shortDescription: '20 شخصاً آمنوا بتوصيتك', longDescription: 'عشرون شخصاً انضموا بفضلك يعني أنك سفير حقيقي للاستثمار الواعي. التأثير يُقاس بالأثر.', route: '/account?tab=referral' },
   { id: 'big-portfolio', level: 'pro', title: 'المحفظة الكبيرة', shortDescription: '15 سهماً تحت إدارتك', longDescription: 'خمسة عشر سهمًا في محفظتك تعني إدارة حقيقية للتنويع والمخاطر. الحجم يأتي مع المسؤولية.', route: '/portfolio' },
   { id: 'patient', level: 'pro', title: 'الصبور', shortDescription: '6 أشهر والرحلة مستمرة', longDescription: 'ستة أشهر من المتابعة تعني صبراً على العملية. الاستثمار لعبة طويلة الأمد.', route: null },
   { id: 'daily-follower', level: 'pro', title: 'المتابع اليومي', shortDescription: '100 يوم من المعرفة المتراكمة', longDescription: 'مئة يوم من المتابعة تبني عادة يومية قوية. المعرفة المتراكمة تصنع الفارق.', route: null },

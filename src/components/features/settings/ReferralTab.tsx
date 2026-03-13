@@ -97,7 +97,7 @@ function ReferralTabInner() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'EGX Pro',
+          title: t('common.appName'),
           text: shareText,
           url: shareUrl,
         });

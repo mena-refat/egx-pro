@@ -297,7 +297,7 @@ function CheckoutModal({
       ],
       merchantInfo: {
         merchantId: 'YOUR_MERCHANT_ID',
-        merchantName: 'EGX Pro',
+        merchantName: 'Borsa',
       },
       transactionInfo: {
         totalPriceStatus: 'FINAL' as const,

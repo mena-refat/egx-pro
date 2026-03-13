@@ -192,7 +192,7 @@ async function startServer() {
   });
 
   const swaggerUiOptions = {
-    customSiteTitle: 'EGX Pro — API Documentation',
+    customSiteTitle: 'Borsa — API Documentation',
     customCss: `
       .swagger-ui .topbar { display: none }
       .swagger-ui .info { margin: 2rem 0 }
@@ -286,7 +286,7 @@ async function startServer() {
   let wsHandlers: ReturnType<typeof setupWebSocket> | null = null;
 
   server.listen(PORT, '0.0.0.0', async () => {
-    logger.info(`🚀 EGX Pro Server running on http://localhost:${PORT}`);
+    logger.info(`🚀 Borsa Server running on http://localhost:${PORT}`);
     wsHandlers = setupWebSocket(server);
     marketDataService.setBroadcastFn(wsHandlers.broadcastPrices);
 
