@@ -10,9 +10,10 @@ const NOTIFICATION_KEYS = [
   { key: 'notifyGoals', labelKey: 'settings.notifyGoals', descKey: 'settings.notifyGoalsDesc' },
 ] as const;
 
+type NotifKey = (typeof NOTIFICATION_KEYS)[number]['key'];
+
 export function NotificationsTab({ user, onUpdateProfile }: ProfileTabProps) {
   const { t } = useTranslation('common');
-  const userRecord = user as unknown as Record<string, unknown>;
 
   return (
     <div className="space-y-6">
@@ -24,7 +25,7 @@ export function NotificationsTab({ user, onUpdateProfile }: ProfileTabProps) {
 
         <div className="space-y-0 divide-y divide-[var(--border-subtle)]">
           {NOTIFICATION_KEYS.map(({ key, labelKey, descKey }) => {
-            const value = userRecord[key] ?? true;
+            const value = user[key as NotifKey] ?? true;
             return (
               <div key={key} className="flex items-center justify-between gap-4 py-4 first:pt-0">
                 <div className="min-w-0">

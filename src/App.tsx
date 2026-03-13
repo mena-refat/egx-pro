@@ -15,6 +15,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
+import { ToastContainer } from './components/shared/ToastContainer';
 import PageLoader from './components/shared/PageLoader';
 import { SubscriptionTab, ReferralTab, AchievementsTab, AccountOverviewTab } from './components/features/settings';
 import SettingsLayout from './components/layout/SettingsLayout';
@@ -108,6 +109,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen w-full max-w-[100vw] bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row overflow-x-hidden">
+      <ToastContainer />
       <Sidebar activeRoute={pathname} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />
       <main className="main-content flex-1 p-4 sm:p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto overflow-x-hidden">
         <Header

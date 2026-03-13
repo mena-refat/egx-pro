@@ -27,26 +27,30 @@ api.interceptors.request.use(
 
 // Response interceptor to handle 401 and token refresh
 let isRefreshing = false;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let failedQueue: any[] = [];
+type QueuedPromise = { resolve: (token: string | null) => void; reject: (err: unknown) => void };
+let failedQueue: QueuedPromise[] = [];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: unknown, token: string | null = null): void => {
   failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
+    if (error) prom.reject(error);
+    else prom.resolve(token);
   });
   failedQueue = [];
 };
 
 api.interceptors.response.use(
   (response) => {
-    const list = response.data?.newUnseenAchievements;
+    const body = response.data;
+    const list = body && typeof body === 'object' && 'newUnseenAchievements' in body
+      ? (body as { newUnseenAchievements?: unknown[] }).newUnseenAchievements
+      : undefined;
     if (Array.isArray(list) && list.length > 0) {
       useAuthStore.getState().addUnseenAchievementsCount(list.length);
+    }
+    if (body && typeof body === 'object' && 'ok' in body) {
+      const envelope = body as { ok: boolean; data?: unknown };
+      if (!envelope.ok) return Promise.reject(envelope);
+      response.data = envelope.data;
     }
     return response;
   },

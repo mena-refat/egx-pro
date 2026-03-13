@@ -4,6 +4,7 @@ import { marketDataService } from '../services/market-data/market-data.service.t
 import { getMarketStatusForStocks } from '../lib/marketHours.ts';
 import { isPro } from '../lib/plan.ts';
 import type { AuthRequest } from '../routes/types.ts';
+import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 
 async function useDelayed(req: AuthRequest): Promise<boolean> {
   const userId = req.user?.id ?? req.userId;
@@ -21,20 +22,20 @@ function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
 
 export const StocksController = {
   root: (_req: AuthRequest, res: Response) => {
-    res.json({ data: { message: 'Stocks API root. Use /prices, /market/overview, etc.' } });
+    sendSuccess(res, { message: 'Stocks API root. Use /prices, /market/overview, etc.' });
   },
 
   getPrices: run(async (req, res) => {
     const delayed = await useDelayed(req);
     const sector = typeof req.query.sector === 'string' ? req.query.sector : undefined;
     const prices = await StocksService.getBulkPrices(delayed, sector);
-    res.json({ data: prices });
+    sendSuccess(res, prices);
   }),
 
   search: run(async (req, res) => {
     const q = typeof req.query.q === 'string' ? req.query.q : '';
     const results = await StocksService.search(q);
-    res.json({ data: results });
+    sendSuccess(res, results);
   }),
 
   getPrice: run(async (req, res) => {
@@ -42,71 +43,69 @@ export const StocksController = {
     const delayed = await useDelayed(req);
     const price = await StocksService.getPrice(ticker, delayed);
     if (!price) {
-      res.status(404).json({ error: 'NOT_FOUND' });
+      sendError(res, 'NOT_FOUND', 404);
       return;
     }
-    res.json({ data: price });
+    sendSuccess(res, price);
   }),
 
   getHistory: run(async (req, res) => {
     const { ticker } = req.params;
     const { range } = req.query;
     const history = await StocksService.getHistory(ticker, range as string);
-    res.json({ data: history });
+    sendSuccess(res, history);
   }),
 
   getFinancials: run(async (req, res) => {
     const { ticker } = req.params;
     const financials = await StocksService.getFinancials(ticker);
     if (!financials) {
-      res.status(404).json({ error: 'NOT_FOUND' });
+      sendError(res, 'NOT_FOUND', 404);
       return;
     }
-    res.json({ data: financials });
+    sendSuccess(res, financials);
   }),
 
   getNews: run(async (req, res) => {
     const { ticker } = req.params;
     const news = await StocksService.getNews(ticker);
-    res.json({ data: news });
+    sendSuccess(res, news);
   }),
 
   orderDepth: (_req: AuthRequest, res: Response) => {
-    res.json({ data: { available: false, message: 'Order depth data not available' } });
+    sendSuccess(res, { available: false, message: 'Order depth data not available' });
   },
 
   investorCategories: (_req: AuthRequest, res: Response) => {
-    res.json({ data: { available: false, message: 'Investor categories not available' } });
+    sendSuccess(res, { available: false, message: 'Investor categories not available' });
   },
 
   tradingStats: (_req: AuthRequest, res: Response) => {
-    res.json({ data: { available: false, message: 'Trading stats not available' } });
+    sendSuccess(res, { available: false, message: 'Trading stats not available' });
   },
 
   getQuote: run(async (req, res) => {
     const { ticker } = req.params;
     if (!ticker?.trim()) {
-      res.status(400).json({ error: 'VALIDATION_ERROR' });
+      sendError(res, 'VALIDATION_ERROR', 400);
       return;
     }
     const quote = await marketDataService.getQuote(ticker.trim());
     if (!quote || !Number.isFinite(quote.price)) {
-      res.status(404).json({ error: 'NOT_FOUND' });
+      sendError(res, 'NOT_FOUND', 404);
       return;
     }
-    res.json({
-      data: {
-        ticker: quote.symbol,
-        price: quote.price,
-        change: quote.change,
-        changePercent: quote.changePercent,
-        high: quote.high,
-        low: quote.low,
-        open: quote.open,
-        previousClose: quote.previousClose,
-        volume: quote.volume,
-        symbol: quote.symbol,
-      },
+    sendSuccess(res, {
+      ticker: quote.symbol,
+      price: quote.price,
+      change: quote.change,
+      changePercent: quote.changePercent,
+      high: quote.high,
+      low: quote.low,
+      open: quote.open,
+      previousClose: quote.previousClose,
+      volume: quote.volume,
+      symbol: quote.symbol,
     });
   }),
 
@@ -119,7 +118,7 @@ export const StocksController = {
       .map((t) => t.trim())
       .slice(0, 50);
     if (tickers.length === 0) {
-      res.status(400).json({ error: 'VALIDATION_ERROR' });
+      sendError(res, 'VALIDATION_ERROR', 400);
       return;
     }
     const quotesMap = await marketDataService.getQuotes(tickers);
@@ -140,12 +139,12 @@ export const StocksController = {
         };
       }
     }
-    res.json({ data: quotes });
+    sendSuccess(res, quotes);
   }),
 
   /** GET /api/stocks/market-status — { isOpen, nextOpen, nextClose } */
   getMarketStatus: run(async (_req, res) => {
     const status = getMarketStatusForStocks();
-    res.json({ data: status });
+    sendSuccess(res, status);
   }),
 };

@@ -31,9 +31,19 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// RESPONSE INTERCEPTOR — لو 401 يجرب يجدد الـ token، لو فشل يعمل logout ويروح login
+// RESPONSE INTERCEPTOR — فكّ { ok, data } ورفض عند { ok: false }
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const body = response.data;
+    if (body && typeof body === 'object' && 'ok' in body) {
+      const envelope = body as { ok: boolean; data?: unknown };
+      if (!envelope.ok) {
+        return Promise.reject(envelope);
+      }
+      response.data = envelope.data;
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 

@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { SocialService } from '../services/social.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
-import { usernameSearchQuerySchema } from '../../src/lib/validations.ts';
+import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 
 function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -13,18 +13,18 @@ export const SocialController = {
   follow: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const username = req.params.username ?? '';
     const follow = await SocialService.follow(userId, username);
-    res.status(201).json({ data: { status: follow.status } });
+    sendSuccess(res, { status: follow.status }, 201);
   }),
 
   unfollow: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const username = req.params.username ?? '';
@@ -35,122 +35,119 @@ export const SocialController = {
   followers: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const followers = await SocialService.getFollowers(userId);
-    res.json({ data: followers });
+    sendSuccess(res, followers);
   }),
 
   following: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const following = await SocialService.getFollowing(userId);
-    res.json({ data: following });
+    sendSuccess(res, following);
   }),
 
   requests: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const requests = await SocialService.getRequests(userId);
-    res.json({ data: requests });
+    sendSuccess(res, requests);
   }),
 
   acceptRequest: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const followerId = req.params.followerId ?? '';
     await SocialService.acceptRequest(userId, followerId);
-    res.json({ success: true });
+    sendSuccess(res, { success: true });
   }),
 
   declineRequest: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const followerId = req.params.followerId ?? '';
     await SocialService.declineRequest(userId, followerId);
-    res.json({ success: true });
+    sendSuccess(res, { success: true });
   }),
 
   profile: run(async (req, res) => {
     const username = req.params.username ?? '';
     const viewer = req.user;
     const data = await SocialService.getPublicProfile(viewer, username);
-    res.json({ data });
+    sendSuccess(res, data);
   }),
 
   profileFollowers: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const username = req.params.username ?? '';
     const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
     const result = await SocialService.getProfileFollowers(username, userId, page, limit);
-    res.json({ data: result });
+    sendSuccess(res, result);
   }),
 
   profileFollowing: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const username = req.params.username ?? '';
     const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
     const result = await SocialService.getProfileFollowing(username, userId, page, limit);
-    res.json({ data: result });
+    sendSuccess(res, result);
   }),
 
   settings: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const { isPrivate, showPortfolio } = req.body as { isPrivate?: boolean; showPortfolio?: boolean };
     const user = await SocialService.updateSettings(userId, { isPrivate, showPortfolio });
-    res.json({ data: { isPrivate: user.isPrivate, showPortfolio: user.showPortfolio } });
+    sendSuccess(res, { isPrivate: user.isPrivate, showPortfolio: user.showPortfolio });
   }),
 
   search: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const q = (req.query.q as string) ?? (req.query.username as string) ?? '';
     const list = await SocialService.search(userId, q);
-    res.json({ data: list });
+    sendSuccess(res, list);
   }),
 
   usernameSearch: run(async (req, res) => {
     const userId = req.user?.id ?? req.userId;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
-    const { q, limit } = usernameSearchQuerySchema.parse({
-      q: String(req.query.q ?? '').trim(),
-      limit: req.query.limit ?? 5,
-    });
-    const list = await SocialService.usernameSearch(userId, q, limit);
-    res.json(list);
+    const { q, limit } = req.query as { q?: string; limit?: number };
+    const list = await SocialService.usernameSearch(userId, q ?? '', limit ?? 5);
+    sendSuccess(res, list);
   }),
 };
 

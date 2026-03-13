@@ -5,7 +5,6 @@ import { createServer as createViteServer } from 'vite';
 import helmet from 'helmet';
 import cors from 'cors';
 import hpp from 'hpp';
-import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { rateLimit } from 'express-rate-limit';
 import path from 'path';
@@ -101,12 +100,24 @@ async function startServer() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   }));
   app.use(hpp());
-  if (process.env.NODE_ENV !== 'production') {
-    app.use(morgan('dev'));
-  } else {
-    // في الـ production نحافظ على لوج مبسط بدون تفاصيل داخلية
-    app.use(morgan('combined'));
-  }
+
+  // Structured request logging (Winston) — بديل morgan
+  app.use((req, res, next) => {
+    const reqId = (req as express.Request & { id?: string }).id ?? randomUUID();
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
+      logger[level]('request', {
+        reqId,
+        method: req.method,
+        path: req.path,
+        status: res.statusCode,
+        durationMs: duration,
+      });
+    });
+    next();
+  });
 
   // Static uploads (avatars, etc.)
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -250,36 +261,34 @@ async function startServer() {
 
   // 404 for unknown API routes (before static so /api/foo returns JSON not HTML)
   app.use('/api', (_req, res) => {
-    res.status(404).json({ error: 'NOT_FOUND' });
+    res.status(404).json({ ok: false, error: 'NOT_FOUND' });
   });
 
   if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
     Sentry.setupExpressErrorHandler(app);
   }
 
-  // Global Error Handler — AppError and ZodError get consistent JSON; never expose internals
+  // Global Error Handler — كل الأخطاء ترجع { ok: false, error, message? }; لا filesystem logging
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const reqId = (req as express.Request & { id?: string }).id;
 
     if (err instanceof AppError) {
-      const body: Record<string, unknown> = { error: err.code };
-      if (err.message && err.message !== err.code) body.message = err.message;
-      if (err.details) body.details = err.details;
-      return res.status(err.status).json(body);
+      logger.warn('AppError', { reqId, code: err.code, status: err.status });
+      return res.status(err.status).json({
+        ok: false,
+        error: err.code,
+        ...(err.message && err.message !== err.code && { message: err.message }),
+        ...(err.details && { details: err.details }),
+      });
     }
     if (err && typeof err === 'object' && (err as { name?: string }).name === 'ZodError') {
-      return res.status(400).json({ error: 'VALIDATION_ERROR' });
+      return res.status(400).json({ ok: false, error: 'VALIDATION_ERROR' });
     }
 
     const message = err instanceof Error ? err.message : String(err);
-    const logLine = `[${new Date().toISOString()}] [${reqId ?? 'no-id'}] ${message}\n`;
-
-    if (process.env.NODE_ENV !== 'production') {
-      logger.error('Unhandled Error:', { reqId, err });
-    }
-
-    res.status(500).json({ error: 'INTERNAL_ERROR' });
+    logger.error('Unhandled Error', { reqId, message, stack: err instanceof Error ? err.stack : undefined });
+    res.status(500).json({ ok: false, error: 'INTERNAL_ERROR' });
   });
 
   // Vite Integration
@@ -311,9 +320,11 @@ async function startServer() {
       let symbols: string[] = [...EGX_TICKERS];
       try {
         // Use DB stocks if the model exists on the generated Prisma client
-        const anyPrisma = prisma as unknown as { stock?: { findMany: (args: { select: { ticker: true } }) => Promise<{ ticker: string }[]> } };
-        if (anyPrisma.stock?.findMany) {
-          const stocks = await anyPrisma.stock.findMany({ select: { ticker: true } });
+        // Optional Stock model — not all Prisma schemas have it; use EGX_TICKERS fallback
+        type PrismaWithStock = { stock?: { findMany: (args: { select: { ticker: true } }) => Promise<{ ticker: string }[]> } };
+        const prismaWithStock = prisma as unknown as PrismaWithStock;
+        if (prismaWithStock.stock?.findMany) {
+          const stocks = await prismaWithStock.stock.findMany({ select: { ticker: true } });
           if (stocks.length > 0) {
             symbols = stocks.map((s) => s.ticker);
           }
@@ -476,15 +487,21 @@ async function startServer() {
     aiResetCron.stop();
     resolveCron.stop();
     clearInterval(pricesInterval);
-    server.close(async () => {
+    server.close(() => {
+      logger.info('HTTP server closed');
+    });
+    // Drain: give in-flight requests time to finish, then disconnect DB
+    const drainMs = 5000;
+    setTimeout(async () => {
       try {
         const { prisma } = await import('./server/lib/prisma.ts');
         await prisma.$disconnect();
         logger.info('DB connection closed');
       } catch {
-        // لو الـ prisma اتعمله import فاشل من قبل، نتجاهل الخطأ
+        // ignore if prisma import failed
       }
-    });
+      process.exit(0);
+    }, drainMs);
   };
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));

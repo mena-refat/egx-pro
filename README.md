@@ -1,6 +1,17 @@
-# Borsa
+# Borsa — بورصة
 
-Stock tracking and portfolio app with AI analysis, goals, referrals, and real-time market data.
+**Borsa** is an Egyptian stock market SaaS for retail investors: portfolio tracking, real-time EGX data, AI-powered analysis (Claude), goals, referrals, and predictions.  
+**بورصة** — منصة تتبع أسهم وبورصة مصرية مع تحليل ذكي وأهداف مالية وإحالات.
+
+## Tech stack
+
+| Layer        | Stack |
+|-------------|--------|
+| Frontend    | React 19, Vite 6, Tailwind 4, SCSS Modules, Zustand, i18next (AR/EN RTL) |
+| Backend     | Express 4, Prisma 6, PostgreSQL, Upstash Redis, JWT |
+| Market data | yahoo-finance2 (EGX/.CA), Stooq fallback |
+| AI          | Anthropic Claude API |
+| Realtime    | WebSocket (prices) |
 
 ## Documentation
 
@@ -15,17 +26,31 @@ Stock tracking and portfolio app with AI analysis, goals, referrals, and real-ti
 | [docs/features/](docs/features/) | Market data, subscription, referral, achievements |
 | [docs/decisions/market-data-strategy.md](docs/decisions/market-data-strategy.md) | Why Twelve Data, migration path |
 
-## Quick start
+## Quick start (5 steps)
 
-1. **Prerequisites:** Node.js 18+, PostgreSQL 15+
-2. **Install:** `npm install`
-3. **Env:** `cp .env.example .env.local` and set required variables (see [environment-variables](docs/guides/environment-variables.md))
-4. **DB:** `npx prisma migrate dev` then `npx prisma db seed` (if seed exists)
-5. **Run:** `npm run dev`
-6. **Open:** [http://localhost:3000](http://localhost:3000)
+1. **Clone** — `git clone <repo> && cd egx-pro`
+2. **Env** — `cp .env.example .env` and set `DATABASE_URL`, optional `CLAUDE_API_KEY`, `REDIS_*`, etc.
+3. **Install** — `npm install`
+4. **DB** — `npx prisma migrate dev` then `npx prisma generate`
+5. **Run** — `npm run dev` → open [http://localhost:3000](http://localhost:3000)
 
-## Tech stack
+See [docs/guides/environment-variables.md](docs/guides/environment-variables.md) for all variables.
 
-- **Backend:** Express, Prisma, PostgreSQL, Upstash Redis, JWT
-- **Frontend:** React, Vite, Tailwind
-- **Market data:** Twelve Data (EGX/XCAI) with optional EGXlytics fallback
+## Folder structure
+
+- `src/` — React app (pages, components, hooks, store, lib)
+- `server/` — Express API (routes, controllers, services, middleware, schemas)
+- `shared/` — Shared types (e.g. API response envelope)
+- `prisma/` — Schema and migrations
+- `public/` — Static assets and locale JSON (ar/en)
+
+## API docs
+
+- **Swagger UI:** [http://localhost:3000/api/docs](http://localhost:3000/api/docs) (when `EGX_EXPOSE_DOCS=true`)
+- **Guides:** [docs/api/README.md](docs/api/README.md), [docs/api/auth.md](docs/api/auth.md), [docs/api/market.md](docs/api/market.md)
+
+## Production & deployment
+
+- **Database:** Use `DATABASE_URL` with `?connection_limit=20&pool_timeout=10`.
+- **Logging:** Winston only (structured JSON); no filesystem logs.
+- **Graceful shutdown:** SIGTERM/SIGINT close HTTP server, drain 5s, then Prisma disconnect.

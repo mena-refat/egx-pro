@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { NewsService } from '../services/news.service.ts';
 import { logger } from '../lib/logger.ts';
+import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 
 function run(fn: (req: { params: { ticker?: string } }, res: Response) => Promise<void>) {
   return (req: { params: { ticker?: string } }, res: Response, next: NextFunction) => {
@@ -11,13 +12,13 @@ function run(fn: (req: { params: { ticker?: string } }, res: Response) => Promis
 export const NewsController = {
   getMarket: run(async (_req, res) => {
     const items = await NewsService.getMarket();
-    res.json({ data: items });
+    sendSuccess(res, items);
   }),
 
   getByTicker: run(async (req, res) => {
     const ticker = req.params.ticker ?? '';
     const items = await NewsService.getByTicker(ticker);
-    res.json({ data: items });
+    sendSuccess(res, items);
   }),
 };
 
@@ -26,8 +27,8 @@ export function newsErrorHandler(err: unknown, _req: unknown, res: Response, nex
   logger.error('News API error', { message: err instanceof Error ? err.message : err });
   const message = err instanceof Error ? err.message : '';
   if (message === 'NEWS_API_MISSING') {
-    res.status(503).json({ error: 'NEWS_API_MISSING' });
+    sendError(res, 'NEWS_API_MISSING', 503);
     return;
   }
-  res.status(500).json({ error: 'INTERNAL_ERROR' });
+  sendError(res, 'INTERNAL_ERROR', 500);
 }

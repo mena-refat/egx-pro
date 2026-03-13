@@ -1,9 +1,10 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
-import { AuthRequest } from './types';
+import { AuthRequest } from './types.ts';
 import { authenticate } from '../middleware/auth.middleware.ts';
 import { logger } from '../lib/logger.ts';
+import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 
 const router = Router();
 
@@ -11,7 +12,7 @@ const router = Router();
 router.get('/completion', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!userId) return sendError(res, 'UNAUTHORIZED', 401);
     const [user, goalsCount, watchlistCount] = await Promise.all([
       UserRepository.findUnique({
         where: { id: userId },
@@ -21,7 +22,7 @@ router.get('/completion', authenticate, async (req: AuthRequest, res: Response) 
       prisma.watchlist.count({ where: { userId } }),
     ]);
 
-    if (!user) return res.status(404).json({ error: 'NOT_FOUND' });
+    if (!user) return sendError(res, 'NOT_FOUND', 404);
 
     const hasEmail = Boolean(user.email?.trim());
     const hasPhone = Boolean(user.phone?.trim());
@@ -37,12 +38,6 @@ router.get('/completion', authenticate, async (req: AuthRequest, res: Response) 
       { field: 'watchlist' as const, ok: hasWatchlist },
     ];
 
-    // توزيع النقاط:
-    // username manual change: 10%
-    // email: 25%
-    // phone: 25%
-    // goal: 20%
-    // watchlist: 20%
     const percentage = checks.reduce((sum, c) => {
       if (!c.ok) return sum;
       if (c.field === 'username') return sum + 10;
@@ -65,10 +60,10 @@ router.get('/completion', authenticate, async (req: AuthRequest, res: Response) 
               : '/profile?tab=account',
       }));
 
-    res.json({ data: { percentage, missing } });
+    sendSuccess(res, { percentage, missing });
   } catch (err) {
     logger.error('Profile completion error', { err });
-    res.status(500).json({ error: 'INTERNAL_ERROR' });
+    sendError(res, 'INTERNAL_ERROR', 500);
   }
 });
 

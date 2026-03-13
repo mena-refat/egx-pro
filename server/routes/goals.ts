@@ -4,6 +4,9 @@ import { authenticate } from '../middleware/auth.middleware.ts';
 import { GoalsController } from '../controllers/goals.controller.ts';
 import type { AuthRequest } from './types.ts';
 import { ONE_MINUTE_MS } from '../lib/constants.ts';
+import { validate } from '../middleware/validate.middleware.ts';
+import { createGoalBodySchema, updateGoalBodySchema, updateGoalAmountBodySchema } from '../schemas/goals.schema.ts';
+import { idParamSchema } from '../schemas/params.ts';
 
 const router = Router();
 
@@ -22,10 +25,10 @@ const goalsCreateLimiter = rateLimit({
 });
 
 router.get('/', authenticate, GoalsController.getAll);
-router.post('/', authenticate, goalsCreateLimiter, GoalsController.create);
-router.put('/:id', authenticate, GoalsController.update);
-router.patch('/:id/amount', authenticate, GoalsController.updateAmount);
-router.patch('/:id/complete', authenticate, GoalsController.complete);
-router.delete('/:id', authenticate, GoalsController.delete);
+router.post('/', authenticate, goalsCreateLimiter, validate(createGoalBodySchema, 'body'), GoalsController.create);
+router.put('/:id', authenticate, validate(idParamSchema, 'params'), validate(updateGoalBodySchema, 'body'), GoalsController.update);
+router.patch('/:id/amount', authenticate, validate(idParamSchema, 'params'), validate(updateGoalAmountBodySchema, 'body'), GoalsController.updateAmount);
+router.patch('/:id/complete', authenticate, validate(idParamSchema, 'params'), GoalsController.complete);
+router.delete('/:id', authenticate, validate(idParamSchema, 'params'), GoalsController.delete);
 
 export default router;

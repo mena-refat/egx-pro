@@ -379,8 +379,15 @@ export const SocialService = {
       ])
     );
 
-    type UserWithStats = { id: string; username: string | null; avatarUrl: string | null; isPrivate: boolean; predictionStats: { rank: string; accuracyRate: number; totalPredictions: number } | null };
-    return (sliced as unknown as UserWithStats[]).map((u) => {
+    interface UserWithStats {
+      id: string;
+      username: string | null;
+      avatarUrl: string | null;
+      isPrivate: boolean;
+      predictionStats: { rank: string; accuracyRate: number; totalPredictions: number } | null;
+    }
+    const typed = sliced as UserWithStats[];
+    return typed.map((u) => {
       const un = u.username ?? '';
       const stats = u.predictionStats;
       return {

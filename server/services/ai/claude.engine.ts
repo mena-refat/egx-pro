@@ -1,5 +1,6 @@
 import type { IAnalysisEngine, AnalysisEngineRequest, AnalysisEngineResponse } from './types.ts';
 import { logger } from '../../lib/logger.ts';
+import { withRetry } from '../../lib/retry.ts';
 
 const MODEL = 'claude-sonnet-4-6';
 
@@ -40,7 +41,7 @@ export class ClaudeAnalysisEngine implements IAnalysisEngine {
 
     // Tool-use loop — max 5 rounds (web search may trigger multiple rounds)
     for (let round = 0; round < 5; round++) {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await withRetry(() => fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'x-api-key': apiKey,
@@ -54,7 +55,7 @@ export class ClaudeAnalysisEngine implements IAnalysisEngine {
           messages,
           tools,
         }),
-      });
+      }), { maxAttempts: 2, baseDelayMs: 1000 });
 
       if (!res.ok) {
         const errText = await res.text();

@@ -2,82 +2,83 @@ import { Response } from 'express';
 import { NotificationService } from '../services/notification.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { logger } from '../lib/logger.ts';
+import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 
 export const NotificationsController = {
   getAll: async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!userId) return sendError(res, 'UNAUTHORIZED', 401);
     const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
     const limit = Math.min(50, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
     try {
       const data = await NotificationService.getList(userId, page, limit);
-      res.json(data);
+      sendSuccess(res, data);
     } catch (err) {
       logger.error('Notifications list error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   markRead: async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!userId) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       await NotificationService.markAllRead(userId);
-      res.json({ success: true });
+      sendSuccess(res, { success: true });
     } catch (err) {
       logger.error('Mark read error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   markAllRead: async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!userId) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       await NotificationService.markAllRead(userId);
-      res.json({ success: true });
+      sendSuccess(res, { success: true });
     } catch (err) {
       logger.error('Mark read all error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   markOneRead: async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!userId) return sendError(res, 'UNAUTHORIZED', 401);
     const { id } = req.params;
     try {
       await NotificationService.markOneRead(userId, id);
-      res.json({ success: true });
+      sendSuccess(res, { success: true });
     } catch (err) {
       logger.error('Mark one read error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   clearAll: async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!userId) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       await NotificationService.clearAll(userId);
       res.status(204).send();
     } catch (err) {
       logger.error('Clear all notifications error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   deleteOne: async (req: AuthRequest, res: Response) => {
     const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!userId) return sendError(res, 'UNAUTHORIZED', 401);
     const { id } = req.params;
     try {
       const deleted = await NotificationService.deleteOne(userId, id);
-      if (!deleted) return res.status(404).json({ error: 'NOT_FOUND' });
+      if (!deleted) return sendError(res, 'NOT_FOUND', 404);
       res.status(204).send();
     } catch (err) {
       logger.error('Delete notification error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 };

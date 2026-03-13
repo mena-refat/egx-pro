@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { BillingService } from '../services/billing.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { auditLog } from '../lib/audit.ts';
+import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 
 function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -13,17 +14,17 @@ export const BillingController = {
   getPlan: run(async (req, res) => {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const data = await BillingService.getPlan(userId);
-    res.json({ data });
+    sendSuccess(res, data);
   }),
 
   validateDiscount: run(async (req, res) => {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const { code, plan } = req.body as { code?: string; plan?: string };
@@ -32,13 +33,13 @@ export const BillingController = {
       String(code ?? '').trim(),
       plan as 'pro' | 'annual' | undefined
     );
-    res.json({ data });
+    sendSuccess(res, data);
   }),
 
   upgrade: run(async (req, res) => {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const { plan, discountCode, paymentToken } = req.body as {
@@ -57,6 +58,6 @@ export const BillingController = {
       result: 'success',
       req: { ip: req.ip, headers: req.headers as { 'user-agent'?: string } },
     });
-    res.json({ data });
+    sendSuccess(res, data);
   }),
 };

@@ -4,6 +4,7 @@ import { generateUniqueReferralCode } from '../lib/referral.ts';
 import { logger } from '../lib/logger.ts';
 import { ReferralService } from '../services/referral.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
+import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 
 function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -15,7 +16,7 @@ export const ReferralController = {
   get: run(async (req, res) => {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
 
@@ -36,13 +37,13 @@ export const ReferralController = {
       }
 
       const data = await ReferralService.getReferralData(userId);
-      res.json({ data });
+      sendSuccess(res, data);
     } catch (err: unknown) {
       logger.error('Failed to fetch referrals', {
         userId,
         error: (err as Error).message,
       });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   }),
 };

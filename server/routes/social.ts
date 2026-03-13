@@ -3,6 +3,9 @@ import { authenticate, optionalAuth } from '../middleware/auth.middleware.ts';
 import { SocialController } from '../controllers/social.controller.ts';
 import { incrWithExpire } from '../lib/redis.ts';
 import type { AuthRequest } from './types.ts';
+import { validate } from '../middleware/validate.middleware.ts';
+import { updateSocialSettingsBodySchema, usernameSearchQuerySchema } from '../schemas/social.schema.ts';
+import { usernameParamSchema, followerIdParamSchema } from '../schemas/params.ts';
 
 const router = Router();
 
@@ -39,24 +42,24 @@ const usernameSearchRateLimit = async (req: Request, res: Response, next: NextFu
   next();
 };
 
-router.post('/follow/:username', authenticate, SocialController.follow);
-router.delete('/unfollow/:username', authenticate, SocialController.unfollow);
+router.post('/follow/:username', authenticate, validate(usernameParamSchema, 'params'), SocialController.follow);
+router.delete('/unfollow/:username', authenticate, validate(usernameParamSchema, 'params'), SocialController.unfollow);
 
 router.get('/followers', authenticate, SocialController.followers);
 router.get('/following', authenticate, SocialController.following);
 
 router.get('/requests', authenticate, SocialController.requests);
-router.post('/requests/:followerId/accept', authenticate, SocialController.acceptRequest);
-router.post('/requests/:followerId/decline', authenticate, SocialController.declineRequest);
+router.post('/requests/:followerId/accept', authenticate, validate(followerIdParamSchema, 'params'), SocialController.acceptRequest);
+router.post('/requests/:followerId/decline', authenticate, validate(followerIdParamSchema, 'params'), SocialController.declineRequest);
 
-router.get('/profile/:username/followers', authenticate, SocialController.profileFollowers);
-router.get('/profile/:username/following', authenticate, SocialController.profileFollowing);
-router.get('/profile/:username', optionalAuth, SocialController.profile);
+router.get('/profile/:username/followers', authenticate, validate(usernameParamSchema, 'params'), SocialController.profileFollowers);
+router.get('/profile/:username/following', authenticate, validate(usernameParamSchema, 'params'), SocialController.profileFollowing);
+router.get('/profile/:username', optionalAuth, validate(usernameParamSchema, 'params'), SocialController.profile);
 
-router.patch('/settings', authenticate, SocialController.settings);
+router.patch('/settings', authenticate, validate(updateSocialSettingsBodySchema, 'body'), SocialController.settings);
 
 router.get('/search', authenticate, SocialController.search);
-router.get('/username-search', authenticate, usernameSearchRateLimit, SocialController.usernameSearch);
+router.get('/username-search', authenticate, usernameSearchRateLimit, validate(usernameSearchQuerySchema, 'query'), SocialController.usernameSearch);
 
 export default router;
 

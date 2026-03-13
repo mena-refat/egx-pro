@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
@@ -23,9 +23,9 @@ export function DangerZoneTab({ user, onLogout, setRequestStatus }: ProfileTabPr
     return n === 'حذف' || n.toUpperCase() === 'DELETE';
   })();
 
+  const goodbyeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
-    const tId = (window as unknown as { __goodbyeTimeout?: ReturnType<typeof setTimeout> }).__goodbyeTimeout;
-    if (tId) clearTimeout(tId);
+    if (goodbyeTimeoutRef.current) clearTimeout(goodbyeTimeoutRef.current);
   }, []);
 
   const handleDeleteAccount = async () => {
@@ -51,11 +51,10 @@ export function DangerZoneTab({ user, onLogout, setRequestStatus }: ProfileTabPr
       setDeleteDialogOpen(false);
       setGoodbyeName(user.fullName || user.username || '');
       setGoodbyeOpen(true);
-      const t1 = setTimeout(() => {
+      goodbyeTimeoutRef.current = setTimeout(() => {
         setGoodbyeOpen(false);
         onLogout();
       }, TIMEOUTS.goodbyeDelay);
-      (window as unknown as { __goodbyeTimeout?: ReturnType<typeof setTimeout> }).__goodbyeTimeout = t1;
     } catch (err) {
       setDeleteError((err as Error).message || 'Failed');
     } finally {
@@ -112,8 +111,10 @@ export function DangerZoneTab({ user, onLogout, setRequestStatus }: ProfileTabPr
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
           onClick={() => {
-            const tId = (window as unknown as { __goodbyeTimeout?: ReturnType<typeof setTimeout> }).__goodbyeTimeout;
-            if (tId) clearTimeout(tId);
+            if (goodbyeTimeoutRef.current) {
+              clearTimeout(goodbyeTimeoutRef.current);
+              goodbyeTimeoutRef.current = null;
+            }
             setGoodbyeOpen(false);
             onLogout();
           }}

@@ -281,10 +281,15 @@ export const PredictionsService = {
   },
 
   async getStatsByUsername(username: string, viewerId: string) {
+    interface StatsUser {
+      id: string;
+      isPrivate: boolean;
+      predictionStats: { rank: UserRank; accuracyRate: number; totalPredictions: number } | null;
+    }
     const user = await UserRepository.findUnique({
       where: { username },
       select: { id: true, isPrivate: true, predictionStats: true },
-    }) as unknown as { id: string; isPrivate: boolean; predictionStats: { rank: UserRank; accuracyRate: number; totalPredictions: number } | null } | null;
+    }) as StatsUser | null;
     if (!user) throw new AppError('NOT_FOUND', 404, 'المستخدم غير موجود');
     const stats = user.predictionStats;
     if (!stats) {

@@ -7,11 +7,12 @@ import type { User } from '../types';
 
 export type AuthFormData = { emailOrPhone: string; password: string; fullName?: string };
 
-function ensureUserShape(u: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
+/** Normalize API auth payload to User; auth API returns compatible shape. */
+function ensureUserShape(u: Record<string, unknown> | null | undefined): User | null {
   if (!u || typeof u !== 'object') return null;
   const id = u.id;
   if (!id || typeof id !== 'string') return null;
-  return { ...u, id: String(id), fullName: typeof u.fullName === 'string' ? u.fullName : (u.fullName ?? '') };
+  return { ...u, id: String(id), fullName: typeof u.fullName === 'string' ? u.fullName : String(u.fullName ?? '') } as User;
 }
 
 export function useAuthPage(refCode: string) {
@@ -129,7 +130,7 @@ export function useAuthPage(refCode: string) {
         profileData = (payload.user as Record<string, unknown>) ?? profileData;
       }
       const userForAuth = ensureUserShape(profileData ?? (payload.user as Record<string, unknown>));
-      if (userForAuth && payload.accessToken) setAuth(userForAuth as unknown as User, payload.accessToken);
+      if (userForAuth && payload.accessToken) setAuth(userForAuth, payload.accessToken);
       setAuthMessage({
         text: isLogin ? (payload.restored ? t('settings.welcomeBack') : t('auth.loginSuccess')) : t('auth.registerSuccess'),
         type: 'success',

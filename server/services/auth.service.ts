@@ -26,6 +26,7 @@ import { EmailService } from './email.service.ts';
 import { logger } from '../lib/logger.ts';
 import { sanitizeUser } from '../lib/userSanitize.ts';
 import { buildRefreshTokenData } from '../lib/refreshTokenData.ts';
+import { AppError } from '../lib/errors.ts';
 import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
 
@@ -39,13 +40,6 @@ export type AuthContext = {
   /** For auditLog; pass from controller req. */
   auditReq?: AuditReq | null;
 };
-
-/** Thrown by service to signal HTTP response. Controller should send status + body. */
-export type AuthServiceError = { status: number; error: string; message?: string };
-
-function fail(status: number, error: string, message?: string): never {
-  throw { status, error, message } as AuthServiceError;
-}
 
 function ensureFullName(payload: Record<string, unknown>, fullName: string | null): void {
   if (typeof payload.fullName !== 'string') payload.fullName = fullName ?? '';
@@ -82,7 +76,7 @@ export async function register(
   const parsed = registerSchema.parse(body);
   const { fullName, emailOrPhone: raw, password, referralCode: incomingRefCode } = parsed;
   const pwCheck = validateRegisterPassword(password, raw);
-  if (!pwCheck.ok) fail(400, (pwCheck as { ok: false; message: string }).message);
+  if (!pwCheck.ok) throw new AppError('VALIDATION_ERROR', 400, (pwCheck as { ok: false; message: string }).message);
 
   const isEmail = isEmailInput(raw);
   const email = isEmail ? raw.toLowerCase().trim() : null;
@@ -91,7 +85,7 @@ export async function register(
     const digitsOnly = raw.replace(/\D/g, '');
     const normalizedPhone = normalizePhone(digitsOnly);
     if (!isValidEgyptianPhone(normalizedPhone)) {
-      fail(400, 'invalid_phone', 'رقم الموبايل غير صحيح');
+      throw new AppError('invalid_phone', 400, 'رقم الموبايل غير صحيح');
     }
     phone = normalizedPhone;
   }
@@ -103,10 +97,10 @@ export async function register(
         ? await UserRepository.findFirst({ where: { phone } })
         : null;
   if (existingUser) {
-    fail(400, isEmail ? 'Email already registered' : 'Phone number already registered');
+    throw new AppError(isEmail ? 'Email already registered' : 'Phone number already registered', 400);
   }
   if ((email == null || email === '') && (phone == null || phone === '')) {
-    fail(400, 'invalid_input', 'يجب إدخال بريد إلكتروني أو رقم موبايل صحيح');
+    throw new AppError('invalid_input', 400, 'يجب إدخال بريد إلكتروني أو رقم موبايل صحيح');
   }
 
   const { hash, salt } = await hashPassword(password);
@@ -203,18 +197,18 @@ export async function login(
     : await UserRepository.findUnique({ where: { phone } });
   if (!user) {
     await auditLog({ action: 'LOGIN_FAILED', req: ctx.auditReq ?? undefined, result: 'failure', details: 'user_not_found' });
-    fail(401, 'account_not_found', 'الحساب ده مش موجود. تقدر تسجّل حساب جديد.');
+    throw new AppError('account_not_found', 401, 'الحساب ده مش موجود. تقدر تسجّل حساب جديد.');
   }
   if (!user.passwordHash || !user.salt) {
     await auditLog({ userId: user.id, action: 'LOGIN_FAILED', req: ctx.auditReq ?? undefined, result: 'failure', details: 'no_credentials' });
-    fail(401, 'unauthorized');
+    throw new AppError('UNAUTHORIZED', 401);
   }
 
   const now = new Date();
   if (user.lockedUntil && user.lockedUntil > now) {
     await auditLog({ userId: user.id, action: 'LOGIN_FAILED', req: ctx.auditReq ?? undefined, result: 'failure', details: 'account_locked' });
     const until = user.lockedUntil.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
-    fail(423, 'account_locked', `الحساب مقفل حتى ${until}`);
+    throw new AppError('account_locked', 423, `الحساب مقفل حتى ${until}`);
   }
 
   const isValid = await verifyPassword(parsed.password, user.passwordHash, user.salt);
@@ -230,7 +224,7 @@ export async function login(
       await UserRepository.update({ where: { id: user.id }, data: updates });
     }
     await auditLog({ userId: user.id, action: 'LOGIN_FAILED', req: ctx.auditReq ?? undefined, result: 'failure', details: 'wrong_password' });
-    fail(401, 'unauthorized');
+    throw new AppError('UNAUTHORIZED', 401);
   }
 
   await UserRepository.update({
@@ -242,7 +236,7 @@ export async function login(
   if (user.isDeleted) {
     if (user.deletionScheduledFor && user.deletionScheduledFor < now) {
       await auditLog({ userId: user.id, action: 'LOGIN_FAILED', req: ctx.auditReq ?? undefined, result: 'failure', details: 'account_deleted_after_grace' });
-      fail(401, 'account_not_found', 'الحساب ده مش موجود. تقدر تسجّل حساب جديد.');
+      throw new AppError('account_not_found', 401, 'الحساب ده مش موجود. تقدر تسجّل حساب جديد.');
     }
     user = await UserRepository.update({
       where: { id: user.id },
@@ -287,16 +281,16 @@ export async function twoFaAuthenticate(
 ): Promise<{ user: unknown; accessToken: string; refreshToken: string }> {
   const cleanCode = body.code != null ? body.code.toString().replace(/\s/g, '') : '';
   if (!body.tempToken || !body.code || typeof body.code !== 'string' || cleanCode.length !== 6) {
-    fail(400, 'Invalid request');
+    throw new AppError('Invalid request', 400);
   }
   let userId: string;
   try {
     userId = verify2FATempToken(body.tempToken).userId;
   } catch {
-    fail(401, 'invalid_or_expired_token');
+    throw new AppError('invalid_or_expired_token', 401);
   }
 
-  if (!userId) fail(401, 'unauthorized');
+  if (!userId) throw new AppError('UNAUTHORIZED', 401);
   const user = await UserRepository.findUnique({
     where: { id: userId },
     select: {
@@ -311,7 +305,7 @@ export async function twoFaAuthenticate(
     },
   });
 
-  if (!user?.twoFactorSecret) fail(401, 'unauthorized');
+  if (!user?.twoFactorSecret) throw new AppError('UNAUTHORIZED', 401);
 
   const valid = speakeasy.totp.verify({
     secret: user.twoFactorSecret,
@@ -319,7 +313,7 @@ export async function twoFaAuthenticate(
     token: cleanCode,
     window: 2,
   });
-  if (!valid) fail(401, 'invalid_code');
+  if (!valid) throw new AppError('invalid_code', 401);
 
   const referral = await prisma.referral.findUnique({
     where: { referredId: user.id },
@@ -355,8 +349,8 @@ export async function twoFaSetup(userId: string): Promise<{ secret: string; qrCo
     where: { id: userId },
     select: { id: true, email: true, twoFactorSecret: true, twoFactorEnabled: true },
   });
-  if (!user) fail(401, 'unauthorized');
-  if (user.twoFactorEnabled) fail(400, '2fa_already_enabled');
+  if (!user) throw new AppError('UNAUTHORIZED', 401);
+  if (user.twoFactorEnabled) throw new AppError('2fa_already_enabled', 400);
 
   const label = user.email ?? userId;
   let base32: string;
@@ -384,15 +378,15 @@ export async function twoFaVerify(
   body: { code?: string },
   ctx?: AuthContext
 ): Promise<{ success: true }> {
-  if (!body.code || typeof body.code !== 'string') fail(400, 'invalid_code', 'الكود مطلوب');
+  if (!body.code || typeof body.code !== 'string') throw new AppError('invalid_code', 400, 'الكود مطلوب');
   const cleanCode = body.code.toString().replace(/\s/g, '');
-  if (cleanCode.length !== 6) fail(400, 'invalid_code', 'الكود غير صحيح، تأكد من التطبيق وحاول مجدداً');
+  if (cleanCode.length !== 6) throw new AppError('invalid_code', 400, 'الكود غير صحيح، تأكد من التطبيق وحاول مجدداً');
 
   const user = await UserRepository.findUnique({
     where: { id: userId },
     select: { twoFactorSecret: true },
   });
-  if (!user?.twoFactorSecret) fail(400, 'no_secret', 'ابدأ عملية الإعداد أولاً');
+  if (!user?.twoFactorSecret) throw new AppError('no_secret', 400, 'ابدأ عملية الإعداد أولاً');
 
   const valid = speakeasy.totp.verify({
     secret: user.twoFactorSecret,
@@ -400,7 +394,7 @@ export async function twoFaVerify(
     token: cleanCode,
     window: 2,
   });
-  if (!valid) fail(400, 'invalid_code', 'الكود غير صحيح، تأكد من التطبيق وحاول مجدداً');
+  if (!valid) throw new AppError('invalid_code', 400, 'الكود غير صحيح، تأكد من التطبيق وحاول مجدداً');
 
   await UserRepository.update({
     where: { id: userId },
@@ -415,19 +409,19 @@ export async function twoFaDisable(
   body: { code?: string; password?: string },
   ctx?: AuthContext
 ): Promise<{ success: true }> {
-  if (!body.code || typeof body.code !== 'string' || !body.password) fail(400, 'code_and_password_required');
+  if (!body.code || typeof body.code !== 'string' || !body.password) throw new AppError('code_and_password_required', 400);
   const cleanCode = body.code.toString().replace(/\s/g, '');
-  if (cleanCode.length !== 6) fail(400, 'invalid_code');
+  if (cleanCode.length !== 6) throw new AppError('invalid_code', 400);
 
   const user = await UserRepository.findUnique({
     where: { id: userId },
     select: { passwordHash: true, salt: true, twoFactorSecret: true },
   });
-  if (!user?.passwordHash || !user.salt) fail(401, 'unauthorized');
-  if (!user.twoFactorSecret) fail(400, '2FA not enabled');
+  if (!user?.passwordHash || !user.salt) throw new AppError('UNAUTHORIZED', 401);
+  if (!user.twoFactorSecret) throw new AppError('2FA not enabled', 400);
 
   const passwordValid = await verifyPassword(body.password, user.passwordHash, user.salt);
-  if (!passwordValid) fail(401, 'wrong_password');
+  if (!passwordValid) throw new AppError('wrong_password', 401);
 
   const valid = speakeasy.totp.verify({
     secret: user.twoFactorSecret,
@@ -435,7 +429,7 @@ export async function twoFaDisable(
     token: cleanCode,
     window: 2,
   });
-  if (!valid) fail(400, 'invalid_code');
+  if (!valid) throw new AppError('invalid_code', 400);
 
   await UserRepository.update({
     where: { id: userId },
@@ -446,7 +440,7 @@ export async function twoFaDisable(
 }
 
 export async function refresh(refreshTokenCookie: string | undefined): Promise<{ accessToken: string }> {
-  if (!refreshTokenCookie) fail(401, 'unauthorized');
+  if (!refreshTokenCookie) throw new AppError('UNAUTHORIZED', 401);
   const refreshHash = hashRefreshToken(refreshTokenCookie);
   const rt = await prisma.refreshToken.findUnique({
     where: { token: refreshHash },
@@ -455,7 +449,7 @@ export async function refresh(refreshTokenCookie: string | undefined): Promise<{
   const now = new Date();
   if (!rt || rt.isRevoked || rt.expiresAt < now) {
     if (rt?.id) await prisma.refreshToken.updateMany({ where: { id: rt.id }, data: { isRevoked: true } });
-    fail(401, 'unauthorized');
+    throw new AppError('UNAUTHORIZED', 401);
   }
   const loginId = rt.user.email ?? rt.user.phone ?? '';
   const accessToken = generateAccessToken({ id: rt.user.id, email: loginId });
@@ -504,13 +498,13 @@ export async function getSessions(refreshTokenCookie: string | undefined): Promi
     isCurrentSession: boolean;
   }>
 > {
-  if (!refreshTokenCookie) fail(401, 'unauthorized');
+  if (!refreshTokenCookie) throw new AppError('UNAUTHORIZED', 401);
   const refreshHash = hashRefreshToken(refreshTokenCookie);
   const current = await prisma.refreshToken.findUnique({
     where: { token: refreshHash },
     select: { id: true, userId: true },
   });
-  if (!current) fail(401, 'unauthorized');
+  if (!current) throw new AppError('UNAUTHORIZED', 401);
 
   const list = await prisma.refreshToken.findMany({
     where: {
@@ -540,13 +534,13 @@ export async function revokeSession(
   tokenId: string,
   ctx?: AuthContext
 ): Promise<{ userId: string }> {
-  if (!refreshTokenCookie) fail(401, 'unauthorized');
+  if (!refreshTokenCookie) throw new AppError('UNAUTHORIZED', 401);
   const refreshHash = hashRefreshToken(refreshTokenCookie);
   const current = await prisma.refreshToken.findUnique({
     where: { token: refreshHash },
     select: { userId: true },
   });
-  if (!current) fail(401, 'unauthorized');
+  if (!current) throw new AppError('UNAUTHORIZED', 401);
   await prisma.refreshToken.updateMany({
     where: { id: tokenId, userId: current.userId },
     data: { isRevoked: true },
@@ -560,13 +554,13 @@ export async function changePassword(
   body: { currentPassword?: string; newPassword?: string },
   ctx?: AuthContext
 ): Promise<{ success: true }> {
-  if (!body.currentPassword || !body.newPassword) fail(400, 'Current and new password are required');
+  if (!body.currentPassword || !body.newPassword) throw new AppError('VALIDATION_ERROR', 400, 'Current and new password are required');
 
   const user = await UserRepository.findUnique({ where: { id: userId } });
-  if (!user || !user.passwordHash || !user.salt) fail(400, 'Password change not available for this account');
+  if (!user || !user.passwordHash || !user.salt) throw new AppError('VALIDATION_ERROR', 400, 'Password change not available for this account');
 
   const valid = await verifyPassword(body.currentPassword, user.passwordHash, user.salt);
-  if (!valid) fail(400, 'كلمة المرور الحالية غير صحيحة');
+  if (!valid) throw new AppError('wrong_password', 400, 'كلمة المرور الحالية غير صحيحة');
 
   const pwCheck = validateChangePassword(body.newPassword, { email: user.email ?? undefined, username: user.username ?? undefined });
   if (!pwCheck.ok) fail(400, (pwCheck as { ok: false; message: string }).message);
@@ -586,14 +580,14 @@ export async function changePassword(
 }
 
 export async function getMe(refreshTokenCookie: string | undefined): Promise<{ user: unknown; accessToken: string }> {
-  if (!refreshTokenCookie) fail(401, 'No refresh token');
+  if (!refreshTokenCookie) throw new AppError('UNAUTHORIZED', 401, 'No refresh token');
   const refreshHash = hashRefreshToken(refreshTokenCookie);
   const rt = await prisma.refreshToken.findUnique({
     where: { token: refreshHash },
     include: { user: true },
   });
   const now = new Date();
-  if (!rt || rt.isRevoked || rt.expiresAt < now) fail(401, 'Invalid or expired refresh token');
+  if (!rt || rt.isRevoked || rt.expiresAt < now) throw new AppError('invalid_or_expired_token', 401, 'Invalid or expired refresh token');
 
   const loginId = rt.user.email ?? rt.user.phone ?? '';
   const accessToken = generateAccessToken({ id: rt.user.id, email: loginId });
@@ -686,15 +680,4 @@ export async function googleCallback(
     </html>
   `;
   return { redirectHtml, refreshToken };
-}
-
-export function isAuthServiceError(e: unknown): e is AuthServiceError {
-  return (
-    typeof e === 'object' &&
-    e !== null &&
-    'status' in e &&
-    'error' in e &&
-    typeof (e as AuthServiceError).status === 'number' &&
-    typeof (e as AuthServiceError).error === 'string'
-  );
 }

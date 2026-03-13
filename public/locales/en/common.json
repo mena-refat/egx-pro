@@ -1,4 +1,31 @@
 {
+  "errors": {
+    "unauthorized": "Please sign in first",
+    "rateLimit": "Too many requests, try again in a moment",
+    "validation": "Invalid input",
+    "portfolioLimit": "Portfolio stock limit reached",
+    "watchlistLimit": "Watchlist limit reached",
+    "analysisLimit": "Analysis quota for this month used",
+    "dailyLimit": "Daily limit used, try again tomorrow",
+    "internal": "Something went wrong, please try again",
+    "likeFailed": "Failed to like",
+    "networkError": "No internet connection"
+  },
+  "apiErrors": {
+    "UNAUTHORIZED": "Please sign in",
+    "FORBIDDEN": "Not allowed",
+    "NOT_FOUND": "Not found",
+    "VALIDATION_ERROR": "Invalid data",
+    "RATE_LIMIT_EXCEEDED": "Too many requests, try again later",
+    "INTERNAL_ERROR": "Server error, try again later",
+    "GOAL_LIMIT_REACHED": "Goal limit reached",
+    "WATCHLIST_LIMIT_REACHED": "Watchlist limit reached",
+    "PLAN_LIMIT_REACHED": "Plan limit reached, upgrade for more",
+    "PRICE_ALERTS_PRO": "Price alerts available in Pro",
+    "ALREADY_IN_WATCHLIST": "Stock already in watchlist",
+    "NEWS_API_MISSING": "News service unavailable",
+    "loadFailed": "Failed to load data"
+  },
   "common": {
     "appName": "Borsa",
     "loading": "Loading...",

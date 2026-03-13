@@ -1,4 +1,31 @@
 {
+  "errors": {
+    "unauthorized": "يجب تسجيل الدخول أولاً",
+    "rateLimit": "طلبات كثيرة، حاول بعد شوية",
+    "validation": "البيانات المدخلة غير صحيحة",
+    "portfolioLimit": "وصلت للحد الأقصى من الأسهم في المحفظة",
+    "watchlistLimit": "وصلت للحد الأقصى من قائمة المراقبة",
+    "analysisLimit": "استهلكت حصة التحليلات لهذا الشهر",
+    "dailyLimit": "استهلكت الحد اليومي، حاول بكرة",
+    "internal": "حصل خطأ غير متوقع، حاول تاني",
+    "likeFailed": "فشل تسجيل الإعجاب",
+    "networkError": "مفيش اتصال بالإنترنت"
+  },
+  "apiErrors": {
+    "UNAUTHORIZED": "يجب تسجيل الدخول",
+    "FORBIDDEN": "غير مسموح",
+    "NOT_FOUND": "المطلوب غير موجود",
+    "VALIDATION_ERROR": "بيانات غير صحيحة",
+    "RATE_LIMIT_EXCEEDED": "تجاوزت الحد، جرّب لاحقاً",
+    "INTERNAL_ERROR": "حدث خطأ في الخادم، جرّب لاحقاً",
+    "GOAL_LIMIT_REACHED": "وصلت لحد الأهداف المسموح",
+    "WATCHLIST_LIMIT_REACHED": "وصلت لحد قائمة المراقبة",
+    "PLAN_LIMIT_REACHED": "وصلت لحد خطتك، ترقية للوصول للمزيد",
+    "PRICE_ALERTS_PRO": "تنبيهات الأسعار متاحة في باقة Pro",
+    "ALREADY_IN_WATCHLIST": "السهم مضاف مسبقاً في قائمة المراقبة",
+    "NEWS_API_MISSING": "خدمة الأخبار غير متوفرة حالياً",
+    "loadFailed": "فشل تحميل البيانات"
+  },
   "common": {
     "appName": "Borsa",
     "loading": "جاري التحميل...",

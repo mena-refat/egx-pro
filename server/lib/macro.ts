@@ -1,5 +1,6 @@
 import { getCache, setCache } from './redis.ts';
 import { logger } from './logger.ts';
+import { withRetry } from './retry.ts';
 
 const stubIndex = () => ({ value: 0, change: 0, changePercent: 0 });
 const stubCommodity = () => ({ value: 0, change: 0, changePercent: 0 });
@@ -17,7 +18,7 @@ export async function getMarketOverview() {
         ? `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`
         : 'https://api.exchangerate-api.com/v4/latest/USD';
 
-      const exchangeResponse = await fetch(url);
+      const exchangeResponse = await withRetry(() => fetch(url), { maxAttempts: 2, baseDelayMs: 500 });
       if (exchangeResponse.ok) {
         const exchangeData = await exchangeResponse.json() as { conversion_rates?: { EGP?: number }; rates?: { EGP?: number } };
         const rate = apiKey ? exchangeData.conversion_rates?.EGP : exchangeData.rates?.EGP;

@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { UserService } from '../services/user.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { logger } from '../lib/logger.ts';
+import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 
 function userId(req: AuthRequest): string | null {
   return req.user?.id ?? req.userId ?? null;
@@ -10,225 +11,225 @@ function userId(req: AuthRequest): string | null {
 export const UserController = {
   getProfile: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const user = await UserService.getProfile(id);
-      if (!user) return res.status(404).json({ error: 'NOT_FOUND' });
-      res.json({ data: user });
+      if (!user) return sendError(res, 'NOT_FOUND', 404);
+      sendSuccess(res, user);
     } catch {
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   updateProfile: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const { user } = await UserService.updateProfile(id, req.body, req);
-      res.json({ data: user });
+      sendSuccess(res, user);
     } catch (err) {
       const e = err as Error;
-      if (e.message === 'EMAIL_IN_USE') return res.status(400).json({ error: 'EMAIL_ALREADY_EXISTS' });
-      if (e.message === 'PHONE_IN_USE') return res.status(400).json({ error: 'PHONE_ALREADY_EXISTS' });
-      if (e.message === 'INVALID_PHONE') return res.status(400).json({ error: 'INVALID_PHONE' });
-      if (e.message === 'USERNAME_TAKEN') return res.status(400).json({ error: 'USERNAME_TAKEN' });
-      if (e.message === 'USERNAME_COOLDOWN') return res.status(400).json({ error: 'USERNAME_COOLDOWN' });
-      if (e.message === 'USER_NOT_FOUND') return res.status(404).json({ error: 'NOT_FOUND' });
+      if (e.message === 'EMAIL_IN_USE') return sendError(res, 'EMAIL_ALREADY_EXISTS', 400);
+      if (e.message === 'PHONE_IN_USE') return sendError(res, 'PHONE_ALREADY_EXISTS', 400);
+      if (e.message === 'INVALID_PHONE') return sendError(res, 'INVALID_PHONE', 400);
+      if (e.message === 'USERNAME_TAKEN') return sendError(res, 'USERNAME_TAKEN', 400);
+      if (e.message === 'USERNAME_COOLDOWN') return sendError(res, 'USERNAME_COOLDOWN', 400);
+      if (e.message === 'USER_NOT_FOUND') return sendError(res, 'NOT_FOUND', 404);
       logger.error('Update profile error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   checkUsername: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const raw = (req.query.username ?? '') as string;
       const result = await UserService.checkUsername(id, raw);
       if ('error' in result && result.error === 'Username is required') {
-        return res.status(400).json({ error: 'VALIDATION_ERROR' });
+        return sendError(res, 'VALIDATION_ERROR', 400);
       }
-      res.json({ data: result });
+      sendSuccess(res, result);
     } catch {
-      res.status(400).json({ error: 'VALIDATION_ERROR' });
+      sendError(res, 'VALIDATION_ERROR', 400);
     }
   },
 
   getProfileStats: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const stats = await UserService.getProfileStats(id);
-      if (!stats) return res.status(404).json({ error: 'NOT_FOUND' });
-      res.json({ data: stats });
+      if (!stats) return sendError(res, 'NOT_FOUND', 404);
+      sendSuccess(res, stats);
     } catch (err) {
       logger.error('Profile stats error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   getUnseenAchievements: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const list = await UserService.getUnseenAchievements(id);
-      res.json({ data: list });
+      sendSuccess(res, list);
     } catch (err) {
       logger.error('Unseen achievements error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   markAchievementsSeen: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       await UserService.markAchievementsSeen(id);
-      res.json({ success: true });
+      sendSuccess(res, { success: true });
     } catch (err) {
       logger.error('Mark achievements seen error:', err);
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   getAchievements: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const achievements = await UserService.getAchievements(id);
-      res.json({ data: achievements });
+      sendSuccess(res, achievements);
     } catch (err) {
       logger.error('Achievements error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   getReferral: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const data = await UserService.getReferralSummary(id);
-      if (!data) return res.status(404).json({ error: 'NOT_FOUND' });
-      res.json({ data });
+      if (!data) return sendError(res, 'NOT_FOUND', 404);
+      sendSuccess(res, data);
     } catch (err) {
       logger.error('Referral summary error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   redeemReferral: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const result = await UserService.redeemReferralReward(id);
-      if (result.error === 'User not found') return res.status(404).json({ error: 'NOT_FOUND' });
-      if (result.error === 'Reward already claimed') return res.status(400).json({ error: 'REWARD_ALREADY_CLAIMED' });
-      if (result.error === 'Not enough referrals yet') return res.status(400).json({ error: 'NOT_ENOUGH_REFERRALS' });
-      res.json({ data: (result as { data: unknown }).data });
+      if (result.error === 'User not found') return sendError(res, 'NOT_FOUND', 404);
+      if (result.error === 'Reward already claimed') return sendError(res, 'REWARD_ALREADY_CLAIMED', 400);
+      if (result.error === 'Not enough referrals yet') return sendError(res, 'NOT_ENOUGH_REFERRALS', 400);
+      sendSuccess(res, (result as { data: unknown }).data);
     } catch (err) {
       logger.error('Referral redeem error:', err);
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   applyReferralCode: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const { code } = (req.body || {}) as { code?: string };
       const result = await UserService.applyReferralCode(id, code ?? '');
-      if (result.error === 'Referral code is required') return res.status(400).json({ error: 'VALIDATION_ERROR' });
-      if (result.error === 'User not found') return res.status(404).json({ error: 'NOT_FOUND' });
-      if (result.error === 'Referral code already used') return res.status(400).json({ error: 'REFERRAL_CODE_ALREADY_USED' });
-      if (result.error === 'Invalid referral code') return res.status(400).json({ error: 'INVALID_REFERRAL_CODE' });
-      if (result.error === 'You cannot use your own referral code') return res.status(400).json({ error: 'OWN_REFERRAL_CODE' });
-      res.json({ success: true, data: { referrerName: (result as { referrerName: string }).referrerName } });
+      if (result.error === 'Referral code is required') return sendError(res, 'VALIDATION_ERROR', 400);
+      if (result.error === 'User not found') return sendError(res, 'NOT_FOUND', 404);
+      if (result.error === 'Referral code already used') return sendError(res, 'REFERRAL_CODE_ALREADY_USED', 400);
+      if (result.error === 'Invalid referral code') return sendError(res, 'INVALID_REFERRAL_CODE', 400);
+      if (result.error === 'You cannot use your own referral code') return sendError(res, 'OWN_REFERRAL_CODE', 400);
+      sendSuccess(res, { success: true, referrerName: (result as { referrerName: string }).referrerName });
     } catch (err) {
       logger.error('Referral use error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   getSecurity: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const data = await UserService.getSecurity(id);
-      if (!data) return res.status(404).json({ error: 'NOT_FOUND' });
-      res.json({ data });
+      if (!data) return sendError(res, 'NOT_FOUND', 404);
+      sendSuccess(res, data);
     } catch (err) {
       logger.error('Security info error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   getSessions: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const list = await UserService.getSessions(id);
-      res.json({ data: list });
+      sendSuccess(res, list);
     } catch (err) {
       logger.error('Sessions list error:', err);
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   revokeSession: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const sessionId = req.params.id;
       await UserService.revokeSession(id, sessionId);
       res.status(204).send();
     } catch (err) {
       logger.error('End session error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   revokeAllOtherSessions: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       await UserService.revokeAllOtherSessions(id);
-      res.status(200).json({ success: true });
+      sendSuccess(res, { success: true });
     } catch (err) {
       logger.error('Revoke all sessions error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   uploadAvatar: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const { image } = (req.body || {}) as { image?: string };
-      if (!image || typeof image !== 'string') return res.status(400).json({ error: 'VALIDATION_ERROR' });
+      if (!image || typeof image !== 'string') return sendError(res, 'VALIDATION_ERROR', 400);
       const result = await UserService.uploadAvatar(id, image);
-      if (result.error === 'Invalid image format') return res.status(400).json({ error: 'INVALID_IMAGE_FORMAT' });
-      res.json({ data: { avatarUrl: (result as { avatarUrl: string }).avatarUrl } });
+      if (result.error === 'Invalid image format') return sendError(res, 'INVALID_IMAGE_FORMAT', 400);
+      sendSuccess(res, { avatarUrl: (result as { avatarUrl: string }).avatarUrl });
     } catch (err) {
       logger.error('Avatar upload error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
   deleteAccount: async (req: AuthRequest, res: Response) => {
     const id = userId(req);
-    if (!id) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const { confirmText, password } = (req.body || {}) as { confirmText?: string; password?: string };
       const result = await UserService.deleteAccount(id, confirmText ?? '', password ?? '', req);
-      if (result.error === 'invalid_confirm') return res.status(400).json({ error: 'INVALID_CONFIRM' });
-      if (result.error === 'password_required') return res.status(400).json({ error: 'PASSWORD_REQUIRED' });
-      if (result.error === 'invalid_account') return res.status(400).json({ error: 'INVALID_ACCOUNT' });
-      if (result.error === 'wrong_password') return res.status(400).json({ error: 'WRONG_PASSWORD' });
+      if (result.error === 'invalid_confirm') return sendError(res, 'INVALID_CONFIRM', 400);
+      if (result.error === 'password_required') return sendError(res, 'PASSWORD_REQUIRED', 400);
+      if (result.error === 'invalid_account') return sendError(res, 'INVALID_ACCOUNT', 400);
+      if (result.error === 'wrong_password') return sendError(res, 'WRONG_PASSWORD', 400);
       const success = result as { deletedAt: Date; deletionScheduledFor: Date };
-      res.status(200).json({ success: true, data: { deletedAt: success.deletedAt, deletionScheduledFor: success.deletionScheduledFor } });
+      sendSuccess(res, { deletedAt: success.deletedAt, deletionScheduledFor: success.deletionScheduledFor });
     } catch (err) {
       logger.error('Delete account error', { err });
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 };

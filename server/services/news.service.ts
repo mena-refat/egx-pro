@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getCache, setCache } from '../lib/redis.ts';
+import { withRetry } from '../lib/retry.ts';
 
 const NEWS_API_KEY = process.env.NEWS_API_KEY;
 
@@ -58,8 +59,10 @@ export const NewsService = {
     if (cached) return cached;
     if (!NEWS_API_KEY) throw new Error('NEWS_API_MISSING');
     const query = encodeURIComponent('سوق الأسهم البورصة');
-    const response = await axios.get(
-      `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=15&apiKey=${NEWS_API_KEY}`
+    const response = await withRetry(() =>
+      axios.get(
+        `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=15&apiKey=${NEWS_API_KEY}`
+      )
     );
     const news = (response.data.articles || []).map((a: Parameters<typeof mapArticle>[0]) => mapArticle(a));
     await setCache(cacheKey, news, 1800);
@@ -73,8 +76,10 @@ export const NewsService = {
     if (cached) return cached;
     if (!NEWS_API_KEY) throw new Error('NEWS_API_MISSING');
     const query = encodeURIComponent(`${companyName} أسهم`);
-    const response = await axios.get(
-      `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=10&apiKey=${NEWS_API_KEY}`
+    const response = await withRetry(() =>
+      axios.get(
+        `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=10&apiKey=${NEWS_API_KEY}`
+      )
     );
     const news = (response.data.articles || []).map((a: Parameters<typeof mapArticle>[0]) => mapArticle(a));
     await setCache(cacheKey, news, 1800);

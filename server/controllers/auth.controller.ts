@@ -8,6 +8,8 @@ import { getCache, setCache } from '../lib/redis.ts';
 import { EmailService } from '../services/email.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { logger } from '../lib/logger.ts';
+import { sendSuccess, sendError } from '../lib/apiResponse.ts';
+import { AppError } from '../lib/errors.ts';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const REFRESH_TOKEN_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -48,18 +50,18 @@ function clearRefreshCookie(res: Response): void {
 }
 
 function handleError(e: unknown, res: Response, fallbackMessage = 'Request failed'): void {
-  if (AuthService.isAuthServiceError(e)) {
-    res.status(e.status).json({ error: e.error, ...(e.message && { message: e.message }) });
+  if (e instanceof AppError) {
+    sendError(res, e.code, e.status, e.message);
     return;
   }
   if (e instanceof z.ZodError) {
     const first = e.issues[0];
     const msg = first?.message && typeof first.message === 'string' ? first.message : 'Invalid input';
-    res.status(400).json({ error: msg });
+    sendError(res, 'VALIDATION_ERROR', 400, msg);
     return;
   }
   logger.error('Auth controller error', { error: e });
-  res.status(500).json({ error: fallbackMessage });
+  sendError(res, 'INTERNAL_ERROR', 500, fallbackMessage);
 }
 
 export async function register(req: Request, res: Response): Promise<void> {
@@ -68,16 +70,16 @@ export async function register(req: Request, res: Response): Promise<void> {
     const ctx = authContext(req);
     const result = await AuthService.register(body, ctx);
     setRefreshCookie(res, result.refreshToken);
-    res.status(201).json({ data: { accessToken: result.accessToken, user: result.user } });
+    sendSuccess(res, { accessToken: result.accessToken, user: result.user }, 201);
   } catch (e) {
-    if (AuthService.isAuthServiceError(e)) {
-      res.status(e.status).json({ error: e.error, ...(e.message && { message: e.message }) });
+    if (e instanceof AppError) {
+      sendError(res, e.code, e.status, e.message);
       return;
     }
     if (e instanceof z.ZodError) {
       const first = e.issues[0];
       const msg = first?.message && typeof first.message === 'string' ? first.message : 'Invalid input';
-      res.status(400).json({ error: msg });
+      sendError(res, 'VALIDATION_ERROR', 400, msg);
       return;
     }
     logger.error('Registration error', { error: e });
@@ -86,21 +88,18 @@ export async function register(req: Request, res: Response): Promise<void> {
     const errMessage = e instanceof Error ? e.message : String(e);
     const errLower = errMessage.toLowerCase();
     if (prismaCode === 'P2002' || errLower.includes('unique constraint') || errLower.includes('duplicate key')) {
-      res.status(400).json({ error: 'already_registered', message: 'البريد أو رقم الموبايل أو اسم المستخدم مستخدم بالفعل.' });
+      sendError(res, 'already_registered', 400, 'البريد أو رقم الموبايل أو اسم المستخدم مستخدم بالفعل.');
       return;
     }
     if (prismaCode === 'P2003') {
-      res.status(400).json({ error: 'invalid_data', message: 'بيانات غير صالحة. تأكد من الحقول وحاول مرة أخرى.' });
+      sendError(res, 'invalid_data', 400, 'بيانات غير صالحة. تأكد من الحقول وحاول مرة أخرى.');
       return;
     }
     if (errLower.includes('connect') || errLower.includes('econnrefused') || errLower.includes('connection')) {
-      res.status(503).json({ error: 'service_unavailable', message: 'تعذر الاتصال بقاعدة البيانات. تأكد أن الخادم يعمل وحاول لاحقاً.' });
+      sendError(res, 'service_unavailable', 503, 'تعذر الاتصال بقاعدة البيانات. تأكد أن الخادم يعمل وحاول لاحقاً.');
       return;
     }
-    res.status(500).json({
-      error: 'Registration failed',
-      message: errMessage.length <= 120 ? errMessage : errMessage.slice(0, 117) + '...',
-    });
+    sendError(res, 'Registration failed', 500, errMessage.length <= 120 ? errMessage : errMessage.slice(0, 117) + '...');
   }
 }
 
@@ -110,12 +109,12 @@ export async function login(req: Request, res: Response): Promise<void> {
     const ctx = authContext(req);
     const result = await AuthService.login(body, ctx);
     if ('requires2FA' in result && result.requires2FA) {
-      res.json({ data: { requires2FA: true, tempToken: result.tempToken } });
+      sendSuccess(res, { requires2FA: true, tempToken: result.tempToken });
       return;
     }
     const success = result as { refreshToken: string; accessToken: string; user: unknown; restored?: boolean };
     setRefreshCookie(res, success.refreshToken);
-    res.json({ data: { accessToken: success.accessToken, ...(success.restored && { restored: true }), user: success.user } });
+    sendSuccess(res, { accessToken: success.accessToken, ...(success.restored && { restored: true }), user: success.user });
   } catch (e) {
     handleError(e, res, 'Login failed');
   }
@@ -126,14 +125,14 @@ export async function twoFaAuthenticate(req: Request, res: Response): Promise<vo
     const ctx = authContext(req);
     const result = await AuthService.twoFaAuthenticate(req.body as { tempToken?: string; code?: string }, ctx);
     setRefreshCookie(res, result.refreshToken);
-    res.json({ data: { accessToken: result.accessToken, user: result.user } });
+    sendSuccess(res, { accessToken: result.accessToken, user: result.user });
   } catch (e) {
-    if (AuthService.isAuthServiceError(e)) {
-      res.status(e.status).json({ error: e.error, ...(e.message && { message: e.message }) });
+    if (e instanceof AppError) {
+      sendError(res, e.code, e.status, e.message);
       return;
     }
     logger.error('2FA authenticate error', { error: e });
-    res.status(500).json({ error: 'Verification failed', message: e instanceof Error ? e.message : 'Verification failed' });
+    sendError(res, 'Verification failed', 500, e instanceof Error ? e.message : 'Verification failed');
   }
 }
 
@@ -141,11 +140,11 @@ export async function twoFaSetup(req: Request, res: Response): Promise<void> {
   try {
     const userId = getAuthUserId(req);
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     const result = await AuthService.twoFaSetup(userId);
-    res.json(result);
+    sendSuccess(res, result);
   } catch (e) {
     handleError(e, res, 'Failed to setup 2FA');
   }
@@ -155,11 +154,11 @@ export async function twoFaVerify(req: Request, res: Response): Promise<void> {
   try {
     const userId = getAuthUserId(req);
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     await AuthService.twoFaVerify(userId, req.body as { code?: string }, authContext(req));
-    res.json({ data: { success: true } });
+    sendSuccess(res, { success: true });
   } catch (e) {
     handleError(e, res, 'Failed to verify 2FA');
   }
@@ -169,11 +168,11 @@ export async function twoFaDisable(req: Request, res: Response): Promise<void> {
   try {
     const userId = getAuthUserId(req);
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     await AuthService.twoFaDisable(userId, req.body as { code?: string; password?: string }, authContext(req));
-    res.json({ success: true });
+    sendSuccess(res, { success: true });
   } catch (e) {
     handleError(e, res, 'Failed to disable 2FA');
   }
@@ -183,15 +182,15 @@ export async function refresh(req: Request, res: Response): Promise<void> {
   try {
     const token = req.cookies?.refreshToken;
     const result = await AuthService.refresh(token);
-    res.json({ data: { accessToken: result.accessToken } });
+    sendSuccess(res, { accessToken: result.accessToken });
   } catch (e) {
     clearRefreshCookie(res);
-    if (AuthService.isAuthServiceError(e)) {
-      res.status(e.status).json({ error: e.error });
+    if (e instanceof AppError) {
+      sendError(res, e.code, e.status, e.message);
       return;
     }
     logger.error('Refresh token error', { error: e });
-    res.status(401).json({ error: 'UNAUTHORIZED' });
+    sendError(res, 'UNAUTHORIZED', 401);
   }
 }
 
@@ -200,7 +199,7 @@ export async function logout(req: Request, res: Response): Promise<void> {
     const token = req.cookies?.refreshToken;
     await AuthService.logout(token, authContext(req));
     clearRefreshCookie(res);
-    res.status(200).json({ message: 'Logged out successfully' });
+    sendSuccess(res, { message: 'Logged out successfully' });
   } catch (e) {
     clearRefreshCookie(res);
     handleError(e, res, 'Logout failed');
@@ -212,7 +211,7 @@ export async function logoutAll(req: Request, res: Response): Promise<void> {
     const token = req.cookies?.refreshToken;
     await AuthService.logoutAll(token, authContext(req));
     clearRefreshCookie(res);
-    res.status(200).json({ message: 'All sessions ended' });
+    sendSuccess(res, { message: 'All sessions ended' });
   } catch (e) {
     clearRefreshCookie(res);
     handleError(e, res, 'Failed to end all sessions');
@@ -223,7 +222,7 @@ export async function getSessions(req: Request, res: Response): Promise<void> {
   try {
     const token = req.cookies?.refreshToken;
     const list = await AuthService.getSessions(token);
-    res.json({ data: list });
+    sendSuccess(res, list);
   } catch (e) {
     handleError(e, res, 'Failed to load sessions');
   }
@@ -244,11 +243,11 @@ export async function changePassword(req: Request, res: Response): Promise<void>
   try {
     const userId = getAuthUserId(req);
     if (!userId) {
-      res.status(401).json({ error: 'UNAUTHORIZED' });
+      sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
     await AuthService.changePassword(userId, req.body as { currentPassword?: string; newPassword?: string }, authContext(req));
-    res.json({ success: true });
+    sendSuccess(res, { success: true });
   } catch (e) {
     handleError(e, res, 'Failed to change password');
   }
@@ -258,7 +257,7 @@ export async function getMe(req: Request, res: Response): Promise<void> {
   try {
     const token = req.cookies?.refreshToken;
     const result = await AuthService.getMe(token);
-    res.json({ data: { accessToken: result.accessToken, user: result.user } });
+    sendSuccess(res, { accessToken: result.accessToken, user: result.user });
   } catch (e) {
     handleError(e, res, 'Auth check failed');
   }
@@ -266,7 +265,7 @@ export async function getMe(req: Request, res: Response): Promise<void> {
 
 export function getGoogleUrl(_req: Request, res: Response): void {
   const { url } = AuthService.getGoogleUrl();
-  res.json({ data: { url } });
+  sendSuccess(res, { url });
 }
 
 export async function googleCallback(req: Request, res: Response): Promise<void> {
@@ -289,7 +288,7 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
 export async function sendVerifyEmail(req: AuthRequest, res: Response): Promise<void> {
   const userId = req.userId ?? req.user?.id;
   if (!userId) {
-    res.status(401).json({ error: 'UNAUTHORIZED' });
+    sendError(res, 'UNAUTHORIZED', 401);
     return;
   }
   try {
@@ -298,47 +297,47 @@ export async function sendVerifyEmail(req: AuthRequest, res: Response): Promise<
       select: { email: true, isEmailVerified: true },
     });
     if (!user?.email) {
-      res.status(400).json({ error: 'no_email' });
+      sendError(res, 'no_email', 400);
       return;
     }
     if (user.isEmailVerified) {
-      res.status(400).json({ error: 'already_verified' });
+      sendError(res, 'already_verified', 400);
       return;
     }
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     await setCache(`email_verify:${userId}`, code, 15 * 60);
     await EmailService.sendVerificationCode(user.email, code);
-    res.json({ data: { success: true } });
+    sendSuccess(res, { success: true });
   } catch (e) {
     logger.error('sendVerifyEmail error', { error: e });
-    res.status(500).json({ error: 'server_error' });
+    sendError(res, 'server_error', 500);
   }
 }
 
 export async function confirmVerifyEmail(req: AuthRequest, res: Response): Promise<void> {
   const userId = req.userId ?? req.user?.id;
   if (!userId) {
-    res.status(401).json({ error: 'UNAUTHORIZED' });
+    sendError(res, 'UNAUTHORIZED', 401);
     return;
   }
   const { code } = (req.body as { code?: string }) ?? {};
   if (!code || typeof code !== 'string') {
-    res.status(400).json({ error: 'code_required' });
+    sendError(res, 'code_required', 400);
     return;
   }
   try {
     const stored = await getCache<string>(`email_verify:${userId}`);
     if (!stored || stored !== code.trim()) {
-      res.status(400).json({ error: 'invalid_code' });
+      sendError(res, 'invalid_code', 400);
       return;
     }
     await UserRepository.update({
       where: { id: userId },
       data: { isEmailVerified: true },
     });
-    res.json({ data: { success: true } });
+    sendSuccess(res, { success: true });
   } catch (e) {
     logger.error('confirmVerifyEmail error', { error: e });
-    res.status(500).json({ error: 'server_error' });
+    sendError(res, 'server_error', 500);
   }
 }

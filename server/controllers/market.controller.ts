@@ -3,6 +3,7 @@ import { MarketService } from '../services/market.service.ts';
 import { isPro } from '../lib/plan.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { logger } from '../lib/logger.ts';
+import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 
 function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -14,9 +15,9 @@ export const MarketController = {
   getStatus: (_req: AuthRequest, res: Response) => {
     try {
       const data = MarketService.getStatus();
-      res.json({ data });
+      sendSuccess(res, data);
     } catch {
-      res.status(500).json({ error: 'INTERNAL_ERROR' });
+      sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
@@ -30,7 +31,7 @@ export const MarketController = {
         delayed = u ? !isPro(u) : false;
       }
       const payload = await MarketService.getOverview(delayed);
-      res.json({ data: payload });
+      sendSuccess(res, payload);
     } catch (error) {
       logger.error('Stocks /market/overview error', { error });
       const { getMarketStatus, getGoldMarketStatus } = await import('../lib/marketHours.ts');
@@ -48,7 +49,7 @@ export const MarketController = {
         egxStatus: getMarketStatus(),
         goldMarketStatus: getGoldMarketStatus(),
       };
-      res.json({ data: fallback });
+      sendSuccess(res, fallback);
     }
   }),
 };

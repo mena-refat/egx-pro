@@ -58,12 +58,18 @@ export function usePortfolio(livePrices: Record<string, { price: number }>) {
       await api.delete(`/portfolio/${id}`);
       await fetchPortfolio();
     } catch (err: unknown) {
-      let errorMessage = 'Failed to remove holding';
-      if (err && typeof err === 'object' && 'response' in err) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        errorMessage = (err as any).response?.data?.error || errorMessage;
+      let errorCode = 'Failed to remove holding';
+      if (err && typeof err === 'object') {
+        if ('error' in err && typeof (err as { error: string }).error === 'string') {
+          errorCode = (err as { error: string }).error;
+        } else if ('response' in err) {
+          const res = (err as { response?: { data?: { error?: string } } }).response;
+          if (res?.data && typeof res.data === 'object' && 'error' in res.data && typeof (res.data as { error: string }).error === 'string') {
+            errorCode = (res.data as { error: string }).error;
+          }
+        }
       }
-      throw new Error(errorMessage, { cause: err });
+      throw new Error(errorCode, { cause: err });
     }
   };
 

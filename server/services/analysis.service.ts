@@ -11,6 +11,7 @@ import { AppError } from '../lib/errors.ts';
 import { SINGLE_ANALYSIS_SYSTEM } from '../lib/analysisPrompts.ts';
 import { analysisEngine } from './ai/index.ts';
 import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
+import { withRetry } from '../lib/retry.ts';
 
 function getFirstDayOfNextMonth(): Date {
   const d = new Date();
@@ -68,11 +69,15 @@ async function consumeQuota(userId: string, points: number): Promise<void> {
 async function runAnalysisEngine(system: string, userMessage: string, maxTokens = 2000): Promise<string> {
   if (!process.env.CLAUDE_API_KEY) throw new AppError('SERVICE_UNAVAILABLE', 503);
   try {
-    const { text } = await analysisEngine.generate({
-      systemPrompt: system,
-      userMessage,
-      maxTokens,
-    });
+    const { text } = await withRetry(
+      () =>
+        analysisEngine.generate({
+          systemPrompt: system,
+          userMessage,
+          maxTokens,
+        }),
+      { maxAttempts: 2, baseDelayMs: 1000, retryable: (e) => (e as Error)?.message?.includes('rate') !== true }
+    );
     return text;
   } catch (err) {
     logger.error('Analysis engine error', { error: (err as Error).message });

@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import type { GoalRecord } from '../../hooks/useGoals';
+import { toast } from '../../store/toastStore';
 import { GOAL_CATEGORIES } from './goalsUtils';
 import { formatWithCommas } from './goalsUtils';
 
@@ -114,6 +115,7 @@ export function GoalFormModal({
       }
       if (typeof window !== 'undefined')
         window.dispatchEvent(new CustomEvent('profile-completion-changed'));
+      toast.success(mode === 'add' ? t('goals.added', { defaultValue: t('common.success') }) : t('common.success'));
       onSaved();
     } catch (e) {
       setErr(e instanceof Error ? e.message : t('goals.errorAdd'));

@@ -7,7 +7,28 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, Lock, Settings, Bell, Trash2, Trophy } from 'lucide-react';
 import { AccountTab, SecurityTab, PreferencesTab, NotificationsTab, DangerZoneTab, FollowersFollowingModal, ProfileCounterRow } from './features/profile';
 import { usePredictionsApi } from '../hooks/usePredictionsApi';
+import type { User } from '../types';
 import type { ProfileUser } from './features/profile';
+
+/** Map auth User to ProfileUser (overlapping fields only). */
+function userToProfileUser(u: User): ProfileUser {
+  return {
+    id: u.id,
+    fullName: u.fullName ?? null,
+    username: u.username ?? null,
+    email: u.email ?? null,
+    isEmailVerified: u.isEmailVerified,
+    phone: u.phone ?? null,
+    avatarUrl: u.avatarUrl ?? null,
+    twoFactorEnabled: u.twoFactorEnabled,
+    language: u.language,
+    theme: u.theme,
+    shariaMode: u.shariaMode,
+    notifySignals: u.notifySignals,
+    notifyPortfolio: u.notifyPortfolio,
+    notifyNews: u.notifyNews,
+  };
+}
 
 const TABS = [
   { id: 'account', labelKey: 'settings.accountData', icon: User },
@@ -41,7 +62,11 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    if (authUser) { setUser(authUser as unknown as ProfileUser); setLoading(false); return; }
+    if (authUser) {
+      setUser(userToProfileUser(authUser));
+      setLoading(false);
+      return;
+    }
     if (!accessToken) { setLoading(false); return; }
     let cancelled = false;
     fetch('/api/user/profile', { headers: { Authorization: `Bearer ${accessToken}` } })

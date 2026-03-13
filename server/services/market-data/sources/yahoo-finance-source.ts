@@ -23,6 +23,7 @@ import YahooFinance from 'yahoo-finance2';
 import type { IMarketDataSource, DataSourceResult, StockQuote } from '../types.ts';
 import { logger } from '../../../lib/logger.ts';
 import { STOCK_QUOTE, MARKET_DATA } from '../../../lib/constants.ts';
+import { withRetry } from '../../../lib/retry.ts';
 
 /** yahoo-finance2 v3 requires an instance; static methods throw. */
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
@@ -142,11 +143,15 @@ export class YahooFinanceSource implements IMarketDataSource {
       const yahooSymbol = this.toYahooSymbol(egxSymbol);
 
       try {
-        const chart = await yahooFinance.chart(
-          yahooSymbol,
-          { period1, interval },
-          { validateResult: false },
-        ) as { quotes?: ChartQuote[] } | null;
+        const chart = await withRetry(
+          () =>
+            yahooFinance.chart(
+              yahooSymbol,
+              { period1, interval },
+              { validateResult: false },
+            ) as Promise<{ quotes?: ChartQuote[] } | null>,
+          { maxAttempts: 2, baseDelayMs: 500 }
+        );
 
         const chartQuotes = chart?.quotes;
         if (!chartQuotes || chartQuotes.length === 0) {
