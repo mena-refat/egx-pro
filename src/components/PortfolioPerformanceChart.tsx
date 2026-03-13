@@ -45,7 +45,7 @@ function formatDateLabelShort(date: Date, range: string, locale: string): string
     const y = date.getFullYear().toString().slice(-2);
     return isAr && m.length > 3 ? `${m.slice(0, 3)} ${y}` : `${m} ${y}`;
   }
-  if (range === '5Y') return "'" + date.getFullYear().toString().slice(-2);
+  if (range === '5Y') return date.getFullYear().toString();
   return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
@@ -301,7 +301,7 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart({
                     }
                     if (selectedRange === '3Y' || selectedRange === '5Y') {
                       const point = data.find((p) => p.x === value);
-                      return point?.label ?? "'" + d.getFullYear().toString().slice(-2);
+                      return point?.label ?? (selectedRange === '5Y' ? d.getFullYear().toString() : "'" + d.getFullYear().toString().slice(-2));
                     }
                     return '';
                   }}
