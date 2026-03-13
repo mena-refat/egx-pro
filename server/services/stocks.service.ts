@@ -63,8 +63,18 @@ export const StocksService = {
     return rows;
   },
 
-  search(q: string) {
-    return searchEgxStocks(q);
+  async search(q: string) {
+    const results = await searchEgxStocks(q);
+    if (results.length === 0) return [];
+
+    const tickers = results.map(r => r.ticker);
+    const cached = await marketDataService.getCachedQuotes(tickers);
+
+    // If cache is cold (server just started), return all results unfiltered
+    // rather than returning an empty list.
+    if (cached.size === 0) return results;
+
+    return results.filter(r => cached.has(r.ticker));
   },
 
   async getPrice(ticker: string, _delayed: boolean) {
