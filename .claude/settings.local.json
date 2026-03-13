@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npx prisma:*)",
       "Bash(node -e \"const p = require\\(''./node_modules/yahoo-finance2/package.json''\\); console.log\\(''version:'', p.version\\)\")",
-      "Bash(node -e \"const {getCache} = require\\(''''./server/lib/redis.ts''''\\); getCache\\(''''stock:quote:COMI.CA''''\\).then\\(console.log\\).catch\\(console.error\\)\")"
+      "Bash(node -e \"const {getCache} = require\\(''''./server/lib/redis.ts''''\\); getCache\\(''''stock:quote:COMI.CA''''\\).then\\(console.log\\).catch\\(console.error\\)\")",
+      "Bash(node --input-type=module:*)"
     ]
   }
 }

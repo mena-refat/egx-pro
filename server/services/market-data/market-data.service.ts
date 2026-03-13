@@ -106,7 +106,7 @@ export class MarketDataService {
 
   constructor() {
     this.sources = [
-      new YahooFinanceSource(),
+      new YahooFinanceSource(), // chart endpoint — accurate EGX daily close prices
     ].sort((a, b) => a.priority - b.priority);
 
     this.sources.forEach(s => this.sourceHealth.set(s.name, {
