@@ -76,7 +76,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
       <GoalsActiveList
         goals={goalsData.activeGoals}
         locale={locale}
-        t={t as (key: string, opts?: object) => string}
+        t={t}
         menuOpenId={menuOpenId}
         onMenuToggle={setMenuOpenIdFor}
         onUpdateAmount={openAmountFor}

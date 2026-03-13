@@ -4,6 +4,7 @@ export interface SkeletonProps {
   width?: string | number;
   height?: string | number;
   className?: string;
+  key?: React.Key;
 }
 
 export function Skeleton({

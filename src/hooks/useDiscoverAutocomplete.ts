@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DISCOVER, TIMEOUTS } from '../lib/constants';
 import type { AutocompleteSuggestion } from '../components/features/discover/types';

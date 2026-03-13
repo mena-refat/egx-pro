@@ -51,7 +51,7 @@ export function DashboardMarketOverview({ overview, loading, error, onRetry }: P
   if (!overview) return null;
 
   const items = INDICATOR_KEYS.map(({ key, tKey }) => {
-    const data = key === 'gold' ? overview.gold : (overview as Record<string, { value?: number; changePercent?: number }>)[key];
+    const data = key === 'gold' ? overview.gold : (overview as unknown as Record<string, { value?: number; changePercent?: number }>)[key];
     const label = tKey.startsWith('market.') ? t(tKey) : tKey;
     return { label, value: data?.value, change: data?.changePercent };
   });

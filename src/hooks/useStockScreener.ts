@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { useLivePrices } from './useLivePrices';
 import { searchStocks, getStockName, getStockInfo } from '../lib/egxStocks';
 import { getSector, isInEGX30, isInEGX70, isInEGX100 } from '../lib/egxIndicesSectors';
-import { Stock } from '../types';
+import type { Stock } from '../types';
 
 export const SECTOR_OPTIONS = [
   { value: '', labelAr: 'كل القطاعات', labelEn: 'All Sectors' },

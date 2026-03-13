@@ -44,7 +44,8 @@ export function DashboardWatchlistList({ watchlist, livePrices, loading, onGoToS
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {watchlist.map((w) => {
-        const stock = livePrices[w.ticker] || w;
+        const priceData = livePrices[w.ticker];
+        const stock = { ...w, ...priceData };
         const ch = (stock.changePercent ?? stock.change ?? 0) as number;
         const isUp = ch >= 0;
         return (

@@ -35,7 +35,7 @@ export interface User {
   language?: string;
   theme?: string;
   avatarUrl?: string | null;
-  plan?: 'free' | 'pro' | 'yearly';
+  plan?: 'free' | 'pro' | 'yearly' | 'ultra' | 'ultra_yearly';
   planExpiresAt?: string | null;
   aiAnalysisUsedThisMonth?: number;
   aiAnalysisResetDate?: string | null;
