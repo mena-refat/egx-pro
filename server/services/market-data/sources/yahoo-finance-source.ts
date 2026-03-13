@@ -30,7 +30,7 @@ const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 /** عدة رموز للـ probe — لو أحدها نجح نعتبر المصدر متاح */
 const PROBE_SYMBOLS = ['COMI.CA', 'HRHO.CA', 'ETEL.CA'];
 /** أقصى عدد طلبات متزامنة لتفادي حظر IP من Yahoo */
-const CONCURRENCY_LIMIT = 5;
+const CONCURRENCY_LIMIT = 8;
 /** نجيب 5 أيام عشان نضمن إن فيه يومين على الأقل بعد العطلة (للـ 1d interval) */
 const CHART_RANGE_DAYS = 5;
 
@@ -136,7 +136,7 @@ export class YahooFinanceSource implements IMarketDataSource {
     const period1 = marketOpen
       ? new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
       : new Date(Date.now() - CHART_RANGE_DAYS * 24 * 60 * 60 * 1000);
-    const interval = marketOpen ? '15m' : '1d';
+    const interval = marketOpen ? '5m' : '1d';
 
     await mapWithConcurrency(symbols, CONCURRENCY_LIMIT, async (egxSymbol) => {
       const yahooSymbol = this.toYahooSymbol(egxSymbol);

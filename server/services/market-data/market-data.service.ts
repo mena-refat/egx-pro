@@ -33,6 +33,62 @@ function cachedToQuote(c: CachedQuote): StockQuote {
   };
 }
 
+/**
+ * How many ms until the next market open (Cairo time).
+ * Returns 0 if market is currently open.
+ * Accounts for weekends: if today is Thu after close, next open is Sunday.
+ */
+function msUntilMarketOpen(): number {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: MARKET_DATA.CAIRO_TZ,
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: false,
+    weekday: 'short',
+  });
+  const parts = formatter.formatToParts(now);
+  let hour = 0, minute = 0, second = 0, weekday = '';
+  for (const p of parts) {
+    if (p.type === 'hour')    hour    = parseInt(p.value, 10);
+    if (p.type === 'minute')  minute  = parseInt(p.value, 10);
+    if (p.type === 'second')  second  = parseInt(p.value, 10);
+    if (p.type === 'weekday') weekday = p.value;
+  }
+
+  const minutesSinceMidnight = hour * 60 + minute;
+  const openMinute  = MARKET_DATA.MARKET_OPEN_HOUR  * 60;
+  const closeMinute = MARKET_DATA.MARKET_CLOSE_HOUR * 60;
+
+  // Market is open right now
+  if (weekday !== 'Fri' && weekday !== 'Sat' &&
+      minutesSinceMidnight >= openMinute && minutesSinceMidnight < closeMinute) {
+    return 0;
+  }
+
+  // Calculate seconds until today's open, accounting for weekend
+  const daysUntilOpen: Record<string, number> = {
+    Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 2, Sat: 1,
+  };
+  let daysAhead = daysUntilOpen[weekday] ?? 0;
+
+  // If today is a weekday but we're past close, open is tomorrow (or Monday if Thu)
+  if (daysAhead === 0 && minutesSinceMidnight >= closeMinute) {
+    daysAhead = weekday === 'Thu' ? 3 : 1; // Thu → skip Fri+Sat → Sun
+  }
+  // If today is a weekday but before open, open is later today
+  if (daysAhead === 0 && minutesSinceMidnight < openMinute) {
+    const secsUntilOpen = (openMinute - minutesSinceMidnight) * 60 - second;
+    return secsUntilOpen * 1000;
+  }
+
+  // Days ahead: calculate ms to midnight of that day + open time
+  const secsToMidnight = (24 * 60 - minutesSinceMidnight) * 60 - second;
+  const secsFromMidnightToOpen = openMinute * 60;
+  return (secsToMidnight + (daysAhead - 1) * 24 * 3600 + secsFromMidnightToOpen) * 1000;
+}
+
 /** Cairo time: weekday and minutes since midnight using Intl (handles EET/EEST). */
 function getCairoNow(): { minutesSinceMidnight: number; weekday: string } {
   const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -265,12 +321,27 @@ export class MarketDataService {
   async startPolling(symbols: string[]): Promise<void> {
     this.pollingActive = true;
 
+    /** Consecutive poll failures — used for auto-backoff to avoid Yahoo IP bans */
+    let consecutiveFailures = 0;
+
     const poll = async () => {
       if (!this.pollingActive) return;
 
-      const interval = this.isMarketOpen()
+      const marketOpen = this.isMarketOpen();
+      const msToOpen   = msUntilMarketOpen();
+
+      // Outside hours: wake up exactly when market opens (if sooner than OFF_HOURS_INTERVAL)
+      // so the first poll of the day fires at 10:00 Cairo, not up to 2h late.
+      const baseInterval = marketOpen
         ? MARKET_DATA.POLL_INTERVAL_MS
-        : MARKET_DATA.OFF_HOURS_INTERVAL_MS;
+        : (msToOpen > 0 && msToOpen < MARKET_DATA.OFF_HOURS_INTERVAL_MS)
+            ? msToOpen
+            : MARKET_DATA.OFF_HOURS_INTERVAL_MS;
+
+      // Auto-backoff: double the interval for each consecutive failure, cap at 5 min
+      const interval = consecutiveFailures === 0
+        ? baseInterval
+        : Math.min(baseInterval * Math.pow(2, consecutiveFailures), 5 * 60_000);
 
       try {
         const quotes = await this.getQuotes(symbols);
@@ -279,10 +350,20 @@ export class MarketDataService {
           this.broadcastFn(quotes);
         }
 
-        logger.info(`Poll complete: ${quotes.size} stocks, market ${this.isMarketOpen() ? 'OPEN' : 'CLOSED'}`);
+        // Reset backoff on successful poll
+        if (quotes.size > 0) consecutiveFailures = 0;
+
+        logger.info(`Poll complete: ${quotes.size} stocks, market ${this.isMarketOpen() ? 'OPEN' : 'CLOSED'}`, {
+          nextPollMs: interval,
+        });
 
       } catch (err: unknown) {
-        logger.error('Polling error', { error: (err as Error).message });
+        consecutiveFailures++;
+        logger.error('Polling error', {
+          error: (err as Error).message,
+          backoffMs: interval,
+          consecutiveFailures,
+        });
       }
 
       if (this.pollingActive) {
