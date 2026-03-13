@@ -98,9 +98,9 @@ export default function App() {
   if (!isAuthenticated) return <AuthPage />;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row">
+    <div className="min-h-screen w-full max-w-[100vw] bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row overflow-x-hidden">
       <Sidebar activeRoute={pathname} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />
-      <main className="flex-1 p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto">
+      <main className="main-content flex-1 p-4 sm:p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto overflow-x-hidden">
         <Header
           user={user ?? null}
           notifications={notifications}

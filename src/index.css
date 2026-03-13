@@ -108,6 +108,33 @@
   outline-color: var(--brand);
 }
 
+/* ─── Responsive base: prevent horizontal overflow ─── */
+html {
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Main content area: allow shrink and prevent flex overflow on small screens */
+.main-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Touch-friendly: reduce tap highlight on mobile, improve scroll */
+@media (max-width: 767px) {
+  * {
+    -webkit-tap-highlight-color: rgba(124, 58, 237, 0.15);
+  }
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+}
+
 @layer base {
   body {
     background-color: var(--bg-primary);
@@ -201,4 +228,31 @@
 
 .safe-area-inset-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ─── Responsive utilities ─── */
+/* Scrollable tables/cards on small screens */
+.responsive-overflow-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Responsive container: padding smaller on mobile */
+.responsive-page {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-page {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-page {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }

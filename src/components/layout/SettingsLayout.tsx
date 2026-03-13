@@ -20,12 +20,12 @@ export default function SettingsLayout() {
   const location = useLocation();
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-6">
+    <div className="max-w-4xl mx-auto w-full min-w-0">
+      <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] mb-4 sm:mb-6">
         {t('settings.title')}
       </h1>
 
-      <div className="flex gap-1 border-b border-[var(--border)] mb-6 overflow-x-auto">
+      <div className="flex gap-1 border-b border-[var(--border)] mb-4 sm:mb-6 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
         {SETTINGS_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = location.pathname === tab.path;

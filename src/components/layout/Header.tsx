@@ -76,9 +76,9 @@ export function Header({
 
 
   return (
-    <header className="flex justify-between items-center mb-6 flex-wrap gap-3" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}>
-      <div className="text-end">
-        <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+    <header className="flex justify-between items-center mb-4 sm:mb-6 flex-wrap gap-2 sm:gap-3" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}>
+      <div className="text-end min-w-0 flex-1">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-[var(--text-primary)] truncate">
           {t('header.welcomeUser', { name: user?.fullName || t('header.defaultUser') })}
         </h2>
       </div>

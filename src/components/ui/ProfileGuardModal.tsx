@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
+import styles from './ProfileGuardModal.module.scss';
 
 interface ProfileGuardModalProps {
   show: boolean;
@@ -23,8 +24,8 @@ export function ProfileGuardModal({
 }: ProfileGuardModalProps) {
   return (
     <Modal isOpen={show} onClose={onClose} title={title} size="sm">
-      <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{body}</p>
-      <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+      <p className={styles.body}>{body}</p>
+      <div className={styles.actions}>
         <Button variant="primary" onClick={onGoToProfile}>
           {goToProfileLabel}
         </Button>

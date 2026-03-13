@@ -205,7 +205,14 @@
     },
     "label": "حدث خطأ",
     "codeLabel": "رمز الخطأ: {{code}}",
-    "loadFailed": "فشل تحميل البيانات، حاول مرة أخرى"
+    "loadFailed": "فشل تحميل البيانات، حاول مرة أخرى",
+    "generic": "حدث خطأ ما",
+    "network": "خطأ في الشبكة",
+    "invalid_email": "بريد إلكتروني غير صالح",
+    "invalid_phone": "رقم هاتف غير صالح",
+    "password_too_short": "كلمة المرور قصيرة جداً",
+    "passwords_no_match": "كلمتا المرور غير متطابقتين",
+    "phone_11_digits": "رقم الهاتف يجب أن يكون 11 رقماً"
   },
   "auth": {
     "loading": "جاري التحميل...",
@@ -339,7 +346,10 @@
     "unrealizedReturn": "عائد غير محقق",
     "chartPurchaseValue": "قيمة الشراء",
     "chartCurrentValue": "القيمة الحالية",
-    "noPerformanceData": "أضف أسهم للمحفظة لرؤية أداء المحفظة"
+    "noPerformanceData": "أضف أسهم للمحفظة لرؤية أداء المحفظة",
+    "connecting": "جاري الاتصال...",
+    "showIndicators": "إظهار المؤشرات",
+    "hideIndicators": "إخفاء المؤشرات"
   },
   "achievements": {
     "congrats": "مبروك!",

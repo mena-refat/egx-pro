@@ -356,6 +356,9 @@
     "hideIndicators": "Hide Indicators"
   },
   "achievements": {
+    "congrats": "Congratulations!",
+    "newAchievement": "You unlocked a new achievement",
+    "tabLabel": "Achievements",
     "progress": "Your achievements progress",
     "summaryNote": "You unlocked {{unlocked}} out of {{total}} achievements",
     "level": "Level",
