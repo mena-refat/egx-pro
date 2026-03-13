@@ -22,7 +22,7 @@ export type StockPriceData = {
   priceTime?: string;
 };
 
-/** Reads from market-data cache only. Price updates come from MarketDataService (Twelve Data) polling. */
+/** Reads from market-data cache only. Price updates come from MarketDataService (Yahoo Finance) polling. */
 export async function getStockPrice(ticker: string): Promise<(StockPriceData & { delayedAt?: number }) | null> {
   const cacheKey = `stock:quote:${ticker}`;
   const cached = await getCache<{ symbol: string; price: number; change: number; changePercent: number; volume: number; high?: number; low?: number; open?: number; previousClose?: number }>(cacheKey);

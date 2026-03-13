@@ -52,11 +52,6 @@ async function startServer() {
 
   validateEnv();
 
-  logger.info('TwelveData API key status', {
-    keySet:    !!process.env.TWELVE_DATA_API_KEY,
-    keyPrefix: process.env.TWELVE_DATA_API_KEY ? process.env.TWELVE_DATA_API_KEY.slice(0, 8) + '...' : '(not set)',
-  });
-
   const app = express();
   app.set('trust proxy', 1);
   const server = createServer(app);
@@ -368,22 +363,28 @@ async function startServer() {
   }, ONE_DAY_MS);
 
   // كل أول الشهر: إعادة تعيين عداد تحليلات الذكاء الاصطناعي للمجانيين
-  let lastAiResetMonth = '';
-  const aiResetInterval = setInterval(async () => {
-    try {
-      const now = new Date();
-      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      if (now.getDate() !== 1 || lastAiResetMonth === monthKey) return;
-      lastAiResetMonth = monthKey;
-      const { prisma } = await import('./server/lib/prisma.ts');
-      const nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
-      await prisma.user.updateMany({
-        data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: nextReset },
-      });
-    } catch (err) {
-      logger.error('AI usage reset job error', { error: err });
-    }
-  }, 60 * 60 * 1000);
+  // نستخدم setTimeout موجّهاً بدل setInterval كل ساعة — يشتغل مرة واحدة بالضبط وقت الريست
+  let aiResetTimeout: ReturnType<typeof setTimeout>;
+  const scheduleAiReset = () => {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 1, 0, 0); // أول الشهر القادم + دقيقة
+    const delay = next.getTime() - now.getTime();
+    aiResetTimeout = setTimeout(async () => {
+      try {
+        const { prisma } = await import('./server/lib/prisma.ts');
+        const resetDate = new Date();
+        const nextReset = new Date(resetDate.getFullYear(), resetDate.getMonth() + 1, 1, 0, 0, 0, 0);
+        await prisma.user.updateMany({
+          data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: nextReset },
+        });
+        logger.info('AI usage counters reset for free users');
+      } catch (err) {
+        logger.error('AI usage reset job error', { error: err });
+      }
+      scheduleAiReset(); // جدول الشهر القادم
+    }, delay);
+  };
+  scheduleAiReset();
 
   // كل 10 دقائق: تحديث كاش الأسعار المتأخرة للمجانيين
   const TEN_MIN_MS = 10 * 60 * 1000;
@@ -451,11 +452,21 @@ async function startServer() {
   }, ONE_HOUR_MS);
 
   process.on('SIGTERM', () => {
+    logger.info('SIGTERM received — shutting down gracefully');
+    marketDataService.stopPolling();
     clearInterval(archiveInterval);
-    clearInterval(aiResetInterval);
+    clearTimeout(aiResetTimeout);
     clearInterval(pricesInterval);
     clearInterval(resolvePredictionsInterval);
-    server.close();
+    server.close(async () => {
+      try {
+        const { prisma } = await import('./server/lib/prisma.ts');
+        await prisma.$disconnect();
+        logger.info('DB connection closed');
+      } catch {
+        // لو الـ prisma اتعمله import فاشل من قبل، نتجاهل الخطأ
+      }
+    });
   });
 }
 

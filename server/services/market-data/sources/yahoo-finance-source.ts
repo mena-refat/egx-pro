@@ -5,13 +5,52 @@ const yahooFinance = new YahooFinance();
 import type { IMarketDataSource, DataSourceResult, StockQuote } from '../types.ts';
 import { logger } from '../../../lib/logger.ts';
 
+const AVAILABILITY_TIMEOUT_MS = 5000;
+/** عدة رموز للـ probe — لو أحدها نجح نعتبر المصدر متاح */
+const PROBE_SYMBOLS = ['COMI.CA', 'HRHO.CA', 'ETEL.CA'];
+/** أقصى عدد طلبات متزامنة لتفادي حظر IP من Yahoo */
+const CONCURRENCY_LIMIT = 5;
+
+/** تشغيل دالة async على مصفوفة مع تحديد عدد الطلبات المتزامنة */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let index = 0;
+  async function worker() {
+    while (index < items.length) {
+      const i = index++;
+      results[i] = await fn(items[i]);
+    }
+  }
+  const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
+  await Promise.all(workers);
+  return results;
+}
+
 export class YahooFinanceSource implements IMarketDataSource {
   name = 'YAHOO';
-  priority = 0;
+  priority = 1;
 
   async isAvailable(): Promise<boolean> {
-    // لو حابين نضيف checks لاحقاً ممكن نعمل ping بسيط هنا
-    return true;
+    const timeout = <T>() =>
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), AVAILABILITY_TIMEOUT_MS),
+      );
+    for (const probe of PROBE_SYMBOLS) {
+      try {
+        await Promise.race([
+          yahooFinance.quote(probe, { validateResult: false }),
+          timeout(),
+        ]);
+        return true;
+      } catch {
+        // جرب الرمز التالي
+      }
+    }
+    return false;
   }
 
   private toYahooSymbol(symbol: string): string {
@@ -24,8 +63,7 @@ export class YahooFinanceSource implements IMarketDataSource {
     const quotes = new Map<string, StockQuote>();
     const failed: string[] = [];
 
-    await Promise.all(
-      symbols.map(async (egxSymbol) => {
+    await mapWithConcurrency(symbols, CONCURRENCY_LIMIT, async (egxSymbol) => {
         const yahooSymbol = this.toYahooSymbol(egxSymbol);
 
         try {
@@ -72,8 +110,7 @@ export class YahooFinanceSource implements IMarketDataSource {
             error: (err as Error).message,
           });
         }
-      })
-    );
+    });
 
     const latency = Date.now() - start;
 

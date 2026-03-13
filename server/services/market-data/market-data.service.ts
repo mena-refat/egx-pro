@@ -1,13 +1,12 @@
 import type { IMarketDataSource, StockQuote } from './types.ts';
-import { EgxlyticsSource } from './sources/egxlytics-source.ts';
 import { YahooFinanceSource } from './sources/yahoo-finance-source.ts';
 import { logger } from '../../lib/logger.ts';
 import { getCache, setCache } from '../../lib/redis.ts';
-import { EGX_TICKERS } from '../../lib/egxTickers.ts';
 
 const CACHE_KEY_PREFIX  = 'stock:quote:';
 const CACHE_TTL_SECONDS = 60;        // 1 دقيقة
 const STALE_TTL_SECONDS = 60 * 60;  // 1 ساعة للـ stale data
+const CAIRO_TZ = 'Africa/Cairo';
 const MARKET_OPEN_HOUR  = 10;       // 10 صباحاً بتوقيت القاهرة
 const MARKET_CLOSE_HOUR = 15;       // 3 مساءً
 
@@ -40,6 +39,26 @@ function cachedToQuote(c: CachedQuote): StockQuote {
   };
 }
 
+/** Cairo time: weekday and minutes since midnight using Intl (handles EET/EEST). */
+function getCairoNow(): { minutesSinceMidnight: number; weekday: string } {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: CAIRO_TZ,
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+    weekday: 'short',
+  });
+  const parts = formatter.formatToParts(new Date());
+  let hour = 0, minute = 0, weekday = '';
+  for (const p of parts) {
+    if (p.type === 'hour') hour = parseInt(p.value, 10);
+    if (p.type === 'minute') minute = parseInt(p.value, 10);
+    if (p.type === 'weekday') weekday = p.value;
+  }
+  const minutesSinceMidnight = hour * 60 + minute;
+  return { minutesSinceMidnight, weekday };
+}
+
 export class MarketDataService {
   private sources: IMarketDataSource[];
   private sourceHealth = new Map<string, {
@@ -50,6 +69,7 @@ export class MarketDataService {
 
   /** Called after each poll to broadcast to WebSocket clients; set from server.ts */
   private broadcastFn: ((quotes: Map<string, StockQuote>) => void) | null = null;
+  private pollingActive = false;
 
   private symbolFailCount  = new Map<string, number>();
   private symbolSkipUntil  = new Map<string, number>();
@@ -82,7 +102,6 @@ export class MarketDataService {
   constructor() {
     this.sources = [
       new YahooFinanceSource(),
-      new EgxlyticsSource(),
     ].sort((a, b) => a.priority - b.priority);
 
     this.sources.forEach(s => this.sourceHealth.set(s.name, {
@@ -97,15 +116,9 @@ export class MarketDataService {
   }
 
   isMarketOpen(): boolean {
-    const now = new Date();
-    const cairoOffset = 2;
-    const cairoHour = (now.getUTCHours() + cairoOffset) % 24;
-    const day = now.getUTCDay();
-
-    const isWeekday = day >= 0 && day <= 4;
-    const isInHours = cairoHour >= MARKET_OPEN_HOUR && cairoHour < MARKET_CLOSE_HOUR;
-
-    return isWeekday && isInHours;
+    const { minutesSinceMidnight, weekday } = getCairoNow();
+    if (weekday === 'Fri' || weekday === 'Sat') return false;
+    return minutesSinceMidnight >= MARKET_OPEN_HOUR * 60 && minutesSinceMidnight < MARKET_CLOSE_HOUR * 60;
   }
 
   async getQuote(symbol: string): Promise<StockQuote | null> {
@@ -150,6 +163,8 @@ export class MarketDataService {
 
     const symbolsToFetch = Array.from(needsFetch);
     let remaining = [...symbolsToFetch];
+    /** الرموز التي نجح جلبها فعلاً من أحد المصادر (ليس من الـ stale cache) */
+    const fetchedFromSource = new Set<string>();
 
     for (const source of this.sources) {
       if (remaining.length === 0) break;
@@ -173,19 +188,17 @@ export class MarketDataService {
       if (sourceResult.quotes.size > 0) {
         health.failures    = 0;
         health.lastSuccess = Date.now();
-        health.avgLatency  = (health.avgLatency + sourceResult.latency) / 2;
+        // EWMA بمعامل تسوية 0.2 — يعطي وزناً أكبر للقيم الأحدث تدريجياً
+        health.avgLatency  = health.avgLatency === 0
+          ? sourceResult.latency
+          : 0.8 * health.avgLatency + 0.2 * sourceResult.latency;
       } else {
         health.failures++;
       }
 
       for (const [symbol, quote] of sourceResult.quotes) {
-        const sane = await this.isSanePriceChange(symbol, quote.price, source.name);
-        if (!sane) {
-          sourceResult.failed.push(symbol);
-          sourceResult.quotes.delete(symbol);
-          continue;
-        }
         result.set(symbol, quote);
+        fetchedFromSource.add(symbol);
         await this.saveToCache(symbol, quote);
       }
 
@@ -208,11 +221,19 @@ export class MarketDataService {
       );
     }
 
-    for (const symbol of activeSymbols) {
-      if (result.has(symbol)) {
+    // نسجّل نجاح/فشل فقط للرموز التي حاولنا جلبها فعلاً من المصادر.
+    // الرموز التي جاءت من stale cache بعد فشل المصادر تُعدّ فشلاً للـ deprioritization.
+    for (const symbol of needsFetch) {
+      if (fetchedFromSource.has(symbol)) {
         this.recordSymbolSuccess(symbol);
       } else {
         this.recordSymbolFailure(symbol);
+      }
+    }
+    // الرموز التي وُجدت في fresh cache بالفعل — نصفّر عداد الفشل
+    for (const symbol of activeSymbols) {
+      if (!needsFetch.has(symbol) && result.has(symbol)) {
+        this.recordSymbolSuccess(symbol);
       }
     }
 
@@ -223,7 +244,11 @@ export class MarketDataService {
     const POLL_INTERVAL_MS      = 60_000;
     const OFF_HOURS_INTERVAL_MS = 5 * 60_000;
 
+    this.pollingActive = true;
+
     const poll = async () => {
+      if (!this.pollingActive) return;
+
       const interval = this.isMarketOpen()
         ? POLL_INTERVAL_MS
         : OFF_HOURS_INTERVAL_MS;
@@ -241,11 +266,18 @@ export class MarketDataService {
         logger.error('Polling error', { error: (err as Error).message });
       }
 
-      setTimeout(poll, interval);
+      if (this.pollingActive) {
+        setTimeout(poll, interval);
+      }
     };
 
     poll();
     logger.info('Market data polling started');
+  }
+
+  stopPolling(): void {
+    this.pollingActive = false;
+    logger.info('Market data polling stopped');
   }
 
   getHealthReport(): Record<string, unknown> {
@@ -259,34 +291,6 @@ export class MarketDataService {
       };
     });
     return report;
-  }
-
-  /**
-   * Reject prices that are obviously wrong.
-   * If we have a cached price and the new price differs by more than 15%,
-   * the new price is likely garbage (wrong ticker, stale foreign data, etc.)
-   */
-  private async isSanePriceChange(
-    symbol: string,
-    newPrice: number,
-    source: string
-  ): Promise<boolean> {
-    if (source === 'EGX') return true;
-
-    const lastKnown = await this.getFromCache(symbol, true);
-    if (!lastKnown) return true;
-
-    const lastPrice = lastKnown.price;
-    if (lastPrice <= 0) return true;
-
-    const changePct = Math.abs((newPrice - lastPrice) / lastPrice) * 100;
-
-    if (changePct > 15) {
-      logger.warn(`Sanity check FAILED: ${symbol} ${source} price=${newPrice} vs last=${lastPrice} (${changePct.toFixed(1)}% diff) — REJECTED`);
-      return false;
-    }
-
-    return true;
   }
 
   private async getFromCache(symbol: string, stale = false): Promise<StockQuote | null> {

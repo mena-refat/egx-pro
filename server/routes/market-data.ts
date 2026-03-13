@@ -28,7 +28,7 @@ router.get('/quotes', authenticate, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/health', async (_req: Request, res: Response) => {
+router.get('/health', authenticate, async (_req: Request, res: Response) => {
   res.json({
     data:       marketDataService.getHealthReport(),
     marketOpen: marketDataService.isMarketOpen(),
@@ -43,18 +43,15 @@ if (process.env.NODE_ENV !== 'production') {
     }
     const results: Record<string, unknown> = {};
 
-    const { TwelveDataSource } = await import('../services/market-data/sources/twelve-data-source.ts');
-    const { EgxlyticsSource } = await import('../services/market-data/sources/egxlytics-source.ts');
-    const sources = [new TwelveDataSource(), new EgxlyticsSource()];
+    const { YahooFinanceSource } = await import('../services/market-data/sources/yahoo-finance-source.ts');
+    const source = new YahooFinanceSource();
 
-    for (const source of sources) {
-      try {
-        const r = await source.fetchQuotes([symbol]);
-        const quote = r.quotes.get(symbol);
-        results[source.name] = quote ?? { error: 'not found', failed: r.failed };
-      } catch (err: unknown) {
-        results[source.name] = { error: (err as Error).message };
-      }
+    try {
+      const r = await source.fetchQuotes([symbol]);
+      const quote = r.quotes.get(symbol);
+      results[source.name] = quote ?? { error: 'not found', failed: r.failed };
+    } catch (err: unknown) {
+      results[source.name] = { error: (err as Error).message };
     }
 
     res.json({ symbol, results });

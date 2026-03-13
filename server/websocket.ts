@@ -5,15 +5,24 @@ import { logger } from './lib/logger.ts';
 import type { StockQuote } from './services/market-data/types.ts';
 import { marketDataService } from './services/market-data/market-data.service.ts';
 
-const UPDATE_INTERVAL = 60000;
 const PING_INTERVAL = 30000;
 
 export function setupWebSocket(server: Server): { broadcastPrices: (quotes: Map<string, StockQuote>) => void } {
   const wss = new WebSocketServer({ server });
   logger.info('✅ WebSocket Server initialized');
 
+  /** يُستدعى من startPolling بعد كل دورة جلب — يبث للـ clients التنسيق الذي يتوقعه الـ frontend */
   function broadcastPrices(quotes: Map<string, StockQuote>) {
-    const payload = { type: 'PRICE_UPDATE' as const, data: Object.fromEntries(quotes) };
+    if (wss.clients.size === 0) return;
+    const data = Array.from(quotes.values()).map((q) => ({
+      ticker: q.symbol,
+      price: q.price,
+      change: q.change,
+      changePercent: q.changePercent,
+      volume: q.volume,
+    }));
+    if (data.length === 0) return;
+    const payload = { type: 'PRICES_UPDATE' as const, data };
     let count = 0;
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
@@ -21,7 +30,7 @@ export function setupWebSocket(server: Server): { broadcastPrices: (quotes: Map<
         count++;
       }
     });
-    if (count > 0) logger.info(`📡 Price update broadcast to ${count} clients`);
+    if (count > 0) logger.info(`📡 Prices broadcast to ${count} clients`);
   }
 
   // Ping كل 30 ثانية للتأكد إن الـ clients لسه متصلين
@@ -70,8 +79,8 @@ export function setupWebSocket(server: Server): { broadcastPrices: (quotes: Map<
 
     // ابعت الأسعار فوراً لما حد يتصل
     try {
-      const initialData = await fetchAndCachePrices();
-      if (initialData && initialData.length > 0) {
+      const initialData = await fetchCurrentPrices();
+      if (initialData.length > 0) {
         safeSend(ws, { type: 'INITIAL_PRICES', data: initialData });
       }
     } catch (err) {
@@ -87,30 +96,6 @@ export function setupWebSocket(server: Server): { broadcastPrices: (quotes: Map<
     });
   });
 
-  // Update loop كل 60 ثانية
-  setInterval(async () => {
-    if (wss.clients.size === 0) return; // مفيش clients = مفيش داعي نجيب بيانات
-
-    try {
-      const data = await fetchAndCachePrices();
-      if (!data || data.length === 0) {
-        logger.warn('⚠️ No price data available for broadcast');
-        return;
-      }
-
-      let sentCount = 0;
-      wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          safeSend(client, { type: 'PRICES_UPDATE', data });
-          sentCount++;
-        }
-      });
-      logger.info(`📡 Prices broadcast to ${sentCount} clients`);
-    } catch (err) {
-      logger.error('❌ WebSocket broadcast error', { error: err });
-    }
-  }, UPDATE_INTERVAL);
-
   return { broadcastPrices };
 }
 
@@ -125,7 +110,8 @@ function safeSend(ws: WebSocket, data: unknown) {
   }
 }
 
-async function fetchAndCachePrices(): Promise<Array<{ ticker: string; price: number; change: number; changePercent: number; volume: number }>> {
+/** يُستخدم فقط لإرسال الأسعار الأولية لـ client متصل حديثاً */
+async function fetchCurrentPrices(): Promise<Array<{ ticker: string; price: number; change: number; changePercent: number; volume: number }>> {
   try {
     const quotes = await marketDataService.getQuotes([...EGX_TICKERS]);
     return Array.from(quotes.values()).map((q) => ({
