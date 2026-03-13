@@ -2,6 +2,7 @@ import React, { memo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Calendar, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { toast } from '../store/toastStore';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 
@@ -114,11 +115,11 @@ const GoalTracker = memo(function GoalTracker({ currentWealth }: { currentWealth
       if (res.ok) {
         setRefreshTrigger(prev => prev + 1);
       } else {
-        alert(t('goals.errorDelete'));
+        toast.error(t('goals.errorDelete'));
       }
     } catch (err) {
-      console.error('Delete goal error', err);
-      alert(t('goals.errorDelete'));
+      if (import.meta.env.DEV) console.error('Delete goal error', err);
+      toast.error(t('goals.errorDelete'));
     }
   };
 

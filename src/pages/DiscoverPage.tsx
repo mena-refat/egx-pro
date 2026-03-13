@@ -53,7 +53,7 @@ export default function DiscoverPage() {
           aria-activedescendant={
             highlightedIndex >= 0 ? `suggestion-${highlightedIndex}` : undefined
           }
-          icon={<Search className="w-5 h-5" aria-hidden />}
+          icon={autocompleteLoading || loading ? <Loader2 className="w-5 h-5 animate-spin" aria-hidden /> : <Search className="w-5 h-5" aria-hidden />}
           iconPosition={isRtl ? 'right' : 'left'}
           wrapperClassName="relative"
         />

@@ -11,6 +11,8 @@ export interface StockCardProps {
   onToggleWatchlist: (e: React.MouseEvent) => void;
   t: (key: string) => string;
   lang: string;
+  /** When inside a virtual list, use 'div' to avoid invalid ul > li > li. */
+  as?: 'li' | 'div';
 }
 
 export function StockCard({
@@ -20,12 +22,13 @@ export function StockCard({
   onToggleWatchlist,
   t,
   lang,
+  as: Tag = 'li',
 }: StockCardProps) {
   const changeP = stock.changePercent ?? 0;
   const isUp = changeP >= 0;
 
   return (
-    <li
+    <Tag
       role="button"
       tabIndex={0}
       onClick={onSelect}
@@ -105,6 +108,6 @@ export function StockCard({
           {inWatchlist ? t('stockDetail.watchlistRemove') : t('stocks.watchlistAdd')}
         </button>
       </div>
-    </li>
+    </Tag>
   );
 }

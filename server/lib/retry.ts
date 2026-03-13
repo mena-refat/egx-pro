@@ -43,3 +43,16 @@ export async function withRetry<T>(
   }
   throw lastError;
 }
+
+/** Alias for prompt compatibility: maxRetries, delayMs, backoff. */
+export async function withRetryCompat<T>(
+  fn: () => Promise<T>,
+  opts: { maxRetries?: number; delayMs?: number; backoff?: number } = {}
+): Promise<T> {
+  const { maxRetries = 2, delayMs = 500, backoff = 2 } = opts;
+  return withRetry(fn, {
+    maxAttempts: maxRetries + 1,
+    baseDelayMs: delayMs,
+    maxDelayMs: delayMs * Math.pow(backoff, maxRetries),
+  });
+}

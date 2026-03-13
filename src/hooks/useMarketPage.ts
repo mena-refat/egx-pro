@@ -1,12 +1,14 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
+import { cachedGet } from '../lib/queryCache';
 import type { MarketOverview } from '../components/market/types';
 import type { Stock } from '../types';
 import type { MarketNewsItem } from '../components/market/types';
 
 export function useMarketPage() {
   const { t } = useTranslation('common');
+  const mountedRef = useRef(true);
   const [overview, setOverview] = useState<MarketOverview | null>(null);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [news, setNews] = useState<MarketNewsItem[]>([]);
@@ -21,8 +23,8 @@ export function useMarketPage() {
       setLoadingOverview(true);
       setError(null);
       try {
-        const res = await api.get<MarketOverview | { data: MarketOverview }>('/stocks/market/overview', { signal });
-        if (!signal?.aborted) setOverview((res.data as { data?: MarketOverview })?.data ?? res.data);
+        const data = await cachedGet<MarketOverview>('/stocks/market/overview', 30_000);
+        if (mountedRef.current && !signal?.aborted) setOverview(data);
       } catch (err: unknown) {
         if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
         if (!signal?.aborted) setError(t('market.loadError'));
@@ -61,11 +63,15 @@ export function useMarketPage() {
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     const controller = new AbortController();
     fetchOverview(controller.signal);
     fetchStocks(controller.signal);
     fetchNews(controller.signal);
-    return () => controller.abort();
+    return () => {
+      mountedRef.current = false;
+      controller.abort();
+    };
   }, [fetchOverview, fetchStocks, fetchNews]);
 
   const refreshAll = useCallback(async () => {

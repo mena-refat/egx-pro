@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { StockCard } from './StockCard';
 import type { StockWithMeta } from '../../hooks/useStockScreener';
+
+const ROW_HEIGHT_ESTIMATE = 96;
+const OVERSCAN = 5;
 
 export interface StockTableProps {
   stocks: StockWithMeta[];
@@ -19,20 +23,51 @@ export function StockTable({
   t,
   lang,
 }: StockTableProps) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: stocks.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_HEIGHT_ESTIMATE,
+    overscan: OVERSCAN,
+  });
+
+  if (stocks.length === 0) return null;
+
   return (
-    <ul className="space-y-3">
-      {stocks.map((stock) => (
-        <React.Fragment key={stock.ticker}>
-          <StockCard
-            stock={stock}
-            inWatchlist={watchlist.includes(stock.ticker)}
-            onSelect={() => onSelectStock(stock)}
-            onToggleWatchlist={(e) => onToggleWatchlist(e, stock.ticker)}
-            t={t}
-            lang={lang}
-          />
-        </React.Fragment>
-      ))}
-    </ul>
+    <div
+      ref={parentRef}
+      className="overflow-auto rounded-xl"
+      style={{ maxHeight: 'min(70vh, 600px)' }}
+    >
+      <ul
+        className="relative w-full space-y-3"
+        style={{ height: `${virtualizer.getTotalSize()}px` }}
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const stock = stocks[virtualRow.index];
+          return (
+            <li
+              key={stock.ticker}
+              className="absolute left-0 w-full px-0"
+              style={{
+                top: virtualRow.start,
+                height: `${virtualRow.size}px`,
+              }}
+            >
+              <StockCard
+                as="div"
+                stock={stock}
+                inWatchlist={watchlist.includes(stock.ticker)}
+                onSelect={() => onSelectStock(stock)}
+                onToggleWatchlist={(e) => onToggleWatchlist(e, stock.ticker)}
+                t={t}
+                lang={lang}
+              />
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

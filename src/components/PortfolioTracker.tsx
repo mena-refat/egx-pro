@@ -13,6 +13,7 @@ import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Skeleton } from './ui/Skeleton';
 import EmptyState from './shared/EmptyState';
+import { toast } from '../store/toastStore';
 import { BriefcaseBusiness } from 'lucide-react';
 
 export default function PortfolioTracker() {
@@ -120,11 +121,8 @@ export default function PortfolioTracker() {
     try {
       await removeHolding(id);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        alert(err.message);
-      } else {
-        alert('An unknown error occurred');
-      }
+      const msg = err instanceof Error ? err.message : t('errors.internal', { defaultValue: 'An unknown error occurred' });
+      toast.error(msg);
     }
   };
 
