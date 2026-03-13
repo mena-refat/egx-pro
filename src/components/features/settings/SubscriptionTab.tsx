@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, X, Lock } from 'lucide-react';
+import { Check, X, Lock, BarChart3, Brain, Bell, TrendingUp, Shield, Sparkles, Zap } from 'lucide-react';
 import api from '../../../lib/api';
 import { useAuthStore } from '../../../store/authStore';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
-import { PLAN_PRICES } from '../../../lib/constants';
+import { PLAN_PRICES, YEARLY_SAVINGS_PERCENT } from '../../../lib/constants';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -44,16 +44,42 @@ declare global {
   }
 }
 
-// ─── FeatureItem ─────────────────────────────────────────────────────────────
+// ─── FeatureItem (with optional icon, animated check) ─────────────────────────
+
+const FEATURE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  freeWatchlist: BarChart3,
+  freePortfolio: BarChart3,
+  freeGoals: BarChart3,
+  proWatchlist: BarChart3,
+  proPortfolio: BarChart3,
+  proGoals: BarChart3,
+  ultraWatchlist: BarChart3,
+  ultraPortfolio: BarChart3,
+  ultraGoals: BarChart3,
+  freeAi: Brain,
+  proAi: Brain,
+  ultraAi: Brain,
+  priceAlerts: Bell,
+  realtimePrices: TrendingUp,
+  delayed10: TrendingUp,
+  shariaMode: Shield,
+  prioritySupport: Sparkles,
+  earlyAccess: Zap,
+};
 
 function FeatureItem({ featureKey, unavailable, t }: { featureKey: string; unavailable?: boolean; t: (k: string) => string }) {
   const text = t(`billing.features.${featureKey}`);
+  const Icon = FEATURE_ICONS[featureKey];
   return (
-    <div className="flex items-center gap-2 text-sm">
+    <div className="flex items-center gap-3 text-sm leading-[1.6]">
       {unavailable ? (
-        <X className="w-4 h-4 shrink-0 text-[var(--danger)]" aria-hidden />
+        <X className="w-[18px] h-[18px] shrink-0 text-[var(--danger)]" aria-hidden />
+      ) : Icon ? (
+        <Icon className="w-[18px] h-[18px] shrink-0 text-[var(--brand)] opacity-90" aria-hidden />
       ) : (
-        <Check className="w-4 h-4 shrink-0 text-[var(--success)]" aria-hidden />
+        <span className="flex shrink-0 w-[18px] h-[18px] rounded-full bg-[var(--success-bg)] flex items-center justify-center">
+          <Check className="w-2.5 h-2.5 text-[var(--success)]" strokeWidth={3} aria-hidden />
+        </span>
       )}
       <span className={unavailable ? 'text-[var(--text-muted)]' : 'text-[var(--text-secondary)]'}>
         {text}
@@ -62,64 +88,74 @@ function FeatureItem({ featureKey, unavailable, t }: { featureKey: string; unava
   );
 }
 
-// ─── Period switch (شهري | سنوي) ───────────────────────────────────────────
+// ─── PricingToggle (شهري / سنوي) ───────────────────────────────────────────
 
-function PeriodSwitch({
+function PricingToggle({
   period,
   onPeriodChange,
   t,
 }: {
   period: BillingPeriod;
   onPeriodChange: (p: BillingPeriod) => void;
-  t: (k: string) => string;
+  t: (k: string, opts?: Record<string, unknown>) => string;
 }) {
+  const savePercent = YEARLY_SAVINGS_PERCENT.pro;
   return (
-    <div
-      className="inline-flex rounded-xl bg-[var(--bg-input)] p-1 border border-[var(--border-subtle)]"
-      role="tablist"
-      aria-label={t('billing.billingPeriod')}
-    >
-      <button
-        type="button"
-        role="tab"
-        aria-selected={period === 'monthly'}
-        onClick={() => onPeriodChange('monthly')}
-        className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-          period === 'monthly'
-            ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm'
-            : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-        }`}
+    <div className="flex flex-col items-center gap-2 mb-8">
+      <div
+        className="inline-flex rounded-full p-1 bg-[var(--bg-secondary)] border border-[var(--border)] shadow-sm"
+        role="tablist"
+        aria-label={t('billing.billingPeriod')}
       >
-        {t('billing.monthly')}
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={period === 'yearly'}
-        onClick={() => onPeriodChange('yearly')}
-        className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-          period === 'yearly'
-            ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm'
-            : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-        }`}
-      >
-        {t('billing.yearly')}
-      </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={period === 'monthly'}
+          onClick={() => onPeriodChange('monthly')}
+          className={`rounded-full px-6 py-2.5 text-sm font-semibold transition-all duration-200 ${
+            period === 'monthly'
+              ? 'bg-[var(--brand)] text-[var(--text-inverse)] shadow-md'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+          }`}
+        >
+          {t('billing.monthly')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={period === 'yearly'}
+          onClick={() => onPeriodChange('yearly')}
+          className={`rounded-full px-6 py-2.5 text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+            period === 'yearly'
+              ? 'bg-[var(--brand)] text-[var(--text-inverse)] shadow-md'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+          }`}
+        >
+          {t('billing.yearly')}
+          <span className="rounded-full bg-[var(--success)] px-2 py-0.5 text-xs font-bold text-white shrink-0">
+            {t('billing.yearlySave', { percent: savePercent })}
+          </span>
+        </button>
+      </div>
+      <p className="text-[13px] text-[var(--text-muted)]">{t('billing.billingNote')}</p>
     </div>
   );
 }
 
-// ─── PlanCard ──────────────────────────────────────────────────────────────
+// ─── PricingCard (PlanCard) ─────────────────────────────────────────────────
 
 function getPaidPlanId(tier: 'pro' | 'ultra', period: BillingPeriod): PaidPlanId {
   return period === 'yearly' ? `${tier}_yearly` : `${tier}_monthly`;
+}
+
+function monthlyEquivalent(yearlyPrice: number): number {
+  return Math.round((yearlyPrice / 12) * 100) / 100;
 }
 
 interface PlanCardProps {
   plan: PlanConfig;
   index: number;
   period: BillingPeriod;
-  onPeriodChange: (period: BillingPeriod) => void;
   currentPlan: string | null | undefined;
   planExpiresAt: string | null | undefined;
   discountPercent: number | null;
@@ -129,13 +165,14 @@ interface PlanCardProps {
   onUpgrade: (plan: PaidPlanId) => void;
   onSelectPlan: (plan: PaidPlanId) => void;
   t: (k: string, opts?: Record<string, unknown>) => string;
+  /** React key – not passed to component */
+  key?: string | number;
 }
 
 function PlanCard({
   plan,
   index,
   period,
-  onPeriodChange,
   currentPlan,
   planExpiresAt,
   discountPercent,
@@ -165,126 +202,133 @@ function PlanCard({
 
   const basePrice = paidPlanId ? getBasePrice(paidPlanId) : 0;
   const finalPrice = paidPlanId ? getFinalPrice(paidPlanId) : 0;
+  const isYearly = period === 'yearly';
+  const yearlyEquivalent = isYearly && paidPlanId && (plan.id === 'pro' || plan.id === 'ultra')
+    ? monthlyEquivalent(finalPrice)
+    : 0;
+  const savingsPercent = plan.id === 'pro' ? YEARLY_SAVINGS_PERCENT.pro : plan.id === 'ultra' ? YEARLY_SAVINGS_PERCENT.ultra : 0;
+
+  const ctaLabel = isCurrent
+    ? t('billing.currentPlan')
+    : isFree
+      ? t('billing.ctaStartFree')
+      : plan.id === 'pro'
+        ? t('billing.ctaUpgradePro')
+        : t('billing.ctaGetUltra');
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      className={`relative flex flex-col rounded-2xl border p-6 bg-[var(--bg-card)] ${
-        plan.highlighted
-          ? 'border-2 border-[var(--brand)] md:scale-[1.02]'
-          : 'border-[var(--border)]'
+      transition={{ delay: index * 0.08, duration: 0.25 }}
+      whileHover={{ y: -6 }}
+      className={`relative flex flex-col w-full max-w-[320px] min-h-[560px] rounded-[20px] overflow-hidden border transition-all duration-200 ease-out ${
+        isFree
+          ? 'bg-[var(--bg-secondary)] border-[var(--border-subtle)] hover:border-[var(--border)] hover:shadow-lg'
+          : plan.highlighted
+            ? 'bg-[var(--bg-card)] border-2 border-[var(--brand)] shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:shadow-[0_16px_48px_rgba(124,58,237,0.15)]'
+            : 'bg-[var(--bg-card)] border-[var(--border)] shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.1)]'
       }`}
-      style={
-        plan.highlighted
-          ? { boxShadow: '0 0 30px rgba(124, 58, 237, 0.15)' }
-          : undefined
-      }
     >
       {plan.badgeKey && (
-        <div className="absolute top-0 start-1/2 -translate-x-1/2 -translate-y-1/2">
-          <span className="rounded-full bg-[var(--brand)] px-4 py-1 text-xs font-bold text-[var(--text-inverse)]">
+        <div className="absolute top-0 end-0 z-10 pt-4 pe-4">
+          <span className="rounded-full bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
             {t(`billing.${plan.badgeKey}`)}
           </span>
         </div>
       )}
+      <div className="flex flex-col flex-1 p-8">
+        <h3 className="text-[22px] font-bold leading-tight" style={{ color: isFree ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
+          {t(plan.nameKey)}
+        </h3>
 
-      <h3 className="text-lg font-bold text-[var(--text-primary)] mt-2">
-        {t(plan.nameKey)}
-      </h3>
-
-      {!isFree && (
-        <div className="mt-4">
-          <PeriodSwitch period={period} onPeriodChange={onPeriodChange} t={t} />
-        </div>
-      )}
-
-      <div className="mt-4 flex items-baseline gap-1">
-        {isFree ? (
-          <span className="text-3xl font-black text-[var(--text-primary)] tabular-nums">
-            {t('billing.free')}
-          </span>
-        ) : (
-          <>
-            <span className="text-4xl font-black text-[var(--text-primary)] tabular-nums">
-              {finalPrice}
-            </span>
-            <span className="text-sm text-[var(--text-secondary)] self-end mb-2 ms-1">
-              {t('billing.egp')}
-            </span>
-          </>
-        )}
-      </div>
-      {!isFree && discountPercent != null && discountPercent < 100 && (
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <span className="text-sm line-through text-[var(--text-muted)]">
-            {basePrice} {t('billing.egp')}
-          </span>
-          <span className="rounded-full bg-[var(--success-bg)] text-[var(--success)] text-xs px-2 py-0.5 font-bold">
-            -{discountPercent}%
-          </span>
-        </div>
-      )}
-      {!isFree && discountPercent === 100 && (
-        <div className="mt-1 flex items-center gap-2 flex-wrap">
-          <span className="text-sm line-through text-[var(--text-muted)]">
-            {basePrice} {t('billing.egp')}
-          </span>
-          <span className="rounded-full bg-[var(--success-bg)] text-[var(--success)] text-xs px-2 py-0.5 font-bold">
-            {t('billing.free')} 🎉
-          </span>
-        </div>
-      )}
-      {!isFree && (
-        <span className="text-sm text-[var(--text-muted)]">
-          / {period === 'yearly' ? t('billing.yearly') : t('billing.monthly')}
-        </span>
-      )}
-      {!isFree && plan.savingsNoteKey && period === 'yearly' && !discountPercent && (
-        <span className="mt-1 inline-block rounded-full bg-[var(--success-bg)] text-[var(--success)] text-xs px-2 py-0.5 w-fit">
-          {t(`billing.${plan.savingsNoteKey}`)}
-        </span>
-      )}
-
-      {currentPlan && currentPlan !== 'free' && planExpiresAt && isCurrent && (
-        <p className="text-xs text-[var(--text-muted)] text-center mt-1">
-          {t('billing.expiresOn', { date: new Date(planExpiresAt).toLocaleDateString('ar-EG') })}
-        </p>
-      )}
-
-      <div className="border-t border-[var(--border)] my-4" aria-hidden />
-
-      <ul className="flex flex-col gap-2">
-        {plan.features.map((f) => (
-          <li key={f.key}>
-            <FeatureItem featureKey={f.key} unavailable={f.unavailable} t={t} />
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-6 flex-1 flex flex-col justify-end">
-        <Button
-          type="button"
-          variant={isFree ? 'secondary' : 'primary'}
-          fullWidth
-          className="rounded-xl py-3 font-bold"
-          disabled={isFree || upgrading}
-          loading={upgrading}
-          icon={isCurrent ? <Check className="w-4 h-4" /> : undefined}
-          iconPosition="left"
-          onClick={handleCta}
+        <div
+          className={`mt-4 rounded-xl px-4 py-4 flex flex-col justify-center ${
+            isFree ? 'bg-[var(--bg-card)]/80' : 'bg-[var(--bg-secondary)]'
+          }`}
         >
-          {isCurrent
-            ? t('billing.currentPlan')
-            : isFree
-              ? t('billing.planFree')
-              : discountPercent === 100
-                ? t('billing.activateNow')
-                : discountPercent != null && discountPercent > 0
-                  ? t('billing.payDiscounted', { price: finalPrice })
-                  : t('billing.startNow')}
-        </Button>
+          {isFree ? (
+            <span className="text-[48px] font-bold text-[var(--text-primary)] tabular-nums leading-none">
+              {t('billing.free')}
+            </span>
+          ) : (
+            <>
+              <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-[48px] font-bold tabular-nums tracking-tight leading-none" style={{ color: 'var(--text-primary)' }}>
+                    {finalPrice.toLocaleString()}
+                  </span>
+                  <span className="text-[14px] opacity-70 whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
+                    {t('billing.egp')} {isYearly ? t('billing.perYear') : t('billing.perMonth')}
+                  </span>
+                </div>
+              </div>
+              {isYearly && !discountPercent && (
+                <div className="flex items-center justify-between gap-2 mt-1 min-w-0">
+                  <span className="text-[14px] font-medium whitespace-nowrap" style={{ color: 'var(--success)' }}>
+                    <span>{t('billing.perMonth')}</span>{' '}
+                    <span dir="ltr" style={{ unicodeBidi: 'isolate' }}>{yearlyEquivalent} / ≈</span>
+                  </span>
+                  {savingsPercent > 0 && (
+                    <span className="rounded-full bg-[var(--success-bg)] text-[var(--success)] text-xs font-semibold px-2 py-0.5 shrink-0">
+                      {t('billing.yearlySave', { percent: savingsPercent })}
+                    </span>
+                  )}
+                </div>
+              )}
+              {discountPercent != null && discountPercent < 100 && (
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <span className="text-sm line-through opacity-60" style={{ color: 'var(--text-primary)' }}>
+                    {basePrice} {t('billing.egp')}
+                  </span>
+                  <span className="rounded-full bg-[var(--success-bg)] text-[var(--success)] text-xs px-2 py-0.5 font-semibold">
+                    -{discountPercent}%
+                  </span>
+                </div>
+              )}
+              {discountPercent === 100 && (
+                <span className="mt-2 inline-block rounded-full bg-[var(--success-bg)] text-[var(--success)] text-xs px-2 py-0.5 font-semibold w-fit">
+                  {t('billing.free')} 🎉
+                </span>
+              )}
+            </>
+          )}
+        </div>
+
+        {currentPlan && currentPlan !== 'free' && planExpiresAt && isCurrent && (
+          <p className="text-[13px] text-[var(--text-muted)] text-center mt-2">
+            {t('billing.expiresOn', { date: new Date(planExpiresAt).toLocaleDateString('ar-EG') })}
+          </p>
+        )}
+
+        <div className="border-t border-[var(--border)] mt-4" aria-hidden />
+
+        <ul className="flex flex-col gap-3 mt-6">
+          {plan.features.map((f) => (
+            <li key={f.key}>
+              <FeatureItem featureKey={f.key} unavailable={f.unavailable} t={t} />
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-8">
+          <motion.div whileHover={{ scale: 1.03 }} transition={{ duration: 0.2 }} className="w-full">
+            <Button
+              type="button"
+              variant={isFree ? 'secondary' : 'primary'}
+              fullWidth
+              className="h-12 rounded-[12px] font-semibold transition-shadow duration-200 hover:shadow-lg"
+              style={!isFree && !isCurrent ? { background: 'linear-gradient(135deg, var(--brand) 0%, var(--brand-hover) 100%)' } : undefined}
+              disabled={isFree || upgrading}
+              loading={upgrading}
+              icon={isCurrent ? <Check className="w-4 h-4" /> : undefined}
+              iconPosition="left"
+              onClick={handleCta}
+            >
+              {isCurrent ? ctaLabel : discountPercent === 100 ? t('billing.activateNow') : discountPercent != null && discountPercent > 0 ? t('billing.payDiscounted', { price: finalPrice }) : ctaLabel}
+            </Button>
+          </motion.div>
+        </div>
       </div>
     </motion.div>
   );
@@ -471,13 +515,14 @@ function getPlansConfig(): PlanConfig[] {
         { key: 'freePortfolio' },
         { key: 'freeGoals' },
         { key: 'freeAi' },
+        { key: 'shariaMode' },
         { key: 'delayed10' },
       ],
     },
     {
       id: 'pro',
       nameKey: 'billing.planPro',
-      badgeKey: 'mostPopular',
+      badgeKey: 'mostUsed',
       savingsNoteKey: 'equivalentPro',
       highlighted: true,
       features: [
@@ -493,7 +538,7 @@ function getPlansConfig(): PlanConfig[] {
     {
       id: 'ultra',
       nameKey: 'billing.planUltra',
-      badgeKey: 'bestValue',
+      badgeKey: 'forProfessionals',
       savingsNoteKey: 'equivalentUltra',
       features: [
         { key: 'ultraWatchlist' },
@@ -528,8 +573,7 @@ export function SubscriptionTab() {
   const [upgrading, setUpgrading] = useState(false);
   const [modalPlan, setModalPlan] = useState<PaidPlanId | null>(null);
   const [billingMessage, setBillingMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [proPeriod, setProPeriod] = useState<BillingPeriod>('yearly');
-  const [ultraPeriod, setUltraPeriod] = useState<BillingPeriod>('yearly');
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -625,31 +669,46 @@ export function SubscriptionTab() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-[var(--text-muted)]">
-        {t('common.loading')}
+      <div className="max-w-[1200px] mx-auto px-6 space-y-12 pb-24" dir="rtl">
+        <div className="h-10 w-48 bg-[var(--bg-secondary)] rounded-xl animate-pulse mx-auto" />
+        <div className="h-12 w-64 bg-[var(--bg-secondary)] rounded-full animate-pulse mx-auto" />
+        <div className="flex flex-wrap justify-center gap-8">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="w-full max-w-[320px] h-[560px] rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] animate-pulse" />
+          ))}
+        </div>
       </div>
     );
   }
 
+  const sectionGap = '96px';
+  const componentGap = '48px';
+
   return (
-    <div className="space-y-8 pb-8" dir="rtl">
-      <header className="text-center">
-        <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+    <div className="max-w-[1200px] mx-auto px-6 pb-24" dir="rtl">
+      <header className="text-center pt-6" style={{ marginBottom: sectionGap }}>
+        <h1 className="text-3xl sm:text-4xl font-bold text-[var(--text-primary)] tracking-tight">
           {t('billing.title')}
-        </h2>
-        <p className="mt-1 text-[var(--text-secondary)]">
+        </h1>
+        <p className="text-[var(--text-secondary)] text-lg max-w-xl mx-auto mt-6">
           {t('billing.subtitle')}
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-4">
+      <div className="flex justify-center" style={{ marginBottom: '32px' }}>
+        <PricingToggle period={billingPeriod} onPeriodChange={setBillingPeriod} t={t} />
+      </div>
+
+      <div
+        className="flex flex-col md:flex-row justify-center gap-6 md:gap-8 items-stretch"
+        style={{ marginBottom: sectionGap }}
+      >
         {plans.map((plan, index) => (
           <PlanCard
             key={plan.id}
             plan={plan}
             index={index}
-            period={plan.id === 'pro' ? proPeriod : plan.id === 'ultra' ? ultraPeriod : 'monthly'}
-            onPeriodChange={plan.id === 'pro' ? setProPeriod : plan.id === 'ultra' ? setUltraPeriod : () => {}}
+            period={billingPeriod}
             currentPlan={currentPlan}
             planExpiresAt={planExpiresAt}
             discountPercent={discountPercent}
@@ -663,45 +722,109 @@ export function SubscriptionTab() {
         ))}
       </div>
 
-      {!showDiscount ? (
-        <div className="text-center">
-          <Button
+      <div className="text-center" style={{ marginBottom: componentGap }}>
+        {!showDiscount ? (
+          <button
             type="button"
-            variant="link"
-            className="text-sm underline underline-offset-2"
             onClick={() => setShowDiscount(true)}
+            className="text-sm text-[var(--brand)] hover:text-[var(--brand-hover)] font-medium underline underline-offset-2 transition-colors"
           >
             {t('billing.hasDiscount')}
-          </Button>
-        </div>
-      ) : (
-        <div className="mt-4 flex flex-col items-center gap-2 max-w-sm mx-auto">
-          <div className="flex gap-2 w-full">
-            <Input
-              value={discountCode}
-              onChange={(e) => setDiscountCode(e.target.value)}
-              placeholder={t('billing.placeholderCode')}
-              wrapperClassName="flex-1"
-              inputClassName="flex-1"
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={handleValidateCode}
-              loading={validating}
-              disabled={validating}
-            >
-              {t('billing.applyCode')}
-            </Button>
-          </div>
-          {discountPercent != null && (
-            <div className="flex items-center gap-2 text-[var(--success)] text-sm">
-              <Check className="w-4 h-4" aria-hidden />
-              <span>{t('billing.codeSuccess')}</span>
+          </button>
+        ) : (
+          <div className="flex flex-col items-center gap-4 max-w-sm mx-auto p-6 rounded-xl bg-[var(--bg-card)] border border-[var(--border)]">
+            <div className="flex gap-2 w-full">
+              <Input
+                value={discountCode}
+                onChange={(e) => setDiscountCode(e.target.value)}
+                placeholder={t('billing.placeholderCode')}
+                wrapperClassName="flex-1"
+                inputClassName="flex-1 rounded-xl"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleValidateCode}
+                loading={validating}
+                disabled={validating}
+                className="rounded-xl h-12 font-semibold"
+              >
+                {t('billing.applyCode')}
+              </Button>
             </div>
-          )}
+            {discountPercent != null && (
+              <div className="flex items-center gap-2 text-[var(--success)] text-sm font-medium">
+                <Check className="w-4 h-4" aria-hidden />
+                <span>{t('billing.codeSuccess')}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ComparisonTable */}
+      <section className="rounded-[20px] border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden" aria-labelledby="compare-plans" style={{ marginBottom: sectionGap }}>
+        <h2 id="compare-plans" className="text-xl font-bold text-[var(--text-primary)] py-6 px-6 border-b border-[var(--border)]">
+          {t('billing.compareTitle')}
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[400px] text-sm text-[var(--text-secondary)] table-fixed">
+            <colgroup>
+              <col style={{ width: '40%' }} />
+              <col style={{ width: '20%' }} />
+              <col style={{ width: '20%' }} />
+              <col style={{ width: '20%' }} />
+            </colgroup>
+            <thead>
+              <tr className="border-b border-[var(--border)] bg-[var(--bg-secondary)]">
+                <th className="text-start py-4 px-4 font-semibold text-[var(--text-primary)]">{t('billing.compareFeature')}</th>
+                <th className="text-center py-4 px-4 font-semibold text-[var(--text-primary)]">{t('billing.planFreeName')}</th>
+                <th className="text-center py-4 px-4 font-semibold text-[var(--brand)]">{t('billing.planPro')}</th>
+                <th className="text-center py-4 px-4 font-semibold text-[var(--text-primary)]">{t('billing.planUltra')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-card)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareWatchlist')}</td><td className="text-center py-0 px-4 h-14 align-middle">20</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><span>50</span></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center font-medium">{t('billing.compareUnlimited')}</div></td></tr>
+              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-secondary)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.comparePortfolio')}</td><td className="text-center py-0 px-4 h-14 align-middle">10</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center">50</div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center font-medium">{t('billing.compareUnlimited')}</div></td></tr>
+              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-card)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareGoals')}</td><td className="text-center py-0 px-4 h-14 align-middle">3</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center">10</div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center font-medium">{t('billing.compareUnlimited')}</div></td></tr>
+              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-secondary)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareAi')}</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center">3</div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center">30</div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center font-medium">{t('billing.compareUnlimited')}</div></td></tr>
+              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-card)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareRealtime')}</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><X className="w-4 h-4 text-[var(--text-muted)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td></tr>
+              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-secondary)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareAlerts')}</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><X className="w-4 h-4 text-[var(--text-muted)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td></tr>
+              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-card)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareSharia')}</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td></tr>
+              <tr className="border-b border-[var(--border-subtle)] h-14 bg-[var(--bg-secondary)]"><td className="py-0 px-4 h-14 align-middle">{t('billing.compareSupport')}</td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><X className="w-4 h-4 text-[var(--text-muted)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><X className="w-4 h-4 text-[var(--text-muted)]" aria-hidden /></div></td><td className="py-0 px-4 h-14 align-middle"><div className="flex justify-center items-center"><Check className="w-4 h-4 text-[var(--success)]" aria-hidden /></div></td></tr>
+            </tbody>
+          </table>
         </div>
-      )}
+      </section>
+
+      <section className="py-12 px-8 rounded-[20px] bg-[var(--bg-secondary)] border border-[var(--border-subtle)]" aria-labelledby="trust-heading">
+        <h2 id="trust-heading" className="text-[22px] font-bold text-[var(--text-primary)] text-center mb-10">
+          {t('billing.trustTitle')}
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className="flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-xl bg-[var(--brand)]/10 flex items-center justify-center mb-4">
+              <TrendingUp className="w-6 h-6 text-[var(--brand)]" aria-hidden />
+            </div>
+            <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2">{t('billing.trust1Title')}</h3>
+            <p className="text-[13px] text-[var(--text-muted)] leading-relaxed">{t('billing.trust1')}</p>
+          </div>
+          <div className="flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-xl bg-[var(--brand)]/10 flex items-center justify-center mb-4">
+              <Brain className="w-6 h-6 text-[var(--brand)]" aria-hidden />
+            </div>
+            <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2">{t('billing.trust2Title')}</h3>
+            <p className="text-[13px] text-[var(--text-muted)] leading-relaxed">{t('billing.trust2')}</p>
+          </div>
+          <div className="flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-xl bg-[var(--brand)]/10 flex items-center justify-center mb-4">
+              <Zap className="w-6 h-6 text-[var(--brand)]" aria-hidden />
+            </div>
+            <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2">{t('billing.trust3Title')}</h3>
+            <p className="text-[13px] text-[var(--text-muted)] leading-relaxed">{t('billing.trust3')}</p>
+          </div>
+        </div>
+      </section>
 
       <CheckoutModal
         open={modalPlan !== null}

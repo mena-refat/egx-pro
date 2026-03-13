@@ -6,6 +6,12 @@ export const PLAN_PRICES = {
   ultra_yearly: 2499,
 } as const;
 
+/** Yearly savings vs monthly * 12 (percent). Used for "Save X%" on toggle. */
+export const YEARLY_SAVINGS_PERCENT = {
+  pro: Math.round((1 - PLAN_PRICES.yearly / (PLAN_PRICES.pro * 12)) * 100),
+  ultra: Math.round((1 - PLAN_PRICES.ultra_yearly / (PLAN_PRICES.ultra * 12)) * 100),
+} as const;
+
 /** Free tier limits — must match server/lib/plan.ts */
 export const FREE_LIMITS = {
   aiAnalysisPerMonth: 3,
