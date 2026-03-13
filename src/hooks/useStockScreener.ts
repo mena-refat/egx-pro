@@ -4,7 +4,7 @@ import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useLivePrices } from './useLivePrices';
 import { searchStocks, getStockName, getStockInfo } from '../lib/egxStocks';
-import { getSector, isInEGX30, isInEGX70, isInEGX100 } from '../lib/egxIndicesSectors';
+import { getSector, isInEGX30, isInEGX70, isInEGX100, isInEGX35LV, isShariaCompliant } from '../lib/egxIndicesSectors';
 import type { Stock } from '../types';
 
 export const SECTOR_OPTIONS = [
@@ -40,6 +40,8 @@ export interface StockWithMeta extends Stock {
   inEGX30?: boolean;
   inEGX70?: boolean;
   inEGX100?: boolean;
+  inEGX35LV?: boolean;
+  inEGX33?: boolean;
   /** GICS sector from API when available */
   gicsSector?: string | null;
 }
@@ -49,10 +51,8 @@ export type FilterId =
   | 'egx30'
   | 'egx70'
   | 'egx100'
-  | 'banks'
-  | 'realestate'
-  | 'industry'
-  | 'healthcare'
+  | 'egx35lv'
+  | 'egx33'
   | 'topGainers'
   | 'topLosers';
 export type SortId = 'ticker' | 'price' | 'change' | 'volume';
@@ -60,12 +60,10 @@ export type SortId = 'ticker' | 'price' | 'change' | 'volume';
 export const FILTERS: { id: FilterId; labelKey: string }[] = [
   { id: 'all', labelKey: 'stocks.filterAll' },
   { id: 'egx30', labelKey: 'stocks.filterEGX30' },
-  { id: 'egx70', labelKey: 'stocks.filterEGX70' },
-  { id: 'egx100', labelKey: 'stocks.filterEGX100' },
-  { id: 'banks', labelKey: 'stocks.filterBanks' },
-  { id: 'realestate', labelKey: 'stocks.filterRealEstate' },
-  { id: 'industry', labelKey: 'stocks.filterIndustry' },
-  { id: 'healthcare', labelKey: 'stocks.filterHealthcare' },
+  { id: 'egx70', labelKey: 'stocks.filterEGX70EWI' },
+  { id: 'egx100', labelKey: 'stocks.filterEGX100EWI' },
+  { id: 'egx35lv', labelKey: 'stocks.filterEGX35LV' },
+  { id: 'egx33', labelKey: 'stocks.filterEGX33' },
   { id: 'topGainers', labelKey: 'stocks.filterTopGainers' },
   { id: 'topLosers', labelKey: 'stocks.filterTopLosers' },
 ];
@@ -133,6 +131,8 @@ export function useStockScreener() {
             inEGX30: isInEGX30(ticker),
             inEGX70: isInEGX70(ticker),
             inEGX100: isInEGX100(ticker),
+            inEGX35LV: isInEGX35LV(ticker),
+            inEGX33: isShariaCompliant(ticker),
             gicsSector: apiSector,
           };
         });
@@ -243,6 +243,8 @@ export function useStockScreener() {
             inEGX30: s.inEGX30,
             inEGX70: s.inEGX70,
             inEGX100: s.inEGX100,
+            inEGX35LV: s.inEGX35LV,
+            inEGX33: s.inEGX33,
           }
         : s
     );
@@ -265,13 +267,8 @@ export function useStockScreener() {
     if (filter === 'egx30') list = list.filter((s) => s.inEGX30);
     if (filter === 'egx70') list = list.filter((s) => s.inEGX70);
     if (filter === 'egx100') list = list.filter((s) => s.inEGX100);
-    if (filter === 'banks') list = list.filter((s) => (isAr ? s.sector === 'بنوك' : s.sector === 'Banks'));
-    if (filter === 'realestate')
-      list = list.filter((s) => (isAr ? s.sector === 'عقارات' : s.sector === 'Real Estate'));
-    if (filter === 'industry')
-      list = list.filter((s) => (isAr ? s.sector === 'صناعة' : s.sector === 'Industry'));
-    if (filter === 'healthcare')
-      list = list.filter((s) => (isAr ? s.sector === 'رعاية صحية' : s.sector === 'Healthcare'));
+    if (filter === 'egx35lv') list = list.filter((s) => s.inEGX35LV);
+    if (filter === 'egx33') list = list.filter((s) => s.inEGX33);
     if (filter === 'topGainers')
       list = [...list].sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0)).slice(0, 50);
     if (filter === 'topLosers')

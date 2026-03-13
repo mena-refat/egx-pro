@@ -24,6 +24,9 @@ export const INDEX_EGX100 = [
   ...INDEX_EGX70.filter(t => !(INDEX_EGX30 as readonly string[]).includes(t)),
 ] as const;
 
+/** EGX 35 LV — low volatility index (Aug 2025); extend as official list is confirmed */
+export const INDEX_EGX35_LV: readonly string[] = [];
+
 /** EGX 33 Sharia-compliant index (subset; used for Sharia badge) */
 export const INDEX_EGX33_SHARIA = [
   'COMI', 'ADIB', 'SAUD', 'EXPA', 'FWRY', 'EFID', 'TMGH', 'CIRA', 'EMFD', 'SWDY',
@@ -35,6 +38,7 @@ export const INDEX_EGX33_SHARIA = [
 const EGX30_SET = new Set(INDEX_EGX30);
 const EGX70_SET = new Set(INDEX_EGX70);
 const EGX100_SET = new Set(INDEX_EGX100);
+const EGX35_LV_SET = new Set(INDEX_EGX35_LV);
 const EGX33_SET = new Set(INDEX_EGX33_SHARIA);
 
 export function isInEGX30(ticker: string): boolean {
@@ -45,6 +49,9 @@ export function isInEGX70(ticker: string): boolean {
 }
 export function isInEGX100(ticker: string): boolean {
   return EGX100_SET.has(ticker as typeof INDEX_EGX100[number]);
+}
+export function isInEGX35LV(ticker: string): boolean {
+  return EGX35_LV_SET.has(ticker);
 }
 export function isShariaCompliant(ticker: string): boolean {
   return EGX33_SET.has(ticker as typeof INDEX_EGX33_SHARIA[number]);
