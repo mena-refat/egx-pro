@@ -1,11 +1,10 @@
 import YahooFinance from 'yahoo-finance2';
+import type { IMarketDataSource, DataSourceResult, StockQuote } from '../types.ts';
+import { logger } from '../../../lib/logger.ts';
+import { STOCK_QUOTE } from '../../../lib/constants.ts';
 
 /** yahoo-finance2 v3 requires an instance; static methods throw. */
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
-import type { IMarketDataSource, DataSourceResult, StockQuote } from '../types.ts';
-import { logger } from '../../../lib/logger.ts';
-
-const AVAILABILITY_TIMEOUT_MS = 5000;
 /** عدة رموز للـ probe — لو أحدها نجح نعتبر المصدر متاح */
 const PROBE_SYMBOLS = ['COMI.CA', 'HRHO.CA', 'ETEL.CA'];
 /** أقصى عدد طلبات متزامنة لتفادي حظر IP من Yahoo */
@@ -37,7 +36,7 @@ export class YahooFinanceSource implements IMarketDataSource {
   async isAvailable(): Promise<boolean> {
     const timeout = <T>() =>
       new Promise<T>((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), AVAILABILITY_TIMEOUT_MS),
+        setTimeout(() => reject(new Error('timeout')), STOCK_QUOTE.AVAILABILITY_TIMEOUT_MS),
       );
     for (const probe of PROBE_SYMBOLS) {
       try {

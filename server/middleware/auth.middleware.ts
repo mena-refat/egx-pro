@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../../src/lib/auth.ts';
-import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import type { AuthRequest } from '../routes/types.ts';
 
 export async function authenticate(
@@ -16,7 +16,7 @@ export async function authenticate(
 
   try {
     const payload = verifyAccessToken(token) as { sub: string };
-    const user = await prisma.user.findUnique({
+    const user = await UserRepository.findUnique({
       where: { id: payload.sub },
       select: {
         id: true,
@@ -52,7 +52,7 @@ export async function optionalAuth(
   }
   try {
     const payload = verifyAccessToken(token) as { sub: string };
-    const user = await prisma.user.findUnique({
+    const user = await UserRepository.findUnique({
       where: { id: payload.sub },
       select: {
         id: true,

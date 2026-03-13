@@ -16,28 +16,33 @@ export function useNotifications(isAuthenticated: boolean) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = useCallback(async (signal?: AbortSignal) => {
     const token = getAccessToken();
     if (!token) return;
     setNotificationsLoading(true);
     try {
       const res = await fetch('/api/notifications', {
         headers: { Authorization: `Bearer ${token}` },
+        signal,
       });
+      if (signal?.aborted) return;
       const data = await res.json();
       if (res.ok && data?.notifications) {
         setNotifications(data.notifications);
         setUnreadCount(data.unreadCount ?? 0);
       }
-    } catch {
-      // ignore
+    } catch (err: unknown) {
+      if ((err as { name?: string }).name === 'AbortError') return;
     } finally {
       setNotificationsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) fetchNotifications();
+    if (!isAuthenticated) return;
+    const controller = new AbortController();
+    fetchNotifications(controller.signal);
+    return () => controller.abort();
   }, [isAuthenticated, fetchNotifications]);
 
   const markAllRead = useCallback(async () => {

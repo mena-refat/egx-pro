@@ -3,7 +3,7 @@ import React from 'react';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'link';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
-export interface ButtonProps {
+export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
@@ -48,6 +48,7 @@ export function Button({
   className = '',
   onClick,
   children,
+  ...rest
 }: ButtonProps) {
   const base =
     'inline-flex items-center justify-center font-medium rounded-xl border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--brand)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] disabled:opacity-50 disabled:pointer-events-none btn-press';
@@ -60,6 +61,7 @@ export function Button({
       disabled={disabled || loading}
       onClick={onClick}
       className={`${base} ${variantClass} ${sizeClass} ${fullWidth ? 'w-full' : ''} ${className}`.trim()}
+      {...rest}
     >
       {loading ? (
         <>

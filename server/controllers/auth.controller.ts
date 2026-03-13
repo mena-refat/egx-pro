@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { verifyAccessToken } from '../../src/lib/auth.ts';
 import * as AuthService from '../services/auth.service.ts';
 import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { getCache, setCache } from '../lib/redis.ts';
 import { EmailService } from '../services/email.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
@@ -291,7 +292,7 @@ export async function sendVerifyEmail(req: AuthRequest, res: Response): Promise<
     return;
   }
   try {
-    const user = await prisma.user.findUnique({
+    const user = await UserRepository.findUnique({
       where: { id: userId },
       select: { email: true, isEmailVerified: true },
     });
@@ -330,7 +331,7 @@ export async function confirmVerifyEmail(req: AuthRequest, res: Response): Promi
       res.status(400).json({ error: 'invalid_code' });
       return;
     }
-    await prisma.user.update({
+    await UserRepository.update({
       where: { id: userId },
       data: { isEmailVerified: true },
     });

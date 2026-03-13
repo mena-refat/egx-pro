@@ -11,9 +11,9 @@
 | # | البند | الحالة | ملاحظات |
 |---|--------|--------|----------|
 | 1 | Backend: routes بدون logic | ✅ | watchlist, goals, portfolio, billing, news = controller فقط |
-| 2 | Backend: controllers بدون business logic ولا prisma | ✅ | كل الـ controllers تستدعي services |
+| 2 | Backend: controllers بدون business logic ولا prisma | ✅ | كل الـ controllers تستدعي services أو UserRepository |
 | 3 | Backend: services تحتوي كل الـ business logic | ✅ | |
-| 4 | Backend: repositories تحتوي كل استعلامات DB | ⚠️ جزئي | watchlist, goals, portfolio, notifications, user (getPlanUser, getForBillingPlan) فقط. **ناقص**: UserService و AuthService ما زالا يستدعيان prisma مباشرة في عشرات الأماكن. |
+| 4 | Backend: repositories تحتوي كل استعلامات DB | ✅ | UserRepository يغطي كل استعلامات User؛ watchlist, goals, portfolio, notifications. |
 | 5 | Auth middleware على المسارات المحمية | ✅ | |
 | 6 | Ownership (userId في الاستعلامات) | ✅ | |
 | 7 | Constants من lib/constants | ✅ | |
@@ -36,7 +36,7 @@
 |---|--------|--------|----------|
 | 1 | Route = method + middleware + controller فقط | ⚠️ | **ناقص**: analysis route فيه كل الـ logic داخل الـ handler. يجب استخراج AnalysisService + AnalysisController. |
 | 2 | Controller لا يستدعي prisma | ✅ | |
-| 3 | Service فيه business logic ويستخدم Repository | ⚠️ | UserService و AuthService يستدعيان prisma مباشرة (لا Repository كامل). |
+| 3 | Service فيه business logic ويستخدم Repository | ✅ | UserService و AuthService وغيرهما يستخدمون UserRepository. |
 | 4 | تنسيق الاستجابة: { data } / { items, pagination } / { error } | ✅ | مطبّق على كل الـ APIs. |
 | 5 | authenticate على المسارات المحمية | ✅ | |
 | 6 | Logger بدل console | ✅ | |
@@ -55,7 +55,7 @@
 | 5 | أي function ≤ 40 سطر | ⚠️ | غير مفحوص بشكل منهجي. |
 | 6 | استخدام مكونات Design System (Button, Input, إلخ) | ⚠️ جزئي | تم استبدال كثير من الأزرار؛ متبقي أزرار أيقونات/ثيم. |
 | 7 | ممنوع ألوان hardcoded — CSS variables فقط | ✅ | تم: استبدال كل الألوان المذكورة بـ var(--border), var(--border-strong), var(--warning), var(--text-muted), var(--brand). |
-| 8 | useEffect + fetch مع AbortController و cleanup | ✅ | في أغلب الأماكن. |
+| 8 | useEffect + fetch مع AbortController و cleanup | ✅ | usePortfolio، useMarketPage، useDashboardStats، useNotifications، useStockQuote، إلخ. |
 | 9 | تنظيف event listeners و timers | ✅ | |
 | 10 | react-hook-form + Zod للنماذج | ✅ | |
 | 11 | Memo للـ components الثقيلة و useCallback حيث يلزم | ⚠️ | غير مفحوص بالكامل. |

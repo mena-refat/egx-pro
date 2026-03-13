@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '../../ui/Button';
 import { Skeleton } from '../../ui/Skeleton';
 import type { DashboardMarketOverview as Overview } from './types';
 
@@ -40,9 +41,9 @@ export function DashboardMarketOverview({ overview, loading, error, onRetry }: P
     return (
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-6 text-center text-[var(--danger)] text-body">
         <p>{error}</p>
-        <button type="button" onClick={onRetry} className="mt-3 text-[var(--brand)] hover:underline font-medium">
+        <Button type="button" variant="link" size="sm" onClick={onRetry} className="mt-3">
           {t('common.retry')}
-        </button>
+        </Button>
       </div>
     );
   }

@@ -6,6 +6,7 @@ import { getCairoDateString, getCairoDateStringFromDate, getCairoMidnightExpiryS
 import { PREDICTION_LIMITS } from '../lib/constants.ts';
 import { isPro } from '../lib/plan.ts';
 import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { PredictionRepository } from '../repositories/prediction.repository.ts';
 import type { PredictionDir, PredictionTime, UserRank } from '@prisma/client';
 
@@ -279,7 +280,7 @@ export const PredictionsService = {
   },
 
   async getStatsByUsername(username: string, viewerId: string) {
-    const user = await prisma.user.findUnique({
+    const user = await UserRepository.findUnique({
       where: { username },
       select: { id: true, isPrivate: true, predictionStats: true },
     });
@@ -342,7 +343,7 @@ export const PredictionsService = {
     }
     const liked = await PredictionRepository.toggleLike(predictionId, userId);
     if (liked) {
-      const liker = await prisma.user.findUnique({
+      const liker = await UserRepository.findUnique({
         where: { id: userId },
         select: { username: true },
       });

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'node:crypto';
-import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { normalizePhone, usernameSchema, isValidEgyptianPhone } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { auditLog } from '../lib/audit.ts';
@@ -46,7 +46,7 @@ const profileSelect = {
 
 export const UserService = {
   async getProfile(userId: string) {
-    const user = await prisma.user.findUnique({
+    const user = await UserRepository.findUnique({
       where: { id: userId },
       select: profileSelect,
     });
@@ -68,7 +68,7 @@ export const UserService = {
     userId: string,
     body: Record<string, unknown>,
     req?: Request
-  ): Promise<{ user: Awaited<ReturnType<typeof prisma.user.update>> }> {
+  ): Promise<{ user: Awaited<ReturnType<typeof UserRepository.update>> }> {
     const {
       fullName,
       email: rawEmail,
@@ -119,7 +119,7 @@ export const UserService = {
       if (!trimmed) {
         data.email = null;
       } else {
-        const existing = await prisma.user.findFirst({
+        const existing = await UserRepository.findFirst({
           where: { email: trimmed, id: { not: userId } },
         });
         if (existing) throw new Error('EMAIL_IN_USE');
@@ -135,7 +135,7 @@ export const UserService = {
         const digitsOnly = trimmed.replace(/\D/g, '');
         if (!isValidEgyptianPhone(digitsOnly)) throw new Error('INVALID_PHONE');
         const normalized = normalizePhone(digitsOnly);
-        const existingPhoneUser = await prisma.user.findFirst({
+        const existingPhoneUser = await UserRepository.findFirst({
           where: { phone: normalized, id: { not: userId } },
         });
         if (existingPhoneUser) throw new Error('PHONE_IN_USE');
@@ -149,13 +149,13 @@ export const UserService = {
         data.username = null;
       } else {
         const username = usernameSchema.parse(trimmed);
-        const current = await prisma.user.findUnique({
+        const current = await UserRepository.findUnique({
           where: { id: userId },
           select: { username: true, lastUsernameChangeAt: true, usernameChangeCount: true },
         });
         if (!current) throw new Error('USER_NOT_FOUND');
         if (current.username !== username) {
-          const existing = await prisma.user.findFirst({
+          const existing = await UserRepository.findFirst({
             where: { username, id: { not: userId } },
           });
           if (existing) throw new Error('USERNAME_TAKEN');
@@ -177,12 +177,12 @@ export const UserService = {
       }
     }
 
-    const before = await prisma.user.findUnique({
+    const before = await UserRepository.findUnique({
       where: { id: userId },
       select: { phone: true, email: true },
     });
     const completedBefore = await getCompletedAchievementIds(userId);
-    const user = await prisma.user.update({
+    const user = await UserRepository.update({
       where: { id: userId },
       data,
     });
@@ -207,12 +207,12 @@ export const UserService = {
     const trimmed = rawUsername.trim();
     if (!trimmed) return { error: 'Username is required' as const };
     const username = usernameSchema.parse(trimmed);
-    const currentUser = await prisma.user.findUnique({
+    const currentUser = await UserRepository.findUnique({
       where: { id: userId },
       select: { username: true },
     });
     if (currentUser?.username === username) return { available: true };
-    const existing = await prisma.user.findFirst({
+    const existing = await UserRepository.findFirst({
       where: { username, id: { not: userId } },
     });
     return { available: !existing };
@@ -220,7 +220,7 @@ export const UserService = {
 
   async getProfileStats(userId: string) {
     const [user, analysesCount, watchlistCount, portfolioHoldings] = await Promise.all([
-      prisma.user.findUnique({ where: { id: userId }, select: { createdAt: true } }),
+      UserRepository.findUnique({ where: { id: userId }, select: { createdAt: true } }),
       prisma.analysis.count({ where: { userId } }),
       prisma.watchlist.count({ where: { userId } }),
       prisma.portfolio.findMany({ where: { userId } }),
@@ -242,7 +242,7 @@ export const UserService = {
   },
 
   async getUnseenAchievements(userId: string) {
-    const user = await prisma.user.findUnique({
+    const user = await UserRepository.findUnique({
       where: { id: userId },
       select: { unseenAchievements: true },
     });
@@ -257,7 +257,7 @@ export const UserService = {
   },
 
   async markAchievementsSeen(userId: string) {
-    await prisma.user.update({
+    await UserRepository.update({
       where: { id: userId },
       data: { unseenAchievements: [] },
     });
@@ -280,7 +280,7 @@ export const UserService = {
       completedReferrals,
       distinctTickersResult,
     ] = await Promise.all([
-      prisma.user.findUnique({
+      UserRepository.findUnique({
         where: { id: userId },
         select: {
           createdAt: true,
@@ -576,7 +576,7 @@ export const UserService = {
     else if (completedByLevel.pro >= 10) newTitle = 'محترف';
     else if (completedByLevel.growth >= 10) newTitle = 'مستثمر';
     else if (completedByLevel.beginner >= 10) newTitle = 'ناشئ';
-    await prisma.user.update({
+    await UserRepository.update({
       where: { id: userId },
       data: { userTitle: newTitle },
     });
@@ -584,7 +584,7 @@ export const UserService = {
   },
 
   async getSecurity(userId: string) {
-    const user = await prisma.user.findUnique({
+    const user = await UserRepository.findUnique({
       where: { id: userId },
       select: {
         lastPasswordChangeAt: true,
@@ -607,14 +607,14 @@ export const UserService = {
   },
 
   async getReferralSummary(userId: string) {
-    let user = await prisma.user.findUnique({
+    let user = await UserRepository.findUnique({
       where: { id: userId },
       select: { referralCode: true, freeReferralRewarded: true, totalReferrals: true },
     });
     if (!user) return null;
     if (!user.referralCode) {
       const referralCode = `EGX-${randomUUID().slice(0, 8).toUpperCase()}`;
-      user = await prisma.user.update({
+      user = await UserRepository.update({
         where: { id: userId },
         data: { referralCode },
         select: { referralCode: true, freeReferralRewarded: true, totalReferrals: true },
@@ -659,7 +659,7 @@ export const UserService = {
   },
 
   async redeemReferralReward(userId: string) {
-    const user = await prisma.user.findUnique({
+    const user = await UserRepository.findUnique({
       where: { id: userId },
       select: { freeReferralRewarded: true, plan: true, planExpiresAt: true },
     });
@@ -674,7 +674,7 @@ export const UserService = {
     if (user.planExpiresAt && user.planExpiresAt > now) startsFrom = user.planExpiresAt;
     const newEndsAt = new Date(startsFrom);
     newEndsAt.setMonth(newEndsAt.getMonth() + 1);
-    const updated = await prisma.user.update({
+    const updated = await UserRepository.update({
       where: { id: userId },
       data: { plan: 'pro', planExpiresAt: newEndsAt, freeReferralRewarded: true },
       select: { plan: true, planExpiresAt: true, freeReferralRewarded: true },
@@ -685,20 +685,20 @@ export const UserService = {
   async applyReferralCode(userId: string, code: string) {
     const trimmed = (code || '').trim().toUpperCase();
     if (!trimmed) return { error: 'Referral code is required' as const };
-    const currentUser = await prisma.user.findUnique({
+    const currentUser = await UserRepository.findUnique({
       where: { id: userId },
       select: { id: true, fullName: true, referralUsed: true },
     });
     if (!currentUser) return { error: 'User not found' as const };
     if (currentUser.referralUsed) return { error: 'Referral code already used' as const };
-    const referrer = await prisma.user.findFirst({
+    const referrer = await UserRepository.findFirst({
       where: { referralCode: trimmed },
       select: { id: true, fullName: true },
     });
     if (!referrer) return { error: 'Invalid referral code' as const };
     if (referrer.id === currentUser.id) return { error: 'You cannot use your own referral code' as const };
     await prisma.$transaction([
-      prisma.user.update({
+      UserRepository.update({
         where: { id: currentUser.id },
         data: { referredBy: referrer.id, referralUsed: trimmed },
       }),
@@ -767,7 +767,7 @@ export const UserService = {
     const filePath = path.join(uploadsDir, filename);
     fs.writeFileSync(filePath, buffer);
     const publicUrl = `/uploads/avatars/${filename}`;
-    const user = await prisma.user.update({
+    const user = await UserRepository.update({
       where: { id: userId },
       data: { avatarUrl: publicUrl },
       select: { avatarUrl: true },
@@ -783,7 +783,7 @@ export const UserService = {
     if (!password || typeof password !== 'string') {
       return { error: 'password_required' as const, message: 'كلمة المرور مطلوبة' };
     }
-    const user = await prisma.user.findUnique({
+    const user = await UserRepository.findUnique({
       where: { id: userId },
       select: { passwordHash: true, salt: true },
     });
@@ -795,7 +795,7 @@ export const UserService = {
     const now = new Date();
     const deletionDate = new Date(now);
     deletionDate.setDate(deletionDate.getDate() + 30);
-    await prisma.user.update({
+    await UserRepository.update({
       where: { id: userId },
       data: { isDeleted: true, deletedAt: now, deletionScheduledFor: deletionDate },
     });

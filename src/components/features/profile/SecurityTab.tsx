@@ -414,13 +414,9 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
                 <Key className="w-4 h-4 text-[var(--text-muted)]" />
                 <span className="text-sm font-medium text-[var(--text-primary)]">{t('settings.password')}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowPasswordForm((v) => !v)}
-                className="text-sm font-medium text-[var(--brand-text)] hover:underline"
-              >
+              <Button type="button" variant="link" size="sm" onClick={() => setShowPasswordForm((v) => !v)}>
                 {showPasswordForm ? t('common.cancel') : `${t('settings.change')} ←`}
-              </button>
+              </Button>
             </div>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
               {t('settings.lastChange')}: {lastPasswordChangeAt ? new Date(lastPasswordChangeAt).toLocaleDateString(i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) : t('settings.passwordNeverChanged')}
@@ -431,15 +427,15 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
                   <div className="mt-4 space-y-3 pt-2">
                     <div className="relative">
                       <Input type={showCurrentPw ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder={t('settings.currentPassword')} inputClassName="pe-10" />
-                      <button type="button" onClick={() => setShowCurrentPw((v) => !v)} className="absolute end-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setShowCurrentPw((v) => !v)} className="absolute end-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] min-w-0 w-8 h-8 p-0">
                         {showCurrentPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
+                      </Button>
                     </div>
                     <div className="relative">
                       <Input type={showNewPw ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={t('settings.newPassword')} inputClassName="pe-10" />
-                      <button type="button" onClick={() => setShowNewPw((v) => !v)} className="absolute end-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewPw((v) => !v)} className="absolute end-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] min-w-0 w-8 h-8 p-0">
                         {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
+                      </Button>
                     </div>
                     <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder={t('settings.confirmPassword')} />
                     <div className="flex gap-2">
@@ -512,9 +508,9 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
                             {s.isCurrentSession ? (
                               <span className="text-xs px-2 py-0.5 rounded bg-[var(--brand-subtle)] text-[var(--brand-text)]">{t('settings.youAreHere')}</span>
                             ) : (
-                              <button type="button" onClick={() => endSession(s.id)} disabled={revokingId === s.id} className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)]">
+                              <Button type="button" variant="link" size="sm" onClick={() => endSession(s.id)} disabled={revokingId === s.id} className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] min-w-0 h-auto p-0">
                                 {revokingId === s.id ? <Loader2 className="w-3 h-3 animate-spin inline" /> : t('settings.endSession')}
-                              </button>
+                              </Button>
                             )}
                           </div>
                           {location && <p className="text-xs text-[var(--text-muted)] mt-0.5">{location}</p>}
@@ -575,7 +571,7 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
                     <p className="text-xs text-[var(--text-muted)] mb-1">{t('settings.twoFaStep2Manual')}</p>
                     <div className="flex items-center gap-2 mb-6">
                       <code className="flex-1 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] text-sm text-[var(--text-primary)] font-mono">{setupData.manualCode}</code>
-                      <button type="button" onClick={() => setupData?.manualCode && navigator.clipboard.writeText(setupData.manualCode.replace(/\s/g, ''))} className="p-2 rounded-lg border border-[var(--border)]" title={t('settings.twoFaCopyCode')}><Copy className="w-4 h-4" /></button>
+                      <Button type="button" variant="secondary" size="sm" onClick={() => setupData?.manualCode && navigator.clipboard.writeText(setupData.manualCode.replace(/\s/g, ''))} icon={<Copy className="w-4 h-4" />} title={t('settings.twoFaCopyCode')}> </Button>
                     </div>
                     <div className="flex justify-between">
                       <Button type="button" variant="secondary" onClick={() => setEnable2FAStep(1)}>← {t('settings.twoFaPrev')}</Button>

@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
 import { PLAN_PRICES } from '../lib/constants.ts';
 import { AppError } from '../lib/errors.ts';
@@ -138,7 +139,7 @@ export const BillingService = {
 
       if (discountPercent >= 100) {
         await prisma.$transaction([
-          prisma.user.update({
+          UserRepository.update({
             where: { id: userId },
             data: { plan: planValue, planExpiresAt },
           }),
@@ -166,7 +167,7 @@ export const BillingService = {
     // TODO: verify payment with Paymob using options.paymentToken and finalPrice
 
     await prisma.$transaction([
-      prisma.user.update({
+      UserRepository.update({
         where: { id: userId },
         data: { plan: planValue, planExpiresAt },
       }),

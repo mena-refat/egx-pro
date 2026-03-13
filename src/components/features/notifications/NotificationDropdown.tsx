@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, Trophy, TrendingUp, UserPlus as UserPlusIcon, Target, Briefcase, Circle, UserCheck } from 'lucide-react';
+import { Button } from '../../ui/Button';
 import { Skeleton } from '../../ui/Skeleton';
 import EmptyState from '../../shared/EmptyState';
 import type { NotificationItem } from '../../../hooks/useNotifications';
@@ -56,11 +57,13 @@ export function NotificationDropdown({ notifications, loading, onItemClick }: No
           return t('settings.lastActivityDays', { d: Math.floor(diff / 86400) });
         })();
         return (
-          <button
+          <Button
             key={n.id}
             type="button"
+            variant="ghost"
+            fullWidth
             onClick={() => onItemClick(n.id, n.type, n.isRead, n.route)}
-            className={`w-full flex gap-2 px-3 py-2.5 rounded-lg text-left transition-colors ${!n.isRead ? 'bg-[var(--brand-subtle)] hover:opacity-90' : 'hover:bg-[var(--bg-card-hover)]'}`}
+            className={`flex gap-2 px-3 py-2.5 rounded-lg justify-start text-left h-auto font-normal ${!n.isRead ? 'bg-[var(--brand-subtle)] hover:opacity-90' : ''}`}
           >
             <span className="w-2 shrink-0 flex items-start justify-center pt-2">
               {!n.isRead && <Circle className="w-2 h-2 text-[var(--brand-text)] fill-[var(--brand-text)]" aria-hidden />}
@@ -71,7 +74,7 @@ export function NotificationDropdown({ notifications, loading, onItemClick }: No
               {n.body && <p className="text-xs text-[var(--text-muted)] mt-0.5">{n.body}</p>}
               <p className="text-xs text-[var(--text-muted)] mt-1">{timeAgo}</p>
             </div>
-          </button>
+          </Button>
         );
       })}
     </>

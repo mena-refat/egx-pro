@@ -85,10 +85,12 @@ export function Header({
       <div className="flex items-center gap-2 sm:gap-3">
         {profileCompletion != null && profileCompletion.percentage < 100 && (
           <div className="relative" ref={completionDropdownRef}>
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => setProfileCompletionOpen((o) => !o)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--brand-subtle)] hover:opacity-90 transition-colors"
+              className="flex items-center gap-2 rounded-lg bg-[var(--brand-subtle)] hover:opacity-90 border-[var(--border)]"
             >
               <div className="w-12 h-1.5 bg-[var(--border)] rounded-full overflow-hidden shrink-0">
                 <div className="h-full w-progress bg-[var(--brand)] rounded-full" style={{ ['--progress-width']: `${profileCompletion.percentage}%` } as React.CSSProperties} />
@@ -96,7 +98,7 @@ export function Header({
               <span className="text-xs font-bold text-[var(--brand-text)] whitespace-nowrap">{profileCompletion.percentage}%</span>
               <span className="text-xs font-medium text-[var(--text-secondary)] whitespace-nowrap hidden sm:inline">{t('overview.completeProfile')}</span>
               <ChevronRight className={`w-4 h-4 text-[var(--brand-text)] shrink-0 ${profileCompletionOpen ? 'rotate-90' : ''} ${i18n.language.startsWith('ar') ? 'rotate-180' : ''}`} />
-            </button>
+            </Button>
             <AnimatePresence>
               {profileCompletionOpen && (
                 <motion.div
@@ -119,17 +121,19 @@ export function Header({
                         return (
                           <li key={m.field} className="flex items-center justify-between gap-2 text-sm">
                             <span className="text-[var(--text-secondary)]">{label}</span>
-                            <button
+                            <Button
                               type="button"
+                              variant="link"
+                              size="sm"
                               onClick={() => {
                                 setProfileCompletionOpen(false);
                                 navigate(m.route);
                               }}
-                              className="text-xs font-medium text-[var(--brand-text)] hover:opacity-80 flex items-center gap-0.5"
+                              className="text-xs font-medium flex items-center gap-0.5"
                             >
                               {t('overview.add')}
                               <ChevronRight className={`w-3 h-3 ${i18n.language.startsWith('ar') ? 'rotate-180' : ''}`} />
-                            </button>
+                            </Button>
                           </li>
                         );
                       })}
@@ -142,16 +146,15 @@ export function Header({
         )}
 
         <div className="flex items-center gap-1 rounded-full bg-[var(--bg-card)] border border-[var(--border)] px-1 py-1 text-[var(--text-muted)] text-xs">
-          <button type="button" onClick={() => onThemeChange('light')} className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${theme === 'light' ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : 'bg-transparent hover:bg-[var(--bg-card-hover)]'}`} aria-label="Light mode"><Sun className="w-4 h-4" /></button>
-          <button type="button" onClick={() => onThemeChange('system')} className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${theme === 'system' ? 'bg-[var(--text-inverse)] text-[var(--text-primary)]' : 'bg-transparent hover:bg-[var(--bg-card-hover)]'}`} aria-label="System theme"><Monitor className="w-4 h-4" /></button>
-          <button type="button" onClick={() => onThemeChange('dark')} className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${theme === 'dark' ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : 'bg-transparent hover:bg-[var(--bg-card-hover)]'}`} aria-label="Dark mode"><Moon className="w-4 h-4" /></button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => onThemeChange('light')} className={`w-8 h-8 min-w-0 p-0 rounded-full ${theme === 'light' ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : ''}`} icon={<Sun className="w-4 h-4" />} aria-label="Light mode"> </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => onThemeChange('system')} className={`w-8 h-8 min-w-0 p-0 rounded-full ${theme === 'system' ? 'bg-[var(--text-inverse)] text-[var(--text-primary)]' : ''}`} icon={<Monitor className="w-4 h-4" />} aria-label="System theme"> </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => onThemeChange('dark')} className={`w-8 h-8 min-w-0 p-0 rounded-full ${theme === 'dark' ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : ''}`} icon={<Moon className="w-4 h-4" />} aria-label="Dark mode"> </Button>
         </div>
 
         <div className="relative" ref={notificationsRef}>
-          <button type="button" onClick={() => { setNotificationsOpen((o) => !o); if (!notificationsOpen) fetchNotifications(); }} className="relative p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]" aria-label={t('settings.notifications')}>
-            <Bell className="w-5 h-5" />
+          <Button type="button" variant="ghost" size="sm" onClick={() => { setNotificationsOpen((o) => !o); if (!notificationsOpen) fetchNotifications(); }} className="relative p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)]" icon={<Bell className="w-5 h-5" />} aria-label={t('settings.notifications')}>
             {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--danger)]" aria-hidden />}
-          </button>
+          </Button>
           <AnimatePresence>
             {notificationsOpen && (
               <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className={`absolute left-0 top-full mt-2 w-80 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] flex flex-col ${notifications.length > 0 ? 'max-h-96 overflow-hidden' : ''} ltr:left-auto ltr:right-0`}>
@@ -184,11 +187,11 @@ export function Header({
         </div>
 
         <div className="relative" ref={userDropdownRef}>
-          <button type="button" onClick={() => setUserDropdownOpen((o) => !o)} className="flex items-center gap-2 p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]" aria-label={t('settings.settingsPage')}>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setUserDropdownOpen((o) => !o)} className="flex items-center gap-2 p-1.5 rounded-lg min-w-0" aria-label={t('settings.settingsPage')}>
             <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--brand)] flex items-center justify-center shrink-0">
               {user?.avatarUrl ? <img src={user.avatarUrl} alt={t('profile.avatarAlt', { name: user.fullName ?? '' })} className="w-full h-full object-cover" /> : <UserIcon className="w-4 h-4 text-[var(--text-inverse)]" aria-hidden="true" />}
             </div>
-          </button>
+          </Button>
           <AnimatePresence>
             {userDropdownOpen && (
               <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="absolute left-0 ltr:right-0 ltr:-left-40 top-full mt-2 w-[200px] rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] overflow-hidden">

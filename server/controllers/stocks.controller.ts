@@ -7,11 +7,8 @@ import type { AuthRequest } from '../routes/types.ts';
 async function useDelayed(req: AuthRequest): Promise<boolean> {
   const userId = req.user?.id ?? req.userId;
   if (!userId) return false;
-  const { prisma } = await import('../lib/prisma.ts');
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
-  });
+  const { UserRepository } = await import('../repositories/user.repository.ts');
+  const user = await UserRepository.getPlanUser(userId);
   return user ? !isPro(user) : false;
 }
 

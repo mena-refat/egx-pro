@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { generateUniqueReferralCode, checkAndRewardReferrer } from '../lib/referral.ts';
 import {
   hashPassword,
@@ -96,9 +97,9 @@ export async function register(
 
   const existingUser =
     email != null && email !== ''
-      ? await prisma.user.findFirst({ where: { email } })
+      ? await UserRepository.findFirst({ where: { email } })
       : phone != null && phone !== ''
-        ? await prisma.user.findFirst({ where: { phone } })
+        ? await UserRepository.findFirst({ where: { phone } })
         : null;
   if (existingUser) {
     fail(400, isEmail ? 'Email already registered' : 'Phone number already registered');
@@ -115,7 +116,7 @@ export async function register(
   for (let i = 0; i < 100; i++) {
     const digits = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join('');
     const candidate = `${safeBase}-${digits}`;
-    const exists = await prisma.user.findUnique({ where: { username: candidate } });
+    const exists = await UserRepository.findUnique({ where: { username: candidate } });
     if (!exists) {
       username = candidate;
       break;
@@ -123,7 +124,7 @@ export async function register(
   }
   if (!username) username = `${safeBase}-${Date.now().toString().slice(-8)}`;
 
-  const user = await prisma.user.create({
+  const user = await UserRepository.create({
     data: {
       fullName,
       username,
@@ -137,7 +138,7 @@ export async function register(
   });
 
   if (incomingRefCode?.trim()) {
-    const referrer = await prisma.user.findUnique({
+    const referrer = await UserRepository.findUnique({
       where: { referralCode: incomingRefCode.trim().toUpperCase() },
       select: { id: true },
     });
@@ -168,7 +169,7 @@ export async function register(
     buildRefreshTokenData(user.id, refreshHash, expiresAt, null, ctx.userAgent)
   );
   await prisma.refreshToken.create({ data: refreshData });
-  await prisma.user.update({
+  await UserRepository.update({
     where: { id: user.id },
     data: { lastLoginAt: new Date(), lastLoginIp: ctx.ip || null },
   });
@@ -191,8 +192,8 @@ export async function login(
   const phone = isEmail ? null : normalizePhone(raw);
 
   let user = email
-    ? await prisma.user.findUnique({ where: { email } })
-    : await prisma.user.findUnique({ where: { phone } });
+    ? await UserRepository.findUnique({ where: { email } })
+    : await UserRepository.findUnique({ where: { phone } });
   if (!user) {
     await auditLog({ action: 'LOGIN_FAILED', req: ctx.auditReq ?? undefined, result: 'failure', details: 'user_not_found' });
     fail(401, 'account_not_found', 'الحساب ده مش موجود. تقدر تسجّل حساب جديد.');
@@ -216,16 +217,16 @@ export async function login(
     if (attempts >= MAX_FAILED_ATTEMPTS) {
       const lockedUntil = new Date(now.getTime() + LOCKOUT_MINUTES * 60 * 1000);
       updates.lockedUntil = lockedUntil;
-      await prisma.user.update({ where: { id: user.id }, data: updates });
+      await UserRepository.update({ where: { id: user.id }, data: updates });
       await auditLog({ userId: user.id, action: 'ACCOUNT_LOCKED', req: ctx.auditReq ?? undefined, result: 'failure', details: `locked_until_${lockedUntil.toISOString()}` });
     } else {
-      await prisma.user.update({ where: { id: user.id }, data: updates });
+      await UserRepository.update({ where: { id: user.id }, data: updates });
     }
     await auditLog({ userId: user.id, action: 'LOGIN_FAILED', req: ctx.auditReq ?? undefined, result: 'failure', details: 'wrong_password' });
     fail(401, 'unauthorized');
   }
 
-  await prisma.user.update({
+  await UserRepository.update({
     where: { id: user.id },
     data: { failedLoginAttempts: 0, lockedUntil: null },
   });
@@ -236,7 +237,7 @@ export async function login(
       await auditLog({ userId: user.id, action: 'LOGIN_FAILED', req: ctx.auditReq ?? undefined, result: 'failure', details: 'account_deleted_after_grace' });
       fail(401, 'account_not_found', 'الحساب ده مش موجود. تقدر تسجّل حساب جديد.');
     }
-    user = await prisma.user.update({
+    user = await UserRepository.update({
       where: { id: user.id },
       data: { isDeleted: false, deletedAt: null, deletionScheduledFor: null },
     });
@@ -289,7 +290,7 @@ export async function twoFaAuthenticate(
   }
 
   if (!userId) fail(401, 'unauthorized');
-  const user = await prisma.user.findUnique({
+  const user = await UserRepository.findUnique({
     where: { id: userId },
     select: {
       id: true,
@@ -333,7 +334,7 @@ export async function twoFaAuthenticate(
     buildRefreshTokenData(user.id, refreshHash, expiresAt, null, ctx.userAgent)
   );
   await prisma.refreshToken.create({ data: refreshData });
-  await prisma.user.update({
+  await UserRepository.update({
     where: { id: user.id },
     data: { lastLoginAt: new Date(), lastLoginIp: ctx.ip || null },
   });
@@ -343,7 +344,7 @@ export async function twoFaAuthenticate(
 }
 
 export async function twoFaSetup(userId: string): Promise<{ secret: string; qrCodeUrl: string; manualCode: string }> {
-  const user = await prisma.user.findUnique({
+  const user = await UserRepository.findUnique({
     where: { id: userId },
     select: { id: true, email: true, twoFactorSecret: true, twoFactorEnabled: true },
   });
@@ -360,7 +361,7 @@ export async function twoFaSetup(userId: string): Promise<{ secret: string; qrCo
       length: 20,
     });
     base32 = secret.base32 ?? '';
-    await prisma.user.update({
+    await UserRepository.update({
       where: { id: userId },
       data: { twoFactorSecret: base32, twoFactorEnabled: false },
     });
@@ -380,7 +381,7 @@ export async function twoFaVerify(
   const cleanCode = body.code.toString().replace(/\s/g, '');
   if (cleanCode.length !== 6) fail(400, 'invalid_code', 'الكود غير صحيح، تأكد من التطبيق وحاول مجدداً');
 
-  const user = await prisma.user.findUnique({
+  const user = await UserRepository.findUnique({
     where: { id: userId },
     select: { twoFactorSecret: true },
   });
@@ -394,7 +395,7 @@ export async function twoFaVerify(
   });
   if (!valid) fail(400, 'invalid_code', 'الكود غير صحيح، تأكد من التطبيق وحاول مجدداً');
 
-  await prisma.user.update({
+  await UserRepository.update({
     where: { id: userId },
     data: { twoFactorEnabled: true, twoFactorEnabledAt: new Date() },
   });
@@ -411,7 +412,7 @@ export async function twoFaDisable(
   const cleanCode = body.code.toString().replace(/\s/g, '');
   if (cleanCode.length !== 6) fail(400, 'invalid_code');
 
-  const user = await prisma.user.findUnique({
+  const user = await UserRepository.findUnique({
     where: { id: userId },
     select: { passwordHash: true, salt: true, twoFactorSecret: true },
   });
@@ -429,7 +430,7 @@ export async function twoFaDisable(
   });
   if (!valid) fail(400, 'invalid_code');
 
-  await prisma.user.update({
+  await UserRepository.update({
     where: { id: userId },
     data: { twoFactorEnabled: false, twoFactorSecret: null, twoFactorEnabledAt: null },
   });
@@ -554,7 +555,7 @@ export async function changePassword(
 ): Promise<{ success: true }> {
   if (!body.currentPassword || !body.newPassword) fail(400, 'Current and new password are required');
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await UserRepository.findUnique({ where: { id: userId } });
   if (!user || !user.passwordHash || !user.salt) fail(400, 'Password change not available for this account');
 
   const valid = await verifyPassword(body.currentPassword, user.passwordHash, user.salt);
@@ -564,7 +565,7 @@ export async function changePassword(
   if (!pwCheck.ok) fail(400, (pwCheck as { ok: false; message: string }).message);
 
   const { hash, salt } = await hashPassword(body.newPassword);
-  await prisma.user.update({
+  await UserRepository.update({
     where: { id: userId },
     data: { passwordHash: hash, salt, lastPasswordChangeAt: new Date() },
   });
@@ -629,10 +630,10 @@ export async function googleCallback(
   );
   const googleUser = userRes.data;
 
-  let user = await prisma.user.findUnique({ where: { email: googleUser.email } });
+  let user = await UserRepository.findUnique({ where: { email: googleUser.email } });
   if (!user) {
     const referralCode = `EGX-${randomUUID().slice(0, 8).toUpperCase()}`;
-    user = await prisma.user.create({
+    user = await UserRepository.create({
       data: {
         email: googleUser.email,
         fullName: googleUser.name,
@@ -645,7 +646,7 @@ export async function googleCallback(
     );
   } else if (!user.referralCode) {
     const referralCode = `EGX-${randomUUID().slice(0, 8).toUpperCase()}`;
-    user = await prisma.user.update({
+    user = await UserRepository.update({
       where: { id: user.id },
       data: { referralCode },
     });

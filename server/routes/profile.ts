@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { AuthRequest } from './types';
 import { authenticate } from '../middleware/auth.middleware.ts';
 import { logger } from '../lib/logger.ts';
@@ -12,7 +13,7 @@ router.get('/completion', authenticate, async (req: AuthRequest, res: Response) 
     const userId = req.user?.id ?? req.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     const [user, goalsCount, watchlistCount] = await Promise.all([
-      prisma.user.findUnique({
+      UserRepository.findUnique({
         where: { id: userId },
         select: { email: true, phone: true, username: true, usernameChangeCount: true },
       }),

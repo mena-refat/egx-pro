@@ -1,11 +1,12 @@
 import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import type { AuthUser } from '../routes/types.ts';
 import { AppError } from '../lib/errors.ts';
 import { createNotification } from '../lib/createNotification.ts';
 
 export const SocialService = {
   async follow(currentUserId: string, username: string) {
-    const target = await prisma.user.findFirst({
+    const target = await UserRepository.findFirst({
       where: { username: username.trim().toLowerCase() },
       select: { id: true, isPrivate: true },
     });
@@ -29,7 +30,7 @@ export const SocialService = {
     });
 
     if (status === 'ACCEPTED') {
-      const follower = await prisma.user.findUnique({
+      const follower = await UserRepository.findUnique({
         where: { id: currentUserId },
         select: { username: true },
       });
@@ -42,7 +43,7 @@ export const SocialService = {
         { route: follower?.username ? `/profile/${follower.username}` : undefined }
       );
     } else {
-      const follower = await prisma.user.findUnique({
+      const follower = await UserRepository.findUnique({
         where: { id: currentUserId },
         select: { username: true },
       });
@@ -60,7 +61,7 @@ export const SocialService = {
   },
 
   async unfollow(currentUserId: string, username: string) {
-    const target = await prisma.user.findFirst({
+    const target = await UserRepository.findFirst({
       where: { username: username.trim().toLowerCase() },
       select: { id: true },
     });
@@ -105,7 +106,7 @@ export const SocialService = {
   },
 
   async getProfileFollowers(profileUsername: string, viewerId: string, page: number, limit: number) {
-    const profile = await prisma.user.findFirst({
+    const profile = await UserRepository.findFirst({
       where: { username: profileUsername.trim().toLowerCase(), isDeleted: false },
       select: { id: true, isPrivate: true },
     });
@@ -152,7 +153,7 @@ export const SocialService = {
   },
 
   async getProfileFollowing(profileUsername: string, viewerId: string, page: number, limit: number) {
-    const profile = await prisma.user.findFirst({
+    const profile = await UserRepository.findFirst({
       where: { username: profileUsername.trim().toLowerCase(), isDeleted: false },
       select: { id: true, isPrivate: true },
     });
@@ -223,7 +224,7 @@ export const SocialService = {
     if (updated.count === 0) {
       throw new AppError('NOT_FOUND', 404);
     }
-    const accepter = await prisma.user.findUnique({
+    const accepter = await UserRepository.findUnique({
       where: { id: currentUserId },
       select: { username: true },
     });
@@ -244,7 +245,7 @@ export const SocialService = {
   },
 
   async getPublicProfile(viewer: AuthUser | undefined, username: string) {
-    const target = await prisma.user.findFirst({
+    const target = await UserRepository.findFirst({
       where: { username: username.trim().toLowerCase() },
       select: {
         id: true,
@@ -348,7 +349,7 @@ export const SocialService = {
     if (term.length < 5) return [];
 
     const take = Math.min(10, Math.max(1, limit));
-    const users = await prisma.user.findMany({
+    const users = await UserRepository.findMany({
       where: {
         isDeleted: false,
         id: { not: currentUserId },
@@ -396,7 +397,7 @@ export const SocialService = {
   async search(currentUserId: string, q: string) {
     const term = q.trim().toLowerCase();
     if (!term || term.length < 2) return [];
-    const users = await prisma.user.findMany({
+    const users = await UserRepository.findMany({
       where: {
         isDeleted: false,
         username: { contains: term, mode: 'insensitive' },
@@ -429,7 +430,7 @@ export const SocialService = {
   },
 
   async updateSettings(userId: string, body: { isPrivate?: boolean; showPortfolio?: boolean }) {
-    const current = await prisma.user.findUnique({
+    const current = await UserRepository.findUnique({
       where: { id: userId },
       select: { isPrivate: true },
     });
@@ -437,7 +438,7 @@ export const SocialService = {
 
     const nextIsPrivate = body.isPrivate ?? current.isPrivate;
 
-    const user = await prisma.user.update({
+    const user = await UserRepository.update({
       where: { id: userId },
       data: {
         isPrivate: nextIsPrivate,
@@ -455,7 +456,7 @@ export const SocialService = {
           where: { followingId: userId, status: 'PENDING' },
           data: { status: 'ACCEPTED' },
         });
-        const accepter = await prisma.user.findUnique({
+        const accepter = await UserRepository.findUnique({
           where: { id: userId },
           select: { username: true },
         });

@@ -2,6 +2,7 @@
  * فحص الإنجازات وإضافة الجديدة إلى unseenAchievements
  */
 import { prisma } from './prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { ACHIEVEMENT_DEFS } from './achievements.ts';
 import { createNotification } from './createNotification.ts';
 
@@ -49,7 +50,7 @@ export async function getAchievementContext(userId: string): Promise<Achievement
     completedReferrals,
     distinctTickersResult,
   ] = await Promise.all([
-    prisma.user.findUnique({
+    UserRepository.findUnique({
       where: { id: userId },
       select: {
         createdAt: true,
@@ -260,7 +261,7 @@ export async function addNewlyUnlockedAchievements(
     ? completedIdsAfter.filter((id) => !completedIdsBeforeAction.includes(id))
     : completedIdsAfter;
 
-  const user = await prisma.user.findUnique({
+  const user = await UserRepository.findUnique({
     where: { id: userId },
     select: { unseenAchievements: true },
   });
@@ -269,7 +270,7 @@ export async function addNewlyUnlockedAchievements(
   const toAdd = newlyCompleted.filter((id) => !unseen.includes(id));
   if (toAdd.length === 0) return [];
   const newUnseen = [...unseen, ...toAdd];
-  await prisma.user.update({
+  await UserRepository.update({
     where: { id: userId },
     data: { unseenAchievements: newUnseen },
   });

@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { generateUniqueReferralCode } from '../lib/referral.ts';
 import { logger } from '../lib/logger.ts';
 import { ReferralService } from '../services/referral.service.ts';
@@ -20,14 +20,14 @@ export const ReferralController = {
     }
 
     try {
-      let userData = await prisma.user.findUnique({
+      let userData = await UserRepository.findUnique({
         where: { id: userId },
         select: { referralCode: true, referralProExpiresAt: true },
       });
 
       if (!userData?.referralCode) {
         const code = await generateUniqueReferralCode();
-        const updated = await prisma.user.update({
+        const updated = await UserRepository.update({
           where: { id: userId },
           data: { referralCode: code },
           select: { referralCode: true, referralProExpiresAt: true },

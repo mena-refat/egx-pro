@@ -8,14 +8,10 @@
 import YahooFinance from 'yahoo-finance2';
 import { prisma } from '../lib/prisma.ts';
 import { logger } from '../lib/logger.ts';
+import { MARKET_DATA, STOCK_QUOTE } from '../lib/constants.ts';
 
 /** yahoo-finance2 v3 requires an instance; static methods throw. */
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
-
-const CAIRO_TZ = 'Africa/Cairo';
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const BATCH_SIZE = 10;
-const BATCH_DELAY_MS = 500;
 
 export type QuoteResult = {
   ticker: string;
@@ -38,7 +34,7 @@ export type QuoteResult = {
 function getCairoNow(): { minutesSinceMidnight: number; weekday: string } {
   const now = new Date();
   const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: CAIRO_TZ,
+    timeZone: MARKET_DATA.CAIRO_TZ,
     hour: 'numeric',
     minute: 'numeric',
     hour12: false,
@@ -116,7 +112,7 @@ export async function getQuote(ticker: string): Promise<QuoteResult | null> {
 
   const now = Date.now();
   const cacheAgeMs = cached ? now - cached.updatedAt.getTime() : Infinity;
-  const cacheFresh = cacheAgeMs < CACHE_TTL_MS;
+  const cacheFresh = cacheAgeMs < STOCK_QUOTE.CACHE_TTL_MS;
   const marketOpen = isMarketOpen();
 
   // Outside market hours: return cache only, do not hit Yahoo
@@ -288,6 +284,7 @@ export function getMarketStatus(): { isOpen: boolean; nextOpen: string; nextClos
  * Prefetch all EGX stocks in batches of 10 with 500ms delay between batches.
  */
 export async function prefetchAllEGXStocks(tickers: string[]): Promise<void> {
+  const { BATCH_SIZE, BATCH_DELAY_MS } = STOCK_QUOTE;
   for (let i = 0; i < tickers.length; i += BATCH_SIZE) {
     const batch = tickers.slice(i, i + BATCH_SIZE);
     await Promise.allSettled(batch.map((t) => getQuote(t)));
@@ -297,15 +294,13 @@ export async function prefetchAllEGXStocks(tickers: string[]): Promise<void> {
   }
 }
 
-const BULK_BATCH_SIZE = 20;
-const BULK_BATCH_DELAY_MS = 400;
-
 /**
  * Fetch quotes for many tickers in batches (for screener/listing). Returns a map of ticker → quote
  * only for tickers that have at least a price. Used by GET /stocks/prices.
  */
 export async function getBulkQuotesForScreener(tickers: string[]): Promise<Map<string, QuoteResult>> {
   const result = new Map<string, QuoteResult>();
+  const { BULK_BATCH_SIZE, BULK_BATCH_DELAY_MS } = STOCK_QUOTE;
   for (let i = 0; i < tickers.length; i += BULK_BATCH_SIZE) {
     const batch = tickers.slice(i, i + BULK_BATCH_SIZE);
     const rows = await getMultipleQuotes(batch);

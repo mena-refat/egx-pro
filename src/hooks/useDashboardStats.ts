@@ -6,18 +6,22 @@ export function useDashboardStats(isAuthenticated: boolean, pathname: string) {
   const accessToken = useAuthStore((s) => s.accessToken);
   const [stats, setStats] = useState({ totalValue: 0, topPerformer: '--', topPerformerChange: 0 });
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (signal?: AbortSignal) => {
     if (!accessToken) return;
     try {
       const [holdingsRes, stocksRes, watchlistRes] = await Promise.all([
-        fetch('/api/portfolio', { headers: { Authorization: `Bearer ${accessToken}` } }),
-        fetch('/api/stocks/prices'),
-        fetch('/api/watchlist', { headers: { Authorization: `Bearer ${accessToken}` } }),
+        fetch('/api/portfolio', { headers: { Authorization: `Bearer ${accessToken}` }, signal }),
+        fetch('/api/stocks/prices', { signal }),
+        fetch('/api/watchlist', { headers: { Authorization: `Bearer ${accessToken}` }, signal }),
       ]);
+      if (signal?.aborted) return;
       if (!holdingsRes.ok || !stocksRes.ok || !watchlistRes.ok) return;
-      const holdingsData = await holdingsRes.json();
-      const stocksPayload = await stocksRes.json();
-      const watchlistData = await watchlistRes.json();
+      const [holdingsData, stocksPayload, watchlistData] = await Promise.all([
+        holdingsRes.json(),
+        stocksRes.json(),
+        watchlistRes.json(),
+      ]);
+      if (signal?.aborted) return;
       const holdingsInner = (holdingsData as { data?: { holdings?: unknown[] } })?.data ?? holdingsData;
       const holdings = Array.isArray(holdingsInner) ? holdingsInner : (holdingsInner?.holdings || (holdingsData as { holdings?: unknown[] }).holdings || (holdingsData as { items?: unknown[] }).items || []);
       const stocks = (stocksPayload as { data?: unknown[] })?.data ?? stocksPayload;
@@ -34,13 +38,17 @@ export function useDashboardStats(isAuthenticated: boolean, pathname: string) {
         }
       });
       setStats({ totalValue, topPerformer: bestStock, topPerformerChange: bestChange === -Infinity ? 0 : bestChange });
-    } catch (err) {
-      console.error('Dashboard fetch error', err);
+    } catch (err: unknown) {
+      if ((err as { name?: string }).name === 'AbortError') return;
+      // Avoid console in production; errors are silent for dashboard stats
     }
   }, [accessToken]);
 
   useEffect(() => {
-    if (isAuthenticated && (pathname === '/' || pathname === '/dashboard' || pathname === '/goals') && accessToken) fetchDashboardData();
+    if (!isAuthenticated || (pathname !== '/' && pathname !== '/dashboard' && pathname !== '/goals') || !accessToken) return;
+    const controller = new AbortController();
+    fetchDashboardData(controller.signal);
+    return () => controller.abort();
   }, [isAuthenticated, pathname, fetchDashboardData, accessToken]);
 
   return stats;

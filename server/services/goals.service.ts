@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { goalSchema, goalUpdateSchema, goalAmountSchema } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
@@ -23,10 +24,7 @@ export const GoalsService = {
 
   async create(user: AuthUser, body: unknown): Promise<{ goal: Awaited<ReturnType<typeof GoalsRepository.create>>; newUnseenAchievements: string[] }> {
     if (!user?.id) throw new AppError('UNAUTHORIZED', 401);
-    const planUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
-    });
+    const planUser = await UserRepository.getPlanUser(user.id);
     if (!planUser) throw new AppError('UNAUTHORIZED', 401);
     if (!isPro(planUser)) {
       const count = await GoalsRepository.countByUser(user.id);

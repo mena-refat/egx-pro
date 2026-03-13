@@ -6,7 +6,7 @@
 
 ## تحديث الرولز ليتوافق مع الكود (مراجعة 2025)
 
-- **مصدر بيانات السوق**: تم استبدال كل مراجع "Yahoo Finance" و"fetchFromYahoo" في `engineering.mdc` و`api.mdc` بـ "market data" / `marketDataService.getQuote()` لأن المصدر الوحيد حاليًا هو **Twelve Data**.
+- **مصدر بيانات السوق**: المصدر الوحيد حاليًا هو **yahoo-finance2** عبر `marketDataService` و`stockQuote.service`؛ لا Twelve Data ولا Egxlytics.
 - **console في السيرفر**: لا يوجد `console.*` في كود التطبيق (routes, services, lib). الاستثناء الوحيد: **سكربتات CLI** في `server/scripts/` (مثل seed-sectors.ts و backfill-referral-codes.ts) تستخدم `console.log` للخرج — وهذا مقبول لسكربتات تشغيل من الطرفية.
 
 ---
@@ -32,6 +32,10 @@
 17. **Analysis: Controller + Service** — تم نقل كل منطق التحليل من `server/routes/analysis.ts` إلى `AnalysisService` و `AnalysisController`؛ الـ route = authenticate + analysisLimiter + AnalysisController.create فقط. دعم AppError مع details (402 ANALYSIS_LIMIT_REACHED).
 18. **توحيد FREE_LIMITS** — الفرونت `src/lib/constants.ts` يطابق السيرفر `server/lib/plan.ts` (goals: 3، portfolioStocks: 10، watchlistStocks: 20، aiAnalysisPerMonth: 3).
 19. **إزالة ألوان hardcoded المتبقية** — InvestmentCalculator (stroke، tick fill، gradient، area stroke)، StockAnalysis (fill-amber، fill-slate)، MarketPage (divide-slate) استُبدلت كلها بـ CSS variables (--border-strong، --text-muted، --brand، --warning).
+20. **ثوابت من lib/constants (engineering.mdc §3)** — إضافة `MARKET_DATA` و`STOCK_QUOTE` في `server/lib/constants.ts` (CACHE_TTL، STALE_TTL، أوقات السوق، أحجام الدفعات، مهلة التوفر). استخدامها في `market-data.service.ts` و`stockQuote.service.ts` و`yahoo-finance-source.ts` بدل الأرقام الثابتة.
+21. **AbortController + cleanup (components.mdc §2.4)** — `useDashboardStats`: تمرير `signal` لجميع استدعاءات `fetch`، cleanup عبر `controller.abort()`، إزالة `console.error`. `useNotifications`: تمرير `signal` لـ fetch الأولي في `useEffect` مع cleanup.
+22. **UserRepository = كل استعلامات User (api.mdc §4)** — توسيع `server/repositories/user.repository.ts` بـ `findUnique`, `findFirst`, `create`, `update`, `findMany` واستبدال كل استدعاءات `prisma.user` في: UserService، AuthService، WatchlistService، GoalsService، AnalysisService، BillingService، ReferralService، SocialService، PredictionsService؛ والـ controllers (Auth، Referral، Predictions)، والـ middleware (auth)، و`server/lib/referral.ts`، `server/lib/achievementCheck.ts`، `server/routes/profile.ts`، MarketController، StocksController. السكربتات في `server/scripts/` ما زالت تستخدم `prisma` مباشرة (مقبول).
+23. **استبدال raw &lt;button&gt; بمكون Button** — Header (profile completion، theme، notifications، user menu)، NotificationDropdown، DashboardMarketOverview (retry)، SecurityTab (change password link، end session، copy 2FA، show/hide password). مكوّن Button يدعم الآن `...rest` و`aria-label` عبر تمديد `ButtonHTMLAttributes`.
 
 قائمة تحقق تفصيلية: **RULES-CHECKLIST.md**.
 
@@ -115,12 +119,12 @@
    - PortfolioTracker.tsx  
    **الإجراء**: استبدالها بـ `var(--success)`, `var(--danger)`, `var(--brand)` وغيرها حسب الدلالة.
 
-2. **استخدام Button بدل raw `<button>` (قسم 2.2 و 5)** — **مطبّق جزئياً**  
-   تم استبدال: EmptyState، ErrorBoundary، DangerZoneTab، Header (تسجيل خروج، إشعارات)، MarketPage (إعادة المحاولة، ترقية، تحديث).  
-   **متبقي**: أزرار ثانوية/أيقونات (مثل theme switcher) يمكن تركها أو استبدالها لاحقاً.
+2. **استخدام Button بدل raw `<button>` (قسم 2.2 و 5)** — **مطبّق في أغلب الأماكن**  
+   تم استبدال: EmptyState، ErrorBoundary، DangerZoneTab، Header (تسجيل خروج، إشعارات، **theme switcher، profile completion، user menu**)، MarketPage، **NotificationDropdown، DashboardMarketOverview (retry)، SecurityTab (روابط وتفعيلات)**.  
+   **متبقي**: أزرار toggle للـ privacy (شكل مخصص)، وبعض الأزرار في StockAnalysis وOnboardingWizard يمكن استبدالها لاحقاً.
 
 3. **AbortController في كل useEffect فيه fetch (قسم 2.4 و 8)** — **مطبّق في أغلب الأماكن**  
-   تم في usePortfolio، ReferralTab، AccountOverviewTab، SubscriptionTab، AchievementsTab (استخدام AbortController و signal و cleanup).
+   تم في usePortfolio، ReferralTab، AccountOverviewTab، SubscriptionTab، AchievementsTab، **useDashboardStats**، **useNotifications** (استخدام AbortController و signal و cleanup).
 
 4. **حدود حجم الملفات (صفحة 100، feature 200، hook 80)** — **بدء التطبيق**  
    تم استخراج MarketIndicesGrid من MarketPage.  
@@ -145,7 +149,7 @@
 ### ❌ غير مطبّق أو جزئي
 
 1. **Repository = كل استعلامات DB (قسم 4)** — **مطبّق**  
-   WatchlistRepository، GoalsRepository، PortfolioRepository، NotificationsRepository، UserRepository (جزئي)؛ الـ services المعنية تستخدمها.
+   WatchlistRepository، GoalsRepository، PortfolioRepository، NotificationsRepository، **UserRepository (كامل)**؛ كل استعلامات User تمر عبر UserRepository.
 
 2. **تنسيق الاستجابة (قسم 5)** — **مطبّق**  
    مطبّق لـ watchlist، goals، profile/completion، notifications، user، portfolio، stocks، market، news، billing، analysis، auth.

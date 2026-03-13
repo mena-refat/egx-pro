@@ -1,4 +1,5 @@
 import { prisma } from './prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { createNotification } from './createNotification.ts';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -18,7 +19,7 @@ export async function generateUniqueReferralCode(): Promise<string> {
       code += CHARS[Math.floor(Math.random() * CHARS.length)];
     }
 
-    const existing = await prisma.user.findUnique({
+    const existing = await UserRepository.findUnique({
       where: { referralCode: code },
       select: { id: true },
     });
@@ -57,7 +58,7 @@ export async function checkAndRewardReferrer(referrerId: string): Promise<void> 
 
   const now = new Date();
 
-  const referrer = await prisma.user.findUnique({
+  const referrer = await UserRepository.findUnique({
     where: { id: referrerId },
     select: { referralProExpiresAt: true },
   });
@@ -67,7 +68,7 @@ export async function checkAndRewardReferrer(referrerId: string): Promise<void> 
   const newExpiry = new Date(baseDate.getTime() + rewardsEarned * THIRTY_DAYS_MS);
 
   await prisma.$transaction([
-    prisma.user.update({
+    UserRepository.update({
       where: { id: referrerId },
       data: { referralProExpiresAt: newExpiry },
     }),

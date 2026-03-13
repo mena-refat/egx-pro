@@ -1,4 +1,4 @@
-import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { watchlistTickerSchema, watchlistCheckTargetsSchema } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { createNotification } from '../lib/createNotification.ts';
@@ -24,10 +24,7 @@ export const WatchlistService = {
     const parsed = watchlistTickerSchema.parse(body) as WatchlistTickerInput;
     const { ticker, targetPrice: bodyTargetPrice } = parsed;
 
-    const planUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
-    });
+    const planUser = await UserRepository.getPlanUser(userId);
     if (!planUser) throw new AppError('UNAUTHORIZED', 401);
     if (!isPro(planUser)) {
       const count = await WatchlistRepository.countByUser(userId);
@@ -59,10 +56,7 @@ export const WatchlistService = {
 
     const targetPrice = typeof body?.targetPrice === 'number' ? body.targetPrice : null;
     if (targetPrice != null) {
-      const planUser = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
-      });
+      const planUser = await UserRepository.getPlanUser(userId);
       if (!planUser || !isPro(planUser)) {
         throw new AppError('PRICE_ALERTS_PRO', 403);
       }

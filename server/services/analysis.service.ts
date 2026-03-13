@@ -1,6 +1,7 @@
 import { getStockPrice, getStockHistory, getFinancials } from '../lib/stockData.ts';
 import { getStockNews } from '../lib/news.ts';
 import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { logger } from '../lib/logger.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { isPro, FREE_LIMITS } from '../lib/plan.ts';
@@ -54,16 +55,7 @@ export const AnalysisService = {
     }
 
     const now = new Date();
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        plan: true,
-        planExpiresAt: true,
-        referralProExpiresAt: true,
-        aiAnalysisUsedThisMonth: true,
-        aiAnalysisResetDate: true,
-      },
-    });
+    const user = await UserRepository.getForBillingPlan(userId);
 
     if (!user) {
       throw new AppError('NOT_FOUND', 404);
@@ -77,7 +69,7 @@ export const AnalysisService = {
     if (resetDate == null || now >= resetDate) {
       usedThisMonth = 0;
       const nextReset = getFirstDayOfNextMonth();
-      await prisma.user.update({
+      await UserRepository.update({
         where: { id: userId },
         data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: nextReset },
       });
@@ -193,7 +185,7 @@ export const AnalysisService = {
       },
     });
 
-    await prisma.user.update({
+    await UserRepository.update({
       where: { id: userId },
       data: { aiAnalysisUsedThisMonth: usedThisMonth + 1 },
     });

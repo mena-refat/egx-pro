@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 import { AppError } from '../lib/errors.ts';
 
 export interface ReferralData {
@@ -31,7 +32,7 @@ export const ReferralService = {
         },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.user.findUnique({
+      UserRepository.findUnique({
         where: { id: userId },
         select: { referralProExpiresAt: true, referralCode: true },
       }),

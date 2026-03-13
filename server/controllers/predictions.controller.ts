@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { PredictionsService } from '../services/predictions.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
-import { prisma } from '../lib/prisma.ts';
+import { UserRepository } from '../repositories/user.repository.ts';
 
 function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -16,7 +16,7 @@ export const PredictionsController = {
       res.status(401).json({ error: 'UNAUTHORIZED' });
       return;
     }
-    const user = await prisma.user.findUnique({
+    const user = await UserRepository.findUnique({
       where: { id: userId },
       select: { id: true, plan: true, planExpiresAt: true, referralProExpiresAt: true, createdAt: true },
     });

@@ -25,11 +25,8 @@ export const MarketController = {
       const user = req.user;
       let delayed = false;
       if (user?.id) {
-        const { prisma } = await import('../lib/prisma.ts');
-        const u = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
-        });
+        const { UserRepository } = await import('../repositories/user.repository.ts');
+        const u = await UserRepository.getPlanUser(user.id);
         delayed = u ? !isPro(u) : false;
       }
       const payload = await MarketService.getOverview(delayed);

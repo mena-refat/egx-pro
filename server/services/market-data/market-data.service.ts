@@ -2,13 +2,7 @@ import type { IMarketDataSource, StockQuote } from './types.ts';
 import { YahooFinanceSource } from './sources/yahoo-finance-source.ts';
 import { logger } from '../../lib/logger.ts';
 import { getCache, setCache } from '../../lib/redis.ts';
-
-const CACHE_KEY_PREFIX  = 'stock:quote:';
-const CACHE_TTL_SECONDS = 60;        // 1 دقيقة
-const STALE_TTL_SECONDS = 60 * 60;  // 1 ساعة للـ stale data
-const CAIRO_TZ = 'Africa/Cairo';
-const MARKET_OPEN_HOUR  = 10;       // 10 صباحاً بتوقيت القاهرة
-const MARKET_CLOSE_HOUR = 15;       // 3 مساءً
+import { MARKET_DATA } from '../../lib/constants.ts';
 
 /** Serialized shape for Redis (timestamp as ISO string) */
 interface CachedQuote {
@@ -42,7 +36,7 @@ function cachedToQuote(c: CachedQuote): StockQuote {
 /** Cairo time: weekday and minutes since midnight using Intl (handles EET/EEST). */
 function getCairoNow(): { minutesSinceMidnight: number; weekday: string } {
   const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: CAIRO_TZ,
+    timeZone: MARKET_DATA.CAIRO_TZ,
     hour: 'numeric',
     minute: 'numeric',
     hour12: false,
@@ -76,8 +70,8 @@ export class MarketDataService {
 
   private symbolFailCount  = new Map<string, number>();
   private symbolSkipUntil  = new Map<string, number>();
-  private readonly MAX_FAILURES_BEFORE_DEPRIORITIZE = 3;
-  private readonly DEPRIORITIZE_FOR_MS = 60 * 60 * 1000;
+  private readonly MAX_FAILURES_BEFORE_DEPRIORITIZE = MARKET_DATA.MAX_FAILURES_BEFORE_DEPRIORITIZE;
+  private readonly DEPRIORITIZE_FOR_MS = MARKET_DATA.DEPRIORITIZE_FOR_MS;
 
   private shouldSkipSymbol(symbol: string): boolean {
     const skipUntil = this.symbolSkipUntil.get(symbol);
@@ -89,8 +83,8 @@ export class MarketDataService {
     const count = (this.symbolFailCount.get(symbol) ?? 0) + 1;
     this.symbolFailCount.set(symbol, count);
 
-    if (count >= this.MAX_FAILURES_BEFORE_DEPRIORITIZE) {
-      this.symbolSkipUntil.set(symbol, Date.now() + this.DEPRIORITIZE_FOR_MS);
+    if (count >= MARKET_DATA.MAX_FAILURES_BEFORE_DEPRIORITIZE) {
+      this.symbolSkipUntil.set(symbol, Date.now() + MARKET_DATA.DEPRIORITIZE_FOR_MS);
       if (count === this.MAX_FAILURES_BEFORE_DEPRIORITIZE) {
         logger.info(`Deprioritizing ${symbol} — failed ${count} times, skipping for 1hr`);
       }
@@ -137,7 +131,7 @@ export class MarketDataService {
   isMarketOpen(): boolean {
     const { minutesSinceMidnight, weekday } = getCairoNow();
     if (weekday === 'Fri' || weekday === 'Sat') return false;
-    return minutesSinceMidnight >= MARKET_OPEN_HOUR * 60 && minutesSinceMidnight < MARKET_CLOSE_HOUR * 60;
+    return minutesSinceMidnight >= MARKET_DATA.MARKET_OPEN_HOUR * 60 && minutesSinceMidnight < MARKET_DATA.MARKET_CLOSE_HOUR * 60;
   }
 
   async getQuote(symbol: string): Promise<StockQuote | null> {
@@ -203,7 +197,8 @@ export class MarketDataService {
 
       if (!sourceResult) continue;
 
-      const health = this.sourceHealth.get(source.name)!;
+      const health = this.sourceHealth.get(source.name);
+      if (!health) continue;
       if (sourceResult.quotes.size > 0) {
         health.failures    = 0;
         health.lastSuccess = Date.now();
@@ -260,17 +255,14 @@ export class MarketDataService {
   }
 
   async startPolling(symbols: string[]): Promise<void> {
-    const POLL_INTERVAL_MS      = 60_000;
-    const OFF_HOURS_INTERVAL_MS = 5 * 60_000;
-
     this.pollingActive = true;
 
     const poll = async () => {
       if (!this.pollingActive) return;
 
       const interval = this.isMarketOpen()
-        ? POLL_INTERVAL_MS
-        : OFF_HOURS_INTERVAL_MS;
+        ? MARKET_DATA.POLL_INTERVAL_MS
+        : MARKET_DATA.OFF_HOURS_INTERVAL_MS;
 
       try {
         const quotes = await this.getQuotes(symbols);
@@ -303,7 +295,7 @@ export class MarketDataService {
     const report: Record<string, unknown> = {};
     this.sourceHealth.forEach((health, name) => {
       report[name] = {
-        status:       health.failures < 3 ? 'healthy' : 'degraded',
+        status:       health.failures < MARKET_DATA.MAX_FAILURES_BEFORE_DEPRIORITIZE ? 'healthy' : 'degraded',
         failures:     health.failures,
         lastSuccess:  new Date(health.lastSuccess).toISOString(),
         avgLatencyMs: Math.round(health.avgLatency),
@@ -314,34 +306,32 @@ export class MarketDataService {
 
   private async getFromCache(symbol: string, stale = false): Promise<StockQuote | null> {
     try {
-      const key  = `${CACHE_KEY_PREFIX}${symbol}`;
+      const key  = `${MARKET_DATA.CACHE_KEY_PREFIX}${symbol}`;
       const data = await getCache<CachedQuote>(key);
       if (data) {
         const ageSeconds = (Date.now() - new Date(data.timestamp).getTime()) / 1000;
-        const maxAge     = stale ? STALE_TTL_SECONDS : CACHE_TTL_SECONDS;
+        const maxAge     = stale ? MARKET_DATA.STALE_TTL_SECONDS : MARKET_DATA.CACHE_TTL_SECONDS;
         if (ageSeconds <= maxAge) return cachedToQuote(data);
       }
     } catch {
       // fall through to in-memory cache
     }
 
-    // In-memory fallback (used when Redis is unavailable)
     const mem = this.memCache.get(symbol);
     if (mem) {
       const ageSeconds = (Date.now() - mem.savedAt) / 1000;
-      const maxAge     = stale ? STALE_TTL_SECONDS : CACHE_TTL_SECONDS;
+      const maxAge     = stale ? MARKET_DATA.STALE_TTL_SECONDS : MARKET_DATA.CACHE_TTL_SECONDS;
       if (ageSeconds <= maxAge) return mem.quote;
     }
     return null;
   }
 
   private async saveToCache(symbol: string, quote: StockQuote): Promise<void> {
-    // Always save to in-memory cache first
     this.memCache.set(symbol, { quote, savedAt: Date.now() });
 
     try {
-      const key = `${CACHE_KEY_PREFIX}${symbol}`;
-      await setCache(key, quoteToCached(quote), STALE_TTL_SECONDS);
+      const key = `${MARKET_DATA.CACHE_KEY_PREFIX}${symbol}`;
+      await setCache(key, quoteToCached(quote), MARKET_DATA.STALE_TTL_SECONDS);
     } catch (err: unknown) {
       logger.warn('Cache save failed', { symbol, error: (err as Error).message });
     }
