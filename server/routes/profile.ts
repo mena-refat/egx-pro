@@ -11,7 +11,7 @@ const router = Router();
 router.get('/completion', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id ?? req.userId;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!userId) return res.status(401).json({ error: 'UNAUTHORIZED' });
     const [user, goalsCount, watchlistCount] = await Promise.all([
       UserRepository.findUnique({
         where: { id: userId },

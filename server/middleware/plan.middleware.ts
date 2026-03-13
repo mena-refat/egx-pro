@@ -9,7 +9,7 @@ export function requirePro(
 ): void {
   const user = req.user;
   if (!user) {
-    res.status(401).json({ error: 'unauthorized' });
+    res.status(401).json({ error: 'UNAUTHORIZED' });
     return;
   }
   const hasPro =

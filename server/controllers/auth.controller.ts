@@ -140,7 +140,7 @@ export async function twoFaSetup(req: Request, res: Response): Promise<void> {
   try {
     const userId = getAuthUserId(req);
     if (!userId) {
-      res.status(401).json({ error: 'unauthorized' });
+      res.status(401).json({ error: 'UNAUTHORIZED' });
       return;
     }
     const result = await AuthService.twoFaSetup(userId);
@@ -154,7 +154,7 @@ export async function twoFaVerify(req: Request, res: Response): Promise<void> {
   try {
     const userId = getAuthUserId(req);
     if (!userId) {
-      res.status(401).json({ error: 'unauthorized' });
+      res.status(401).json({ error: 'UNAUTHORIZED' });
       return;
     }
     await AuthService.twoFaVerify(userId, req.body as { code?: string }, authContext(req));
@@ -168,7 +168,7 @@ export async function twoFaDisable(req: Request, res: Response): Promise<void> {
   try {
     const userId = getAuthUserId(req);
     if (!userId) {
-      res.status(401).json({ error: 'unauthorized' });
+      res.status(401).json({ error: 'UNAUTHORIZED' });
       return;
     }
     await AuthService.twoFaDisable(userId, req.body as { code?: string; password?: string }, authContext(req));
@@ -190,7 +190,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
       return;
     }
     logger.error('Refresh token error', { error: e });
-    res.status(401).json({ error: 'unauthorized' });
+    res.status(401).json({ error: 'UNAUTHORIZED' });
   }
 }
 
@@ -243,7 +243,7 @@ export async function changePassword(req: Request, res: Response): Promise<void>
   try {
     const userId = getAuthUserId(req);
     if (!userId) {
-      res.status(401).json({ error: 'unauthorized' });
+      res.status(401).json({ error: 'UNAUTHORIZED' });
       return;
     }
     await AuthService.changePassword(userId, req.body as { currentPassword?: string; newPassword?: string }, authContext(req));
@@ -288,7 +288,7 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
 export async function sendVerifyEmail(req: AuthRequest, res: Response): Promise<void> {
   const userId = req.userId ?? req.user?.id;
   if (!userId) {
-    res.status(401).json({ error: 'unauthorized' });
+    res.status(401).json({ error: 'UNAUTHORIZED' });
     return;
   }
   try {
@@ -317,7 +317,7 @@ export async function sendVerifyEmail(req: AuthRequest, res: Response): Promise<
 export async function confirmVerifyEmail(req: AuthRequest, res: Response): Promise<void> {
   const userId = req.userId ?? req.user?.id;
   if (!userId) {
-    res.status(401).json({ error: 'unauthorized' });
+    res.status(401).json({ error: 'UNAUTHORIZED' });
     return;
   }
   const { code } = (req.body as { code?: string }) ?? {};

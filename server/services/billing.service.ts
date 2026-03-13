@@ -3,7 +3,6 @@ import { UserRepository } from '../repositories/user.repository.ts';
 import { isPro, isUltra, getLimit } from '../lib/plan.ts';
 import { PLAN_PRICES } from '../lib/constants.ts';
 import { AppError } from '../lib/errors.ts';
-import { UserRepository } from '../repositories/user.repository.ts';
 
 type Plan = 'free' | 'pro' | 'annual' | 'ultra' | 'ultra_annual';
 export type PlanUpgrade = 'pro_monthly' | 'pro_yearly' | 'ultra_monthly' | 'ultra_yearly' | 'pro' | 'annual';

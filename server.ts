@@ -227,7 +227,7 @@ async function startServer() {
 
   // 404 for unknown API routes (before static so /api/foo returns JSON not HTML)
   app.use('/api', (_req, res) => {
-    res.status(404).json({ error: 'not_found' });
+    res.status(404).json({ error: 'NOT_FOUND' });
   });
 
   if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {

@@ -10,7 +10,7 @@ export async function authenticate(
 ): Promise<void> {
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, '').trim();
   if (!token) {
-    res.status(401).json({ error: 'unauthorized' });
+    res.status(401).json({ error: 'UNAUTHORIZED' });
     return;
   }
 
@@ -28,14 +28,14 @@ export async function authenticate(
       },
     });
     if (!user || user.isDeleted) {
-      res.status(401).json({ error: 'unauthorized' });
+      res.status(401).json({ error: 'UNAUTHORIZED' });
       return;
     }
     req.user = user;
     req.userId = user.id;
     next();
   } catch {
-    res.status(401).json({ error: 'invalid_token' });
+    res.status(401).json({ error: 'UNAUTHORIZED' });
   }
 }
 

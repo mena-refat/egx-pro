@@ -79,3 +79,44 @@
 1. **Tailwind**: المشروع يستورد `tailwindcss` في index.css وكثير من المكونات تستخدم classes مثل `flex`, `rounded-xl`, `text-lg`. القاعدة في components.mdc: "ممنوع استخدام Tailwind utility classes". للامتثال الكامل يُفضّل نقل هذه المكونات تدريجياً إلى SCSS modules مع استخدام var() فقط.
 2. **حجم الملفات**: تقسيم الصفحات والمكونات التي تتجاوز 200 سطر (مثلاً StockAnalysis، OnboardingWizard) إلى مكونات فرعية.
 3. **Mixins للـ breakpoints**: إنشاء `src/styles/_mixins.scss` مع `@mixin mobile { }` و `@mixin tablet { }` واستخدامها في كل الـ *.module.scss للتوحيد.
+
+---
+
+## 7. مراجعة عميقة — ربط الفرونت والباكند (آخر تحديث)
+
+### ربط الفرونت والباكند
+| البند | الحالة | ملاحظات |
+|--------|--------|----------|
+| Auth: GET /api/auth/me يعيد `{ data: { user, accessToken } }` | ✅ | الفرونت (App.tsx) يستخرجها ويستدعي setAuth فقط عند وجود الاثنين |
+| Token: setAuth تستدعي setAccessToken من lib/auth/tokens | ✅ | apiClient (client.ts) و api (api.ts) يستخدمان التوكن بعد التحديث |
+| أخطاء API: رموز موحّدة UPPERCASE | ✅ | تم توحيد 401 → UNAUTHORIZED، 404 → NOT_FOUND في الـ middleware والـ controllers |
+| استجابة الأخطاء: { error: "CODE" } بدون كشف تفاصيل داخلية | ✅ | معالجة أخطاء مركّزة في server.ts مع AppError و ZodError |
+
+### إصلاحات تمت في هذه الجلسة
+1. **Backend — توحيد رموز الأخطاء (api.mdc)**  
+   - `auth.middleware.ts`: `unauthorized` / `invalid_token` → `UNAUTHORIZED`  
+   - `plan.middleware.ts`: `unauthorized` → `UNAUTHORIZED`  
+   - `profile.ts`: `Unauthorized` → `UNAUTHORIZED`  
+   - `auth.controller.ts`: كل 401 → `error: 'UNAUTHORIZED'`  
+   - `server.ts`: 404 لمسارات API غير معروفة → `error: 'NOT_FOUND'`  
+   - `stocks.controller.ts`: 404 للسهم → `error: 'NOT_FOUND'` (بدلاً من "Ticker not found")
+
+2. **Backend — أخطاء TypeScript/استيراد**  
+   - `billing.service.ts`: إزالة استيراد مكرر لـ UserRepository  
+   - `user.service.ts`: إضافة `import { prisma } from '../lib/prisma.ts'`  
+   - `stockQuote.service.ts`: استبدال `CAIRO_TZ` بـ `MARKET_DATA.CAIRO_TZ`
+
+3. **Frontend — أمان وتوافق**  
+   - `App.tsx`: استدعاء setAuth فقط عند وجود `user` و `accessToken` (تفادي حالة جزئية)  
+   - `App.tsx` و `authStore.ts`: حماية `console.error` بـ `import.meta.env.DEV` (ممنوع console في الإنتاج)  
+   - `App.tsx`: حماية `console.error` في handleThemeChange بـ DEV
+
+### أخطاء TypeScript المتبقية (لا تزال مفتوحة)
+- `predictionStats` غير موجود على نوع User في Prisma (predictions/social services)  
+- مكوّن Skeleton: `key` غير معرف في SkeletonProps (Dashboard، GoalsPage، MarketGainersLosers)  
+- `useStockScreener`: مقارنة مع 'ultra' | 'ultra_yearly' تحتاج تحديث نوع Plan  
+- `GoalsPage`: نوع TFunction من i18next  
+- `useDiscoverAutocomplete`: namespace React  
+- `DashboardMarketOverview` / `DashboardWatchlistList`: أنواع البيانات من الـ API
+
+يُفضّل معالجة هذه النقاط في جلسة لاحقة مع مراجعة schema Prisma وأنواع المكونات المشتركة.

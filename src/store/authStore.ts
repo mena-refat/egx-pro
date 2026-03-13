@@ -37,7 +37,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
         } catch (err) {
-          console.error('Logout failed', err);
+          if (import.meta.env.DEV) console.error('Logout failed', err);
         }
         clearTokens();
         set({ user: null, accessToken: null, isAuthenticated: false, unseenAchievementsCount: 0 });

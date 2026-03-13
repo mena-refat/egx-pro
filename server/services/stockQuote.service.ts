@@ -228,7 +228,7 @@ export async function getMultipleQuotes(tickers: string[]): Promise<{ ticker: st
  */
 function getNextOpenClose(): { nextOpen: string; nextClose: string } {
   const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: CAIRO_TZ,
+    timeZone: MARKET_DATA.CAIRO_TZ,
     weekday: 'short',
     hour: 'numeric',
     minute: 'numeric',

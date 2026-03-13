@@ -58,7 +58,7 @@ export default function App() {
         const res = await fetch('/api/user/profile', { method: 'PUT', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ theme: nextTheme }) });
         const body = await res.json().catch(() => null);
         if (res.ok && body) updateUser((body as { data?: Record<string, unknown> }).data ?? body);
-      } catch (err) { console.error('Failed to update theme from header', err); }
+      } catch (err) { if (import.meta.env.DEV) console.error('Failed to update theme from header', err); }
     }
   };
 
@@ -79,9 +79,15 @@ export default function App() {
     const checkAuth = async () => {
       try {
         const res = await fetch('/api/auth/me', { credentials: 'include' });
-        if (res.ok) { const data = await res.json(); const p = (data as { data?: { user?: unknown; accessToken?: string } })?.data ?? data; useAuthStore.getState().setAuth(p?.user ?? data.user, p?.accessToken ?? data.accessToken); }
+        if (res.ok) {
+          const data = await res.json();
+          const p = (data as { data?: { user?: unknown; accessToken?: string } })?.data ?? data;
+          const userPayload = p?.user ?? (data as { user?: unknown }).user;
+          const accessTokenPayload = p?.accessToken ?? (data as { accessToken?: string }).accessToken;
+          if (userPayload && typeof accessTokenPayload === 'string') useAuthStore.getState().setAuth(userPayload as import('./types').User, accessTokenPayload);
+        }
         else if (isAuthenticated) logout();
-      } catch (err) { console.error('Initial auth check failed', err); }
+      } catch (err) { if (import.meta.env.DEV) console.error('Initial auth check failed', err); }
     };
     checkAuth();
   }, [isAuthenticated, logout]);

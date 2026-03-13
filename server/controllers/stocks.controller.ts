@@ -90,7 +90,7 @@ export const StocksController = {
     }
     const quote = await stockQuoteService.getQuote(ticker.trim());
     if (!quote) {
-      res.status(404).json({ error: 'Ticker not found', ticker: ticker.trim() });
+      res.status(404).json({ error: 'NOT_FOUND' });
       return;
     }
     res.json({ data: quote });
