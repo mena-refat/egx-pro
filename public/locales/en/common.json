@@ -536,7 +536,7 @@
     "years": "Number of years",
     "yearsShort": "years",
     "return": "Expected annual return",
-    "returnNote": "Based on historical Egyptian stock market averages",
+    "returnNote": "Based on historical market averages",
     "conservative": "Conservative",
     "moderate": "Moderate",
     "optimistic": "Optimistic",
@@ -559,7 +559,7 @@
     "compareGold": "Gold (approx.)",
     "compareEGX": "EGX (average)",
     "best": "Best",
-    "disclaimer": "These figures are estimates based on historical Egyptian stock market returns. Investment involves risks and actual results may vary."
+    "disclaimer": "These figures are estimates based on historical market returns. Investment involves risks and actual results may vary."
   },
   "stocks": {
     "title": "Stocks",
@@ -653,7 +653,7 @@
     "shariaWarning": "This stock may not be Sharia-compliant",
     "shariaIgnore": "Dismiss",
     "shariaBadge": "Sharia compliant",
-    "defaultDescription": "Listed company on EGX.",
+    "defaultDescription": "Listed company on the exchange.",
     "aiAnalysis": "AI Analysis",
     "aiAnalysisDesc": "Get a comprehensive analysis using state-of-the-art AI models.",
     "generateAnalysis": "Generate Analysis",
@@ -724,7 +724,7 @@
     "lastUpdated": "Last Updated",
     "updatedAgo": "{{m}} min ago",
     "updatedNow": "Just now",
-    "egyptIndices": "Egyptian Indices",
+    "egyptIndices": "Market Indices",
     "forexCommodities": "Forex & Commodities",
     "gold24k": "Gold 24k",
     "silver999": "Silver 999",
@@ -846,7 +846,7 @@
     "emptyTitle": "No referrals yet",
     "emptyDescription": "Copy your invite link and share it with friends now",
     "share": "Share",
-    "shareText": "Join Borsa and invest in the Egyptian stock market smartly! Use my code {{code}} when signing up"
+    "shareText": "Join Borsa and invest in the stock market smartly! Use my code {{code}} when signing up"
   },
   "plan": {
     "analysisLimitTitle": "You're a serious investor!",

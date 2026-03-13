@@ -1,5 +1,5 @@
 /**
- * مواعيد البورصة المصرية (Cairo) والذهب (COMEX/LBMA).
+ * مواعيد السوق (Cairo) والذهب (COMEX/LBMA).
  * Cairo: EET UTC+2 (winter) / EEST UTC+3 (summer).
  */
 

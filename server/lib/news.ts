@@ -13,7 +13,7 @@ export async function getStockNews(companyName: string) {
       return [];
     }
 
-    const query = encodeURIComponent(`${companyName} البورصة المصرية`);
+    const query = encodeURIComponent(`${companyName} أسهم`);
     const url = `https://newsapi.org/v2/everything?q=${query}&language=ar&sortBy=publishedAt&pageSize=10&apiKey=${apiKey}`;
 
     const response = await fetch(url);

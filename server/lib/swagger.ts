@@ -8,7 +8,7 @@ export const swaggerDocument = {
     title: 'Borsa API',
     version: '1.0.0',
     description: `
-واجهة برمجة التطبيقات لمنصة **Borsa** — منصة ذكية لمتابعة البورصة المصرية والاستثمار.
+واجهة برمجة التطبيقات لمنصة **Borsa** — منصة ذكية لمتابعة البورصة والاستثمار.
 
 ## تنسيق الاستجابة الموحّد
 - **مورد واحد**: \`{ "data": { ... } }\`
@@ -1116,7 +1116,7 @@ export const swaggerDocument = {
     '/news/market': {
       get: {
         tags: ['News'],
-        summary: 'أخبار السوق (البورصة المصرية)',
+        summary: 'أخبار السوق',
         responses: {
           200: { description: '{ data: NewsArticle[] }' },
           503: {

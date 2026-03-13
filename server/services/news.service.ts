@@ -57,7 +57,7 @@ export const NewsService = {
     const cached = await getCache<NewsArticle[]>(cacheKey);
     if (cached) return cached;
     if (!NEWS_API_KEY) throw new Error('NEWS_API_MISSING');
-    const query = encodeURIComponent('البورصة المصرية EGX سوق الأسهم مصر');
+    const query = encodeURIComponent('سوق الأسهم البورصة');
     const response = await axios.get(
       `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=15&apiKey=${NEWS_API_KEY}`
     );
@@ -72,7 +72,7 @@ export const NewsService = {
     const cached = await getCache<NewsArticle[]>(cacheKey);
     if (cached) return cached;
     if (!NEWS_API_KEY) throw new Error('NEWS_API_MISSING');
-    const query = encodeURIComponent(`${companyName} البورصة المصرية`);
+    const query = encodeURIComponent(`${companyName} أسهم`);
     const response = await axios.get(
       `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=10&apiKey=${NEWS_API_KEY}`
     );

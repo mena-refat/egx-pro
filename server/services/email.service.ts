@@ -43,11 +43,11 @@ export const EmailService = {
     await resend.emails.send({
       from: FROM,
       to: email,
-      subject: `أهلاً ${name}! مرحباً بك في EGX Pro`,
+      subject: `أهلاً ${name}! مرحباً بك في Borsa`,
       html: `
         <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
           <h2 style="color: #7c3aed;">أهلاً ${name}! 🎉</h2>
-          <p style="color: #333; font-size: 16px;">مرحباً بك في Borsa — منصتك لتحليل البورصة المصرية.</p>
+          <p style="color: #333; font-size: 16px;">مرحباً بك في Borsa — منصتك لتحليل البورصة والاستثمار.</p>
           <p style="color: #333;">ابدأ بإضافة أسهمك في المحفظة وتفعيل تنبيهات الأسعار.</p>
           <a href="${process.env.APP_URL}" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px;">ابدأ الآن</a>
         </div>

@@ -1,6 +1,6 @@
 # Borsa
 
-Egyptian Exchange (EGX) stock tracking and portfolio app with AI analysis, goals, referrals, and real-time market data.
+Stock tracking and portfolio app with AI analysis, goals, referrals, and real-time market data.
 
 ## Documentation
 
