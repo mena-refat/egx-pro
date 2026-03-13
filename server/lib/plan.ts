@@ -6,7 +6,7 @@
 export const FREE_LIMITS = {
   aiAnalysisPerMonth: 3,
   portfolioStocks: 3,
-  watchlistStocks: 0,
+  watchlistStocks: 5,
   goals: 1,
   priceAlerts: false,
 } as const;

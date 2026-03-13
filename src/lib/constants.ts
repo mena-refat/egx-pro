@@ -12,12 +12,12 @@ export const YEARLY_SAVINGS_PERCENT = {
   ultra: Math.round((1 - PLAN_PRICES.ultra_yearly / (PLAN_PRICES.ultra * 12)) * 100),
 } as const;
 
-/** Free tier limits — must match server/lib/plan.ts */
+/** Free tier limits — MUST match server/lib/plan.ts */
 export const FREE_LIMITS = {
   aiAnalysisPerMonth: 3,
-  portfolioStocks: 10,
-  watchlistStocks: 20,
-  goals: 3,
+  portfolioStocks: 3,
+  watchlistStocks: 5,
+  goals: 1,
 } as const;
 
 /** UI/timeouts (ms) */
@@ -48,6 +48,6 @@ export const PAGINATION = {
 
 /** Discover / username search autocomplete */
 export const DISCOVER = {
-  minUsernameLength: 5,
+  minUsernameLength: 2,
   autocompleteLimit: 5,
 } as const;

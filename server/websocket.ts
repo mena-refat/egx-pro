@@ -13,6 +13,7 @@ const MAX_CONNECTIONS_PER_IP = 5;
 
 export function setupWebSocket(server: Server): {
   broadcastPrices: (quotes: Map<string, StockQuote>) => void;
+  getClientCount: () => number;
   closeWss: () => void;
 } {
   const allowedOrigins = [
@@ -159,6 +160,7 @@ export function setupWebSocket(server: Server): {
 
   return {
     broadcastPrices,
+    getClientCount: () => wss.clients.size,
     closeWss: () => {
       clearInterval(pingInterval);
       wss.close();

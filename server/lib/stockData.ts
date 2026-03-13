@@ -1,6 +1,7 @@
-import { getCache, setCache } from './redis.ts';
+import { getCache } from './redis.ts';
 import { EGX_TICKERS } from './egxTickers.ts';
 import { prisma } from './prisma.ts';
+import { marketDataService } from '../services/market-data/market-data.service.ts';
 
 const DELAY_MINUTES = 10;
 
@@ -22,23 +23,26 @@ export type StockPriceData = {
   priceTime?: string;
 };
 
-/** Reads from market-data cache only. Price updates come from MarketDataService (Yahoo Finance) polling. */
-export async function getStockPrice(ticker: string): Promise<(StockPriceData & { delayedAt?: number }) | null> {
-  const cacheKey = `stock:quote:${ticker}`;
-  const cached = await getCache<{ symbol: string; price: number; change: number; changePercent: number; volume: number; high?: number; low?: number; open?: number; previousClose?: number }>(cacheKey);
-  if (!cached) return null;
+function quoteToStockPriceData(symbol: string, q: { price: number; change: number; changePercent: number; volume: number; high: number; low: number; open: number; previousClose: number }): StockPriceData {
   return {
-    ticker: cached.symbol,
-    price: cached.price,
-    change: cached.change,
-    changePercent: cached.changePercent,
-    volume: cached.volume ?? null,
-    high: cached.high,
-    low: cached.low,
-    open: cached.open,
-    previousClose: cached.previousClose,
-    name: cached.symbol,
+    ticker: symbol,
+    price: q.price,
+    change: q.change,
+    changePercent: q.changePercent,
+    volume: q.volume,
+    high: q.high,
+    low: q.low,
+    open: q.open,
+    previousClose: q.previousClose,
+    name: symbol,
   };
+}
+
+/** Single source of truth: MarketDataService (Redis + memory cache). */
+export async function getStockPrice(ticker: string): Promise<(StockPriceData & { delayedAt?: number }) | null> {
+  const quote = await marketDataService.getQuote(ticker);
+  if (!quote || !Number.isFinite(quote.price)) return null;
+  return quoteToStockPriceData(quote.symbol, quote);
 }
 
 /** للخطة المجانية: سعر متأخر 10 دقائق من الكاش */
@@ -83,9 +87,31 @@ export async function getBulkPricesDelayed(tickers: string[] = EGX_TICKERS): Pro
     .map(r => r.value);
 }
 
-/** Historical prices — stubbed; use Twelve Data time_series in future if needed. */
-export async function getStockHistory(_ticker: string, _range: string = '1mo') {
-  return [];
+const RANGE_DAYS: Record<string, number> = { '1w': 7, '1mo': 30, '3mo': 90, '6mo': 180, '1y': 365 };
+
+/** Historical OHLCV from Yahoo Finance chart endpoint. */
+export async function getStockHistory(ticker: string, range = '1mo'): Promise<Array<{ date: Date; open: number; high: number; low: number; close: number; volume: number }>> {
+  const yahooTicker = ticker.endsWith('.CA') ? ticker : `${ticker}.CA`;
+  const days = RANGE_DAYS[range] ?? 30;
+  const period1 = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  try {
+    const YahooFinance = (await import('yahoo-finance2')).default;
+    const yahoo = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
+    const chart = await yahoo.chart(yahooTicker, { period1, interval: '1d' }, { validateResult: false }) as { quotes?: Array<{ date: Date; open?: number; high?: number; low?: number; close?: number; volume?: number }> } | null;
+    const quotes = chart?.quotes ?? [];
+    return quotes
+      .filter((q) => q.close != null && Number.isFinite(q.close))
+      .map((q) => ({
+        date: q.date,
+        open: q.open ?? q.close!,
+        high: q.high ?? q.close!,
+        low: q.low ?? q.close!,
+        close: q.close!,
+        volume: q.volume ?? 0,
+      }));
+  } catch {
+    return [];
+  }
 }
 
 /** Financials — stubbed; use Twelve Data or another provider in future if needed. */

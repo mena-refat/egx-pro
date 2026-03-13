@@ -12,6 +12,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
+import cron from 'node-cron';
 
 import { createServer } from 'http';
 import * as Sentry from '@sentry/node';
@@ -36,6 +37,7 @@ import referralRoutes from './server/routes/referral.ts';
 import socialRoutes from './server/routes/social.ts';
 import predictionsRoutes from './server/routes/predictions.ts';
 import marketDataRoutes from './server/routes/market-data.ts';
+import { userApiLimiter } from './server/middleware/userRateLimit.middleware.ts';
 import { marketDataService } from './server/services/market-data/market-data.service.ts';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './server/lib/swagger.ts';
@@ -149,6 +151,7 @@ async function startServer() {
   app.use('/api/auth/register', registerLimiter);
   app.use('/api/auth/refresh', refreshLimiter);
   app.use('/api/', apiLimiter);
+  app.use('/api/', userApiLimiter);
 
   if (process.env.NODE_ENV !== 'production') {
     app.get('/api/debug/time', (_req, res) => {
@@ -181,14 +184,34 @@ async function startServer() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  let wsHandlersRef: ReturnType<typeof setupWebSocket> | null = null;
   app.get('/api/health/ready', async (_req, res) => {
+    const checks: Record<string, string> = {};
     try {
       const { prisma } = await import('./server/lib/prisma.ts');
       await prisma.$queryRaw`SELECT 1`;
-      res.json({ status: 'ok', db: 'connected' });
+      checks.db = 'ok';
     } catch {
-      res.status(503).json({ status: 'error', db: 'disconnected' });
+      checks.db = 'error';
     }
+    try {
+      const { redis } = await import('./server/lib/redis.ts');
+      if (redis) {
+        await redis.ping();
+        checks.redis = 'ok';
+      } else {
+        checks.redis = 'disabled';
+      }
+    } catch {
+      checks.redis = 'error';
+    }
+    checks.marketData = marketDataService.isMarketOpen() ? 'open' : 'closed';
+    checks.wsClients = String(wsHandlersRef?.getClientCount?.() ?? 0);
+    const allOk = checks.db === 'ok';
+    res.status(allOk ? 200 : 503).json({
+      status: allOk ? 'ok' : 'degraded',
+      checks,
+    });
   });
 
   const swaggerUiOptions = {
@@ -252,17 +275,7 @@ async function startServer() {
     const message = err instanceof Error ? err.message : String(err);
     const logLine = `[${new Date().toISOString()}] [${reqId ?? 'no-id'}] ${message}\n`;
 
-    if (process.env.NODE_ENV === 'production') {
-      try {
-        const logsDir = path.join(__dirname, 'logs');
-        if (!fs.existsSync(logsDir)) {
-          fs.mkdirSync(logsDir, { recursive: true });
-        }
-        fs.appendFileSync(path.join(logsDir, 'error.log'), logLine);
-      } catch {
-        // لو حصل خطأ في اللوج، منظهرش أي تفاصيل للـ client
-      }
-    } else {
+    if (process.env.NODE_ENV !== 'production') {
       logger.error('Unhandled Error:', { reqId, err });
     }
 
@@ -288,6 +301,7 @@ async function startServer() {
   server.listen(PORT, '0.0.0.0', async () => {
     logger.info(`🚀 Borsa Server running on http://localhost:${PORT}`);
     wsHandlers = setupWebSocket(server);
+    wsHandlersRef = wsHandlers;
     marketDataService.setBroadcastFn(wsHandlers.broadcastPrices);
 
     try {
@@ -315,9 +329,8 @@ async function startServer() {
     }
   });
 
-  // أرشفة الحسابات المحذوفة بعد 30 يوم + انتهاء الـ refresh tokens (يومي)
-  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-  const archiveInterval = setInterval(async () => {
+  // أرشفة الحسابات المحذوفة بعد 30 يوم + انتهاء الـ refresh tokens — يومياً 3:00 صباحاً القاهرة
+  async function archiveDeletedUsers() {
     try {
       const { prisma } = await import('./server/lib/prisma.ts');
       const now = new Date();
@@ -362,54 +375,60 @@ async function startServer() {
     } catch (err) {
       logger.error('Cleanup job error', { error: err });
     }
-  }, ONE_DAY_MS);
+  }
+  const archiveCron = cron.schedule('0 3 * * *', archiveDeletedUsers, { timezone: 'Africa/Cairo' });
 
-  // كل أول الشهر: إعادة تعيين عداد تحليلات الذكاء الاصطناعي للمجانيين
-  // نستخدم setTimeout موجّهاً بدل setInterval كل ساعة — يشتغل مرة واحدة بالضبط وقت الريست
-  let aiResetTimeout: ReturnType<typeof setTimeout>;
-  const scheduleAiReset = () => {
-    const now = new Date();
-    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 1, 0, 0); // أول الشهر القادم + دقيقة
-    const delay = next.getTime() - now.getTime();
-    aiResetTimeout = setTimeout(async () => {
-      try {
-        const { prisma } = await import('./server/lib/prisma.ts');
-        const resetDate = new Date();
-        const nextReset = new Date(resetDate.getFullYear(), resetDate.getMonth() + 1, 1, 0, 0, 0, 0);
-        await prisma.user.updateMany({
-          data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: nextReset },
-        });
-        logger.info('AI usage counters reset for free users');
-      } catch (err) {
-        logger.error('AI usage reset job error', { error: err });
-      }
-      scheduleAiReset(); // جدول الشهر القادم
-    }, delay);
-  };
-  scheduleAiReset();
+  // كل أول الشهر 00:01: إعادة تعيين عداد تحليلات الذكاء الاصطناعي للمجانيين
+  async function resetAiUsage() {
+    try {
+      const { prisma } = await import('./server/lib/prisma.ts');
+      const resetDate = new Date();
+      const nextReset = new Date(resetDate.getFullYear(), resetDate.getMonth() + 1, 1, 0, 0, 0, 0);
+      await prisma.user.updateMany({
+        data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: nextReset },
+      });
+      logger.info('AI usage counters reset for free users');
+    } catch (err) {
+      logger.error('AI usage reset job error', { error: err });
+    }
+  }
+  const aiResetCron = cron.schedule('1 0 1 * *', resetAiUsage, { timezone: 'Africa/Cairo' });
 
-  // كل 10 دقائق: تحديث كاش الأسعار المتأخرة للمجانيين
+  // كل 10 دقائق: تحديث كاش الأسعار المتأخرة للمجانيين (batch بدل N+1)
   const TEN_MIN_MS = 10 * 60 * 1000;
   const pricesInterval = setInterval(async () => {
     try {
-      const { getStockPrice } = await import('./server/lib/stockData.ts');
       const { setCache } = await import('./server/lib/redis.ts');
       const { EGX_TICKERS } = await import('./server/lib/egxTickers.ts');
       const { prisma } = await import('./server/lib/prisma.ts');
       const { createNotification } = await import('./server/lib/createNotification.ts');
       const now = Date.now();
-      for (const ticker of EGX_TICKERS) {
-        const data = await getStockPrice(ticker);
-        if (data) {
-          await setCache(`stock:price:delayed:${ticker}`, { ...data, delayedAt: now }, 15 * 60);
-        }
-      }
+      const quotes = await marketDataService.getQuotes(EGX_TICKERS);
+      await Promise.all(
+        Array.from(quotes.entries()).map(([ticker, data]) =>
+          setCache(`stock:price:delayed:${ticker}`, {
+            ticker: data.symbol,
+            price: data.price,
+            change: data.change,
+            changePercent: data.changePercent,
+            volume: data.volume,
+            high: data.high,
+            low: data.low,
+            open: data.open,
+            previousClose: data.previousClose,
+            name: data.symbol,
+            delayedAt: now,
+          }, 15 * 60)
+        )
+      );
       const watchlistAlerts = await prisma.watchlist.findMany({
         where: { targetPrice: { not: null } },
         include: { user: { select: { id: true, notifySignals: true } } },
       });
+      const alertTickers = [...new Set(watchlistAlerts.map((a) => a.ticker))];
+      const alertQuotes = alertTickers.length > 0 ? await marketDataService.getQuotes(alertTickers) : new Map();
       for (const item of watchlistAlerts) {
-        const priceData = await getStockPrice(item.ticker);
+        const priceData = alertQuotes.get(item.ticker);
         if (!priceData || item.targetPrice == null) continue;
         const hit = priceData.price >= item.targetPrice;
         const alreadyNotified = item.targetReachedNotifiedAt != null;
@@ -438,29 +457,25 @@ async function startServer() {
     }
   }, TEN_MIN_MS);
 
-  const ONE_HOUR_MS = 60 * 60 * 1000;
-  let lastPredictionResolveRun = '';
-  const resolvePredictionsInterval = setInterval(async () => {
+  // بعد إغلاق السوق 15:30 القاهرة — تسوية التوقعات (أحد–خميس)
+  async function runResolvePredictionsJob() {
     try {
-      const { runResolvePredictions, isCairoMarketCloseHour } = await import('./server/jobs/resolve-predictions.ts');
-      if (!isCairoMarketCloseHour()) return;
-      const dayKey = new Date().toISOString().slice(0, 10);
-      if (lastPredictionResolveRun === dayKey) return;
-      lastPredictionResolveRun = dayKey;
+      const { runResolvePredictions } = await import('./server/jobs/resolve-predictions.ts');
       await runResolvePredictions();
     } catch (err) {
       logger.error('Resolve predictions job error', { error: err });
     }
-  }, ONE_HOUR_MS);
+  }
+  const resolveCron = cron.schedule('30 15 * * 0-4', runResolvePredictionsJob, { timezone: 'Africa/Cairo' });
 
   const shutdown = (signal: string) => {
     logger.info(`${signal} received — shutting down gracefully`);
     marketDataService.stopPolling();
     wsHandlers?.closeWss();
-    clearInterval(archiveInterval);
-    clearTimeout(aiResetTimeout);
+    archiveCron.stop();
+    aiResetCron.stop();
+    resolveCron.stop();
     clearInterval(pricesInterval);
-    clearInterval(resolvePredictionsInterval);
     server.close(async () => {
       try {
         const { prisma } = await import('./server/lib/prisma.ts');

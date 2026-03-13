@@ -110,6 +110,55 @@ export function getMarketStatus(): MarketStatusResult {
   };
 }
 
+/** للتوافق مع واجهة الأسهم: isOpen + nextOpen/nextClose كـ ISO strings */
+export function getMarketStatusForStocks(): { isOpen: boolean; nextOpen: string; nextClose: string } {
+  const result = getMarketStatus();
+  const isOpen = result.status === 'open' || result.status === 'pre' || result.status === 'auction' || result.status === 'closing';
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: CAIRO_TZ,
+    weekday: 'short',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const now = new Date();
+  const parts = formatter.formatToParts(now);
+  let hour = 0, minute = 0, year = 0, month = 0, day = 0, weekday = '';
+  for (const p of parts) {
+    if (p.type === 'hour') hour = parseInt(p.value, 10);
+    if (p.type === 'minute') minute = parseInt(p.value, 10);
+    if (p.type === 'year') year = parseInt(p.value, 10);
+    if (p.type === 'month') month = parseInt(p.value, 10);
+    if (p.type === 'day') day = parseInt(p.value, 10);
+    if (p.type === 'weekday') weekday = p.value;
+  }
+  const dayIndex = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(weekday);
+  const totalMinutes = hour * 60 + minute;
+  const closeMinutes = 14 * 60 + 15;
+  let nextOpen = new Date(Date.UTC(year, month - 1, day, 8, 0, 0, 0));
+  let nextClose = new Date(Date.UTC(year, month - 1, day, 12, 15, 0, 0));
+  if (dayIndex === 5 || dayIndex === 6) {
+    const daysToAdd = dayIndex === 5 ? 2 : 1;
+    nextOpen.setUTCDate(nextOpen.getUTCDate() + daysToAdd);
+    nextClose.setUTCDate(nextClose.getUTCDate() + daysToAdd);
+  } else if (totalMinutes >= closeMinutes) {
+    nextOpen.setUTCDate(nextOpen.getUTCDate() + 1);
+    nextClose.setUTCDate(nextClose.getUTCDate() + 1);
+    if (nextOpen.getUTCDay() === 5) {
+      nextOpen.setUTCDate(nextOpen.getUTCDate() + 2);
+      nextClose.setUTCDate(nextClose.getUTCDate() + 2);
+    }
+  }
+  return {
+    isOpen,
+    nextOpen: nextOpen.toISOString(),
+    nextClose: nextClose.toISOString(),
+  };
+}
+
 /** سوق الذهب العالمي: الأحد 23:00 GMT → الجمعة 22:00 GMT */
 export function getGoldMarketStatus(): { isOpen: boolean; label: { ar: string; en: string } } {
   const gmt = new Date();

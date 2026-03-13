@@ -33,10 +33,18 @@ export function getCairoDateStringFromDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-/** Unix timestamp (seconds) for next midnight in Africa/Cairo. Use with Redis EXPIREAT. (00:00 Cairo = 22:00 previous day UTC.) */
+/** Unix timestamp (seconds) for next midnight in Africa/Cairo. Use with Redis EXPIREAT. Respects DST (EET UTC+2 / EEST UTC+3). */
 export function getCairoMidnightExpirySeconds(): number {
   const dateStr = getCairoDateString();
   const [y, m, d] = dateStr.split('-').map(Number);
-  const midnightCairoAsUtc = Date.UTC(y, m - 1, d + 1, 22, 0, 0, 0);
-  return Math.ceil(midnightCairoAsUtc / 1000);
+  const tomorrow = new Date(Date.UTC(y, m - 1, d + 1, 12, 0, 0, 0));
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Cairo',
+    hour: 'numeric',
+    hour12: false,
+  });
+  const hourAtNoonUtc = parseInt(formatter.format(tomorrow), 10);
+  const offset = hourAtNoonUtc - 12;
+  const midnightCairoUtc = Date.UTC(y, m - 1, d + 1, -offset, 0, 0, 0);
+  return Math.ceil(midnightCairoUtc / 1000);
 }

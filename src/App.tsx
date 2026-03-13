@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
@@ -75,7 +75,10 @@ export default function App() {
     if (i18n.language !== nextLang) i18n.changeLanguage(nextLang);
   }, [user?.language, i18n]);
 
+  const hasCheckedAuth = useRef(false);
   useEffect(() => {
+    if (hasCheckedAuth.current) return;
+    hasCheckedAuth.current = true;
     const checkAuth = async () => {
       try {
         const res = await fetch('/api/auth/me', { credentials: 'include' });

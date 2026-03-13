@@ -77,23 +77,23 @@ export const StocksService = {
     return results.filter(r => cached.has(r.ticker));
   },
 
-  async getPrice(ticker: string, _delayed: boolean) {
-    const { getQuote } = await import('./stockQuote.service.ts');
-    const quote = await getQuote(ticker);
-    if (!quote || quote.price == null) return null;
+  async getPrice(ticker: string, delayed: boolean) {
+    const { getStockPrice, getStockPriceDelayed } = await import('../lib/stockData.ts');
+    const priceData = delayed ? await getStockPriceDelayed(ticker) : await getStockPrice(ticker);
+    if (!priceData) return null;
     return {
-      ticker: quote.ticker,
-      price: quote.price,
-      change: quote.change ?? 0,
-      changePercent: quote.changePercent ?? 0,
-      volume: quote.volume ?? 0,
-      high: quote.high ?? undefined,
-      low: quote.low ?? undefined,
-      open: quote.open ?? undefined,
-      previousClose: quote.previousClose ?? undefined,
-      name: quote.symbol ?? quote.ticker,
-      isDelayed: true,
-      priceTime: new Date().toISOString().slice(11, 19),
+      ticker: priceData.ticker,
+      price: priceData.price,
+      change: priceData.change,
+      changePercent: priceData.changePercent,
+      volume: priceData.volume ?? 0,
+      high: priceData.high,
+      low: priceData.low,
+      open: priceData.open,
+      previousClose: priceData.previousClose,
+      name: priceData.name,
+      isDelayed: 'isDelayed' in priceData ? priceData.isDelayed : !marketDataService.isMarketOpen(),
+      priceTime: 'priceTime' in priceData ? priceData.priceTime : new Date().toISOString().slice(11, 19),
     };
   },
 

@@ -4,6 +4,7 @@ import { Request } from 'express';
 export interface AuthUser {
   id: string;
   email: string | null;
+  isEmailVerified?: boolean;
   plan?: string | null;
   planExpiresAt?: Date | null;
   referralProExpiresAt?: Date | null;

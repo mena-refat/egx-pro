@@ -329,7 +329,7 @@ export const SocialService = {
     };
   },
 
-  /** GET /username-search: prefix autocomplete, min 5 chars, max 5 results, exclude self. */
+  /** GET /username-search: prefix autocomplete, min 2 chars, max 5 results, exclude self. */
   async usernameSearch(
     currentUserId: string,
     q: string,
@@ -346,7 +346,7 @@ export const SocialService = {
     }>
   > {
     const term = q.trim().toLowerCase();
-    if (term.length < 5) return [];
+    if (term.length < 2) return [];
 
     const take = Math.min(10, Math.max(1, limit));
     const users = await UserRepository.findMany({

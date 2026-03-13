@@ -17,6 +17,7 @@ const getCookieOptions = () => ({
   secure: isProduction,
   sameSite: 'strict' as const,
   maxAge: REFRESH_TOKEN_AGE_MS,
+  path: '/api/auth',
 });
 
 function authContext(req: Request): AuthService.AuthContext {

@@ -758,15 +758,30 @@ export const UserService = {
   async uploadAvatar(userId: string, imageBase64: string) {
     const matches = imageBase64.match(/^data:(image\/\w+);base64,(.+)$/);
     if (!matches) return { error: 'Invalid image format' as const };
-    const mimeType = matches[1];
     const base64Data = matches[2];
-    const buffer = Buffer.from(base64Data, 'base64');
-    const ext = mimeType.split('/')[1] || 'png';
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(base64Data, 'base64');
+    } catch {
+      return { error: 'Invalid image format' as const };
+    }
+    const MAX_AVATAR_BYTES = 500 * 1024; // 500KB
+    if (buffer.length > MAX_AVATAR_BYTES) return { error: 'Invalid image format' as const };
+    const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const JPEG_SIG = Buffer.from([0xff, 0xd8, 0xff]);
+    const isPng = buffer.length >= 8 && buffer.subarray(0, 8).equals(PNG_SIG);
+    const isJpeg = buffer.length >= 3 && buffer.subarray(0, 3).equals(JPEG_SIG);
+    if (!isPng && !isJpeg) return { error: 'Invalid image format' as const };
+    const sharp = (await import('sharp')).default;
     const uploadsDir = path.join(process.cwd(), 'uploads', 'avatars');
     if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-    const filename = `${userId}.${ext}`;
+    const filename = `${randomUUID()}.webp`;
     const filePath = path.join(uploadsDir, filename);
-    fs.writeFileSync(filePath, buffer);
+    await sharp(buffer)
+      .resize(400, 400, { fit: 'cover', position: 'center' })
+      .webp({ quality: 85 })
+      .rotate()
+      .toFile(filePath);
     const publicUrl = `/uploads/avatars/${filename}`;
     const user = await UserRepository.update({
       where: { id: userId },

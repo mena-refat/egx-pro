@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { StocksService } from '../services/stocks.service.ts';
-import * as stockQuoteService from '../services/stockQuote.service.ts';
+import { marketDataService } from '../services/market-data/market-data.service.ts';
+import { getMarketStatusForStocks } from '../lib/marketHours.ts';
 import { isPro } from '../lib/plan.ts';
 import type { AuthRequest } from '../routes/types.ts';
 
@@ -88,12 +89,25 @@ export const StocksController = {
       res.status(400).json({ error: 'VALIDATION_ERROR' });
       return;
     }
-    const quote = await stockQuoteService.getQuote(ticker.trim());
-    if (!quote) {
+    const quote = await marketDataService.getQuote(ticker.trim());
+    if (!quote || !Number.isFinite(quote.price)) {
       res.status(404).json({ error: 'NOT_FOUND' });
       return;
     }
-    res.json({ data: quote });
+    res.json({
+      data: {
+        ticker: quote.symbol,
+        price: quote.price,
+        change: quote.change,
+        changePercent: quote.changePercent,
+        high: quote.high,
+        low: quote.low,
+        open: quote.open,
+        previousClose: quote.previousClose,
+        volume: quote.volume,
+        symbol: quote.symbol,
+      },
+    });
   }),
 
   /** POST /api/stocks/quotes — body: { tickers: string[] }, max 50 */
@@ -108,16 +122,30 @@ export const StocksController = {
       res.status(400).json({ error: 'VALIDATION_ERROR' });
       return;
     }
-    const results = await stockQuoteService.getMultipleQuotes(tickers);
-    const quotes = Object.fromEntries(
-      results.map((r) => [r.ticker, r.quote])
-    );
+    const quotesMap = await marketDataService.getQuotes(tickers);
+    const quotes: Record<string, unknown> = {};
+    for (const [t, q] of quotesMap.entries()) {
+      if (q && Number.isFinite(q.price)) {
+        quotes[t] = {
+          ticker: q.symbol,
+          price: q.price,
+          change: q.change,
+          changePercent: q.changePercent,
+          high: q.high,
+          low: q.low,
+          open: q.open,
+          previousClose: q.previousClose,
+          volume: q.volume,
+          symbol: q.symbol,
+        };
+      }
+    }
     res.json({ data: quotes });
   }),
 
   /** GET /api/stocks/market-status — { isOpen, nextOpen, nextClose } */
   getMarketStatus: run(async (_req, res) => {
-    const status = stockQuoteService.getMarketStatus();
+    const status = getMarketStatusForStocks();
     res.json({ data: status });
   }),
 };

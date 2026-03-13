@@ -1,5 +1,6 @@
 import type { IMarketDataSource, StockQuote } from './types.ts';
 import { YahooFinanceSource } from './sources/yahoo-finance-source.ts';
+import { StooqSource } from './sources/stooq-source.ts';
 import { logger } from '../../lib/logger.ts';
 import { getCache, setCache } from '../../lib/redis.ts';
 import { MARKET_DATA } from '../../lib/constants.ts';
@@ -162,7 +163,8 @@ export class MarketDataService {
 
   constructor() {
     this.sources = [
-      new YahooFinanceSource(), // chart endpoint — accurate EGX daily close prices
+      new YahooFinanceSource(),
+      new StooqSource(),
     ].sort((a, b) => a.priority - b.priority);
 
     this.sources.forEach(s => this.sourceHealth.set(s.name, {

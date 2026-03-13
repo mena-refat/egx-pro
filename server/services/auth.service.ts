@@ -21,6 +21,7 @@ import {
   validateChangePassword,
 } from '../../src/lib/validations.ts';
 import { auditLog, type AuditReq } from '../lib/audit.ts';
+import { setCache } from '../lib/redis.ts';
 import { EmailService } from './email.service.ts';
 import { logger } from '../lib/logger.ts';
 import { sanitizeUser } from '../lib/userSanitize.ts';
@@ -157,6 +158,12 @@ export async function register(
   if (user.email) {
     EmailService.sendWelcome(user.email, user.fullName ?? 'مستخدم').catch((err) =>
       logger.error('Failed to send welcome email', { err })
+    );
+    // إرسال كود التحقق من البريد (15 دقيقة)
+    const verifyCode = Math.floor(100000 + Math.random() * 900000).toString();
+    setCache(`email_verify:${user.id}`, verifyCode, 15 * 60).catch(() => {});
+    EmailService.sendVerificationCode(user.email, verifyCode).catch((err) =>
+      logger.error('Failed to send verification code', { err })
     );
   }
 

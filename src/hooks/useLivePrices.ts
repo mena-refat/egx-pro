@@ -8,6 +8,7 @@ export function useLivePrices() {
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectDelayRef = useRef(1000);
 
   useEffect(() => {
     const connect = () => {
@@ -54,9 +55,10 @@ export function useLivePrices() {
 
       ws.onclose = () => {
         setIsConnected(false);
-        if (import.meta.env.DEV) console.log('WebSocket disconnected. Reconnecting in 5s...');
-        // Auto reconnect
-        reconnectTimeoutRef.current = setTimeout(connect, TIMEOUTS.reconnect);
+        const delay = reconnectDelayRef.current;
+        reconnectDelayRef.current = Math.min(reconnectDelayRef.current * 2, 30000);
+        if (import.meta.env.DEV) console.log(`WebSocket disconnected. Reconnecting in ${delay}ms...`);
+        reconnectTimeoutRef.current = setTimeout(connect, delay);
       };
 
       ws.onerror = () => {

@@ -48,6 +48,8 @@ model StockQuoteCache {
   marketTime    DateTime?
   cachedAt      DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  @@index([updatedAt])
 }
 
 model User {
@@ -178,6 +180,7 @@ model Prediction {
 
   @@index([ticker, status])
   @@index([userId, status])
+  @@index([status, expiresAt])
 }
 
 model PredictionLike {
@@ -245,6 +248,9 @@ model RefreshToken {
   city       String?
   country    String?
   isRevoked  Boolean   @default(false)
+
+  @@index([expiresAt])
+  @@index([userId, isRevoked])
 }
 
 model AuditLog {
@@ -265,6 +271,7 @@ model AuditLog {
   @@index([userId])
   @@index([userId, createdAt])
   @@index([action])
+  @@index([createdAt])
 }
 
 model Portfolio {

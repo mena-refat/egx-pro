@@ -3,12 +3,17 @@ import jwt from 'jsonwebtoken';
 import { promisify } from 'util';
 
 const scrypt = promisify(crypto.scrypt);
-const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined;
-const rawPepper = process.env.AUTH_PEPPER;
-if (!rawPepper?.trim() && !isDev) {
-  throw new Error('AUTH_PEPPER must be set in non-development environments.');
+const rawPepper = process.env.AUTH_PEPPER?.trim();
+if (!rawPepper) {
+  const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined;
+  if (isDev) {
+    throw new Error(
+      'AUTH_PEPPER must be set in .env even in development. Generate one with: openssl rand -hex 32'
+    );
+  }
+  throw new Error('AUTH_PEPPER must be set in production.');
 }
-const PEPPER = rawPepper?.trim() || 'default-pepper-if-missing';
+const PEPPER = rawPepper;
 
 export async function hashPassword(password: string) {
   const salt = crypto.randomBytes(16).toString('hex');
@@ -77,25 +82,28 @@ export function verifyAccessToken(token: string) {
   });
 }
 
-/** Short-lived token returned after login when 2FA is required. */
+/** Secret used only for 2FA temp tokens (not shared with access token). */
+function get2FATokenSecret(): string {
+  const explicit = process.env.JWT_2FA_SECRET?.trim();
+  if (explicit) return explicit;
+  const base = process.env.JWT_ACCESS_TOKEN_SECRET || process.env.JWT_PRIVATE_KEY;
+  if (!base) throw new Error('JWT_ACCESS_TOKEN_SECRET or JWT_PRIVATE_KEY must be set.');
+  return crypto.createHmac('sha256', base).update('2fa-scope').digest('hex');
+}
+
+/** Short-lived token returned after login when 2FA is required. Uses separate secret so it cannot be used as access token. */
 export function generate2FATempToken(userId: string): string {
-  const rawKey = process.env.JWT_PRIVATE_KEY;
-  const isRealKey = rawKey && rawKey.includes('BEGIN RSA PRIVATE KEY') && !rawKey.includes('...');
-  const secret = isRealKey ? rawKey.replace(/\\n/g, '\n') : process.env.JWT_ACCESS_TOKEN_SECRET;
-  if (!secret) {
-    throw new Error('JWT_PRIVATE_KEY or JWT_ACCESS_TOKEN_SECRET must be set.');
-  }
-  const effectiveSecret = secret;
-  const algorithm = isRealKey ? 'RS256' : 'HS256';
+  const secret = get2FATokenSecret();
   return jwt.sign(
     { sub: userId, purpose: '2fa_pending' },
-    effectiveSecret,
-    { expiresIn: '5m', algorithm: algorithm as jwt.Algorithm }
+    secret,
+    { expiresIn: '5m', algorithm: 'HS256' }
   );
 }
 
 export function verify2FATempToken(token: string): { userId: string } {
-  const decoded = verifyAccessToken(token) as { sub: string; purpose?: string };
+  const secret = get2FATokenSecret();
+  const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] }) as { sub: string; purpose?: string };
   if (decoded.purpose !== '2fa_pending') throw new Error('Invalid token purpose');
   return { userId: decoded.sub };
 }

@@ -137,7 +137,8 @@ export const PredictionsService = {
     const rawReason = typeof body.reason === 'string' ? body.reason : '';
     const isPublic = body.isPublic !== false;
 
-    if (!ticker || !['UP', 'DOWN'].includes(direction) || !['WEEK', 'MONTH', 'THREE_MONTHS'].includes(timeframe)) {
+    const validTimeframes = ['WEEK', 'MONTH', 'THREE_MONTHS', 'SIX_MONTHS', 'NINE_MONTHS', 'YEAR'];
+    if (!ticker || !['UP', 'DOWN'].includes(direction) || !validTimeframes.includes(timeframe)) {
       throw new AppError('VALIDATION_ERROR', 400, 'بيانات غير صالحة');
     }
     if (typeof targetPrice !== 'number' || targetPrice <= 0) {
