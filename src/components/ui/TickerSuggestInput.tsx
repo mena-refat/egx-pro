@@ -60,6 +60,14 @@ export function TickerSuggestInput({
           setShowSuggestions(true);
         }}
         onFocus={() => setShowSuggestions(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && suggestions.length > 0) {
+            e.preventDefault();
+            handleSelect(suggestions[0].ticker);
+          } else if (e.key === 'Escape') {
+            setShowSuggestions(false);
+          }
+        }}
         placeholder={placeholder}
         disabled={disabled}
         dir={dir}

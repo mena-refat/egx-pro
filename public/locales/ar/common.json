@@ -75,7 +75,9 @@
     "selectFromList": "اختر رمزاً من القائمة المنسدلة (يجب أن يكون من أسهم البورصة المصرية)",
     "sessionExpired": "انتهت الجلسة أو لم يتم التعرف على حسابك. سجّل الدخول مرة أخرى.",
     "error404Stock": "الرمز غير موجود أو لا تتوفر بيانات له حالياً. جرّب رمزاً آخر أو انتظر تحديث البيانات.",
-    "error404Route": "الخدمة غير متوفرة حالياً. تأكد من تشغيل السيرفر وحاول مرة أخرى."
+    "error404Route": "الخدمة غير متوفرة حالياً. تأكد من تشغيل السيرفر وحاول مرة أخرى.",
+    "serviceUnavailable": "خدمة التحليل غير متاحة حالياً. تأكد من إعداد مفتاح الـ AI وحاول مرة أخرى.",
+    "analysisTimeout": "استغرق التحليل وقتاً طويلاً. حاول مرة أخرى بعد قليل."
   },
   "predictions": {
     "title": "التوقعات",
@@ -178,16 +180,19 @@
     "registerSuccess": "تم إنشاء الحساب بنجاح!"
   },
   "error": {
-    "label": "حدث خطأ",
-    "codeLabel": "رمز الخطأ: {{code}}",
-    "404": {
-      "title": "الصفحة غير موجودة",
-      "description": "الصفحة اللي بتدور عليها مش موجودة أو اتنقلت لمكان تاني.",
-      "action": "العودة للرئيسية"
+    "401": {
+      "title": "يجب تسجيل الدخول أولاً",
+      "description": "سجّل دخولك عشان تقدر تكمل.",
+      "action": "تسجيل الدخول"
     },
     "403": {
       "title": "غير مسموح بالدخول",
       "description": "مش عندك صلاحية للوصول لهذه الصفحة.",
+      "action": "العودة للرئيسية"
+    },
+    "404": {
+      "title": "الصفحة غير موجودة",
+      "description": "الصفحة اللي بتدور عليها مش موجودة أو اتنقلت لمكان تاني.",
       "action": "العودة للرئيسية"
     },
     "500": {
@@ -195,11 +200,8 @@
       "description": "في مشكلة مؤقتة عندنا، بنشتغل على حلها.",
       "action": "حاول مرة أخرى"
     },
-    "401": {
-      "title": "يجب تسجيل الدخول أولاً",
-      "description": "سجّل دخولك عشان تقدر تكمل.",
-      "action": "تسجيل الدخول"
-    },
+    "label": "حدث خطأ",
+    "codeLabel": "رمز الخطأ: {{code}}",
     "loadFailed": "فشل تحميل البيانات، حاول مرة أخرى"
   },
   "auth": {
@@ -348,22 +350,62 @@
     "goNow": "اذهب الآن",
     "dismiss": "فهمت",
     "lockedHint": "لم يُحقق بعد",
-    "levels": { "beginner": "ناشئ", "growth": "مستثمر", "pro": "محترف", "legend": "أسطورة" },
-    "levelTitles": { "first": "المستوى 1", "second": "المستوى 2", "third": "المستوى 3", "fourth": "المستوى 4" },
+    "levels": {
+      "beginner": "ناشئ",
+      "growth": "مستثمر",
+      "pro": "محترف",
+      "legend": "أسطورة"
+    },
+    "levelTitles": {
+      "first": "المستوى 1",
+      "second": "المستوى 2",
+      "third": "المستوى 3",
+      "fourth": "المستوى 4"
+    },
     "goToChallenge": "انطلق نحو التحدي",
     "completedOn": "تم في",
     "ofComplete": "من {{total}} مكتمل",
     "titles": {
-      "first-step": "الخطوة الأولى", "know-yourself": "اعرف نفسك", "profile-complete": "ملف كامل", "first-look": "نظرة أولى",
-      "watcher": "مراقب", "investor": "مستثمر", "dreamer": "حالم", "first-referrer": "أول داعم", "subscriber": "مشترك",
-      "week-with-us": "أسبوع معنا", "active-analyst": "محلل نشط", "wealth-builder": "باني ثروة", "long-list": "قائمة طويلة",
-      "planner": "مخطط", "loyal": "وفي", "network": "شبكة", "diversified": "متنوع", "decision-maker": "صانع قرار",
-      "first-goal-achieved": "أول هدف محقق", "devoted": "مخلص", "expert-analyst": "محلل خبير", "diverse-portfolio": "محفظة متنوعة",
-      "strategist": "استراتيجي", "egx-ambassador": "سفير Borsa", "big-portfolio": "محفظة كبيرة", "patient": "صابر",
-      "daily-follower": "متابع يومي", "researcher": "باحث", "annual-subscriber": "مشترك سنوي", "leader": "قائد",
-      "legend-analyst": "محلل أسطوري", "kings-portfolio": "محفظة الملوك", "full-year": "سنة كاملة", "mega-referrer": "داعم ضخم",
-      "referral-legend": "أسطورة الدعوات", "community-leader": "قائد المجتمع", "the-1000": "الـ 1000", "overachiever": "فائز",
-      "sector-expert": "خبير قطاع", "legend": "أسطورة"
+      "first-step": "الخطوة الأولى",
+      "know-yourself": "اعرف نفسك",
+      "profile-complete": "ملف كامل",
+      "first-look": "نظرة أولى",
+      "watcher": "مراقب",
+      "investor": "مستثمر",
+      "dreamer": "حالم",
+      "first-referrer": "أول داعم",
+      "subscriber": "مشترك",
+      "week-with-us": "أسبوع معنا",
+      "active-analyst": "محلل نشط",
+      "wealth-builder": "باني ثروة",
+      "long-list": "قائمة طويلة",
+      "planner": "مخطط",
+      "loyal": "وفي",
+      "network": "شبكة",
+      "diversified": "متنوع",
+      "decision-maker": "صانع قرار",
+      "first-goal-achieved": "أول هدف محقق",
+      "devoted": "مخلص",
+      "expert-analyst": "محلل خبير",
+      "diverse-portfolio": "محفظة متنوعة",
+      "strategist": "استراتيجي",
+      "egx-ambassador": "سفير Borsa",
+      "big-portfolio": "محفظة كبيرة",
+      "patient": "صابر",
+      "daily-follower": "متابع يومي",
+      "researcher": "باحث",
+      "annual-subscriber": "مشترك سنوي",
+      "leader": "قائد",
+      "legend-analyst": "محلل أسطوري",
+      "kings-portfolio": "محفظة الملوك",
+      "full-year": "سنة كاملة",
+      "mega-referrer": "داعم ضخم",
+      "referral-legend": "أسطورة الدعوات",
+      "community-leader": "قائد المجتمع",
+      "the-1000": "الـ 1000",
+      "overachiever": "فائز",
+      "sector-expert": "خبير قطاع",
+      "legend": "أسطورة"
     }
   },
   "settings": {

@@ -75,7 +75,9 @@
     "selectFromList": "Pick a symbol from the dropdown (must be an EGX listed stock)",
     "sessionExpired": "Session expired or account not recognized. Please sign in again.",
     "error404Stock": "Symbol not found or no data available. Try another symbol or wait for data refresh.",
-    "error404Route": "Service unavailable. Make sure the server is running and try again."
+    "error404Route": "Service unavailable. Make sure the server is running and try again.",
+    "serviceUnavailable": "AI analysis service is currently unavailable. Check the API key configuration and try again.",
+    "analysisTimeout": "Analysis took too long. Please try again in a moment."
   },
   "predictions": {
     "title": "Predictions",
@@ -178,16 +180,19 @@
     "registerSuccess": "Account created successfully!"
   },
   "error": {
-    "label": "An error occurred",
-    "codeLabel": "Error code: {{code}}",
-    "404": {
-      "title": "Page not found",
-      "description": "The page you are looking for does not exist or has been moved.",
-      "action": "Back to home"
+    "401": {
+      "title": "Login required",
+      "description": "Please sign in to continue.",
+      "action": "Login"
     },
     "403": {
       "title": "Access denied",
       "description": "You do not have permission to access this page.",
+      "action": "Back to home"
+    },
+    "404": {
+      "title": "Page not found",
+      "description": "The page you are looking for does not exist or has been moved.",
       "action": "Back to home"
     },
     "500": {
@@ -195,11 +200,8 @@
       "description": "We’re experiencing a temporary issue and are working on a fix.",
       "action": "Try again"
     },
-    "401": {
-      "title": "Login required",
-      "description": "Please sign in to continue.",
-      "action": "Login"
-    },
+    "label": "An error occurred",
+    "codeLabel": "Error code: {{code}}",
     "generic": "Something went wrong",
     "network": "Network error",
     "unauthorized": "Unauthorized",
@@ -351,9 +353,6 @@
     "hideIndicators": "Hide Indicators"
   },
   "achievements": {
-    "congrats": "Congratulations!",
-    "newAchievement": "You unlocked a new achievement",
-    "tabLabel": "Achievements",
     "progress": "Your achievements progress",
     "summaryNote": "You unlocked {{unlocked}} out of {{total}} achievements",
     "level": "Level",
@@ -361,7 +360,64 @@
     "unlocked": "unlocked",
     "goNow": "Go now",
     "dismiss": "Got it",
-    "lockedHint": "Not yet unlocked"
+    "lockedHint": "Not yet unlocked",
+    "levels": {
+      "beginner": "Beginner",
+      "growth": "Investor",
+      "pro": "Pro",
+      "legend": "Legend"
+    },
+    "levelTitles": {
+      "first": "Level 1",
+      "second": "Level 2",
+      "third": "Level 3",
+      "fourth": "Level 4"
+    },
+    "goToChallenge": "Go achieve the challenge",
+    "completedOn": "Completed on",
+    "ofComplete": "of {{total}} complete",
+    "titles": {
+      "first-step": "First Step",
+      "know-yourself": "Know Yourself",
+      "profile-complete": "Complete Profile",
+      "first-look": "First Look",
+      "watcher": "Watcher",
+      "investor": "Investor",
+      "dreamer": "Dreamer",
+      "first-referrer": "First Advocate",
+      "subscriber": "Subscriber",
+      "week-with-us": "Week With Us",
+      "active-analyst": "Active Analyst",
+      "wealth-builder": "Wealth Builder",
+      "long-list": "Long List",
+      "planner": "Planner",
+      "loyal": "Loyal",
+      "network": "Network",
+      "diversified": "Diversified",
+      "decision-maker": "Decision Maker",
+      "first-goal-achieved": "First Goal Achieved",
+      "devoted": "Devoted",
+      "expert-analyst": "Expert Analyst",
+      "diverse-portfolio": "Diverse Portfolio",
+      "strategist": "Strategist",
+      "egx-ambassador": "Borsa Ambassador",
+      "big-portfolio": "Big Portfolio",
+      "patient": "Patient",
+      "daily-follower": "Daily Follower",
+      "researcher": "Researcher",
+      "annual-subscriber": "Annual Subscriber",
+      "leader": "Leader",
+      "legend-analyst": "Legendary Analyst",
+      "kings-portfolio": "Kings' Portfolio",
+      "full-year": "Full Year",
+      "mega-referrer": "Mega Advocate",
+      "referral-legend": "Referral Legend",
+      "community-leader": "Community Leader",
+      "the-1000": "The 1000",
+      "overachiever": "Overachiever",
+      "sector-expert": "Sector Expert",
+      "legend": "Legend"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -958,72 +1014,5 @@
     "cancel": "Cancel",
     "later": "Later",
     "usedAnalysisThisMonth": "Used {{used}} of {{quota}} analyses this month"
-  },
-  "achievements": {
-    "progress": "Your achievements progress",
-    "summaryNote": "You unlocked {{unlocked}} out of {{total}} achievements",
-    "level": "Level",
-    "completed": "Completed",
-    "unlocked": "unlocked",
-    "goNow": "Go now",
-    "dismiss": "Got it",
-    "lockedHint": "Not yet unlocked",
-    "levels": {
-      "beginner": "Beginner",
-      "growth": "Investor",
-      "pro": "Pro",
-      "legend": "Legend"
-    },
-    "levelTitles": {
-      "first": "Level 1",
-      "second": "Level 2",
-      "third": "Level 3",
-      "fourth": "Level 4"
-    },
-    "goToChallenge": "Go achieve the challenge",
-    "completedOn": "Completed on",
-    "ofComplete": "of {{total}} complete",
-    "titles": {
-      "first-step": "First Step",
-      "know-yourself": "Know Yourself",
-      "profile-complete": "Complete Profile",
-      "first-look": "First Look",
-      "watcher": "Watcher",
-      "investor": "Investor",
-      "dreamer": "Dreamer",
-      "first-referrer": "First Advocate",
-      "subscriber": "Subscriber",
-      "week-with-us": "Week With Us",
-      "active-analyst": "Active Analyst",
-      "wealth-builder": "Wealth Builder",
-      "long-list": "Long List",
-      "planner": "Planner",
-      "loyal": "Loyal",
-      "network": "Network",
-      "diversified": "Diversified",
-      "decision-maker": "Decision Maker",
-      "first-goal-achieved": "First Goal Achieved",
-      "devoted": "Devoted",
-      "expert-analyst": "Expert Analyst",
-      "diverse-portfolio": "Diverse Portfolio",
-      "strategist": "Strategist",
-      "egx-ambassador": "Borsa Ambassador",
-      "big-portfolio": "Big Portfolio",
-      "patient": "Patient",
-      "daily-follower": "Daily Follower",
-      "researcher": "Researcher",
-      "annual-subscriber": "Annual Subscriber",
-      "leader": "Leader",
-      "legend-analyst": "Legendary Analyst",
-      "kings-portfolio": "Kings' Portfolio",
-      "full-year": "Full Year",
-      "mega-referrer": "Mega Advocate",
-      "referral-legend": "Referral Legend",
-      "community-leader": "Community Leader",
-      "the-1000": "The 1000",
-      "overachiever": "Overachiever",
-      "sector-expert": "Sector Expert",
-      "legend": "Legend"
-    }
   }
 }

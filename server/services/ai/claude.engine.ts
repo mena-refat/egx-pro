@@ -1,7 +1,7 @@
 import type { IAnalysisEngine, AnalysisEngineRequest, AnalysisEngineResponse } from './types.ts';
 import { logger } from '../../lib/logger.ts';
 
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-4-6';
 
 /**
  * Claude-based analysis engine. Used for highest accuracy in stock analysis

@@ -6,12 +6,12 @@ import api, { ANALYSIS_TIMEOUT_MS } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { TickerSuggestInput } from '../components/ui/TickerSuggestInput';
 import { AnalysisResult } from '../components/analysis/AnalysisResult';
-import { getStockInfo } from '../lib/egxStocks';
+import { getStockInfo, searchStocks } from '../lib/egxStocks';
 import type { AnalysisResult as AnalysisResultType } from '../types';
 import styles from './AIAnalyzePage.module.scss';
 
 export default function AIAnalyzePage() {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
   const [ticker, setTicker] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,27 +20,34 @@ export default function AIAnalyzePage() {
   const [showLimitModal, setShowLimitModal] = useState(false);
 
   const runAnalysis = useCallback(async () => {
-    const tkr = ticker.trim().toUpperCase();
-    if (!tkr) {
+    const raw = ticker.trim();
+    if (!raw) {
       setError(t('ai.enterTicker'));
       return;
     }
-    if (!getStockInfo(tkr)) {
-      setError(t('ai.selectFromList'));
-      return;
+    // Try exact ticker match first, then fall back to name search
+    let resolvedTicker = raw.toUpperCase();
+    if (!getStockInfo(resolvedTicker)) {
+      const lang = i18n.language.startsWith('ar') ? 'ar' : 'en';
+      const matches = searchStocks(raw, lang);
+      if (matches.length === 1) {
+        resolvedTicker = matches[0].ticker;
+      } else {
+        setError(t('ai.selectFromList'));
+        return;
+      }
     }
     setError(null);
     setAnalysis(null);
     setLoading(true);
     try {
-      const res = await api.post<{ data: { analysis: AnalysisResultType } }>(`/analysis/${tkr}`, undefined, { timeout: ANALYSIS_TIMEOUT_MS });
+      const res = await api.post<{ data: { analysis: AnalysisResultType } }>(`/analysis/${resolvedTicker}`, undefined, { timeout: ANALYSIS_TIMEOUT_MS });
       const data = res.data?.data?.analysis ?? (res.data as { analysis?: AnalysisResultType })?.analysis;
       if (data) setAnalysis(data);
       else setError(t('common.error'));
     } catch (err: unknown) {
-      const res = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { status?: number; data?: { error?: string } } }).response
-        : undefined;
+      const axiosErr = err as { code?: string; response?: { status?: number; data?: { error?: string } } };
+      const res = axiosErr?.response;
       const code = res?.data?.error;
       const status = res?.status;
       if (code === 'ANALYSIS_LIMIT_REACHED') {
@@ -48,14 +55,18 @@ export default function AIAnalyzePage() {
       } else if (status === 401) {
         setError(t('ai.sessionExpired'));
       } else if (status === 404) {
-        setError(code === 'NOT_FOUND' ? t('ai.error404Stock') : t('ai.error404Route'));
+        setError(t('ai.error404Stock'));
+      } else if (status === 503 || code === 'SERVICE_UNAVAILABLE') {
+        setError(t('ai.serviceUnavailable'));
+      } else if (axiosErr?.code === 'ECONNABORTED') {
+        setError(t('ai.analysisTimeout'));
       } else {
-        setError((err as Error)?.message || t('common.error'));
+        setError(t('common.error'));
       }
     } finally {
       setLoading(false);
     }
-  }, [ticker, t]);
+  }, [ticker, t, i18n.language]);
 
   return (
     <div className={styles.page}>

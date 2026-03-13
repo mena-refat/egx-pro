@@ -5,12 +5,12 @@ import { ArrowLeft, GitCompare } from 'lucide-react';
 import api, { ANALYSIS_TIMEOUT_MS } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { TickerSuggestInput } from '../components/ui/TickerSuggestInput';
-import { getStockInfo } from '../lib/egxStocks';
+import { getStockInfo, searchStocks } from '../lib/egxStocks';
 import type { CompareResult } from '../types';
 import styles from './AIComparePage.module.scss';
 
 export default function AIComparePage() {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
   const [ticker1, setTicker1] = useState('');
   const [ticker2, setTicker2] = useState('');
@@ -19,19 +19,27 @@ export default function AIComparePage() {
   const [result, setResult] = useState<CompareResult | null>(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
 
+  const resolveTicker = useCallback((raw: string): string | null => {
+    const upper = raw.trim().toUpperCase();
+    if (getStockInfo(upper)) return upper;
+    const lang = i18n.language.startsWith('ar') ? 'ar' : 'en';
+    const matches = searchStocks(raw.trim(), lang);
+    return matches.length === 1 ? matches[0].ticker : null;
+  }, [i18n.language]);
+
   const runCompare = useCallback(async () => {
-    const t1 = ticker1.trim().toUpperCase();
-    const t2 = ticker2.trim().toUpperCase();
-    if (!t1 || !t2) {
+    if (!ticker1.trim() || !ticker2.trim()) {
       setError(t('ai.enterTwoTickers'));
+      return;
+    }
+    const t1 = resolveTicker(ticker1);
+    const t2 = resolveTicker(ticker2);
+    if (!t1 || !t2) {
+      setError(t('ai.selectFromList'));
       return;
     }
     if (t1 === t2) {
       setError(t('ai.differentTickers'));
-      return;
-    }
-    if (!getStockInfo(t1) || !getStockInfo(t2)) {
-      setError(t('ai.selectFromList'));
       return;
     }
     setError(null);
@@ -47,22 +55,27 @@ export default function AIComparePage() {
       if (data) setResult(data);
       else setError(t('common.error'));
     } catch (err: unknown) {
-      const res = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { status?: number; data?: { error?: string } } }).response
-        : undefined;
+      const axiosErr = err as { code?: string; response?: { status?: number; data?: { error?: string } } };
+      const res = axiosErr?.response;
       const code = res?.data?.error;
       const status = res?.status;
       if (code === 'ANALYSIS_LIMIT_REACHED') {
         setShowLimitModal(true);
+      } else if (status === 401) {
+        setError(t('ai.sessionExpired'));
       } else if (status === 404) {
-        setError(code === 'NOT_FOUND' ? t('ai.error404Stock') : t('ai.error404Route'));
+        setError(t('ai.error404Stock'));
+      } else if (status === 503 || code === 'SERVICE_UNAVAILABLE') {
+        setError(t('ai.serviceUnavailable'));
+      } else if (axiosErr?.code === 'ECONNABORTED') {
+        setError(t('ai.analysisTimeout'));
       } else {
-        setError((err as Error)?.message || t('common.error'));
+        setError(t('common.error'));
       }
     } finally {
       setLoading(false);
     }
-  }, [ticker1, ticker2, t]);
+  }, [ticker1, ticker2, t, resolveTicker]);
 
   return (
     <div className={styles.page}>
