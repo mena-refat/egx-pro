@@ -189,7 +189,7 @@ export function Header({
         <div className="relative" ref={userDropdownRef}>
           <Button type="button" variant="ghost" size="sm" onClick={() => setUserDropdownOpen((o) => !o)} className="flex items-center gap-2 p-1.5 rounded-lg min-w-0" aria-label={t('settings.settingsPage')}>
             <div className="w-8 h-8 rounded-full overflow-hidden bg-[var(--brand)] flex items-center justify-center shrink-0">
-              {user?.avatarUrl ? <img src={user.avatarUrl} alt={t('profile.avatarAlt', { name: user.fullName ?? '' })} className="w-full h-full object-cover" /> : <UserIcon className="w-4 h-4 text-[var(--text-inverse)]" aria-hidden="true" />}
+              {user?.avatarUrl ? <img src={user.avatarUrl} alt={t('profile.avatarAlt', { name: user.fullName ?? '' })} width={32} height={32} className="w-full h-full object-cover" loading="lazy" /> : <UserIcon className="w-4 h-4 text-[var(--text-inverse)]" aria-hidden="true" />}
             </div>
           </Button>
           <AnimatePresence>

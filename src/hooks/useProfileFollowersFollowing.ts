@@ -122,6 +122,9 @@ export function useProfileFollowersFollowing() {
       } catch {
         setFollowStatusInFollowers(username, 'none');
         setFollowStatusInFollowing(username, 'none');
+        const { toast } = await import('../store/toastStore');
+        const i18n = (await import('../lib/i18n')).default;
+        toast.error(i18n.t('errors.internal'));
       } finally {
         setUpdating(null);
       }
@@ -152,6 +155,9 @@ export function useProfileFollowersFollowing() {
         setFollowStatusInFollowers(username, prevFollowers);
         setFollowStatusInFollowing(username, prevFollowing);
         incrementFollowingCount();
+        const { toast } = await import('../store/toastStore');
+        const i18n = (await import('../lib/i18n')).default;
+        toast.error(i18n.t('errors.internal'));
       } finally {
         setUpdating(null);
       }

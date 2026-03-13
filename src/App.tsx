@@ -7,7 +7,7 @@ import { useTheme } from './hooks/useTheme';
 import { useProfileCompletion } from './hooks/useProfileCompletion';
 import { useDashboardStats } from './hooks/useDashboardStats';
 import { motion, AnimatePresence } from 'framer-motion';
-import OnboardingWizard from './components/OnboardingWizard';
+const OnboardingWizard = lazy(() => import('./components/OnboardingWizard'));
 import DelayNotice from './components/DelayNotice';
 import DashboardPage from './pages/DashboardPage';
 import AuthPage from './pages/AuthPage';
@@ -17,6 +17,18 @@ import BottomNav from './components/layout/BottomNav';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { ToastContainer } from './components/shared/ToastContainer';
 import PageLoader from './components/shared/PageLoader';
+import {
+  DashboardSkeleton,
+  PortfolioSkeleton,
+  MarketSkeleton,
+  StocksSkeleton,
+  StockDetailSkeleton,
+  GoalsSkeleton,
+  ProfileSkeleton,
+  PredictionsSkeleton,
+  AIPageSkeleton,
+  DiscoverSkeleton,
+} from './components/skeletons';
 import { SubscriptionTab, ReferralTab, AchievementsTab, AccountOverviewTab } from './components/features/settings';
 import SettingsLayout from './components/layout/SettingsLayout';
 
@@ -99,7 +111,11 @@ export default function App() {
   useEffect(() => { document.documentElement.dir = i18n.language.startsWith('ar') ? 'rtl' : 'ltr'; document.documentElement.lang = i18n.language; }, [i18n.language]);
 
   if (isAuthenticated && user?.isFirstLogin) {
-    return <OnboardingWizard onComplete={onCompleteOnboarding} />;
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <OnboardingWizard onComplete={onCompleteOnboarding} />
+      </Suspense>
+    );
   }
   if (isAuthenticated && !user?.username) {
     return <Navigate to="/setup-username" replace />;
@@ -133,12 +149,12 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
                 <Route path="/dashboard" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
-                <Route path="/portfolio" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><PortfolioTracker /></Suspense></ErrorBoundary>} />
-                <Route path="/stocks" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><StockScreener /></Suspense></ErrorBoundary>} />
-                <Route path="/stocks/:ticker" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><StockDetailPage /></Suspense></ErrorBoundary>} />
-                <Route path="/market" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><MarketPage /></Suspense></ErrorBoundary>} />
+                <Route path="/portfolio" element={<ErrorBoundary><Suspense fallback={<PortfolioSkeleton />}><PortfolioTracker /></Suspense></ErrorBoundary>} />
+                <Route path="/stocks" element={<ErrorBoundary><Suspense fallback={<StocksSkeleton />}><StockScreener /></Suspense></ErrorBoundary>} />
+                <Route path="/stocks/:ticker" element={<ErrorBoundary><Suspense fallback={<StockDetailSkeleton />}><StockDetailPage /></Suspense></ErrorBoundary>} />
+                <Route path="/market" element={<ErrorBoundary><Suspense fallback={<MarketSkeleton />}><MarketPage /></Suspense></ErrorBoundary>} />
                 <Route path="/calculator" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><InvestmentCalculator /></Suspense></ErrorBoundary>} />
-                <Route path="/goals" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><GoalsPage currentWealth={stats.totalValue} /></Suspense></ErrorBoundary>} />
+                <Route path="/goals" element={<ErrorBoundary><Suspense fallback={<GoalsSkeleton />}><GoalsPage currentWealth={stats.totalValue} /></Suspense></ErrorBoundary>} />
                 <Route path="/settings" element={<ErrorBoundary><SettingsLayout /></ErrorBoundary>}>
                   <Route index element={<Navigate to="/settings/account" replace />} />
                   <Route path="account" element={<AccountOverviewTab />} />
@@ -146,15 +162,15 @@ export default function App() {
                   <Route path="referrals" element={<ReferralTab />} />
                   <Route path="achievements" element={<AchievementsTab />} />
                 </Route>
-                <Route path="/profile" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><ProfilePage /></Suspense></ErrorBoundary>} />
-                <Route path="/profile/:username" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><SocialProfilePage /></Suspense></ErrorBoundary>} />
+                <Route path="/profile" element={<ErrorBoundary><Suspense fallback={<ProfileSkeleton />}><ProfilePage /></Suspense></ErrorBoundary>} />
+                <Route path="/profile/:username" element={<ErrorBoundary><Suspense fallback={<ProfileSkeleton />}><SocialProfilePage /></Suspense></ErrorBoundary>} />
                 <Route path="/setup-username" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><UsernameSetupPage /></Suspense></ErrorBoundary>} />
-                <Route path="/discover" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><DiscoverPage /></Suspense></ErrorBoundary>} />
-                <Route path="/predictions" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><PredictionsPage /></Suspense></ErrorBoundary>} />
-                <Route path="/ai" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><AIPage /></Suspense></ErrorBoundary>} />
-                <Route path="/ai/analyze" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><AIAnalyzePage /></Suspense></ErrorBoundary>} />
-                <Route path="/ai/compare" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><AIComparePage /></Suspense></ErrorBoundary>} />
-                <Route path="/ai/recommendations" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><AIRecommendationsPage /></Suspense></ErrorBoundary>} />
+                <Route path="/discover" element={<ErrorBoundary><Suspense fallback={<DiscoverSkeleton />}><DiscoverPage /></Suspense></ErrorBoundary>} />
+                <Route path="/predictions" element={<ErrorBoundary><Suspense fallback={<PredictionsSkeleton />}><PredictionsPage /></Suspense></ErrorBoundary>} />
+                <Route path="/ai" element={<ErrorBoundary><Suspense fallback={<AIPageSkeleton />}><AIPage /></Suspense></ErrorBoundary>} />
+                <Route path="/ai/analyze" element={<ErrorBoundary><Suspense fallback={<AIPageSkeleton />}><AIAnalyzePage /></Suspense></ErrorBoundary>} />
+                <Route path="/ai/compare" element={<ErrorBoundary><Suspense fallback={<AIPageSkeleton />}><AIComparePage /></Suspense></ErrorBoundary>} />
+                <Route path="/ai/recommendations" element={<ErrorBoundary><Suspense fallback={<AIPageSkeleton />}><AIRecommendationsPage /></Suspense></ErrorBoundary>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>

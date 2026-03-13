@@ -80,11 +80,14 @@ export function useStockScreener() {
   const user = useAuthStore((s) => s.user);
   const isPro = user?.plan === 'pro' || user?.plan === 'yearly';
   const isPaid = isPro || user?.plan === 'ultra' || user?.plan === 'ultra_yearly';
-  const { prices: livePrices } = useLivePrices();
+  const [stocks, setStocks] = useState<StockWithMeta[]>([]);
   const isAr = i18n.language.startsWith('ar');
   const lang = isAr ? 'ar' : 'en';
-
-  const [stocks, setStocks] = useState<StockWithMeta[]>([]);
+  const subscribedTickers = useMemo(
+    () => (stocks.length > 0 ? stocks.map((s) => s.ticker) : undefined),
+    [stocks]
+  );
+  const { prices: livePrices } = useLivePrices(subscribedTickers);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterId>('all');

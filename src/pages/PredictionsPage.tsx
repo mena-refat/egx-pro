@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Target } from 'lucide-react';
 import { usePredictionsStore } from '../store/usePredictionsStore';
 import { usePredictionsApi } from '../hooks/usePredictionsApi';
 import { useAuthStore } from '../store/authStore';
-import { NewPredictionSheet } from '../components/predictions/NewPredictionSheet';
+import { Skeleton } from '../components/ui/Skeleton';
+const NewPredictionSheet = lazy(() => import('../components/predictions/NewPredictionSheet').then((m) => ({ default: m.NewPredictionSheet })));
 import {
   PredictionsFeedTab,
   PredictionsMyTab,
@@ -99,6 +100,7 @@ export default function PredictionsPage() {
           onFilter={setFeedFilter}
           onLoadMore={() => fetchFeed((feedPagination?.page ?? 1) + 1)}
           onLike={(id, source, likeCount, isLiked) => api.toggleLike(id, source, likeCount, isLiked)}
+          onNewPrediction={openNewPrediction}
         />
       )}
 
@@ -122,7 +124,9 @@ export default function PredictionsPage() {
       {activeTab === 'stock' && <PredictionsStockTab />}
 
       {isNewPredictionOpen && (
-        <NewPredictionSheet onClose={() => usePredictionsStore.getState().closeNewPrediction()} />
+        <Suspense fallback={<Skeleton height={400} className="w-full rounded-xl" />}>
+          <NewPredictionSheet onClose={() => usePredictionsStore.getState().closeNewPrediction()} />
+        </Suspense>
       )}
     </div>
   );

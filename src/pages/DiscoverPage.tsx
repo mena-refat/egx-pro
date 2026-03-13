@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Users } from 'lucide-react';
 import { useDiscoverSearch } from '../hooks/useDiscoverSearch';
 import { useDiscoverAutocomplete } from '../hooks/useDiscoverAutocomplete';
 import { Input } from '../components/ui/Input';
 import { DiscoverAutocompleteDropdown } from '../components/features/discover/DiscoverAutocompleteDropdown';
 import { DiscoverResultsList } from '../components/features/discover/DiscoverResultsList';
+import EmptyState from '../components/shared/EmptyState';
 import { DISCOVER } from '../lib/constants';
 
 export default function DiscoverPage() {
@@ -84,9 +85,11 @@ export default function DiscoverPage() {
       )}
 
       {!loading && query.trim() && results.length === 0 && (
-        <p className="text-center text-[var(--text-secondary)] py-8">
-          {t('social.noResults', { defaultValue: 'No users found.' })}
-        </p>
+        <EmptyState
+          icon={Users}
+          title={t('social.noResults', { defaultValue: 'No users found.' })}
+          description={t('social.noResultsDesc', { defaultValue: 'جرّب كلمة بحث أخرى أو تأكد من كتابة اسم المستخدم بشكل صحيح.' })}
+        />
       )}
     </div>
   );

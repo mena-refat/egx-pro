@@ -1,7 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { TrendingUp } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { PredictionCard } from '../../predictions/PredictionCard';
+import EmptyState from '../../shared/EmptyState';
 import type { FeedPrediction } from '../../../store/usePredictionsStore';
 
 type Props = {
@@ -12,6 +14,7 @@ type Props = {
   onFilter: (f: 'all' | 'following' | 'top') => void;
   onLoadMore: () => void;
   onLike: (id: string, source: 'feed', likeCount: number, isLiked: boolean) => void;
+  onNewPrediction?: () => void;
 };
 
 export function PredictionsFeedTab({
@@ -22,6 +25,7 @@ export function PredictionsFeedTab({
   onFilter,
   onLoadMore,
   onLike,
+  onNewPrediction,
 }: Props) {
   const { t } = useTranslation('common');
 
@@ -48,7 +52,13 @@ export function PredictionsFeedTab({
           ))}
         </div>
       ) : predictions.length === 0 ? (
-        <p className="text-[var(--text-muted)] py-8 text-center">{t('predictions.emptyFeed')}</p>
+        <EmptyState
+          icon={TrendingUp}
+          title={t('predictions.emptyFeed')}
+          description={t('predictions.emptyFeedDesc', { defaultValue: 'لا توجد توقعات في الخلاصة بعد. ابدأ بتوقّعك الأول أو غيّر الفلتر.' })}
+          actionLabel={onNewPrediction ? t('predictions.newPrediction') : undefined}
+          onAction={onNewPrediction}
+        />
       ) : (
         <div className="space-y-4">
           {predictions.map((p) => (

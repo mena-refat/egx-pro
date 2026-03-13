@@ -141,7 +141,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center shrink-0">
             {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
+              <img src={user.avatarUrl} alt="" width={80} height={80} className="w-full h-full rounded-full object-cover" loading="lazy" />
             ) : (
               <User className="w-6 h-6 text-[var(--text-muted)]" />
             )}

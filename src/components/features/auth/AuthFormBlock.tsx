@@ -75,13 +75,16 @@ export function AuthFormBlock({
           variant="ghost"
           size="sm"
           onClick={onTogglePassword}
+          aria-label={showPassword ? t('auth.hidePassword', { defaultValue: 'إخفاء كلمة المرور' }) : t('auth.showPassword', { defaultValue: 'إظهار كلمة المرور' })}
           className="absolute right-2 top-9 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
         >
-          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          {showPassword ? <EyeOff className="w-5 h-5" aria-hidden /> : <Eye className="w-5 h-5" aria-hidden />}
         </Button>
       </div>
       {authMessage && (
         <p
+          role="alert"
+          aria-live="polite"
           className={`text-body p-3 rounded-xl border text-center ${
             authMessage.type === 'success'
               ? 'bg-[var(--success-bg)] text-[var(--success)] border-[var(--success)]/20'
@@ -92,7 +95,7 @@ export function AuthFormBlock({
         </p>
       )}
       {authError && (
-        <p className="text-[var(--danger)] text-body bg-[var(--danger-bg)] p-3 rounded-xl border border-[var(--danger)]/20">
+        <p role="alert" aria-live="polite" className="text-[var(--danger)] text-body bg-[var(--danger-bg)] p-3 rounded-xl border border-[var(--danger)]/20">
           {authError}
         </p>
       )}

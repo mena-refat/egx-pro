@@ -1,9 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Users } from 'lucide-react';
 import { useProfileStore } from '../../../store/profileStore';
 import { useAuthStore } from '../../../store/authStore';
 import { Modal } from '../../ui/Modal';
 import { Button } from '../../ui/Button';
+import EmptyState from '../../shared/EmptyState';
 import { useProfileFollowersFollowing } from '../../../hooks/useProfileFollowersFollowing';
 import { FollowModalListRow, FollowModalSkeletonRow } from './FollowModalListRow';
 
@@ -45,7 +47,11 @@ export function FollowersFollowingModal() {
               <FollowModalSkeletonRow />
             </>
           ) : followersList.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)] py-6 text-center">{t('social.followersEmpty')}</p>
+            <EmptyState
+              icon={Users}
+              title={t('social.followersEmpty')}
+              description={t('social.followersEmptyDesc', { defaultValue: 'لا يوجد متابعون بعد.' })}
+            />
           ) : (
             <div className="divide-y-0">
               {followersList.map((item) => (
@@ -91,7 +97,11 @@ export function FollowersFollowingModal() {
               <FollowModalSkeletonRow />
             </>
           ) : followingList.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)] py-6 text-center">{t('social.followingEmpty')}</p>
+            <EmptyState
+              icon={Users}
+              title={t('social.followingEmpty')}
+              description={t('social.followingEmptyDesc', { defaultValue: 'لا يتابع أحداً بعد.' })}
+            />
           ) : (
             <div className="divide-y-0">
               {followingList.map((item) => (

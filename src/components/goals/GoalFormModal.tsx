@@ -166,9 +166,10 @@ export function GoalFormModal({
             variant="ghost"
             size="sm"
             onClick={onClose}
+            aria-label={t('common.close')}
             className="p-1 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden />
           </Button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -223,7 +224,7 @@ export function GoalFormModal({
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
           />
-          {err && <p className="text-body text-[var(--danger)]">{err}</p>}
+          {err && <p className="text-body text-[var(--danger)]" role="alert" aria-live="polite">{err}</p>}
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
               {t('goals.cancel')}

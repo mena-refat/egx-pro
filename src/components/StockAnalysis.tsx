@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BrainCircuit,
@@ -16,7 +16,8 @@ import {
   Timer,
   Target,
 } from 'lucide-react';
-import { StockPriceChart } from './features/stocks/StockPriceChart';
+import { Skeleton } from './ui/Skeleton';
+const StockPriceChart = lazy(() => import('./features/stocks/StockPriceChart').then((m) => ({ default: m.StockPriceChart })));
 import { getStockName, getStockInfo } from '../lib/egxStocks';
 import { getSector } from '../lib/egxIndicesSectors';
 import { Button } from './ui/Button';
@@ -226,7 +227,9 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               ))}
               </div>
             <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden" style={{ height: 220 }}>
-              <StockPriceChart data={api.history} height={220} lineColor="#8b5cf6" />
+              <Suspense fallback={<Skeleton height={220} className="w-full" />}>
+                <StockPriceChart data={api.history} height={220} lineColor="#8b5cf6" />
+              </Suspense>
             </div>
           </section>
 

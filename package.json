@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "optimize:svg": "npx svgo public/borsa-logo.svg -o public/borsa-logo.svg"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -155,17 +155,30 @@ export function usePredictionsApi() {
   const toggleLike = useCallback(
     async (predictionId: string, source: 'feed' | 'my', currentLikeCount: number, currentlyLiked: boolean) => {
       if (!accessToken) throw new Error('Unauthorized');
-      const res = await fetch(`${API}/${predictionId}/like`, {
-        method: 'POST',
-        headers: getAuthHeaders(accessToken),
-      });
-      if (!res.ok) throw new Error('Like failed');
-      const json = await res.json();
-      const liked = json?.data?.liked ?? false;
-      const likeCount = currentLikeCount + (liked ? 1 : -1);
-      if (source === 'feed') setLikeOnFeed(predictionId, liked, Math.max(0, likeCount));
-      else setLikeOnMy(predictionId, liked, Math.max(0, likeCount));
-      return liked;
+      const nextLiked = !currentlyLiked;
+      const nextCount = Math.max(0, currentLikeCount + (nextLiked ? 1 : -1));
+      if (source === 'feed') setLikeOnFeed(predictionId, nextLiked, nextCount);
+      else setLikeOnMy(predictionId, nextLiked, nextCount);
+      try {
+        const res = await fetch(`${API}/${predictionId}/like`, {
+          method: 'POST',
+          headers: getAuthHeaders(accessToken),
+        });
+        if (!res.ok) throw new Error('Like failed');
+        const json = await res.json();
+        const liked = json?.data?.liked ?? nextLiked;
+        const likeCount = currentLikeCount + (liked ? 1 : -1);
+        if (source === 'feed') setLikeOnFeed(predictionId, liked, Math.max(0, likeCount));
+        else setLikeOnMy(predictionId, liked, Math.max(0, likeCount));
+        return liked;
+      } catch {
+        if (source === 'feed') setLikeOnFeed(predictionId, currentlyLiked, currentLikeCount);
+        else setLikeOnMy(predictionId, currentlyLiked, currentLikeCount);
+        const { toast } = await import('../store/toastStore');
+        const i18n = (await import('../lib/i18n')).default;
+        toast.error(i18n.t('errors.likeFailed'));
+        throw new Error('Like failed');
+      }
     },
     [accessToken, setLikeOnFeed, setLikeOnMy]
   );

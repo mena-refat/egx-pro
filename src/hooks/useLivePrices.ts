@@ -3,12 +3,21 @@ import { Stock } from '../types';
 import { getAccessToken } from '../lib/auth/tokens';
 import { TIMEOUTS } from '../lib/constants';
 
-export function useLivePrices() {
+/** Optional list of tickers to subscribe to; server sends only these. Omit or empty = receive all. */
+export function useLivePrices(subscribedTickers?: string[]) {
   const [prices, setPrices] = useState<Record<string, Stock>>({});
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectDelayRef = useRef(1000);
+  const tickersRef = useRef<string[]>([]);
+  tickersRef.current = subscribedTickers ?? [];
+
+  const sendSubscribe = (ws: WebSocket) => {
+    if (ws.readyState !== WebSocket.OPEN) return;
+    const tickers = tickersRef.current;
+    ws.send(JSON.stringify({ type: 'SUBSCRIBE', tickers: Array.isArray(tickers) ? tickers : [] }));
+  };
 
   useEffect(() => {
     const connect = () => {
@@ -18,8 +27,6 @@ export function useLivePrices() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const { hostname, port } = window.location;
 
-      // In dev on Vite (5173) connect to the Node server on 3000.
-      // In production the reverse proxy forwards WebSocket on the same host/port.
       const targetPort = port === '5173' ? '3000' : port;
       const portSuffix = targetPort ? `:${targetPort}` : '';
       const wsUrl = `${protocol}//${hostname}${portSuffix}`;
@@ -29,8 +36,10 @@ export function useLivePrices() {
 
       ws.onopen = () => {
         setIsConnected(true);
-        // Send token as first message — keeps it out of URL/logs
         ws.send(JSON.stringify({ type: 'AUTH', token }));
+        if (tickersRef.current.length > 0) {
+          setTimeout(() => sendSubscribe(ws), 0);
+        }
         if (import.meta.env.DEV) console.log('WebSocket connected');
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
@@ -77,6 +86,11 @@ export function useLivePrices() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isConnected || !wsRef.current || tickersRef.current.length === 0) return;
+    sendSubscribe(wsRef.current);
+  }, [isConnected, subscribedTickers]);
 
   return { prices, isConnected };
 }

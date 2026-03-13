@@ -30,7 +30,7 @@ export function DiscoverResultsList({ results, updating, onFollow, onUnfollow }:
           >
             <div className="w-10 h-10 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center overflow-hidden shrink-0">
               {u.avatarUrl ? (
-                <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
+                <img src={u.avatarUrl} alt="" width={40} height={40} className="w-full h-full object-cover" loading="lazy" />
               ) : (
                 <UserIcon className="w-5 h-5 text-[var(--text-muted)]" />
               )}

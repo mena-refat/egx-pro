@@ -44,22 +44,28 @@ export function setupWebSocket(server: Server): {
   /** Per-IP connection tracking */
   const connectionsByIp = new Map<string, number>();
 
-  /** يُستدعى من startPolling بعد كل دورة جلب — يبث للـ clients التنسيق الذي يتوقعه الـ frontend */
+  /** يُستدعى من startPolling — يبث لكل عميل فقط الأسعار الخاصة بالـ tickers المشترك فيها */
   function broadcastPrices(quotes: Map<string, StockQuote>) {
     if (wss.clients.size === 0) return;
-    const data = Array.from(quotes.values()).map((q) => ({
+    const allData = Array.from(quotes.values()).map((q) => ({
       ticker: q.symbol,
       price: q.price,
       change: q.change,
       changePercent: q.changePercent,
       volume: q.volume,
     }));
-    if (data.length === 0) return;
-    const payload = { type: 'PRICES_UPDATE' as const, data };
+    if (allData.length === 0) return;
     let count = 0;
     wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        safeSend(client, payload);
+      if (client.readyState !== WebSocket.OPEN) return;
+      const ext = client as ExtendedWs;
+      const subs = ext.subscribedTickers;
+      const data =
+        subs && subs.size > 0
+          ? allData.filter((row) => subs.has(row.ticker))
+          : allData;
+      if (data.length > 0) {
+        safeSend(client, { type: 'PRICES_UPDATE' as const, data });
         count++;
       }
     });
@@ -81,8 +87,16 @@ export function setupWebSocket(server: Server): {
 
   wss.on('close', () => clearInterval(pingInterval));
 
+  /** Per-client subscribed tickers; empty Set = receive all (backward compat) */
+  type ExtendedWs = WebSocket & {
+    isAlive?: boolean;
+    userId?: string;
+    authenticated?: boolean;
+    subscribedTickers?: Set<string>;
+  };
+
   wss.on('connection', async (ws, req) => {
-    const extWs = ws as WebSocket & { isAlive?: boolean; userId?: string; authenticated?: boolean };
+    const extWs = ws as ExtendedWs;
     const clientIp = req.socket.remoteAddress ?? 'unknown';
 
     // ── Per-IP Rate Limiting ────────────────────────────────
@@ -114,44 +128,48 @@ export function setupWebSocket(server: Server): {
     }, AUTH_TIMEOUT_MS);
 
     extWs.on('message', async (raw) => {
-      // Ignore messages from authenticated clients (read-only feed)
-      if (extWs.authenticated) return;
-
       try {
-        const msg = JSON.parse(raw.toString()) as { type?: string; token?: string };
-        if (msg.type !== 'AUTH' || !msg.token) {
-          ws.close(1008, 'Authentication required');
+        const msg = JSON.parse(raw.toString()) as { type?: string; token?: string; tickers?: string[] };
+
+        if (!extWs.authenticated) {
+          if (msg.type !== 'AUTH' || !msg.token) {
+            ws.close(1008, 'Authentication required');
+            return;
+          }
+          const { verifyAccessToken } = await import('../src/lib/auth.ts');
+          const payload = verifyAccessToken(msg.token) as { sub?: string };
+          if (!payload?.sub) throw new Error('Invalid token');
+          clearTimeout(authTimeout);
+          extWs.userId = payload.sub;
+          extWs.authenticated = true;
+          extWs.subscribedTickers = new Set<string>();
+          logger.info('🔌 New client authenticated', { total: wss.clients.size });
+          try {
+            const initialData = await Promise.race([
+              fetchCurrentPrices(),
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('timeout')), INITIAL_PRICES_TIMEOUT_MS)
+              ),
+            ]);
+            if (initialData.length > 0) {
+              safeSend(ws, { type: 'INITIAL_PRICES', data: initialData });
+            }
+          } catch (err) {
+            logger.error('Failed to send initial prices', { error: err });
+          }
           return;
         }
 
-        const { verifyAccessToken } = await import('../src/lib/auth.ts');
-        const payload = verifyAccessToken(msg.token) as { sub?: string };
-        if (!payload?.sub) throw new Error('Invalid token');
-
-        clearTimeout(authTimeout);
-        extWs.userId = payload.sub;
-        extWs.authenticated = true;
-        logger.info('🔌 New client authenticated', { total: wss.clients.size });
-
-        // Send initial prices after successful auth
-        try {
-          const initialData = await Promise.race([
-            fetchCurrentPrices(),
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('timeout')), INITIAL_PRICES_TIMEOUT_MS)
-            ),
-          ]);
-          if (initialData.length > 0) {
-            safeSend(ws, { type: 'INITIAL_PRICES', data: initialData });
-          }
-        } catch (err) {
-          logger.error('Failed to send initial prices', { error: err });
+        if (msg.type === 'SUBSCRIBE' && Array.isArray(msg.tickers)) {
+          extWs.subscribedTickers = new Set(
+            msg.tickers.filter((t): t is string => typeof t === 'string' && t.length > 0)
+          );
         }
       } catch {
-        ws.close(1008, 'Invalid or expired token');
+        if (!extWs.authenticated) ws.close(1008, 'Invalid or expired token');
       }
     });
-    // ── End Auth ─────────────────────────────────────────────
+    // ── End Auth / SUBSCRIBE ─────────────────────────────────
 
     ws.on('error', (err) => {
       logger.error('WebSocket client error', { message: err.message });

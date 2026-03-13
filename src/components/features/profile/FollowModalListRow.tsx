@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../ui/Button';
 import type { FollowListItem } from '../../../store/profileStore';
@@ -17,7 +18,7 @@ export interface FollowModalListRowProps {
   updating: string | null;
 }
 
-export function FollowModalListRow({
+export const FollowModalListRow = memo(function FollowModalListRow({
   item,
   isOwnProfile,
   onFollow,
@@ -71,7 +72,7 @@ export function FollowModalListRow({
       )}
     </div>
   );
-}
+});
 
 export function FollowModalSkeletonRow() {
   return (

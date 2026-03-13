@@ -1,7 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Target } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { PredictionCard } from '../../predictions/PredictionCard';
+import EmptyState from '../../shared/EmptyState';
 import type { FeedPrediction } from '../../../store/usePredictionsStore';
 
 type MyStats = { totalPoints?: number; accuracyRate?: number; correctPredictions?: number; totalPredictions?: number } | null;
@@ -59,7 +61,13 @@ export function PredictionsMyTab({
           ))}
         </div>
       ) : predictions.length === 0 ? (
-        <p className="text-[var(--text-muted)] py-8 text-center">{t('predictions.emptyMy')}</p>
+        <EmptyState
+          icon={Target}
+          title={t('predictions.emptyMy')}
+          description={t('predictions.emptyMyDesc', { defaultValue: 'لم تنشئ أي توقّعات بعد. اضغط على + لإنشاء توقّعك الأول.' })}
+          actionLabel={t('predictions.newPrediction')}
+          onAction={onNewPrediction}
+        />
       ) : (
         <div className="space-y-4">
           {predictions.map((p) => (
