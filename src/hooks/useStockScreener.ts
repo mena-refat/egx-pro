@@ -104,7 +104,7 @@ export function useStockScreener() {
       setError(null);
       try {
         const [stocksRes, watchlistRes] = await Promise.all([
-          api.get('/stocks/prices', { params: sector ? { sector } : {}, signal }),
+          api.get('/stocks/prices', { params: sector ? { sector } : {}, signal, timeout: 60_000 }),
           api.get('/watchlist', { signal }),
         ]);
         if (signal?.aborted) return;

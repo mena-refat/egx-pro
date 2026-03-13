@@ -17,15 +17,19 @@ export function useLivePrices() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const { hostname, port } = window.location;
 
-      // في حالة التشغيل عبر Vite على 5173 نخلي الـ WebSocket على 3000 (السيرفر Node)
-      const targetPort = port === '5173' ? '3000' : (port || '3000');
-      const wsUrl = `${protocol}//${hostname}:${targetPort}?token=${encodeURIComponent(token)}`;
-      
+      // In dev on Vite (5173) connect to the Node server on 3000.
+      // In production the reverse proxy forwards WebSocket on the same host/port.
+      const targetPort = port === '5173' ? '3000' : port;
+      const portSuffix = targetPort ? `:${targetPort}` : '';
+      const wsUrl = `${protocol}//${hostname}${portSuffix}`;
+
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
         setIsConnected(true);
+        // Send token as first message — keeps it out of URL/logs
+        ws.send(JSON.stringify({ type: 'AUTH', token }));
         if (import.meta.env.DEV) console.log('WebSocket connected');
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
@@ -44,7 +48,7 @@ export function useLivePrices() {
             setPrices((prev) => ({ ...prev, ...newPrices }));
           }
         } catch (error) {
-          console.error('Failed to parse WebSocket message', error);
+          if (import.meta.env.DEV) console.error('Failed to parse WebSocket message', error);
         }
       };
 
@@ -55,8 +59,7 @@ export function useLivePrices() {
         reconnectTimeoutRef.current = setTimeout(connect, TIMEOUTS.reconnect);
       };
 
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+      ws.onerror = () => {
         ws.close();
       };
     };

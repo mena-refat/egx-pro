@@ -67,6 +67,8 @@ export class MarketDataService {
 
   /** In-memory fallback cache used when Redis is unavailable */
   private memCache = new Map<string, { quote: StockQuote; savedAt: number }>();
+  /** Limit mem cache to avoid unbounded growth (~500 EGX stocks max) */
+  private readonly MEM_CACHE_MAX_SIZE = 600;
 
   private symbolFailCount  = new Map<string, number>();
   private symbolSkipUntil  = new Map<string, number>();
@@ -75,8 +77,14 @@ export class MarketDataService {
 
   private shouldSkipSymbol(symbol: string): boolean {
     const skipUntil = this.symbolSkipUntil.get(symbol);
-    if (skipUntil && Date.now() < skipUntil) return true;
-    return false;
+    if (!skipUntil) return false;
+    if (Date.now() >= skipUntil) {
+      // Clean up expired deprioritization entries
+      this.symbolSkipUntil.delete(symbol);
+      this.symbolFailCount.delete(symbol);
+      return false;
+    }
+    return true;
   }
 
   private recordSymbolFailure(symbol: string): void {
@@ -327,6 +335,11 @@ export class MarketDataService {
   }
 
   private async saveToCache(symbol: string, quote: StockQuote): Promise<void> {
+    // Evict the oldest entry when at capacity (simple FIFO)
+    if (!this.memCache.has(symbol) && this.memCache.size >= this.MEM_CACHE_MAX_SIZE) {
+      const firstKey = this.memCache.keys().next().value;
+      if (firstKey !== undefined) this.memCache.delete(firstKey);
+    }
     this.memCache.set(symbol, { quote, savedAt: Date.now() });
 
     try {

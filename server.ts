@@ -283,9 +283,11 @@ async function startServer() {
     });
   }
 
+  let wsHandlers: ReturnType<typeof setupWebSocket> | null = null;
+
   server.listen(PORT, '0.0.0.0', async () => {
     logger.info(`🚀 EGX Pro Server running on http://localhost:${PORT}`);
-    const wsHandlers = setupWebSocket(server);
+    wsHandlers = setupWebSocket(server);
     marketDataService.setBroadcastFn(wsHandlers.broadcastPrices);
 
     try {
@@ -451,9 +453,10 @@ async function startServer() {
     }
   }, ONE_HOUR_MS);
 
-  process.on('SIGTERM', () => {
-    logger.info('SIGTERM received — shutting down gracefully');
+  const shutdown = (signal: string) => {
+    logger.info(`${signal} received — shutting down gracefully`);
     marketDataService.stopPolling();
+    wsHandlers?.closeWss();
     clearInterval(archiveInterval);
     clearTimeout(aiResetTimeout);
     clearInterval(pricesInterval);
@@ -467,7 +470,10 @@ async function startServer() {
         // لو الـ prisma اتعمله import فاشل من قبل، نتجاهل الخطأ
       }
     });
-  });
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT',  () => shutdown('SIGINT'));
 }
 
 startServer().catch(err => {
