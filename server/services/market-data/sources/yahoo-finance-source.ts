@@ -1,4 +1,7 @@
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
+
+/** yahoo-finance2 v3 requires an instance; static methods throw. */
+const yahooFinance = new YahooFinance();
 import type { IMarketDataSource, DataSourceResult, StockQuote } from '../types.ts';
 import { logger } from '../../../lib/logger.ts';
 
@@ -26,9 +29,9 @@ export class YahooFinanceSource implements IMarketDataSource {
         const yahooSymbol = this.toYahooSymbol(egxSymbol);
 
         try {
-          const quote: any = await yahooFinance.quote(yahooSymbol);
+          const quote = await yahooFinance.quote(yahooSymbol, { validateResult: false }) as Record<string, unknown> | null;
 
-          if (!quote || quote.regularMarketPrice == null || quote.regularMarketPrice <= 0) {
+          if (!quote || quote.regularMarketPrice == null || Number(quote.regularMarketPrice) <= 0) {
             failed.push(egxSymbol);
             return;
           }

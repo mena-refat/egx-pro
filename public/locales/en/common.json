@@ -752,6 +752,8 @@
     "gotIt": "Got it, thanks",
     "liveBadge": "Live",
     "delayedBadge": "Delayed 10 min",
+    "delayedBadge20": "Delayed 20 min",
+    "staleWarning": "Stale data (update failed)",
     "lastUpdateAt": "Last update: {{time}}",
     "priceAsAt": "Price as at {{time}}",
     "marketClosed": "Market closed",

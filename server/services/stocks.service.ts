@@ -3,9 +3,7 @@ import { getStockNews } from '../lib/news.ts';
 import { EGX_TICKERS } from '../lib/egxTickers.ts';
 import { prisma } from '../lib/prisma.ts';
 import type { GicsSector } from '@prisma/client';
-import { marketDataService } from './market-data/market-data.service.ts';
-import yahooFinance from 'yahoo-finance2';
-import { AllByAttribute } from '@testing-library/dom';
+import { getBulkQuotesForScreener } from './stockQuote.service.ts';
 
 const GICS_VALUES: GicsSector[] = [
   'INFORMATION_TECHNOLOGY', 'HEALTH_CARE', 'FINANCIALS', 'CONSUMER_DISCRETIONARY',
@@ -13,21 +11,24 @@ const GICS_VALUES: GicsSector[] = [
   'REAL_ESTATE', 'COMMUNICATION_SERVICES',
 ];
 
-function quoteToPriceRow(q: { symbol: string; price: number; change: number; changePercent: number; volume: number }, sector: GicsSector | null) {
+function quoteToPriceRow(
+  q: { ticker: string; price: number | null; change: number | null; changePercent: number | null; volume: number | null },
+  sector: GicsSector | null
+) {
   return {
-    ticker: q.symbol,
-    price: q.price,
-    change: q.change,
-    changePercent: q.changePercent,
-    volume: q.volume,
+    ticker: q.ticker,
+    price: q.price ?? 0,
+    change: q.change ?? 0,
+    changePercent: q.changePercent ?? 0,
+    volume: q.volume ?? 0,
     sector,
-    isDelayed: false,
+    isDelayed: true,
     priceTime: new Date().toISOString().slice(11, 19),
   };
 }
 
 export const StocksService = {
-  async getBulkPrices(delayed: boolean, sector?: string) {
+  async getBulkPrices(_delayed: boolean, sector?: string) {
     let tickers = EGX_TICKERS;
     if (sector && GICS_VALUES.includes(sector as GicsSector)) {
       const stocks = await prisma.stock.findMany({
@@ -37,13 +38,16 @@ export const StocksService = {
       tickers = stocks.map((s) => s.ticker);
       if (tickers.length === 0) return [];
     }
-    const quotes = await marketDataService.getQuotes(tickers);
+    const quotes = await getBulkQuotesForScreener(tickers);
     const sectorMap = new Map<string, GicsSector>();
     const allStocks = await prisma.stock.findMany({ select: { ticker: true, sector: true } });
     allStocks.forEach((s) => { if (s.sector) sectorMap.set(s.ticker, s.sector); });
-    return Array.from(quotes.values()).map((q) => {
-      const sec = sectorMap.get(q.symbol) ?? null;
-      return quoteToPriceRow(q, sec);
+    return Array.from(quotes.entries()).map(([ticker, q]) => {
+      const sec = sectorMap.get(ticker) ?? null;
+      return quoteToPriceRow(
+        { ticker, price: q.price, change: q.change, changePercent: q.changePercent, volume: q.volume },
+        sec
+      );
     });
   },
 
@@ -52,20 +56,21 @@ export const StocksService = {
   },
 
   async getPrice(ticker: string, _delayed: boolean) {
-    const quote = await marketDataService.getQuote(ticker);
-    if (!quote) return null;
+    const { getQuote } = await import('./stockQuote.service.ts');
+    const quote = await getQuote(ticker);
+    if (!quote || quote.price == null) return null;
     return {
-      ticker: quote.symbol,
+      ticker: quote.ticker,
       price: quote.price,
-      change: quote.change,
-      changePercent: quote.changePercent,
-      volume: quote.volume,
-      high: quote.high,
-      low: quote.low,
-      open: quote.open,
-      previousClose: quote.previousClose,
-      name: quote.symbol,
-      isDelayed: false,
+      change: quote.change ?? 0,
+      changePercent: quote.changePercent ?? 0,
+      volume: quote.volume ?? 0,
+      high: quote.high ?? undefined,
+      low: quote.low ?? undefined,
+      open: quote.open ?? undefined,
+      previousClose: quote.previousClose ?? undefined,
+      name: quote.symbol ?? quote.ticker,
+      isDelayed: true,
       priceTime: new Date().toISOString().slice(11, 19),
     };
   },
@@ -81,27 +86,4 @@ export const StocksService = {
   getNews(ticker: string) {
     return getStockNews(ticker);
   },
-  
-  async getQuote(ticker: string) {
-    try {
-      const quote:any = await yahooFinance.quote(ticker);
-      console.log(quote,"QUTE");
-      
-      return {
-        price: quote.regularMarketPrice ?? null,
-        change: quote.regularMarketChange ?? null,
-        changePercent: quote.regularMarketChangePercent ?? null,
-        time: quote.regularMarketTime ?? null,
-        currency: quote.currency ?? null,
-        symbol: quote.symbol,
-        longName: quote.longName ?? null,
-        high: quote.regularMarketDayHigh ?? null,
-        low: quote.regularMarketDayLow ?? null,
-        open: quote.regularMarketOpen ?? null,
-        previousClose: quote.regularMarketPreviousClose ?? null,
-        volume: quote.volume ?? null,
-      };
-    } catch (error) {
-      return null;
-    }
-  },};
+};

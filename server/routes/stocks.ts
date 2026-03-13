@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { optionalAuth } from '../middleware/auth.middleware.ts';
+import { authenticate, optionalAuth } from '../middleware/auth.middleware.ts';
 import { MarketController } from '../controllers/market.controller.ts';
 import { StocksController } from '../controllers/stocks.controller.ts';
 
@@ -7,10 +7,12 @@ const router = Router();
 
 router.get('/', StocksController.root);
 router.get('/market/status', MarketController.getStatus);
+router.get('/market-status', StocksController.getMarketStatus);
 router.get('/market/overview', optionalAuth, MarketController.getOverview);
 router.get('/prices', optionalAuth, StocksController.getPrices);
 router.get('/search', StocksController.search);
-router.get('/quote/:ticker', StocksController.getQuote);
+router.get('/quote/:ticker', authenticate, StocksController.getQuote);
+router.post('/quotes', authenticate, StocksController.postQuotes);
 router.get('/:ticker/price', optionalAuth, StocksController.getPrice);
 router.get('/:ticker/history', StocksController.getHistory);
 router.get('/:ticker/financials', StocksController.getFinancials);

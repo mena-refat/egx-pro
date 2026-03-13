@@ -31,6 +31,25 @@ model Stock {
   @@index([sector])
 }
 
+model StockQuoteCache {
+  id            String    @id @default(cuid())
+  ticker        String    @unique
+  price         Float?
+  change        Float?
+  changePercent Float?
+  high          Float?
+  low           Float?
+  open          Float?
+  previousClose Float?
+  volume        Int?
+  currency      String?
+  symbol        String?
+  longName      String?
+  marketTime    DateTime?
+  cachedAt      DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
 model User {
   id                String    @id @default(uuid())
   email             String?   @unique

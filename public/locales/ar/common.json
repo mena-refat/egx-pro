@@ -588,6 +588,7 @@
     "watchlistAdd": "مراقبة",
     "watchlistRemove": "إلغاء المراقبة",
     "noResults": "لا توجد نتائج",
+    "noResultsDescription": "جرّب كلمة بحث أخرى أو غيّر التصفية",
     "retry": "إعادة المحاولة",
     "egp": "جنيه",
     "targetPriceOptional": "السعر المستهدف (اختياري)"
@@ -754,6 +755,8 @@
     "gotIt": "فهمت، شكراً",
     "liveBadge": "Live",
     "delayedBadge": "متأخر 10 دقائق",
+    "delayedBadge20": "متأخر 20 دقيقة",
+    "staleWarning": "بيانات قديمة (فشل التحديث)",
     "lastUpdateAt": "آخر تحديث: {{time}}",
     "priceAsAt": "السعر كما في {{time}}",
     "marketClosed": "السوق مغلق",
