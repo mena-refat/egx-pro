@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import api from '../lib/api';
+import api, { ANALYSIS_TIMEOUT_MS } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { getSector, isShariaCompliant } from '../lib/egxIndicesSectors';
 import { Stock, AnalysisResult } from '../types';
@@ -164,7 +164,7 @@ export function useStockAnalysis(stock: Stock) {
     setLoadingAnalysis(true);
     setErrorAnalysis(null);
     try {
-      const res = await api.post(`/analysis/${stock.ticker}`);
+      const res = await api.post(`/analysis/${stock.ticker}`, undefined, { timeout: ANALYSIS_TIMEOUT_MS });
       const payload = (res.data as { data?: { analysis?: unknown } })?.data ?? res.data;
       const analysisContent = payload?.analysis ?? (res.data as { analysis?: unknown })?.analysis;
       if (analysisContent) {

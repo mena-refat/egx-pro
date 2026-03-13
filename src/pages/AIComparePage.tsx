@@ -2,9 +2,10 @@ import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, GitCompare } from 'lucide-react';
-import api from '../lib/api';
+import api, { ANALYSIS_TIMEOUT_MS } from '../lib/api';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
+import { TickerSuggestInput } from '../components/ui/TickerSuggestInput';
+import { getStockInfo } from '../lib/egxStocks';
 import type { CompareResult } from '../types';
 import styles from './AIComparePage.module.scss';
 
@@ -29,23 +30,32 @@ export default function AIComparePage() {
       setError(t('ai.differentTickers'));
       return;
     }
+    if (!getStockInfo(t1) || !getStockInfo(t2)) {
+      setError(t('ai.selectFromList'));
+      return;
+    }
     setError(null);
     setResult(null);
     setLoading(true);
     try {
-      const res = await api.post<{ data: { comparison: CompareResult } }>('/analysis/compare', {
-        ticker1: t1,
-        ticker2: t2,
-      });
+      const res = await api.post<{ data: { comparison: CompareResult } }>(
+        '/analysis/compare',
+        { ticker1: t1, ticker2: t2 },
+        { timeout: ANALYSIS_TIMEOUT_MS }
+      );
       const data = res.data?.data?.comparison ?? (res.data as { comparison?: CompareResult })?.comparison;
       if (data) setResult(data);
       else setError(t('common.error'));
     } catch (err: unknown) {
-      const code = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        : null;
+      const res = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { status?: number; data?: { error?: string } } }).response
+        : undefined;
+      const code = res?.data?.error;
+      const status = res?.status;
       if (code === 'ANALYSIS_LIMIT_REACHED') {
         setShowLimitModal(true);
+      } else if (status === 404) {
+        setError(code === 'NOT_FOUND' ? t('ai.error404Stock') : t('ai.error404Route'));
       } else {
         setError((err as Error)?.message || t('common.error'));
       }
@@ -73,17 +83,17 @@ export default function AIComparePage() {
       </header>
 
       <div className={styles.form}>
-        <Input
+        <TickerSuggestInput
           value={ticker1}
-          onChange={(e) => setTicker1(e.target.value)}
+          onChange={setTicker1}
           placeholder={t('ai.ticker1Placeholder')}
           wrapperClassName={styles.input}
           dir="ltr"
           disabled={loading}
         />
-        <Input
+        <TickerSuggestInput
           value={ticker2}
-          onChange={(e) => setTicker2(e.target.value)}
+          onChange={setTicker2}
           placeholder={t('ai.ticker2Placeholder')}
           wrapperClassName={styles.input}
           dir="ltr"

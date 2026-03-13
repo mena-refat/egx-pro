@@ -1,5 +1,6 @@
-import { getStockPrice, getStockHistory, getFinancials } from '../lib/stockData.ts';
+import { getStockHistory, getFinancials } from '../lib/stockData.ts';
 import { getStockNews } from '../lib/news.ts';
+import { marketDataService } from './market-data/market-data.service.ts';
 import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { PortfolioRepository } from '../repositories/portfolio.repository.ts';
@@ -8,6 +9,7 @@ import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib
 import { getLimit } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';
 import { SINGLE_ANALYSIS_SYSTEM } from '../lib/analysisPrompts.ts';
+import { analysisEngine } from './ai/index.ts';
 
 function getFirstDayOfNextMonth(): Date {
   const d = new Date();
@@ -20,7 +22,7 @@ function getFirstDayOfNextMonth(): Date {
 /** يتحقق من الحصة فقط (بدون خصم). استخدم consumeQuota بعد نجاح العملية. */
 async function ensureQuota(userId: string, pointsRequired: number): Promise<void> {
   const user = await UserRepository.getForBillingPlan(userId);
-  if (!user) throw new AppError('NOT_FOUND', 404);
+  if (!user) throw new AppError('UNAUTHORIZED', 401);
   const quota = getLimit(user, 'aiAnalysisPerMonth') as number;
   const now = new Date();
   let usedThisMonth = user.aiAnalysisUsedThisMonth ?? 0;
@@ -61,31 +63,20 @@ async function consumeQuota(userId: string, points: number): Promise<void> {
   });
 }
 
-async function callClaude(system: string, userMessage: string, maxTokens = 2000): Promise<string> {
+/** يستدعي محرك التحليل الافتراضي (حالياً Claude) للحصول على أفضل نتيجة. */
+async function runAnalysisEngine(system: string, userMessage: string, maxTokens = 2000): Promise<string> {
   if (!process.env.CLAUDE_API_KEY) throw new AppError('SERVICE_UNAVAILABLE', 503);
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': process.env.CLAUDE_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
-  });
-  if (!res.ok) {
-    const errText = await res.text();
-    logger.error('Claude API Error', { errText });
+  try {
+    const { text } = await analysisEngine.generate({
+      systemPrompt: system,
+      userMessage,
+      maxTokens,
+    });
+    return text;
+  } catch (err) {
+    logger.error('Analysis engine error', { error: (err as Error).message });
     throw new AppError('INTERNAL_ERROR', 500);
   }
-  const data = (await res.json()) as { content: Array<{ text: string }> };
-  const raw = data.content[0]?.text;
-  if (!raw) throw new AppError('INTERNAL_ERROR', 500);
-  return raw;
 }
 
 function parseAnalysisJson(rawText: string): unknown {
@@ -98,6 +89,17 @@ function parseAnalysisJson(rawText: string): unknown {
   }
 }
 
+/** يجيب السعر من market data (كاش أو جلب مباشر) بدل الاعتماد على Redis فقط */
+async function getPriceForAnalysis(ticker: string): Promise<{ price: number; changePercent: number; volume: number | null } | null> {
+  const quote = await marketDataService.getQuote(ticker);
+  if (!quote || quote.price <= 0) return null;
+  return {
+    price: quote.price,
+    changePercent: quote.changePercent,
+    volume: quote.volume ?? null,
+  };
+}
+
 export const AnalysisService = {
   async create(
     userId: string,
@@ -108,7 +110,7 @@ export const AnalysisService = {
     const completedBefore = await getCompletedAchievementIds(userId);
 
     const [priceData, , financials, news] = (await Promise.all([
-      getStockPrice(ticker),
+      getPriceForAnalysis(ticker),
       getStockHistory(ticker, '3mo'),
       getFinancials(ticker),
       getStockNews(ticker),
@@ -119,17 +121,17 @@ export const AnalysisService = {
       Array<{ title: string }>,
     ];
 
-    if (!priceData || !financials) throw new AppError('NOT_FOUND', 404);
+    const priceBlock = priceData
+      ? `السعر: ${priceData.price} جنيه\nالتغير: ${priceData.changePercent}%\nالحجم: ${priceData.volume ?? '—'}`
+      : 'السعر: غير متوفر حالياً (قد تكون بيانات السوق غير محدثة)';
 
     const prompt = `
-حلل السهم التالي وفق العوامل الـ 42 (تحليل فني، موجي، أساسي، قطاع، اقتصاد كلي، جيوسياسي، سلوكي، تقني، وعوامل مصر).
-قدم في النهاية shortTermOutlook و mediumTermOutlook و longTermOutlook واضحة.
+حلل السهم التالي وفق إطار العوامل المذكور (أكثر من 70 عامل: تحليل فني، موجي، أساسي، قطاع، اقتصاد كلي، جيوسياسي، سلوكي، تقني، وعوامل مصر والعوامل الإضافية للدقة).
+قدم في النهاية shortTermOutlook و mediumTermOutlook و longTermOutlook واضحة ومحددة.
 
 ═══ بيانات السهم ═══
 الرمز: ${ticker}
-السعر: ${priceData.price} جنيه
-التغير: ${priceData.changePercent}%
-الحجم: ${priceData.volume ?? '—'}
+${priceBlock}
 
 ═══ التحليل المالي ═══
 P/E: ${financials.pe ?? 'غير متوفر'}
@@ -143,7 +145,7 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'لا توجد 
 المطلوب: نفس شكل الـ JSON المحدد (summary, fundamental, technical, sentiment, verdict, priceTarget, shortTermOutlook, mediumTermOutlook, longTermOutlook, suitability, disclaimer).
 `;
 
-    const rawText = await callClaude(SINGLE_ANALYSIS_SYSTEM, prompt, 2500);
+    const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, 2500);
     const analysisJson = parseAnalysisJson(rawText);
 
     await consumeQuota(userId, 1);
@@ -166,16 +168,21 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'لا توجد 
     }
     await ensureQuota(userId, 2);
 
-    const [p1, p2, f1, f2, news1, news2] = await Promise.all([
-      getStockPrice(ticker1),
-      getStockPrice(ticker2),
+    const [quotes, f1, f2, news1, news2] = await Promise.all([
+      marketDataService.getQuotes([ticker1, ticker2]),
       getFinancials(ticker1),
       getFinancials(ticker2),
       getStockNews(ticker1),
       getStockNews(ticker2),
     ]);
-    if (!p1 || !f1) throw new AppError('NOT_FOUND', 404);
-    if (!p2 || !f2) throw new AppError('NOT_FOUND', 404);
+    const p1 = quotes.get(ticker1);
+    const p2 = quotes.get(ticker2);
+    const line1 = p1 && p1.price > 0
+      ? `السعر: ${p1.price} جنيه، التغير: ${p1.changePercent}%`
+      : 'السعر: غير متوفر حالياً';
+    const line2 = p2 && p2.price > 0
+      ? `السعر: ${p2.price} جنيه، التغير: ${p2.changePercent}%`
+      : 'السعر: غير متوفر حالياً';
 
     const system = `أنت محلل مالي خبير. قارن بين السهمين المذكورين من حيث: القوة النسبية، التحليل الأساسي، المخاطر، والفرص.
 ردك JSON فقط بدون نص خارجي. الشكل:
@@ -190,19 +197,19 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'لا توجد 
 
     const prompt = `
 السهم الأول: ${ticker1}
-السعر: ${p1.price} جنيه، التغير: ${p1.changePercent}%
+${line1}
 P/E: ${f1.pe ?? '—'}, ROE: ${f1.roe != null ? (f1.roe * 100).toFixed(2) : '—'}%, هامش الربح: ${f1.profitMargin != null ? (f1.profitMargin * 100).toFixed(2) : '—'}%
 أخبار: ${news1.length ? news1.slice(0, 3).map((n) => n.title).join(' | ') : '—'}
 
 السهم الثاني: ${ticker2}
-السعر: ${p2.price} جنيه، التغير: ${p2.changePercent}%
+${line2}
 P/E: ${f2.pe ?? '—'}, ROE: ${f2.roe != null ? (f2.roe * 100).toFixed(2) : '—'}%, هامش الربح: ${f2.profitMargin != null ? (f2.profitMargin * 100).toFixed(2) : '—'}%
 أخبار: ${news2.length ? news2.slice(0, 3).map((n) => n.title).join(' | ') : '—'}
 
 قارن واعطِ التوصية في الحقل winner و reason.
 `;
 
-    const raw = await callClaude(system, prompt, 1500);
+    const raw = await runAnalysisEngine(system, prompt, 1500);
     const comparison = parseAnalysisJson(raw);
     await consumeQuota(userId, 2);
     const saved = await prisma.analysis.create({
@@ -262,7 +269,7 @@ P/E: ${f2.pe ?? '—'}, ROE: ${f2.roe != null ? (f2.roe * 100).toFixed(2) : '—
 قدم توصيات شخصية (توصيات array حتى لو المحفظة فاضية: اقترح أسهم أو تحركات).
 `;
 
-    const raw = await callClaude(system, prompt, 1500);
+    const raw = await runAnalysisEngine(system, prompt, 1500);
     const recommendations = parseAnalysisJson(raw);
     await consumeQuota(userId, 1);
     const saved = await prisma.analysis.create({

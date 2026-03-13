@@ -12,13 +12,14 @@ export default function AIPage() {
   const isAuthenticated = useAuthStore((s) => !!s.user);
   const { used, quota, loading } = useAIPlan(isAuthenticated);
 
+  // ترتيب العرض: في العربي (RTL) اليمين = توصيات، الوسط = مقارنة، اليسار = تحليل سهم
   const cards = [
     {
-      id: 'analyze',
-      titleKey: 'ai.analyzeStock',
-      descKey: 'ai.analyzeStockDesc',
-      icon: Brain,
-      path: '/ai/analyze',
+      id: 'recommendations',
+      titleKey: 'ai.personalRecommendations',
+      descKey: 'ai.personalRecommendationsDesc',
+      icon: Sparkles,
+      path: '/ai/recommendations',
       points: 1,
     },
     {
@@ -30,11 +31,11 @@ export default function AIPage() {
       points: 2,
     },
     {
-      id: 'recommendations',
-      titleKey: 'ai.personalRecommendations',
-      descKey: 'ai.personalRecommendationsDesc',
-      icon: Sparkles,
-      path: '/ai/recommendations',
+      id: 'analyze',
+      titleKey: 'ai.analyzeStock',
+      descKey: 'ai.analyzeStockDesc',
+      icon: Brain,
+      path: '/ai/analyze',
       points: 1,
     },
   ];

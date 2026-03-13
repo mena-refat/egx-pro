@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles } from 'lucide-react';
-import api from '../lib/api';
+import api, { ANALYSIS_TIMEOUT_MS } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import type { RecommendationsResult } from '../types';
 import styles from './AIRecommendationsPage.module.scss';
@@ -20,7 +20,7 @@ export default function AIRecommendationsPage() {
     setResult(null);
     setLoading(true);
     try {
-      const res = await api.post<{ data: { recommendations: RecommendationsResult } }>('/analysis/recommendations');
+      const res = await api.post<{ data: { recommendations: RecommendationsResult } }>('/analysis/recommendations', {}, { timeout: ANALYSIS_TIMEOUT_MS });
       const data = res.data?.data?.recommendations ?? (res.data as { recommendations?: RecommendationsResult })?.recommendations;
       if (data) setResult(data);
       else setError(t('common.error'));

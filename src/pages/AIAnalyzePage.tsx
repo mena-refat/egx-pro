@@ -2,10 +2,11 @@ import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Brain } from 'lucide-react';
-import api from '../lib/api';
+import api, { ANALYSIS_TIMEOUT_MS } from '../lib/api';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
+import { TickerSuggestInput } from '../components/ui/TickerSuggestInput';
 import { AnalysisResult } from '../components/analysis/AnalysisResult';
+import { getStockInfo } from '../lib/egxStocks';
 import type { AnalysisResult as AnalysisResultType } from '../types';
 import styles from './AIAnalyzePage.module.scss';
 
@@ -24,20 +25,30 @@ export default function AIAnalyzePage() {
       setError(t('ai.enterTicker'));
       return;
     }
+    if (!getStockInfo(tkr)) {
+      setError(t('ai.selectFromList'));
+      return;
+    }
     setError(null);
     setAnalysis(null);
     setLoading(true);
     try {
-      const res = await api.post<{ data: { analysis: AnalysisResultType } }>(`/analysis/${tkr}`);
+      const res = await api.post<{ data: { analysis: AnalysisResultType } }>(`/analysis/${tkr}`, undefined, { timeout: ANALYSIS_TIMEOUT_MS });
       const data = res.data?.data?.analysis ?? (res.data as { analysis?: AnalysisResultType })?.analysis;
       if (data) setAnalysis(data);
       else setError(t('common.error'));
     } catch (err: unknown) {
-      const code = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        : null;
+      const res = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { status?: number; data?: { error?: string } } }).response
+        : undefined;
+      const code = res?.data?.error;
+      const status = res?.status;
       if (code === 'ANALYSIS_LIMIT_REACHED') {
         setShowLimitModal(true);
+      } else if (status === 401) {
+        setError(t('ai.sessionExpired'));
+      } else if (status === 404) {
+        setError(code === 'NOT_FOUND' ? t('ai.error404Stock') : t('ai.error404Route'));
       } else {
         setError((err as Error)?.message || t('common.error'));
       }
@@ -65,9 +76,9 @@ export default function AIAnalyzePage() {
       </header>
 
       <div className={styles.form}>
-        <Input
+        <TickerSuggestInput
           value={ticker}
-          onChange={(e) => setTicker(e.target.value)}
+          onChange={setTicker}
           placeholder={t('ai.tickerPlaceholder')}
           wrapperClassName={styles.input}
           dir="ltr"
