@@ -733,7 +733,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
       <div className="w-full max-w-xl">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
-            <TrendingUp className="text-[var(--brand)] w-6 h-6" />
+            <img src="/borsa-logo.svg" alt="" className="w-6 h-6 shrink-0 object-contain" aria-hidden />
             <span className="font-bold text-lg">Borsa</span>
           </div>
         </div>

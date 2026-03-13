@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight, Settings, Users, Crosshair, Brain } from 'lucide-react';
+import { LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight, Settings, Users, Crosshair, Brain } from 'lucide-react';
 
 export type SidebarProps = {
   activeRoute: string;
@@ -38,9 +38,7 @@ export function Sidebar({ activeRoute, collapsed, onToggle }: SidebarProps) {
     >
       <div className="p-4 flex items-center justify-between gap-2 min-w-0 bg-gradient-to-br from-[var(--brand)]/10 to-transparent rounded-br-xl">
         <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--brand)] to-[var(--brand-hover)] flex items-center justify-center shrink-0">
-            <TrendingUp className="text-[var(--text-inverse)] w-5 h-5" />
-          </div>
+          <img src="/borsa-logo.svg" alt="" className="w-9 h-9 shrink-0 object-contain" aria-hidden />
           <h1 className={`text-xl font-bold tracking-tight truncate transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>{t('common.appName')}</h1>
         </div>
         <button
