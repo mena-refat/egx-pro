@@ -635,7 +635,8 @@ export function SubscriptionTab() {
         if (!controller.signal.aborted)
           setPlanData((res.data as { data?: unknown })?.data ?? res.data);
       })
-      .catch(() => {
+      .catch((err) => {
+        if (import.meta.env.DEV) console.error('Billing plan fetch failed:', err);
         if (!controller.signal.aborted) setPlanData(null);
       })
       .finally(() => {

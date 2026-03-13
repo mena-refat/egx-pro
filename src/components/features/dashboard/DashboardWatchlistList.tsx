@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { getStockName, getStockInfo } from '../../../lib/egxStocks';
 import { Skeleton } from '../../ui/Skeleton';
 import EmptyState from '../../shared/EmptyState';
@@ -16,7 +16,7 @@ type Props = {
   lang: 'ar' | 'en';
 };
 
-export function DashboardWatchlistList({ watchlist, livePrices, loading, onGoToStocks, lang }: Props) {
+export const DashboardWatchlistList = memo(function DashboardWatchlistList({ watchlist, livePrices, loading, onGoToStocks, lang }: Props) {
   const { t } = useTranslation('common');
 
   if (loading) {
@@ -32,7 +32,7 @@ export function DashboardWatchlistList({ watchlist, livePrices, loading, onGoToS
   if (watchlist.length === 0) {
     return (
       <EmptyState
-        icon={Star}
+        icon={Eye}
         title={t('watchlist.emptyTitle')}
         description={t('watchlist.emptyDescription')}
         actionLabel={t('watchlist.addFirst')}
@@ -77,4 +77,4 @@ export function DashboardWatchlistList({ watchlist, livePrices, loading, onGoToS
       })}
     </div>
   );
-}
+});

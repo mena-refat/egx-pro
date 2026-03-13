@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
+import { clearCache } from '../lib/queryCache';
 import { useAuthStore } from '../store/authStore';
 import { useLivePrices } from './useLivePrices';
 import { searchStocks, getStockName, getStockInfo } from '../lib/egxStocks';
@@ -87,7 +88,7 @@ export function useStockScreener() {
     () => (stocks.length > 0 ? stocks.map((s) => s.ticker) : undefined),
     [stocks]
   );
-  const { prices: livePrices } = useLivePrices(subscribedTickers);
+  const { prices: livePrices, isConnected } = useLivePrices(subscribedTickers);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterId>('all');
@@ -173,6 +174,7 @@ export function useStockScreener() {
       if (isIn) {
         try {
           await api.delete(`/watchlist/${ticker}`);
+          clearCache('/watchlist');
           setWatchlist((prev) => prev.filter((t) => t !== ticker));
         } catch {
           // ignore
@@ -210,6 +212,7 @@ export function useStockScreener() {
           throw postErr;
         }
       }
+      clearCache('/watchlist');
       setWatchlist((prev) => (prev.includes(addTargetModal.ticker) ? prev : [...prev, addTargetModal.ticker]));
       setAddTargetModal(null);
       setAddTargetPrice('');
@@ -289,6 +292,7 @@ export function useStockScreener() {
   }, [filtered, sort]);
 
   return {
+    isConnected,
     sorted,
     watchlist,
     search,

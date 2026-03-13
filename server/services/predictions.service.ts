@@ -5,9 +5,9 @@ import { incrWithExpire, getCount, decrCount } from '../lib/redis.ts';
 import { getCairoDateString, getCairoDateStringFromDate, getCairoMidnightExpirySeconds } from '../lib/cairo-date.ts';
 import { PREDICTION_LIMITS } from '../lib/constants.ts';
 import { isPaid } from '../lib/plan.ts';
-import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { PredictionRepository } from '../repositories/prediction.repository.ts';
+import { FollowRepository } from '../repositories/follow.repository.ts';
 import type { PredictionDir, PredictionTime, UserRank } from '@prisma/client';
 
 const DAILY_KEY_PREFIX = 'predictions:daily:';
@@ -261,11 +261,8 @@ export const PredictionsService = {
     const statusVal = status && ['ACTIVE', 'HIT', 'MISSED', 'EXPIRED'].includes(status) ? (status as 'ACTIVE' | 'HIT' | 'MISSED' | 'EXPIRED') : undefined;
     const items = await PredictionRepository.getMy(userId, statusVal, page, limit);
     const total = await PredictionRepository.getMyCount(userId, statusVal);
-    const likeRows = await prisma.predictionLike.findMany({
-      where: { userId, predictionId: { in: items.map((p) => p.id) } },
-      select: { predictionId: true },
-    });
-    const likedSet = new Set(likeRows.map((r) => r.predictionId));
+    const likedIds = await PredictionRepository.findLikedPredictionIds(userId, items.map((p) => p.id));
+    const likedSet = new Set(likedIds);
     return {
       items: items.map((p) => ({
         ...p,
@@ -295,11 +292,7 @@ export const PredictionsService = {
     if (!stats) {
       return { rank: 'BEGINNER' as UserRank, totalPredictions: 0, private: false };
     }
-    const follow = await prisma.follow.findUnique({
-      where: {
-        followerId_followingId: { followerId: viewerId, followingId: user.id },
-      },
-    });
+    const follow = await FollowRepository.findStatus(viewerId, user.id);
     const isFollowing = follow?.status === 'ACCEPTED';
     const isOwn = viewerId === user.id;
     const canSeeFull = isOwn || !user.isPrivate || isFollowing;
@@ -318,11 +311,8 @@ export const PredictionsService = {
 
   async getByTicker(ticker: string, viewerId: string) {
     const list = await PredictionRepository.getByTicker(ticker);
-    const likeRows = await prisma.predictionLike.findMany({
-      where: { userId: viewerId, predictionId: { in: list.map((p) => p.id) } },
-      select: { predictionId: true },
-    });
-    const likedSet = new Set(likeRows.map((r) => r.predictionId));
+    const likedIds = await PredictionRepository.findLikedPredictionIds(viewerId, list.map((p) => p.id));
+    const likedSet = new Set(likedIds);
     const upCount = list.filter((p) => p.direction === 'UP').length;
     const downCount = list.filter((p) => p.direction === 'DOWN').length;
     const sorted = [...list].sort((a, b) => {
@@ -366,10 +356,7 @@ export const PredictionsService = {
   },
 
   async resolveAndScore(predictionId: string, resolvedPrice: number) {
-    const prediction = await prisma.prediction.findUnique({
-      where: { id: predictionId },
-      include: { user: { select: { id: true } } },
-    });
+    const prediction = await PredictionRepository.findByIdForResolution(predictionId);
     if (!prediction || prediction.status !== 'ACTIVE') return;
     const target = prediction.targetPrice;
     const direction = prediction.direction;
@@ -407,15 +394,12 @@ export const PredictionsService = {
       (direction === 'DOWN' && resolvedPrice <= target);
     const status = targetReached ? 'HIT' : 'MISSED';
 
-    await prisma.prediction.update({
-      where: { id: predictionId },
-      data: {
-        status,
-        resolvedPrice,
-        resolvedAt: new Date(),
-        pointsEarned,
-        accuracyPct,
-      },
+    await PredictionRepository.updateResolution(predictionId, {
+      status,
+      resolvedPrice,
+      resolvedAt: new Date(),
+      pointsEarned,
+      accuracyPct,
     });
 
     const stats = await PredictionRepository.getStatsByUserId(prediction.userId);

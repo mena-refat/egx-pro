@@ -1,17 +1,19 @@
 import React from 'react';
 import { Skeleton } from '../ui/Skeleton';
 
+/** Skeleton that mirrors DashboardPage layout (hero, stats cards, chart, list). */
 export function DashboardSkeleton() {
   return (
     <div className="space-y-8">
-      <Skeleton height={48} className="w-full max-w-md rounded-xl" />
-      <Skeleton height={120} className="w-full rounded-xl" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Skeleton height={200} className="w-full rounded-xl" />
-        <Skeleton height={200} className="w-full rounded-xl" />
+      <Skeleton height={40} className="w-full rounded-xl" />
+      <Skeleton height={112} className="w-full rounded-2xl" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} height={96} className="w-full rounded-xl" />
+        ))}
       </div>
-      <Skeleton height={180} className="w-full rounded-xl" />
-      <Skeleton height={140} className="w-full rounded-xl" />
+      <Skeleton height={256} className="w-full rounded-2xl" />
+      <Skeleton height={192} className="w-full rounded-2xl" />
     </div>
   );
 }

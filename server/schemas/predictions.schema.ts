@@ -11,6 +11,8 @@ export const createPredictionBodySchema = z.object({
   direction: predictionDir,
   timeframe: predictionTime,
   targetPrice: z.number().positive(),
+  reason: z.string().min(1, 'يرجى كتابة سبب توقعك').max(500),
+  isPublic: z.boolean().optional().default(true),
 });
 
 export const predictionsFeedQuerySchema = z.object({

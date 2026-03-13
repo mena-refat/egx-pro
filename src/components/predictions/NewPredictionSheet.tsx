@@ -116,12 +116,15 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
           <AnimatePresence mode="wait">
             {step === 1 && (
               <motion.div key="1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
+                <label htmlFor="new-prediction-stock-search" className="sr-only">{t('predictions.searchStock')}</label>
                 <p className="text-sm text-[var(--text-secondary)]">{t('predictions.step1Title')}</p>
                 <div className="relative">
                   <input
+                    id="new-prediction-stock-search"
                     type="text"
                     ref={inputRef}
                     value={stockSearch}
+                    aria-required="true"
                     onFocus={() => {
                       setShowSuggestions(true);
                       updateDropdownPosition();
@@ -162,13 +165,15 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                 </div>
                 {draft.direction && (
                   <>
-                    <label className="block text-sm">{t('predictions.targetPrice')}</label>
+                    <label htmlFor="new-prediction-target-price" className="block text-sm font-medium text-[var(--text-secondary)]">{t('predictions.targetPrice')}</label>
                     <input
+                      id="new-prediction-target-price"
                       type="number"
                       step="0.01"
                       value={draft.targetPrice ?? ''}
                       onChange={(e) => updateDraft({ targetPrice: e.target.value ? Number(e.target.value) : undefined })}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-primary)]"
+                      aria-required="true"
                     />
                     <p className="text-xs text-[var(--text-muted)]">{t('predictions.expectedChange')}: {draft.targetPrice && price ? (Number(changePct) >= 0 ? '+' : '') + changePct + '%' : '—'}</p>
                     <div className="flex gap-2">
@@ -274,7 +279,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                   <input type="checkbox" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} />
                   <span className="text-sm">{t('predictions.agreeTerms')}</span>
                 </label>
-                {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+                {error && <p className="text-sm text-red-600 dark:text-red-400" role="alert" aria-live="polite">{error}</p>}
                 <Button onClick={handleSubmit} disabled={!agreeTerms || submitting} loading={submitting}>{t('predictions.publishButton')}</Button>
               </motion.div>
             )}

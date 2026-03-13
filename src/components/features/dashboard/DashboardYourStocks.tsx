@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown } from 'lucide-react';
@@ -24,7 +24,7 @@ function formatPrice(p: number): string {
   return p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
+export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
   const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
   const isRTL = i18n.language.startsWith('ar');
@@ -202,4 +202,4 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
       )}
     </div>
   );
-}
+});

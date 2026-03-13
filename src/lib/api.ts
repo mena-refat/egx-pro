@@ -55,9 +55,17 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
+    if (!error.response && error.code !== 'ERR_CANCELED') {
+      return Promise.reject({
+        ok: false,
+        error: 'NETWORK_ERROR',
+        message: 'لا يوجد اتصال بالإنترنت',
+      });
+    }
+
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest?._retry) {
       if (isRefreshing) {
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });

@@ -9,8 +9,10 @@ const requiredInProdSchema = z.object({
 /**
  * Validate required environment variables at startup.
  * أي secret مش موجود يطلع error واضح وقت التشغيل.
+ * Skips validation when NODE_ENV=test for integration tests (caller sets env).
  */
 export function validateEnv(): void {
+  if (process.env.NODE_ENV === 'test') return;
   const isProd = process.env.NODE_ENV === 'production';
   const missing: string[] = [];
 

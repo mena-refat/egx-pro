@@ -32,7 +32,9 @@ export default function DashboardPage() {
       }))
       .filter((item: { currentPrice: number; targetPrice: number }) => item.currentPrice >= item.targetPrice);
     if (items.length === 0) return;
-    api.post('/watchlist/check-targets', { items }).catch(() => {});
+    api.post('/watchlist/check-targets', { items }).catch((err) => {
+        if (import.meta.env.DEV) console.error('check-targets failed:', err);
+      });
   }, [watchlist, livePrices]);
 
   const { topGainer, topLoser } = useMemo(() => {
@@ -71,6 +73,11 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8" dir={isRTL ? 'rtl' : 'ltr'}>
+      {!isConnected && (
+        <div className="bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs text-center py-1.5 rounded-lg mb-4" role="status">
+          {t('dashboard.reconnectingLive', { defaultValue: 'جاري إعادة الاتصال بالأسعار المباشرة...' })}
+        </div>
+      )}
       <DashboardMarketBar egx30={marketOverview?.egx30 ?? null} locale={i18n.language} />
 
       <DashboardPortfolioHero

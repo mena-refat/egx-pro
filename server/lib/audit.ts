@@ -3,7 +3,7 @@ import { prisma } from './prisma.ts';
 import { logger } from './logger.ts';
 
 function hash(value: string): string {
-  return crypto.createHash('sha256').update(value, 'utf8').digest('hex').slice(0, 32);
+  return crypto.createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
 export type AuditReq = { ip?: string; headers?: { 'user-agent'?: string } };

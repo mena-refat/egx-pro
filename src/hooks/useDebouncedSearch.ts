@@ -36,7 +36,8 @@ export function useDebouncedSearch<T>(
         .then((data) => {
           if (!ac.signal.aborted) setResults(data);
         })
-        .catch(() => {
+        .catch((err) => {
+          if (import.meta.env.DEV) console.error('Debounced search failed:', err);
           if (!ac.signal.aborted) setResults(null);
         })
         .finally(() => {

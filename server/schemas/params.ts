@@ -33,3 +33,7 @@ export const tokenIdParamSchema = z.object({
 export const notificationIdParamSchema = z.object({
   id: z.string().min(1).max(100),
 });
+
+export const marketDataQuotesQuerySchema = z.object({
+  symbols: z.string().min(1),
+});

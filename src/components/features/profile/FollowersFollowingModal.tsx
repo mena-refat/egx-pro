@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTranslation } from 'react-i18next';
 import { Users } from 'lucide-react';
 import { useProfileStore } from '../../../store/profileStore';
@@ -8,6 +9,9 @@ import { Button } from '../../ui/Button';
 import EmptyState from '../../shared/EmptyState';
 import { useProfileFollowersFollowing } from '../../../hooks/useProfileFollowersFollowing';
 import { FollowModalListRow, FollowModalSkeletonRow } from './FollowModalListRow';
+
+const ROW_ESTIMATE = 72;
+const OVERSCAN = 5;
 
 export function FollowersFollowingModal() {
   const { t } = useTranslation('common');
@@ -31,6 +35,23 @@ export function FollowersFollowingModal() {
 
   const isOwn = Boolean(profileUsername && authUser?.username && profileUsername === authUser.username);
 
+  const followersRef = useRef<HTMLDivElement>(null);
+  const followingRef = useRef<HTMLDivElement>(null);
+
+  const followersVirtualizer = useVirtualizer({
+    count: followersList.length,
+    getScrollElement: () => followersRef.current,
+    estimateSize: () => ROW_ESTIMATE,
+    overscan: OVERSCAN,
+  });
+
+  const followingVirtualizer = useVirtualizer({
+    count: followingList.length,
+    getScrollElement: () => followingRef.current,
+    estimateSize: () => ROW_ESTIMATE,
+    overscan: OVERSCAN,
+  });
+
   return (
     <>
       <Modal
@@ -39,7 +60,7 @@ export function FollowersFollowingModal() {
         title={t('social.followersModalTitle')}
         size="lg"
       >
-        <div className="max-h-[60vh] overflow-auto">
+        <div ref={followersRef} className="max-h-[60vh] overflow-auto">
           {followersLoading && followersList.length === 0 ? (
             <>
               <FollowModalSkeletonRow />
@@ -53,18 +74,31 @@ export function FollowersFollowingModal() {
               description={t('social.followersEmptyDesc', { defaultValue: 'لا يوجد متابعون بعد.' })}
             />
           ) : (
-            <div className="divide-y-0">
-              {followersList.map((item) => (
-                <React.Fragment key={item.id}>
-                  <FollowModalListRow
-                    item={item}
-                    isOwnProfile={isOwn}
-                    onFollow={handleFollow}
-                    onUnfollow={handleUnfollow}
-                    updating={updating}
-                  />
-                </React.Fragment>
-              ))}
+            <div
+              className="relative w-full"
+              style={{ height: `${followersVirtualizer.getTotalSize()}px` }}
+            >
+              {followersVirtualizer.getVirtualItems().map((virtualRow) => {
+                const item = followersList[virtualRow.index];
+                return (
+                  <div
+                    key={item.id}
+                    className="absolute left-0 w-full"
+                    style={{
+                      top: virtualRow.start,
+                      height: `${virtualRow.size}px`,
+                    }}
+                  >
+                    <FollowModalListRow
+                      item={item}
+                      isOwnProfile={isOwn}
+                      onFollow={handleFollow}
+                      onUnfollow={handleUnfollow}
+                      updating={updating}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
           {hasMoreFollowers && !followersLoading && (
@@ -89,7 +123,7 @@ export function FollowersFollowingModal() {
         title={t('social.followingModalTitle')}
         size="lg"
       >
-        <div className="max-h-[60vh] overflow-auto">
+        <div ref={followingRef} className="max-h-[60vh] overflow-auto">
           {followingLoading && followingList.length === 0 ? (
             <>
               <FollowModalSkeletonRow />
@@ -103,18 +137,31 @@ export function FollowersFollowingModal() {
               description={t('social.followingEmptyDesc', { defaultValue: 'لا يتابع أحداً بعد.' })}
             />
           ) : (
-            <div className="divide-y-0">
-              {followingList.map((item) => (
-                <React.Fragment key={item.id}>
-                  <FollowModalListRow
-                    item={item}
-                    isOwnProfile={isOwn}
-                    onFollow={handleFollow}
-                    onUnfollow={handleUnfollow}
-                    updating={updating}
-                  />
-                </React.Fragment>
-              ))}
+            <div
+              className="relative w-full"
+              style={{ height: `${followingVirtualizer.getTotalSize()}px` }}
+            >
+              {followingVirtualizer.getVirtualItems().map((virtualRow) => {
+                const item = followingList[virtualRow.index];
+                return (
+                  <div
+                    key={item.id}
+                    className="absolute left-0 w-full"
+                    style={{
+                      top: virtualRow.start,
+                      height: `${virtualRow.size}px`,
+                    }}
+                  >
+                    <FollowModalListRow
+                      item={item}
+                      isOwnProfile={isOwn}
+                      onFollow={handleFollow}
+                      onUnfollow={handleUnfollow}
+                      updating={updating}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
           {hasMoreFollowing && !followingLoading && (

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
+import { clearCache } from '../lib/queryCache';
 import { PortfolioHolding } from '../types';
 
 export function usePortfolio(livePrices: Record<string, { price: number }>) {
@@ -43,6 +44,7 @@ export function usePortfolio(livePrices: Record<string, { price: number }>) {
         purchasePrice: data.price,
         purchaseDate: data.date,
       });
+      clearCache('/portfolio');
       await fetchPortfolio();
     } catch (err: unknown) {
       const data = err && typeof err === 'object' && 'response' in err ? (err as { response?: { data?: { error?: string; code?: string } } }).response?.data : undefined;
@@ -56,6 +58,7 @@ export function usePortfolio(livePrices: Record<string, { price: number }>) {
   const removeHolding = async (id: string) => {
     try {
       await api.delete(`/portfolio/${id}`);
+      clearCache('/portfolio');
       await fetchPortfolio();
     } catch (err: unknown) {
       let errorCode = 'Failed to remove holding';

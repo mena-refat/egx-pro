@@ -18,8 +18,8 @@ const getCookieOptions = () => ({
   httpOnly: true,
   secure: isProduction,
   sameSite: 'strict' as const,
-  maxAge: REFRESH_TOKEN_AGE_MS,
   path: '/api/auth',
+  maxAge: REFRESH_TOKEN_AGE_MS, // 30 days — must match REFRESH_TOKEN_AGE_MS
 });
 
 function authContext(req: Request): AuthService.AuthContext {

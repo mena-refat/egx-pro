@@ -7,16 +7,23 @@ import { TIMEOUTS } from '../lib/constants';
 export function useLivePrices(subscribedTickers?: string[]) {
   const [prices, setPrices] = useState<Record<string, Stock>>({});
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectDelayRef = useRef(1000);
   const tickersRef = useRef<string[]>([]);
   tickersRef.current = subscribedTickers ?? [];
+  const subscribeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sendSubscribe = (ws: WebSocket) => {
-    if (ws.readyState !== WebSocket.OPEN) return;
-    const tickers = tickersRef.current;
-    ws.send(JSON.stringify({ type: 'SUBSCRIBE', tickers: Array.isArray(tickers) ? tickers : [] }));
+    if (subscribeTimeoutRef.current) clearTimeout(subscribeTimeoutRef.current);
+    subscribeTimeoutRef.current = setTimeout(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        const tickers = tickersRef.current;
+        ws.send(JSON.stringify({ type: 'SUBSCRIBE', tickers: Array.isArray(tickers) ? tickers : [] }));
+      }
+      subscribeTimeoutRef.current = null;
+    }, 500);
   };
 
   useEffect(() => {
@@ -36,6 +43,7 @@ export function useLivePrices(subscribedTickers?: string[]) {
 
       ws.onopen = () => {
         setIsConnected(true);
+        setConnectionError(null);
         ws.send(JSON.stringify({ type: 'AUTH', token }));
         if (tickersRef.current.length > 0) {
           setTimeout(() => sendSubscribe(ws), 0);
@@ -78,12 +86,9 @@ export function useLivePrices(subscribedTickers?: string[]) {
     connect();
 
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (subscribeTimeoutRef.current) clearTimeout(subscribeTimeoutRef.current);
+      if (wsRef.current) wsRef.current.close();
     };
   }, []);
 
@@ -92,5 +97,5 @@ export function useLivePrices(subscribedTickers?: string[]) {
     sendSubscribe(wsRef.current);
   }, [isConnected, subscribedTickers]);
 
-  return { prices, isConnected };
+  return { prices, isConnected, connectionError };
 }

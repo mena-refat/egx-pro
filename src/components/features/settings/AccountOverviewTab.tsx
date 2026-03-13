@@ -26,8 +26,14 @@ export function AccountOverviewTab() {
     const controller = new AbortController();
     const signal = controller.signal;
     Promise.all([
-      api.get('/user/profile/stats', { signal }).then((r) => (r.data as { data?: unknown })?.data ?? r.data).catch(() => null),
-      api.get('/profile/completion', { signal }).then((r) => (r.data as { data?: CompletionData })?.data ?? (r.data as CompletionData)).catch(() => null),
+      api.get('/user/profile/stats', { signal }).then((r) => (r.data as { data?: unknown })?.data ?? r.data).catch((err) => {
+        if (import.meta.env.DEV) console.error('Profile stats/completion fetch failed:', err);
+        return null;
+      }),
+      api.get('/profile/completion', { signal }).then((r) => (r.data as { data?: CompletionData })?.data ?? (r.data as CompletionData)).catch((err) => {
+        if (import.meta.env.DEV) console.error('Profile stats/completion fetch failed:', err);
+        return null;
+      }),
     ]).then(([s, c]) => {
       if (!signal.aborted) {
         setStats(s ?? null);

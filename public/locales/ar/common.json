@@ -165,7 +165,7 @@
     "leaderboardThisWeek": "هذا الأسبوع",
     "leaderboardThisMonth": "هذا الشهر",
     "leaderboardAllTime": "كل الأوقات",
-    "emptyFeed": "لا توقعات بعد",
+    "emptyFeed": "مفيش توقعات لسه",
     "emptyMy": "لم تنشر أي توقعات بعد",
     "emptyStock": "لا توقعات على هذا السهم",
     "bullish": "صاعد",
@@ -282,8 +282,8 @@
     "progress": "التقدم",
     "noGoals": "لم تضف أي أهداف بعد",
     "addNew": "هدف جديد",
-    "addFirst": "أضف هدف",
-    "emptyTitle": "لا توجد أهداف بعد",
+    "addFirst": "حدد هدفك الأول",
+    "emptyTitle": "مفيش أهداف",
     "emptyDescription": "حدد هدفك المالي الأول وابدأ رحلة الادخار",
     "emptyDesc": "حدد هدفك وتابع تقدمك خطوة بخطوة حتى تحققه",
     "activeCount": "أهداف نشطة",
@@ -336,15 +336,16 @@
     "andMonths": "و{{m}} أشهر"
   },
   "notifications": {
-    "emptyTitle": "لا توجد إشعارات",
+    "emptyTitle": "مفيش إشعارات",
     "emptyDescription": "ستظهر هنا تنبيهات الأسعار والأهداف والإنجازات"
   },
   "watchlist": {
-    "emptyTitle": "قائمة المتابعة فارغة",
+    "emptyTitle": "مفيش أسهم في المراقبة",
     "emptyDescription": "أضف أسهم لمتابعة أسعارها وتلقي التنبيهات",
     "addFirst": "تصفح الأسهم"
   },
   "dashboard": {
+    "reconnectingLive": "جاري إعادة الاتصال بالأسعار المباشرة...",
     "liveWatchlist": "قائمة المتابعة اللحظية",
     "watchlistEmpty": "لا توجد أسهم في قائمة المتابعة",
     "totalValue": "إجمالي القيمة",
@@ -794,9 +795,9 @@
     "epsDesc": "ربحية السهم"
   },
   "portfolio": {
-    "emptyTitle": "محفظتك فارغة",
-    "emptyDescription": "أضف أول سهم لك وابدأ تتابع أداء استثماراتك",
-    "addFirst": "أضف سهم",
+    "emptyTitle": "محفظتك فاضية",
+    "emptyDescription": "أضف أول سهم وابدأ متابعة استثماراتك",
+    "addFirst": "أضف أول سهم",
     "invalidTicker": "يرجى إدخال رمز سهم صحيح",
     "sharesPositive": "الكمية يجب أن تكون أكبر من صفر",
     "errors": {

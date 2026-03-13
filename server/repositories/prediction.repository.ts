@@ -298,4 +298,37 @@ export const PredictionRepository = {
       include: { user: { select: { id: true } } },
     });
   },
+
+  findLikedPredictionIds(userId: string, predictionIds: string[]) {
+    if (predictionIds.length === 0) return Promise.resolve([]);
+    return prisma.predictionLike
+      .findMany({
+        where: { userId, predictionId: { in: predictionIds } },
+        select: { predictionId: true },
+      })
+      .then((rows) => rows.map((r) => r.predictionId));
+  },
+
+  findByIdForResolution(id: string) {
+    return prisma.prediction.findUnique({
+      where: { id },
+      include: { user: { select: { id: true } } },
+    });
+  },
+
+  updateResolution(
+    id: string,
+    data: {
+      status: 'HIT' | 'MISSED';
+      resolvedPrice: number;
+      resolvedAt: Date;
+      pointsEarned: number;
+      accuracyPct: number;
+    }
+  ) {
+    return prisma.prediction.update({
+      where: { id },
+      data,
+    });
+  },
 };

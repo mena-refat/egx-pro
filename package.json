@@ -5,14 +5,21 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build",
+    "build": "tsc --noEmit && vite build",
+    "start": "NODE_ENV=production tsx server.ts",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "preview": "vite preview",
     "postinstall": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx server/scripts/seed-sectors.ts",
     "optimize:svg": "npx svgo public/borsa-logo.svg -o public/borsa-logo.svg"
   },
   "dependencies": {
@@ -105,7 +112,9 @@
     "typescript": "~5.8.2",
     "typescript-eslint": "^8.56.1",
     "vite": "^6.2.0",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.2"
   },
   "overrides": {
     "eslint-plugin-react-hooks": {

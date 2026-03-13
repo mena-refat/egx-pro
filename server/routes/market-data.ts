@@ -1,20 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { marketDataService } from '../services/market-data/market-data.service.ts';
 import { authenticate } from '../middleware/auth.middleware.ts';
+import { validate } from '../middleware/validate.middleware.ts';
+import { marketDataQuotesQuerySchema } from '../schemas/params.ts';
 import type { AuthRequest } from './types.ts';
 import { logger } from '../lib/logger.ts';
 
 const router = Router();
 
-router.get('/quotes', authenticate, async (req: Request, res: Response) => {
+router.get('/quotes', authenticate, validate(marketDataQuotesQuerySchema, 'query'), async (req: Request, res: Response) => {
   const symbolsParam = (req as AuthRequest).query.symbols as string;
-  if (!symbolsParam) {
-    return res.status(400).json({ error: 'VALIDATION_ERROR' });
-  }
-
   const symbols = symbolsParam.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
   if (symbols.length > 50) {
-    return res.status(400).json({ error: 'VALIDATION_ERROR' });
+    return res.status(400).json({ ok: false, error: 'VALIDATION_ERROR' });
   }
 
   try {

@@ -72,7 +72,9 @@ export default function ProfilePage() {
     fetch('/api/user/profile', { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => { if (!cancelled && data) setUser((data as { data?: ProfileUser }).data ?? (data as ProfileUser)); })
-      .catch(() => {})
+      .catch((err) => {
+        if (import.meta.env.DEV) console.error('Profile fetch failed:', err);
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [authUser, accessToken]);
@@ -89,7 +91,9 @@ export default function ProfilePage() {
         const d = data?.data ?? data;
         setCounts(d.followersCount ?? 0, d.followingCount ?? 0);
       })
-      .catch(() => {});
+      .catch((err) => {
+        if (import.meta.env.DEV) console.error('Social profile fetch failed:', err);
+      });
     return () => { cancelled = true; };
   }, [user?.username, accessToken, setCounts]);
 

@@ -38,7 +38,7 @@ export function Sidebar({ activeRoute, collapsed, onToggle }: SidebarProps) {
     >
       <div className="p-4 flex items-center justify-between gap-2 min-w-0 bg-gradient-to-br from-[var(--brand)]/10 to-transparent rounded-br-xl">
         <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-          <img src="/borsa-logo.svg" alt="" width={36} height={36} className="w-9 h-9 shrink-0 object-contain" aria-hidden loading="lazy" />
+          <img src="/borsa-logo.webp" alt="" width={36} height={36} className="w-9 h-9 shrink-0 object-contain" aria-hidden loading="lazy" />
           <h1 className={`text-xl font-bold tracking-tight truncate transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>{t('common.appName')}</h1>
         </div>
         <button

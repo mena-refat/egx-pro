@@ -39,17 +39,16 @@ export function UsernameSetupForm({
           })}
         </p>
         <div className="space-y-2 mb-4">
-          <label className="text-xs font-medium text-[var(--text-secondary)]">
-            {t('settings.username', { defaultValue: 'Username' })}
-          </label>
           <Input
+            label={t('settings.username', { defaultValue: 'Username' })}
             value={value}
             maxLength={maxLength}
             onChange={(e) => onChange(e.target.value)}
             placeholder="egx_trader"
+            aria-required="true"
+            error={formatError ?? undefined}
           />
-          {formatError && <p className="text-xs text-[var(--danger)]">{formatError}</p>}
-          {message && !formatError && <p className="text-xs text-[var(--danger)]">{message}</p>}
+          {message && !formatError && <p className="text-xs text-[var(--danger)] mt-1" role="alert" aria-live="polite">{message}</p>}
           {status === 'available' && !formatError && !message && (
             <p className="text-xs text-[var(--success)]">
               {t('settings.usernameAvailable', { defaultValue: 'Username is available' })}

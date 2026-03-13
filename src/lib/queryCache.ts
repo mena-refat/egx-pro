@@ -26,3 +26,14 @@ export function invalidateCache(urlOrPrefix: string): void {
     cache.delete(urlOrPrefix);
   }
 }
+
+/** Clear entire cache or all keys matching prefix (no wildcard). */
+export function clearCache(prefix?: string): void {
+  if (!prefix) {
+    cache.clear();
+    return;
+  }
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) cache.delete(key);
+  }
+}

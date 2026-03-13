@@ -19,6 +19,7 @@ if (!redis) {
 const localCache = new Map<string, { value: unknown; expiry: number }>();
 let redisWriteDisabled = false;
 
+/** Get value from Redis or in-memory fallback. Returns null if missing or expired. */
 export const getCache = async <T>(key: string): Promise<T | null> => {
   // Try Redis first
   if (redis) {
@@ -43,6 +44,7 @@ export const getCache = async <T>(key: string): Promise<T | null> => {
   return null;
 };
 
+/** Set value in Redis and in-memory cache with TTL in seconds. */
 export const setCache = async (key: string, value: unknown, expireSeconds: number): Promise<void> => {
   // Always set local cache as backup
   localCache.set(key, {

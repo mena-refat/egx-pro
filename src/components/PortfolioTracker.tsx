@@ -14,7 +14,6 @@ import { Input } from './ui/Input';
 import { Skeleton } from './ui/Skeleton';
 import EmptyState from './shared/EmptyState';
 import { toast } from '../store/toastStore';
-import { BriefcaseBusiness } from 'lucide-react';
 
 export default function PortfolioTracker() {
   const { t, i18n } = useTranslation('common');
@@ -215,7 +214,7 @@ export default function PortfolioTracker() {
           <div className="card-base overflow-hidden">
             {holdings.length === 0 && !isLoading ? (
               <EmptyState
-                icon={BriefcaseBusiness}
+                icon={PieChartIcon}
                 title={t('portfolio.emptyTitle')}
                 description={t('portfolio.emptyDescription')}
                 actionLabel={t('portfolio.addFirst')}

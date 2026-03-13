@@ -9,6 +9,7 @@ import { auditLog } from '../lib/audit.ts';
 import { createNotification } from '../lib/createNotification.ts';
 import { ACHIEVEMENT_DEFS, type AchievementLevel } from '../lib/achievements.ts';
 import { verifyPassword } from '../../src/lib/auth.ts';
+import { AppError } from '../lib/errors.ts';
 import type { Request } from 'express';
 
 const profileSelect = {
@@ -664,8 +665,8 @@ export const UserService = {
       where: { id: userId },
       select: { freeReferralRewarded: true, plan: true, planExpiresAt: true },
     });
-    if (!user) return { error: 'User not found' as const };
-    if (user.freeReferralRewarded) return { error: 'Reward already claimed' as const };
+    if (!user) throw new AppError('NOT_FOUND', 404, 'User not found');
+    if (user.freeReferralRewarded) throw new AppError('REWARD_ALREADY_CLAIMED', 400, 'المكافأة تم استلامها بالفعل');
     const completedCount = await prisma.referral.count({
       where: { referrerId: userId, isActive: true },
     });
@@ -685,19 +686,19 @@ export const UserService = {
 
   async applyReferralCode(userId: string, code: string) {
     const trimmed = (code || '').trim().toUpperCase();
-    if (!trimmed) return { error: 'Referral code is required' as const };
+    if (!trimmed) throw new AppError('VALIDATION_ERROR', 400, 'Referral code is required');
     const currentUser = await UserRepository.findUnique({
       where: { id: userId },
       select: { id: true, fullName: true, referralUsed: true },
     });
-    if (!currentUser) return { error: 'User not found' as const };
-    if (currentUser.referralUsed) return { error: 'Referral code already used' as const };
+    if (!currentUser) throw new AppError('NOT_FOUND', 404, 'User not found');
+    if (currentUser.referralUsed) throw new AppError('REFERRAL_CODE_ALREADY_USED', 400, 'Referral code already used');
     const referrer = await UserRepository.findFirst({
       where: { referralCode: trimmed },
       select: { id: true, fullName: true },
     });
-    if (!referrer) return { error: 'Invalid referral code' as const };
-    if (referrer.id === currentUser.id) return { error: 'You cannot use your own referral code' as const };
+    if (!referrer) throw new AppError('INVALID_REFERRAL_CODE', 400, 'Invalid referral code');
+    if (referrer.id === currentUser.id) throw new AppError('OWN_REFERRAL_CODE', 400, 'You cannot use your own referral code');
     await prisma.$transaction([
       UserRepository.update({
         where: { id: currentUser.id },
@@ -757,21 +758,21 @@ export const UserService = {
 
   async uploadAvatar(userId: string, imageBase64: string) {
     const matches = imageBase64.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (!matches) return { error: 'Invalid image format' as const };
+    if (!matches) throw new AppError('INVALID_IMAGE_FORMAT', 400, 'Invalid image format');
     const base64Data = matches[2];
     let buffer: Buffer;
     try {
       buffer = Buffer.from(base64Data, 'base64');
     } catch {
-      return { error: 'Invalid image format' as const };
+      throw new AppError('INVALID_IMAGE_FORMAT', 400, 'Invalid image format');
     }
     const MAX_AVATAR_BYTES = 500 * 1024; // 500KB
-    if (buffer.length > MAX_AVATAR_BYTES) return { error: 'Invalid image format' as const };
+    if (buffer.length > MAX_AVATAR_BYTES) throw new AppError('INVALID_IMAGE_FORMAT', 400, 'Invalid image format');
     const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     const JPEG_SIG = Buffer.from([0xff, 0xd8, 0xff]);
     const isPng = buffer.length >= 8 && buffer.subarray(0, 8).equals(PNG_SIG);
     const isJpeg = buffer.length >= 3 && buffer.subarray(0, 3).equals(JPEG_SIG);
-    if (!isPng && !isJpeg) return { error: 'Invalid image format' as const };
+    if (!isPng && !isJpeg) throw new AppError('INVALID_IMAGE_FORMAT', 400, 'Invalid image format');
     const sharp = (await import('sharp')).default;
     const uploadsDir = path.join(process.cwd(), 'uploads', 'avatars');
     if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -794,20 +795,20 @@ export const UserService = {
   async deleteAccount(userId: string, confirmText: string, password: string, req?: Request) {
     const normalized = (confirmText || '').trim().toUpperCase();
     if (normalized !== 'حذف' && normalized !== 'DELETE') {
-      return { error: 'invalid_confirm' as const, message: 'يرجى كتابة "حذف" أو "DELETE" للتأكيد' };
+      throw new AppError('INVALID_CONFIRM', 400, 'يرجى كتابة "حذف" أو "DELETE" للتأكيد');
     }
     if (!password || typeof password !== 'string') {
-      return { error: 'password_required' as const, message: 'كلمة المرور مطلوبة' };
+      throw new AppError('PASSWORD_REQUIRED', 400, 'كلمة المرور مطلوبة');
     }
     const user = await UserRepository.findUnique({
       where: { id: userId },
       select: { passwordHash: true, salt: true },
     });
     if (!user?.passwordHash || !user.salt) {
-      return { error: 'invalid_account' as const, message: 'تعذر التحقق من الحساب' };
+      throw new AppError('INVALID_ACCOUNT', 400, 'تعذر التحقق من الحساب');
     }
     const valid = await verifyPassword(password, user.passwordHash, user.salt);
-    if (!valid) return { error: 'wrong_password' as const, message: 'كلمة المرور غير صحيحة' };
+    if (!valid) throw new AppError('WRONG_PASSWORD', 400, 'كلمة المرور غير صحيحة');
     const now = new Date();
     const deletionDate = new Date(now);
     deletionDate.setDate(deletionDate.getDate() + 30);

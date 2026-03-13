@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import type { GoalRecord } from '../../hooks/useGoals';
 import { toast } from '../../store/toastStore';
+import { clearCache } from '../../lib/queryCache';
 import { GOAL_CATEGORIES } from './goalsUtils';
 import { formatWithCommas } from './goalsUtils';
 
@@ -113,6 +114,7 @@ export function GoalFormModal({
           throw new Error((data as { error?: string }).error || 'Failed');
         }
       }
+      clearCache('/goals');
       if (typeof window !== 'undefined')
         window.dispatchEvent(new CustomEvent('profile-completion-changed'));
       toast.success(mode === 'add' ? t('goals.added', { defaultValue: t('common.success') }) : t('common.success'));
@@ -179,6 +181,7 @@ export function GoalFormModal({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={t('goals.namePlaceholder')}
+            aria-required="true"
           />
           <div>
             <label className="block text-body font-medium text-[var(--text-secondary)] mb-2">
@@ -210,6 +213,7 @@ export function GoalFormModal({
             inputMode="numeric"
             value={formatWithCommas(targetAmount)}
             onChange={(e) => setTargetAmount(e.target.value.replace(/\D/g, ''))}
+            aria-required="true"
           />
           <Input
             label={t('goals.currentAmountLabel')}
@@ -224,7 +228,7 @@ export function GoalFormModal({
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
           />
-          {err && <p className="text-body text-[var(--danger)]" role="alert" aria-live="polite">{err}</p>}
+          {err && <p className="text-body text-[var(--danger)] mt-2" role="alert" aria-live="polite">{err}</p>}
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
               {t('goals.cancel')}

@@ -1,8 +1,9 @@
-import { Response } from 'express';
+import { Response, NextFunction } from 'express';
 import { UserService } from '../services/user.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { logger } from '../lib/logger.ts';
 import { sendSuccess, sendError } from '../lib/apiResponse.ts';
+import { AppError } from '../lib/errors.ts';
 
 function userId(req: AuthRequest): string | null {
   return req.user?.id ?? req.userId ?? null;
@@ -40,17 +41,15 @@ export const UserController = {
     }
   },
 
-  checkUsername: async (req: AuthRequest, res: Response) => {
+  checkUsername: async (req: AuthRequest, res: Response, next: NextFunction) => {
     const id = userId(req);
     if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const raw = (req.query.username ?? '') as string;
       const result = await UserService.checkUsername(id, raw);
-      if ('error' in result && result.error === 'Username is required') {
-        return sendError(res, 'VALIDATION_ERROR', 400);
-      }
       sendSuccess(res, result);
-    } catch {
+    } catch (err) {
+      if (err instanceof AppError) return next(err);
       sendError(res, 'VALIDATION_ERROR', 400);
     }
   },
@@ -132,19 +131,15 @@ export const UserController = {
     }
   },
 
-  applyReferralCode: async (req: AuthRequest, res: Response) => {
+  applyReferralCode: async (req: AuthRequest, res: Response, next: NextFunction) => {
     const id = userId(req);
     if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const { code } = (req.body || {}) as { code?: string };
       const result = await UserService.applyReferralCode(id, code ?? '');
-      if (result.error === 'Referral code is required') return sendError(res, 'VALIDATION_ERROR', 400);
-      if (result.error === 'User not found') return sendError(res, 'NOT_FOUND', 404);
-      if (result.error === 'Referral code already used') return sendError(res, 'REFERRAL_CODE_ALREADY_USED', 400);
-      if (result.error === 'Invalid referral code') return sendError(res, 'INVALID_REFERRAL_CODE', 400);
-      if (result.error === 'You cannot use your own referral code') return sendError(res, 'OWN_REFERRAL_CODE', 400);
       sendSuccess(res, { success: true, referrerName: (result as { referrerName: string }).referrerName });
     } catch (err) {
+      if (err instanceof AppError) return next(err);
       logger.error('Referral use error', { err });
       sendError(res, 'INTERNAL_ERROR', 500);
     }
@@ -200,34 +195,31 @@ export const UserController = {
     }
   },
 
-  uploadAvatar: async (req: AuthRequest, res: Response) => {
+  uploadAvatar: async (req: AuthRequest, res: Response, next: NextFunction) => {
     const id = userId(req);
     if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const { image } = (req.body || {}) as { image?: string };
       if (!image || typeof image !== 'string') return sendError(res, 'VALIDATION_ERROR', 400);
       const result = await UserService.uploadAvatar(id, image);
-      if (result.error === 'Invalid image format') return sendError(res, 'INVALID_IMAGE_FORMAT', 400);
       sendSuccess(res, { avatarUrl: (result as { avatarUrl: string }).avatarUrl });
     } catch (err) {
+      if (err instanceof AppError) return next(err);
       logger.error('Avatar upload error', { err });
       sendError(res, 'INTERNAL_ERROR', 500);
     }
   },
 
-  deleteAccount: async (req: AuthRequest, res: Response) => {
+  deleteAccount: async (req: AuthRequest, res: Response, next: NextFunction) => {
     const id = userId(req);
     if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const { confirmText, password } = (req.body || {}) as { confirmText?: string; password?: string };
       const result = await UserService.deleteAccount(id, confirmText ?? '', password ?? '', req);
-      if (result.error === 'invalid_confirm') return sendError(res, 'INVALID_CONFIRM', 400);
-      if (result.error === 'password_required') return sendError(res, 'PASSWORD_REQUIRED', 400);
-      if (result.error === 'invalid_account') return sendError(res, 'INVALID_ACCOUNT', 400);
-      if (result.error === 'wrong_password') return sendError(res, 'WRONG_PASSWORD', 400);
       const success = result as { deletedAt: Date; deletionScheduledFor: Date };
       sendSuccess(res, { deletedAt: success.deletedAt, deletionScheduledFor: success.deletionScheduledFor });
     } catch (err) {
+      if (err instanceof AppError) return next(err);
       logger.error('Delete account error', { err });
       sendError(res, 'INTERNAL_ERROR', 500);
     }

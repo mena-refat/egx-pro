@@ -40,6 +40,11 @@ import { userApiLimiter } from './server/middleware/userRateLimit.middleware.ts'
 import { marketDataService } from './server/services/market-data/market-data.service.ts';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './server/lib/swagger.ts';
+import { prisma } from './server/lib/prisma.ts';
+import { redis, setCache } from './server/lib/redis.ts';
+import { EGX_TICKERS } from './server/lib/egxTickers.ts';
+import { createNotification } from './server/lib/createNotification.ts';
+import { runResolvePredictions } from './server/jobs/resolve-predictions.ts';
 
 async function startServer() {
   if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
@@ -76,6 +81,7 @@ async function startServer() {
 
   app.use('/api', sanitizeInput);
 
+  const frontendOrigin = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
   // في التطوير نعطّل CSP بالكامل عشان Vite و HMR يشتغلوا بسرعة من غير أخطاء
   const isDev = process.env.NODE_ENV !== 'production';
   app.use(helmet({
@@ -84,7 +90,7 @@ async function startServer() {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "https:"],
+        imgSrc: ["'self'", "data:", "blob:", frontendOrigin],
         connectSrc: ["'self'", "https://api.anthropic.com", "https://api.gemini.com", "https://*.run.app", "wss://*.run.app", "ws://localhost:3000", "ws://localhost:8080"],
         frameAncestors: ["'self'", "https://*.google.com", "https://*.aistudio.google", "https://*.run.app"],
       },
@@ -92,11 +98,18 @@ async function startServer() {
     crossOriginEmbedderPolicy: false,
   }));
 
-  const frontendOrigin = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
+
   app.use(cors({
     origin: frontendOrigin,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }));
   app.use(hpp());
@@ -199,14 +212,12 @@ async function startServer() {
   app.get('/api/health/ready', async (_req, res) => {
     const checks: Record<string, string> = {};
     try {
-      const { prisma } = await import('./server/lib/prisma.ts');
       await prisma.$queryRaw`SELECT 1`;
       checks.db = 'ok';
     } catch {
       checks.db = 'error';
     }
     try {
-      const { redis } = await import('./server/lib/redis.ts');
       if (redis) {
         await redis.ping();
         checks.redis = 'ok';
@@ -314,9 +325,6 @@ async function startServer() {
     marketDataService.setBroadcastFn(wsHandlers.broadcastPrices);
 
     try {
-      const { prisma } = await import('./server/lib/prisma.ts');
-      const { EGX_TICKERS } = await import('./server/lib/egxTickers.ts');
-
       let symbols: string[] = [...EGX_TICKERS];
       try {
         // Use DB stocks if the model exists on the generated Prisma client
@@ -343,7 +351,6 @@ async function startServer() {
   // أرشفة الحسابات المحذوفة بعد 30 يوم + انتهاء الـ refresh tokens — يومياً 3:00 صباحاً القاهرة
   async function archiveDeletedUsers() {
     try {
-      const { prisma } = await import('./server/lib/prisma.ts');
       const now = new Date();
       const toArchive = await prisma.user.findMany({
         where: {
@@ -392,7 +399,6 @@ async function startServer() {
   // كل أول الشهر 00:01: إعادة تعيين عداد تحليلات الذكاء الاصطناعي للمجانيين
   async function resetAiUsage() {
     try {
-      const { prisma } = await import('./server/lib/prisma.ts');
       const resetDate = new Date();
       const nextReset = new Date(resetDate.getFullYear(), resetDate.getMonth() + 1, 1, 0, 0, 0, 0);
       await prisma.user.updateMany({
@@ -409,10 +415,6 @@ async function startServer() {
   const TEN_MIN_MS = 10 * 60 * 1000;
   const pricesInterval = setInterval(async () => {
     try {
-      const { setCache } = await import('./server/lib/redis.ts');
-      const { EGX_TICKERS } = await import('./server/lib/egxTickers.ts');
-      const { prisma } = await import('./server/lib/prisma.ts');
-      const { createNotification } = await import('./server/lib/createNotification.ts');
       const now = Date.now();
       const quotes = await marketDataService.getQuotes(EGX_TICKERS);
       await Promise.all(
@@ -471,7 +473,6 @@ async function startServer() {
   // بعد إغلاق السوق 15:30 القاهرة — تسوية التوقعات (أحد–خميس)
   async function runResolvePredictionsJob() {
     try {
-      const { runResolvePredictions } = await import('./server/jobs/resolve-predictions.ts');
       await runResolvePredictions();
     } catch (err) {
       logger.error('Resolve predictions job error', { error: err });
@@ -494,7 +495,6 @@ async function startServer() {
     const drainMs = 5000;
     setTimeout(async () => {
       try {
-        const { prisma } = await import('./server/lib/prisma.ts');
         await prisma.$disconnect();
         logger.info('DB connection closed');
       } catch {

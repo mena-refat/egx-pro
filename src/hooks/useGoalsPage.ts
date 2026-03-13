@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
+import { clearCache } from '../lib/queryCache';
 import { useGoals } from './useGoals';
 import type { GoalRecord } from './useGoals';
 
@@ -62,6 +63,7 @@ export function useGoalsPage() {
       if (!window.confirm(t('goals.deleteConfirm'))) return;
       try {
         await fetch(`/api/goals/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } });
+        clearCache('/goals');
         goalsData.fetchGoals();
       } catch {
         goalsData.setError(t('goals.errorDelete'));
@@ -75,6 +77,7 @@ export function useGoalsPage() {
     async (id: string) => {
       try {
         await fetch(`/api/goals/${id}/complete`, { method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}` } });
+        clearCache('/goals');
         goalsData.fetchGoals();
       } catch {
         goalsData.setError(t('goals.errorAdd'));

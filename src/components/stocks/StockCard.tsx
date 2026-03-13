@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { TrendingUp, TrendingDown, Star, Plus } from 'lucide-react';
 import { getStockName } from '../../lib/egxStocks';
 import type { StockWithMeta } from '../../hooks/useStockScreener';
@@ -15,7 +15,7 @@ export interface StockCardProps {
   as?: 'li' | 'div';
 }
 
-export function StockCard({
+export const StockCard = memo(function StockCard({
   stock,
   inWatchlist,
   onSelect,
@@ -110,4 +110,4 @@ export function StockCard({
       </div>
     </Tag>
   );
-}
+});
