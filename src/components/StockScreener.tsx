@@ -20,7 +20,7 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps = {}
   const navigate = useNavigate();
   const isAr = i18n.language.startsWith('ar');
   const screener = useStockScreener();
-  const { isConnected } = screener;
+  const { isConnected, connectionError } = screener;
   const handleSelectStock = onSelectStock ?? ((s: Stock) => navigate(`/stocks/${s.ticker}`));
 
   const handleSubscribe = () => {
@@ -58,9 +58,9 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps = {}
 
   return (
     <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
-      {!isConnected && (
+      {(!isConnected || connectionError) && (
         <div className="bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs text-center py-1.5 rounded-lg" role="status">
-          {t('dashboard.reconnectingLive', { defaultValue: 'جاري إعادة الاتصال بالأسعار المباشرة...' })}
+          {connectionError || t('dashboard.reconnectingLive', { defaultValue: 'جاري إعادة الاتصال بالأسعار المباشرة...' })}
         </div>
       )}
       <StockFilters

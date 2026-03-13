@@ -79,6 +79,7 @@ export function useLivePrices(subscribedTickers?: string[]) {
       };
 
       ws.onerror = () => {
+        setConnectionError('فشل الاتصال بالأسعار المباشرة');
         ws.close();
       };
     };

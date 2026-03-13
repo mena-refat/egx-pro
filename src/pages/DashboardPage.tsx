@@ -18,7 +18,7 @@ import { useDashboardMarketWatchlist } from '../hooks/useDashboardMarketWatchlis
 export default function DashboardPage() {
   const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
-  const { prices: livePrices, isConnected } = useLivePrices();
+  const { prices: livePrices, isConnected, connectionError } = useLivePrices();
   const { holdings, stats, isLoading: portfolioLoading, error: portfolioError } = usePortfolio(livePrices);
   const { marketOverview, watchlist, watchlistLoading } = useDashboardMarketWatchlist();
 
@@ -73,9 +73,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8" dir={isRTL ? 'rtl' : 'ltr'}>
-      {!isConnected && (
+      {(!isConnected || connectionError) && (
         <div className="bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs text-center py-1.5 rounded-lg mb-4" role="status">
-          {t('dashboard.reconnectingLive', { defaultValue: 'جاري إعادة الاتصال بالأسعار المباشرة...' })}
+          {connectionError || t('dashboard.reconnectingLive', { defaultValue: 'جاري إعادة الاتصال بالأسعار المباشرة...' })}
         </div>
       )}
       <DashboardMarketBar egx30={marketOverview?.egx30 ?? null} locale={i18n.language} />

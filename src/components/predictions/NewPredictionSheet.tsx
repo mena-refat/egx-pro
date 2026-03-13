@@ -61,7 +61,10 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
     if (!draft.ticker || !accessToken) { setCurrentPrice(null); return; }
     api.get<{ data?: { price?: number } }>(`/stocks/${draft.ticker}/price`)
       .then((r) => setCurrentPrice((r.data as { data?: { price?: number } })?.data?.price ?? null))
-      .catch(() => setCurrentPrice(null));
+      .catch((err) => {
+        if (import.meta.env.DEV) console.error('Stock price fetch failed:', err);
+        setCurrentPrice(null);
+      });
   }, [draft.ticker, accessToken]);
 
   const price = currentPrice ?? draft.targetPrice ?? 0;

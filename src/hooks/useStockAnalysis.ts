@@ -75,7 +75,10 @@ export function useStockAnalysis(stock: Stock) {
       try {
         const [priceRes, statusRes, histRes, finRes, depthRes, invRes, statsRes, newsRes, watchRes] =
           await Promise.all([
-            api.get(`/stocks/${stock.ticker}/price`, { signal }).catch(() => ({ data: null })),
+            api.get(`/stocks/${stock.ticker}/price`, { signal }).catch((err) => {
+              if (import.meta.env.DEV) console.error('Stock price fetch failed', err);
+              return { data: null };
+            }),
             api
               .get<{ egx: { status: string; label?: { ar: string; en: string } } }>(
                 '/stocks/market/status',
@@ -86,18 +89,33 @@ export function useStockAnalysis(stock: Stock) {
               params: { range: chartRange },
               signal,
             }),
-            api.get(`/stocks/${stock.ticker}/financials`, { signal }).catch(() => ({ data: null })),
+            api.get(`/stocks/${stock.ticker}/financials`, { signal }).catch((err) => {
+              if (import.meta.env.DEV) console.error('Financials fetch failed', err);
+              return { data: null };
+            }),
             api
               .get(`/stocks/${stock.ticker}/order-depth`, { signal })
-              .catch(() => ({ data: { available: false } })),
+              .catch((err) => {
+                if (import.meta.env.DEV) console.error('Order depth fetch failed', err);
+                return { data: { available: false } };
+              }),
             api
               .get(`/stocks/${stock.ticker}/investor-categories`, { signal })
-              .catch(() => ({ data: { available: false } })),
+              .catch((err) => {
+                if (import.meta.env.DEV) console.error('Investor categories fetch failed', err);
+                return { data: { available: false } };
+              }),
             api
               .get(`/stocks/${stock.ticker}/trading-stats`, { signal })
-              .catch(() => ({ data: { available: false } })),
+              .catch((err) => {
+                if (import.meta.env.DEV) console.error('Trading stats fetch failed', err);
+                return { data: { available: false } };
+              }),
             api.get(`/stocks/${stock.ticker}/news`, { signal }),
-            api.get('/watchlist', { signal }).catch(() => ({ data: { items: [] } })),
+            api.get('/watchlist', { signal }).catch((err) => {
+              if (import.meta.env.DEV) console.error('Watchlist fetch failed', err);
+              return { data: { items: [] } };
+            }),
           ]);
         if (signal.aborted) return;
         const priceData = (priceRes.data as { data?: Record<string, unknown> })?.data ?? priceRes.data;

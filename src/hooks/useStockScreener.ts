@@ -88,7 +88,7 @@ export function useStockScreener() {
     () => (stocks.length > 0 ? stocks.map((s) => s.ticker) : undefined),
     [stocks]
   );
-  const { prices: livePrices, isConnected } = useLivePrices(subscribedTickers);
+  const { prices: livePrices, isConnected, connectionError } = useLivePrices(subscribedTickers);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterId>('all');
@@ -293,6 +293,7 @@ export function useStockScreener() {
 
   return {
     isConnected,
+    connectionError,
     sorted,
     watchlist,
     search,

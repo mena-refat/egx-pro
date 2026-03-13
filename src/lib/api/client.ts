@@ -47,6 +47,15 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+    // Network error (no response at all)
+    if (!error.response && (error as { code?: string }).code !== 'ERR_CANCELED') {
+      return Promise.reject({
+        ok: false,
+        error: 'NETWORK_ERROR',
+        message: 'لا يوجد اتصال بالإنترنت',
+      });
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
