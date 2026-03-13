@@ -10,7 +10,7 @@ import { prisma } from '../lib/prisma.ts';
 import { logger } from '../lib/logger.ts';
 
 /** yahoo-finance2 v3 requires an instance; static methods throw. */
-const yahooFinance = new YahooFinance();
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 const CAIRO_TZ = 'Africa/Cairo';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -131,7 +131,7 @@ export async function getQuote(ticker: string): Promise<QuoteResult | null> {
 
   // Fetch from Yahoo
   try {
-    const quote = await yahooFinance.quote(yahooTicker, { validateResult: false }) as Record<string, unknown> | null;
+    const quote = await yahooFinance.quote(yahooTicker) as Record<string, unknown> | null;
     if (!quote) {
       if (cached) {
         return { ...cacheRowToResult(cached), stale: true };

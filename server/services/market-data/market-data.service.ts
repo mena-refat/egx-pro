@@ -71,6 +71,9 @@ export class MarketDataService {
   private broadcastFn: ((quotes: Map<string, StockQuote>) => void) | null = null;
   private pollingActive = false;
 
+  /** In-memory fallback cache used when Redis is unavailable */
+  private memCache = new Map<string, { quote: StockQuote; savedAt: number }>();
+
   private symbolFailCount  = new Map<string, number>();
   private symbolSkipUntil  = new Map<string, number>();
   private readonly MAX_FAILURES_BEFORE_DEPRIORITIZE = 3;
@@ -113,6 +116,22 @@ export class MarketDataService {
 
   setBroadcastFn(fn: (quotes: Map<string, StockQuote>) => void): void {
     this.broadcastFn = fn;
+  }
+
+  /**
+   * Return quotes directly from cache (in-memory or Redis) without hitting any source.
+   * Used by the bulk-prices HTTP endpoint so it never blocks on Yahoo Finance calls.
+   * Returns only symbols that have a cached entry with price > 0.
+   */
+  async getCachedQuotes(symbols: string[]): Promise<Map<string, StockQuote>> {
+    const result = new Map<string, StockQuote>();
+    await Promise.all(
+      symbols.map(async (symbol) => {
+        const cached = await this.getFromCache(symbol, true); // accept stale
+        if (cached && cached.price > 0) result.set(symbol, cached);
+      })
+    );
+    return result;
   }
 
   isMarketOpen(): boolean {
@@ -297,18 +316,29 @@ export class MarketDataService {
     try {
       const key  = `${CACHE_KEY_PREFIX}${symbol}`;
       const data = await getCache<CachedQuote>(key);
-      if (!data) return null;
-
-      const ageSeconds = (Date.now() - new Date(data.timestamp).getTime()) / 1000;
-      const maxAge     = stale ? STALE_TTL_SECONDS : CACHE_TTL_SECONDS;
-
-      return ageSeconds <= maxAge ? cachedToQuote(data) : null;
+      if (data) {
+        const ageSeconds = (Date.now() - new Date(data.timestamp).getTime()) / 1000;
+        const maxAge     = stale ? STALE_TTL_SECONDS : CACHE_TTL_SECONDS;
+        if (ageSeconds <= maxAge) return cachedToQuote(data);
+      }
     } catch {
-      return null;
+      // fall through to in-memory cache
     }
+
+    // In-memory fallback (used when Redis is unavailable)
+    const mem = this.memCache.get(symbol);
+    if (mem) {
+      const ageSeconds = (Date.now() - mem.savedAt) / 1000;
+      const maxAge     = stale ? STALE_TTL_SECONDS : CACHE_TTL_SECONDS;
+      if (ageSeconds <= maxAge) return mem.quote;
+    }
+    return null;
   }
 
   private async saveToCache(symbol: string, quote: StockQuote): Promise<void> {
+    // Always save to in-memory cache first
+    this.memCache.set(symbol, { quote, savedAt: Date.now() });
+
     try {
       const key = `${CACHE_KEY_PREFIX}${symbol}`;
       await setCache(key, quoteToCached(quote), STALE_TTL_SECONDS);

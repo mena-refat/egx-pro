@@ -6,8 +6,6 @@ import { User as UserIcon, Settings as SettingsIcon, Sun, Moon, Monitor, Target,
 import type { NotificationItem } from '../../hooks/useNotifications';
 import { NotificationDropdown } from '../features/notifications/NotificationDropdown';
 import { Button } from '../ui/Button';
-import { useAuthStore } from '@/src/store/authStore';
-
 
 type User = { fullName?: string; username?: string; avatarUrl?: string };
 
@@ -49,7 +47,6 @@ export function Header({
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const completionDropdownRef = useRef<HTMLDivElement>(null);
-  const { accessToken } = useAuthStore();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -77,28 +74,6 @@ export function Header({
     else if (type === 'social_follow' || type === 'social_request' || type === 'social_accept') navigate('/profile');
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-       const res = await fetch(`/stocks/quote/AAPL`, {
-        method: 'GET',
-        
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-            
-      });
-
-        const data = await res.json();
-        console.log('Quote data for AAPL:', data);
-      } catch (error) {
-        console.error('Error fetching data from Yahoo Finance API:', error);
-      }
-    };
-    fetchData();
-  }, [])
-console.log('ter');
 
   return (
     <header className="flex justify-between items-center mb-6 flex-wrap gap-3" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}>

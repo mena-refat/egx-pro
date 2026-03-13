@@ -1,7 +1,7 @@
 import YahooFinance from 'yahoo-finance2';
 
 /** yahoo-finance2 v3 requires an instance; static methods throw. */
-const yahooFinance = new YahooFinance();
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 import type { IMarketDataSource, DataSourceResult, StockQuote } from '../types.ts';
 import { logger } from '../../../lib/logger.ts';
 
@@ -42,7 +42,7 @@ export class YahooFinanceSource implements IMarketDataSource {
     for (const probe of PROBE_SYMBOLS) {
       try {
         await Promise.race([
-          yahooFinance.quote(probe, { validateResult: false }),
+          yahooFinance.quote(probe),
           timeout(),
         ]);
         return true;
@@ -67,7 +67,7 @@ export class YahooFinanceSource implements IMarketDataSource {
         const yahooSymbol = this.toYahooSymbol(egxSymbol);
 
         try {
-          const quote = await yahooFinance.quote(yahooSymbol, { validateResult: false }) as Record<string, unknown> | null;
+          const quote = await yahooFinance.quote(yahooSymbol) as Record<string, unknown> | null;
 
           if (!quote || quote.regularMarketPrice == null || Number(quote.regularMarketPrice) <= 0) {
             failed.push(egxSymbol);
