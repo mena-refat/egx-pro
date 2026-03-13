@@ -75,7 +75,7 @@ export function useStockAnalysis(stock: Stock) {
       try {
         const [priceRes, statusRes, histRes, finRes, depthRes, invRes, statsRes, newsRes, watchRes] =
           await Promise.all([
-            api.get(`/stocks/${stock.ticker}/price`, { signal }),
+            api.get(`/stocks/${stock.ticker}/price`, { signal }).catch(() => ({ data: null })),
             api
               .get<{ egx: { status: string; label?: { ar: string; en: string } } }>(
                 '/stocks/market/status',
@@ -181,11 +181,20 @@ export function useStockAnalysis(stock: Stock) {
         setShowAnalysisLimitModal(true);
         setAnalysisPlan((p) => (p ? { ...p, used: p.quota } : null));
       } else {
-        const msg =
-          err && typeof err === 'object' && 'response' in err
-            ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
-            : null;
-        setErrorAnalysis(msg || t('common.error'));
+        const axiosErr = err as { code?: string; response?: { status?: number; data?: { error?: string } } };
+        const status = axiosErr?.response?.status;
+        const errCode = axiosErr?.response?.data?.error;
+        if (status === 503 || errCode === 'SERVICE_UNAVAILABLE') {
+          setErrorAnalysis(t('ai.serviceUnavailable'));
+        } else if (status === 401) {
+          setErrorAnalysis(t('ai.sessionExpired'));
+        } else if (status === 404 || errCode === 'NOT_FOUND' || errCode === 'not_found') {
+          setErrorAnalysis(t('ai.error404Route'));
+        } else if (axiosErr?.code === 'ECONNABORTED') {
+          setErrorAnalysis(t('ai.analysisTimeout'));
+        } else {
+          setErrorAnalysis(t('common.error'));
+        }
       }
     } finally {
       setLoadingAnalysis(false);

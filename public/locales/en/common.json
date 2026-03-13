@@ -77,7 +77,10 @@
     "error404Stock": "Symbol not found or no data available. Try another symbol or wait for data refresh.",
     "error404Route": "Service unavailable. Make sure the server is running and try again.",
     "serviceUnavailable": "AI analysis service is currently unavailable. Check the API key configuration and try again.",
-    "analysisTimeout": "Analysis took too long. Please try again in a moment."
+    "analysisTimeout": "Analysis took too long. Please try again in a moment.",
+    "profileRequiredTitle": "Complete your profile first",
+    "profileRequiredBody": "To use AI features, you must complete your profile (full name, phone, username, at least one goal, and at least one stock in your watchlist).",
+    "goToProfile": "Go to profile"
   },
   "predictions": {
     "title": "Predictions",

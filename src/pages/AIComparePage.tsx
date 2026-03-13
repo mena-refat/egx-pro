@@ -6,6 +6,8 @@ import api, { ANALYSIS_TIMEOUT_MS } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { TickerSuggestInput } from '../components/ui/TickerSuggestInput';
 import { getStockInfo, searchStocks } from '../lib/egxStocks';
+import { useProfileGuard } from '../hooks/useProfileGuard';
+import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
 import type { CompareResult } from '../types';
 import styles from './AIComparePage.module.scss';
 
@@ -18,6 +20,7 @@ export default function AIComparePage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CompareResult | null>(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const { guardedAction, profileModalProps } = useProfileGuard();
 
   const resolveTicker = useCallback((raw: string): string | null => {
     const upper = raw.trim().toUpperCase();
@@ -115,7 +118,7 @@ export default function AIComparePage() {
         <Button
           type="button"
           variant="primary"
-          onClick={runCompare}
+          onClick={() => guardedAction(runCompare)}
           loading={loading}
           disabled={loading}
           className={styles.btn}
@@ -176,6 +179,8 @@ export default function AIComparePage() {
           )}
         </div>
       )}
+
+      <ProfileGuardModal {...profileModalProps} />
 
       {showLimitModal && (
         <div className={styles.overlay} onClick={() => setShowLimitModal(false)} role="dialog" aria-modal="true">

@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Brain, GitCompare, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useAIPlan } from '../hooks/useAIPlan';
+import { useProfileGuard } from '../hooks/useProfileGuard';
+import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
 import styles from './AIPage.module.scss';
 
 export default function AIPage() {
@@ -11,6 +13,7 @@ export default function AIPage() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => !!s.user);
   const { used, quota, loading } = useAIPlan(isAuthenticated);
+  const { guardedAction, profileModalProps } = useProfileGuard();
 
   // ترتيب العرض: في العربي (RTL) اليمين = توصيات، الوسط = مقارنة، اليسار = تحليل سهم
   const cards = [
@@ -61,7 +64,7 @@ export default function AIPage() {
             key={card.id}
             type="button"
             className={styles.card}
-            onClick={() => navigate(card.path)}
+            onClick={() => guardedAction(() => navigate(card.path))}
             aria-label={t(card.titleKey)}
           >
             <div className={styles.cardIcon}>
@@ -73,6 +76,8 @@ export default function AIPage() {
           </button>
         ))}
       </div>
+
+      <ProfileGuardModal {...profileModalProps} />
     </div>
   );
 }

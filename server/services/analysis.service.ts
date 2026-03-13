@@ -10,6 +10,7 @@ import { getLimit } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';
 import { SINGLE_ANALYSIS_SYSTEM } from '../lib/analysisPrompts.ts';
 import { analysisEngine } from './ai/index.ts';
+import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
 
 function getFirstDayOfNextMonth(): Date {
   const d = new Date();
@@ -121,31 +122,38 @@ export const AnalysisService = {
       Array<{ title: string }>,
     ];
 
+    const stockInfo = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker.toUpperCase());
+    const nameAr = stockInfo?.nameAr ?? ticker;
+    const nameEn = stockInfo?.nameEn ?? ticker;
+
     const priceBlock = priceData
-      ? `السعر: ${priceData.price} جنيه\nالتغير: ${priceData.changePercent}%\nالحجم: ${priceData.volume ?? '—'}`
-      : 'السعر: غير متوفر حالياً (قد تكون بيانات السوق غير محدثة)';
+      ? `السعر الحالي: ${priceData.price} جنيه\nالتغير: ${priceData.changePercent}%\nالحجم: ${priceData.volume ?? '—'}`
+      : 'السعر: ابحث عنه';
 
     const prompt = `
-حلل السهم التالي وفق إطار العوامل المذكور (أكثر من 70 عامل: تحليل فني، موجي، أساسي، قطاع، اقتصاد كلي، جيوسياسي، سلوكي، تقني، وعوامل مصر والعوامل الإضافية للدقة).
-قدم في النهاية shortTermOutlook و mediumTermOutlook و longTermOutlook واضحة ومحددة.
+ابحث في الإنترنت عن أحدث بيانات السهم التالي من مصادر مالية موثوقة (مثل: mubasher.info، egx.com.eg، arabianbusiness.com، investing.com/ar، أي مصدر مالي متاح)، ثم حلله وفق إطار العوامل المذكور (أكثر من 70 عامل).
+قدم shortTermOutlook وmediumTermOutlook وlongTermOutlook واضحة ومحددة.
 
-═══ بيانات السهم ═══
+═══ هوية السهم ═══
 الرمز: ${ticker}
+اسم الشركة (عربي): ${nameAr}
+اسم الشركة (إنجليزي): ${nameEn}
+البورصة: البورصة المصرية EGX — الرمز في Yahoo Finance: ${ticker}.CA
+
+═══ بيانات المنصة (قد تكون ناقصة — ابحث عن الأحدث) ═══
 ${priceBlock}
+P/E: ${financials?.pe ?? 'ابحث عنه'}
+ROE: ${financials?.roe != null ? (financials.roe * 100).toFixed(2) + '%' : 'ابحث عنه'}
+هامش الربح: ${financials?.profitMargin != null ? (financials.profitMargin * 100).toFixed(2) + '%' : 'ابحث عنه'}
+الإيرادات: ${financials?.revenue ?? 'ابحث عنه'}
 
-═══ التحليل المالي ═══
-P/E: ${financials.pe ?? 'غير متوفر'}
-ROE: ${financials.roe != null ? (financials.roe * 100).toFixed(2) : 'غير متوفر'}%
-هامش الربح: ${financials.profitMargin != null ? (financials.profitMargin * 100).toFixed(2) : 'غير متوفر'}%
-الإيرادات: ${financials.revenue ?? 'غير متوفر'}
-
-═══ آخر الأخبار ═══
-${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'لا توجد أخبار حديثة'}
+═══ الأخبار المتاحة ═══
+${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن أحدث الأخبار والإعلانات الخاصة بهذه الشركة'}
 
 المطلوب: نفس شكل الـ JSON المحدد (summary, fundamental, technical, sentiment, verdict, priceTarget, shortTermOutlook, mediumTermOutlook, longTermOutlook, suitability, disclaimer).
 `;
 
-    const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, 2500);
+    const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, 5000);
     const analysisJson = parseAnalysisJson(rawText);
 
     await consumeQuota(userId, 1);

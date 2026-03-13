@@ -7,6 +7,8 @@ import { Button } from '../components/ui/Button';
 import { TickerSuggestInput } from '../components/ui/TickerSuggestInput';
 import { AnalysisResult } from '../components/analysis/AnalysisResult';
 import { getStockInfo, searchStocks } from '../lib/egxStocks';
+import { useProfileGuard } from '../hooks/useProfileGuard';
+import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
 import type { AnalysisResult as AnalysisResultType } from '../types';
 import styles from './AIAnalyzePage.module.scss';
 
@@ -18,6 +20,7 @@ export default function AIAnalyzePage() {
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResultType | null>(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const { guardedAction, profileModalProps } = useProfileGuard();
 
   const runAnalysis = useCallback(async () => {
     const raw = ticker.trim();
@@ -98,7 +101,7 @@ export default function AIAnalyzePage() {
         <Button
           type="button"
           variant="primary"
-          onClick={runAnalysis}
+          onClick={() => guardedAction(runAnalysis)}
           loading={loading}
           disabled={loading}
           className={styles.btn}
@@ -114,6 +117,8 @@ export default function AIAnalyzePage() {
           <AnalysisResult analysis={analysis} t={t} />
         </div>
       )}
+
+      <ProfileGuardModal {...profileModalProps} />
 
       {showLimitModal && (
         <div className={styles.overlay} onClick={() => setShowLimitModal(false)} role="dialog" aria-modal="true">

@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import api, { ANALYSIS_TIMEOUT_MS } from '../lib/api';
 import { Button } from '../components/ui/Button';
+import { useProfileGuard } from '../hooks/useProfileGuard';
+import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
 import type { RecommendationsResult } from '../types';
 import styles from './AIRecommendationsPage.module.scss';
 
@@ -14,6 +16,7 @@ export default function AIRecommendationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RecommendationsResult | null>(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const { guardedAction, profileModalProps } = useProfileGuard();
 
   const runRecommendations = useCallback(async () => {
     setError(null);
@@ -60,7 +63,7 @@ export default function AIRecommendationsPage() {
         <Button
           type="button"
           variant="primary"
-          onClick={runRecommendations}
+          onClick={() => guardedAction(runRecommendations)}
           loading={loading}
           disabled={loading}
           className={styles.btn}
@@ -93,6 +96,8 @@ export default function AIRecommendationsPage() {
           )}
         </div>
       )}
+
+      <ProfileGuardModal {...profileModalProps} />
 
       {showLimitModal && (
         <div className={styles.overlay} onClick={() => setShowLimitModal(false)} role="dialog" aria-modal="true">
