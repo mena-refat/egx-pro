@@ -1,16 +1,20 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { PieChart, TrendingUp, TrendingDown } from 'lucide-react';
+import { PieChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { Skeleton } from '../../ui/Skeleton';
 import EmptyState from '../../shared/EmptyState';
 import type { PortfolioHolding } from '../../../types/portfolio';
+import { getStockName } from '../../../lib/egxStocks';
 
 type Props = {
   holdings: PortfolioHolding[];
   livePrices: Record<string, { price: number }>;
   loading: boolean;
 };
+
+type SortKey = 'name' | 'shares' | 'unitPrice' | 'lastPrice' | 'marketValue' | 'unrealized';
+type SortDir = 'asc' | 'desc';
 
 function formatEgp(n: number): string {
   return n.toLocaleString(undefined, { maximumFractionDigits: 0, minimumFractionDigits: 0 });
@@ -24,10 +28,79 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
   const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
   const isRTL = i18n.language.startsWith('ar');
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
-  const sortedHoldings = React.useMemo(() => {
-    return [...holdings].sort((a, b) => a.ticker.localeCompare(b.ticker));
-  }, [holdings]);
+  const lang = isRTL ? 'ar' : 'en';
+
+  const sortedHoldings = useMemo(() => {
+    const withMeta = holdings.map((h) => {
+      const currentPrice = livePrices[h.ticker]?.price ?? h.avgPrice;
+      const totalValue = currentPrice * h.shares;
+      const cost = h.avgPrice * h.shares;
+      const gainEgp = totalValue - cost;
+      const gainPercent = cost > 0 ? (gainEgp / cost) * 100 : 0;
+      return { holding: h, currentPrice, totalValue, cost, gainEgp, gainPercent };
+    });
+    withMeta.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'name':
+          cmp = (getStockName(a.holding.ticker, lang) || a.holding.ticker).localeCompare(getStockName(b.holding.ticker, lang) || b.holding.ticker);
+          break;
+        case 'shares':
+          cmp = a.holding.shares - b.holding.shares;
+          break;
+        case 'unitPrice':
+          cmp = a.holding.avgPrice - b.holding.avgPrice;
+          break;
+        case 'lastPrice':
+          cmp = a.currentPrice - b.currentPrice;
+          break;
+        case 'marketValue':
+          cmp = a.totalValue - b.totalValue;
+          break;
+        case 'unrealized':
+          cmp = a.gainPercent - b.gainPercent;
+          break;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return withMeta;
+  }, [holdings, livePrices, sortKey, sortDir, lang]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const SortHeader = ({ labelKey, columnKey }: { labelKey: string; columnKey: SortKey }) => {
+    const active = sortKey === columnKey;
+    return (
+      <button
+        type="button"
+        onClick={() => handleSort(columnKey)}
+        className="inline-flex items-center justify-center gap-1.5 tabular-nums text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand)] rounded px-1 py-0.5"
+        aria-label={t(labelKey)}
+      >
+        <span>{t(labelKey)}</span>
+        <span className="inline-flex flex-col gap-0 items-center">
+          <ChevronUp
+            className={`w-4 h-4 shrink-0 stroke-[2.5] ${active && sortDir === 'asc' ? 'text-[var(--brand)] opacity-100' : 'opacity-40'}`}
+            aria-hidden
+          />
+          <ChevronDown
+            className={`w-4 h-4 shrink-0 stroke-[2.5] -mt-2 ${active && sortDir === 'desc' ? 'text-[var(--brand)] opacity-100' : 'opacity-40'}`}
+            aria-hidden
+          />
+        </span>
+      </button>
+    );
+  };
 
   if (loading) {
     return (
@@ -60,20 +133,25 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
           <div className="grid grid-cols-6 gap-4 items-center text-label font-semibold text-[var(--text-muted)] px-4 py-2 min-w-0">
             <div className="flex items-center gap-3 min-w-0">
               <span className="w-10 shrink-0" aria-hidden />
-              <span>{t('dashboard.stockName')}</span>
+              <SortHeader labelKey="dashboard.stockName" columnKey="name" />
             </div>
-            <span className="text-center tabular-nums">{t('dashboard.sharesOwned')}</span>
-            <span className="text-center tabular-nums">{t('dashboard.unitPrice')}</span>
-            <span className="text-center tabular-nums">{t('dashboard.lastPrice')}</span>
-            <span className="text-center tabular-nums">{t('dashboard.marketValue')}</span>
-            <span className="text-center tabular-nums">{t('dashboard.unrealizedReturn')}</span>
+            <div className="flex justify-center">
+              <SortHeader labelKey="dashboard.sharesOwned" columnKey="shares" />
+            </div>
+            <div className="flex justify-center">
+              <SortHeader labelKey="dashboard.unitPrice" columnKey="unitPrice" />
+            </div>
+            <div className="flex justify-center">
+              <SortHeader labelKey="dashboard.lastPrice" columnKey="lastPrice" />
+            </div>
+            <div className="flex justify-center">
+              <SortHeader labelKey="dashboard.marketValue" columnKey="marketValue" />
+            </div>
+            <div className="flex justify-center">
+              <SortHeader labelKey="dashboard.unrealizedReturn" columnKey="unrealized" />
+            </div>
           </div>
-          {sortedHoldings.map((holding) => {
-            const currentPrice = livePrices[holding.ticker]?.price ?? holding.avgPrice;
-            const totalValue = currentPrice * holding.shares;
-            const cost = holding.avgPrice * holding.shares;
-            const gainEgp = totalValue - cost;
-            const gainPercent = cost > 0 ? (gainEgp / cost) * 100 : 0;
+          {sortedHoldings.map(({ holding, currentPrice, totalValue, gainEgp, gainPercent }) => {
             const isProfit = gainEgp > 0;
             const isLoss = gainEgp < 0;
             const returnColor = isProfit
@@ -98,7 +176,7 @@ export function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
                   >
                     {holding.ticker.slice(0, 2)}
                   </div>
-                  <span className="text-body font-semibold text-[var(--text-primary)] truncate">{holding.ticker}</span>
+                  <span className="text-body font-semibold text-[var(--text-primary)] truncate">{getStockName(holding.ticker, lang) || holding.ticker}</span>
                 </div>
                 <span className="text-center font-number tabular-nums text-[var(--text-primary)]">
                   {holding.shares.toLocaleString()}

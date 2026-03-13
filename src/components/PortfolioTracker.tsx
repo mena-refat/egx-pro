@@ -7,6 +7,7 @@ import api from '../lib/api';
 import { useLivePrices } from '../hooks/useLivePrices';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { getStockName, getStockInfo, searchStocks } from '../lib/egxStocks';
+import { GICS_SECTOR_LABELS } from '../hooks/useStockScreener';
 import { Stock } from '../types';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -64,7 +65,7 @@ export default function PortfolioTracker() {
     setAddError(null);
     const sharesRaw = newHolding.shares.trim();
     const sharesNum = parseInt(sharesRaw, 10);
-    const priceNum = parseFloat(newHolding.avgPrice);
+    const priceNum = Math.round(parseFloat(newHolding.avgPrice) * 100) / 100;
 
     if (!newHolding.ticker || newHolding.ticker.length < 2) {
       setAddError(t('portfolio.invalidTicker'));
@@ -95,7 +96,7 @@ export default function PortfolioTracker() {
       await addHolding({
         ticker: newHolding.ticker,
         shares: sharesNum,
-        price: priceNum,
+        price: Number(priceNum.toFixed(2)),
         date: newHolding.buyDate
       });
       setIsAdding(false);
@@ -131,11 +132,17 @@ export default function PortfolioTracker() {
     const sectorData: Record<string, number> = {};
     holdings.forEach(h => {
       const currentPrice = livePrices[h.ticker]?.price || h.avgPrice;
-      const sector = livePrices[h.ticker]?.sector || allStocks.find(s => s.ticker === h.ticker)?.sector || 'Other';
-      sectorData[sector] = (sectorData[sector] || 0) + (h.shares * currentPrice);
+      const sectorKey = livePrices[h.ticker]?.sector || allStocks.find(s => s.ticker === h.ticker)?.sector || 'OTHER';
+      sectorData[sectorKey] = (sectorData[sectorKey] || 0) + (h.shares * currentPrice);
     });
-    return Object.entries(sectorData).map(([name, value]) => ({ name, value }));
-  }, [holdings, livePrices, allStocks]);
+    const labels = GICS_SECTOR_LABELS as Record<string, { ar: string; en: string }>;
+    return Object.entries(sectorData).map(([key, value]) => {
+      const label = key === 'OTHER'
+        ? (isRTL ? 'أخرى' : 'Other')
+        : (labels[key] ? (isRTL ? labels[key].ar : labels[key].en) : key);
+      return { name: label, value };
+    });
+  }, [holdings, livePrices, allStocks, isRTL]);
 
   const COLORS = ['#7c3aed', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
 
@@ -354,10 +361,11 @@ export default function PortfolioTracker() {
                                     type="button"
                                     variant="ghost"
                                     onClick={() => {
+                                      const p = priceStock?.price;
                                       setNewHolding({
                                         ...newHolding,
                                         ticker: eg.ticker,
-                                        avgPrice: priceStock?.price?.toString() || ''
+                                        avgPrice: p != null ? (Math.round(p * 100) / 100).toFixed(2) : ''
                                       });
                                       setShowSuggestions(false);
                                     }}
@@ -398,7 +406,27 @@ export default function PortfolioTracker() {
                   }}
                   inputClassName="input-base"
                 />
-                  <Input label={t('portfolio.buyPrice')} type="number" required step="any" value={newHolding.avgPrice} onChange={e => setNewHolding({ ...newHolding, avgPrice: e.target.value })} inputClassName="input-base" />
+                  <Input
+                    label={t('portfolio.buyPrice')}
+                    type="number"
+                    required
+                    step="0.01"
+                    min="0"
+                    value={newHolding.avgPrice}
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (v === '' || v === '.') {
+                        setNewHolding({ ...newHolding, avgPrice: v });
+                        return;
+                      }
+                      const num = parseFloat(v);
+                      if (Number.isNaN(num)) return;
+                      const [, dec] = v.split('.');
+                      const limited = dec && dec.length > 2 ? `${Math.floor(num * 100) / 100}` : v;
+                      setNewHolding({ ...newHolding, avgPrice: limited });
+                    }}
+                    inputClassName="input-base"
+                  />
                 </div>
                 <Input label={isRTL ? 'تاريخ الشراء' : 'Buy Date'} type="date" required value={newHolding.buyDate} onChange={e => setNewHolding({ ...newHolding, buyDate: e.target.value })} inputClassName="input-base" />
                 

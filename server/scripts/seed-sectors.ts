@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma.ts';
 import { GicsSector } from '@prisma/client';
 import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
 
+// ─── 1) Name-based map (longest match wins per stock) ─────────────────────
 const SECTOR_MAP: Record<string, GicsSector> = {
   'راية القابضة': GicsSector.INFORMATION_TECHNOLOGY,
   'المجموعة المتكاملة': GicsSector.INFORMATION_TECHNOLOGY,
@@ -16,6 +17,7 @@ const SECTOR_MAP: Record<string, GicsSector> = {
   'انترناشيونال بزنيس': GicsSector.INFORMATION_TECHNOLOGY,
   'الاسكندرية للأدوية': GicsSector.HEALTH_CARE,
   'جلاكسو سميثكلاين': GicsSector.HEALTH_CARE,
+  'جلاكسو سميث كلاين': GicsSector.HEALTH_CARE,
   'القاهرة للأدوية': GicsSector.HEALTH_CARE,
   'مستشفي كليوباترا': GicsSector.HEALTH_CARE,
   'الاسكندرية للخدمات الطبية': GicsSector.HEALTH_CARE,
@@ -33,7 +35,6 @@ const SECTOR_MAP: Record<string, GicsSector> = {
   'ماكرو جروب': GicsSector.HEALTH_CARE,
   'بريميم هيلثكير جروب': GicsSector.HEALTH_CARE,
   'فتنس برايم للاندية الصحية': GicsSector.HEALTH_CARE,
-  'البنك التجاري الدولي (مصر)': GicsSector.FINANCIALS,
   'البنك التجاري الدولي': GicsSector.FINANCIALS,
   'هيرمس': GicsSector.FINANCIALS,
   'القلعة للاستشارات المالية': GicsSector.FINANCIALS,
@@ -57,8 +58,7 @@ const SECTOR_MAP: Record<string, GicsSector> = {
   'البنك المصري الخليجي': GicsSector.FINANCIALS,
   'برايم القابضة': GicsSector.FINANCIALS,
   'بنك الشركة المصرفية': GicsSector.FINANCIALS,
-  'فيصل الإسلامي - جنيه': GicsSector.FINANCIALS,
-  'بنك فيصل - بالدولار': GicsSector.FINANCIALS,
+  'فيصل الإسلامي': GicsSector.FINANCIALS,
   'ارابيا انفستمنتس': GicsSector.FINANCIALS,
   'أطلس': GicsSector.FINANCIALS,
   'الملتقى للاستثمارات': GicsSector.FINANCIALS,
@@ -94,6 +94,9 @@ const SECTOR_MAP: Record<string, GicsSector> = {
   'الخليج للاستثمارات العربية': GicsSector.FINANCIALS,
   'الوطني': GicsSector.FINANCIALS,
   'أبو ظبي الإسلامي': GicsSector.FINANCIALS,
+  'أبوظبي الإسلامي': GicsSector.FINANCIALS,
+  'أسبر كابيتال': GicsSector.FINANCIALS,
+  'صروة كابيتال': GicsSector.FINANCIALS,
   'المصرية للمنتجعات': GicsSector.CONSUMER_DISCRETIONARY,
   'جي بي أوتو': GicsSector.CONSUMER_DISCRETIONARY,
   'القناة للتوكيلات': GicsSector.CONSUMER_DISCRETIONARY,
@@ -135,7 +138,7 @@ const SECTOR_MAP: Record<string, GicsSector> = {
   'العامة للصوامع': GicsSector.CONSUMER_STAPLES,
   'مطاحن مصر العليا': GicsSector.CONSUMER_STAPLES,
   'مطاحن وسط وغرب الدلتا': GicsSector.CONSUMER_STAPLES,
-  'آراب ديرى - باندا': GicsSector.CONSUMER_STAPLES,
+  'آراب ديرى': GicsSector.CONSUMER_STAPLES,
   'الدولية للمحاصيل': GicsSector.CONSUMER_STAPLES,
   'أكرو مصر': GicsSector.CONSUMER_STAPLES,
   'ايسترن كومباني': GicsSector.CONSUMER_STAPLES,
@@ -164,7 +167,7 @@ const SECTOR_MAP: Record<string, GicsSector> = {
   'الكابلات الكهربائية': GicsSector.INDUSTRIALS,
   'ماريديف': GicsSector.INDUSTRIALS,
   'السويدي': GicsSector.INDUSTRIALS,
-  'الصعيد العامة SCCD': GicsSector.INDUSTRIALS,
+  'الصعيد العامة': GicsSector.INDUSTRIALS,
   'المجموعة المصرية': GicsSector.INDUSTRIALS,
   'التعمير والاستشارات': GicsSector.INDUSTRIALS,
   'دلتا للإنشاء': GicsSector.INDUSTRIALS,
@@ -273,45 +276,350 @@ const SECTOR_MAP: Record<string, GicsSector> = {
   'راية للاتصالات': GicsSector.COMMUNICATION_SERVICES,
 };
 
-async function seedSectors() {
-  console.log('🚀 Starting sector seeding...\n');
+// ─── 2) Explicit ticker → GICS (overrides + stocks that don't match by name) ───
+const TICKER_GICS_OVERRIDES: Partial<Record<string, GicsSector>> = {
+  ADIB: GicsSector.FINANCIALS,
+  SAUD: GicsSector.FINANCIALS,
+  ALEXA: GicsSector.MATERIALS,
+  AMER: GicsSector.CONSUMER_DISCRETIONARY,
+  SPIN: GicsSector.CONSUMER_DISCRETIONARY,
+  RREI: GicsSector.REAL_ESTATE,
+  ARCC: GicsSector.MATERIALS,
+  BTFH: GicsSector.FINANCIALS,
+  BCAP: GicsSector.FINANCIALS,
+  CAED: GicsSector.CONSUMER_DISCRETIONARY,
+  COSG: GicsSector.CONSUMER_STAPLES,
+  CPCI: GicsSector.HEALTH_CARE,
+  POUL: GicsSector.CONSUMER_STAPLES,
+  CCAP: GicsSector.FINANCIALS,
+  CCAPP: GicsSector.FINANCIALS,
+  DCRC: GicsSector.INDUSTRIALS,
+  DTPP: GicsSector.MATERIALS,
+  DEIN: GicsSector.FINANCIALS,
+  SUGR: GicsSector.CONSUMER_STAPLES,
+  EAST: GicsSector.CONSUMER_STAPLES,
+  EGX30ETF: GicsSector.FINANCIALS,
+  EGAL: GicsSector.MATERIALS,
+  EPCO: GicsSector.CONSUMER_STAPLES,
+  MISR: GicsSector.MATERIALS,
+  ESAC: GicsSector.COMMUNICATION_SERVICES,
+  EASB: GicsSector.FINANCIALS,
+  EGCH: GicsSector.MATERIALS,
+  OREG: GicsSector.COMMUNICATION_SERVICES,
+  EFIC: GicsSector.FINANCIALS,
+  EDBM: GicsSector.MATERIALS,
+  EGTS: GicsSector.CONSUMER_DISCRETIONARY,
+  EGBE: GicsSector.FINANCIALS,
+  PHAR: GicsSector.HEALTH_CARE,
+  EITP: GicsSector.CONSUMER_DISCRETIONARY,
+  IRON: GicsSector.MATERIALS,
+  EKHO: GicsSector.FINANCIALS,
+  MPRC: GicsSector.COMMUNICATION_SERVICES,
+  MOED: GicsSector.CONSUMER_DISCRETIONARY,
+  AREH: GicsSector.REAL_ESTATE,
+  AREHA: GicsSector.REAL_ESTATE,
+  EGSA: GicsSector.COMMUNICATION_SERVICES,
+  ESGI: GicsSector.CONSUMER_STAPLES,
+  ETRS: GicsSector.INDUSTRIALS,
+  ABRD: GicsSector.REAL_ESTATE,
+  EIUD: GicsSector.REAL_ESTATE,
+  EHDR: GicsSector.REAL_ESTATE,
+  EPPK: GicsSector.MATERIALS,
+  EEII: GicsSector.INDUSTRIALS,
+  EALR: GicsSector.INDUSTRIALS,
+  EBDP: GicsSector.MATERIALS,
+  ICFC: GicsSector.MATERIALS,
+  IRAX: GicsSector.MATERIALS,
+  ECAP: GicsSector.MATERIALS,
+  KWIN: GicsSector.FINANCIALS,
+  ELKA: GicsSector.REAL_ESTATE,
+  KABO: GicsSector.CONSUMER_STAPLES,
+  ELNA: GicsSector.CONSUMER_STAPLES,
+  NASR: GicsSector.INDUSTRIALS,
+  OBRI: GicsSector.REAL_ESTATE,
+  EOSB: GicsSector.FINANCIALS,
+  ELSH: GicsSector.REAL_ESTATE,
+  SPHT: GicsSector.CONSUMER_DISCRETIONARY,
+  ELWA: GicsSector.CONSUMER_DISCRETIONARY,
+  NIPH: GicsSector.HEALTH_CARE,
+  ELEC: GicsSector.INDUSTRIALS,
+  UEGC: GicsSector.REAL_ESTATE,
+  SWDY: GicsSector.INDUSTRIALS,
+  EMFD: GicsSector.REAL_ESTATE,
+  ENGC: GicsSector.INFORMATION_TECHNOLOGY,
+  EXPA: GicsSector.FINANCIALS,
+  ZEOT: GicsSector.CONSUMER_STAPLES,
+  ESRS: GicsSector.MATERIALS,
+  FAIT: GicsSector.FINANCIALS,
+  FAITA: GicsSector.FINANCIALS,
+  FERC: GicsSector.MATERIALS,
+  FIRED: GicsSector.REAL_ESTATE,
+  AUTO: GicsSector.CONSUMER_DISCRETIONARY,
+  AALR: GicsSector.INDUSTRIALS,
+  GSSC: GicsSector.CONSUMER_STAPLES,
+  GETO: GicsSector.CONSUMER_DISCRETIONARY,
+  GIHD: GicsSector.REAL_ESTATE,
+  GGCC: GicsSector.INDUSTRIALS,
+  BIOC: GicsSector.HEALTH_CARE,
+  GTHE: GicsSector.COMMUNICATION_SERVICES,
+  GMCI: GicsSector.CONSUMER_DISCRETIONARY,
+  GOCO: GicsSector.CONSUMER_DISCRETIONARY,
+  GPPL: GicsSector.REAL_ESTATE,
+  GTWL: GicsSector.CONSUMER_DISCRETIONARY,
+  GRCA: GicsSector.FINANCIALS,
+  HELI: GicsSector.REAL_ESTATE,
+  HDBK: GicsSector.FINANCIALS,
+  INEE: GicsSector.INDUSTRIALS,
+  INEG: GicsSector.INDUSTRIALS,
+  ICAL: GicsSector.MATERIALS,
+  IFAP: GicsSector.CONSUMER_STAPLES,
+  IBCT: GicsSector.CONSUMER_DISCRETIONARY,
+  ICID: GicsSector.REAL_ESTATE,
+  ICLE: GicsSector.FINANCIALS,
+  ICMI: GicsSector.HEALTH_CARE,
+  DIFC: GicsSector.MATERIALS,
+  IPPM: GicsSector.MATERIALS,
+  IDRE: GicsSector.REAL_ESTATE,
+  ISMA: GicsSector.CONSUMER_STAPLES,
+  INFI: GicsSector.CONSUMER_STAPLES,
+  ITSY: GicsSector.INFORMATION_TECHNOLOGY,
+  JUFO: GicsSector.CONSUMER_STAPLES,
+  KZPC: GicsSector.MATERIALS,
+  LKGP: GicsSector.HEALTH_CARE,
+  MOIL: GicsSector.ENERGY,
+  MMAT: GicsSector.CONSUMER_DISCRETIONARY,
+  MAAL: GicsSector.REAL_ESTATE,
+  MBEN: GicsSector.INDUSTRIALS,
+  MEPA: GicsSector.HEALTH_CARE,
+  MNHD: GicsSector.REAL_ESTATE,
+  MENA: GicsSector.REAL_ESTATE,
+  MEGM: GicsSector.MATERIALS,
+  MBSC: GicsSector.MATERIALS,
+  MCQE: GicsSector.MATERIALS,
+  MICH: GicsSector.MATERIALS,
+  MRCO: GicsSector.CONSUMER_DISCRETIONARY,
+  MFSC: GicsSector.CONSUMER_DISCRETIONARY,
+  MEDA: GicsSector.INFORMATION_TECHNOLOGY,
+  MFINEG: GicsSector.FINANCIALS,
+  MFPC: GicsSector.MATERIALS,
+  MHOT: GicsSector.CONSUMER_DISCRETIONARY,
+  MKIT: GicsSector.CONSUMER_STAPLES,
+  ATQA: GicsSector.MATERIALS,
+  MOSC: GicsSector.CONSUMER_STAPLES,
+  WATP: GicsSector.MATERIALS,
+  SMPP: GicsSector.MATERIALS,
+  MOIN: GicsSector.FINANCIALS,
+  NAHO: GicsSector.FINANCIALS,
+  NCCW: GicsSector.INDUSTRIALS,
+  NCEM: GicsSector.MATERIALS,
+  NCMP: GicsSector.CONSUMER_STAPLES,
+  NDRL: GicsSector.ENERGY,
+  NHPS: GicsSector.REAL_ESTATE,
+  COPR: GicsSector.REAL_ESTATE,
+  EGAS: GicsSector.ENERGY,
+  NCIS: GicsSector.CONSUMER_DISCRETIONARY,
+  NCIN: GicsSector.REAL_ESTATE,
+  NCGC: GicsSector.MATERIALS,
+  NOAF: GicsSector.REAL_ESTATE,
+  MILS: GicsSector.CONSUMER_STAPLES,
+  NEDA: GicsSector.CONSUMER_STAPLES,
+  NINH: GicsSector.HEALTH_CARE,
+  OCPH: GicsSector.HEALTH_CARE,
+  OCIC: GicsSector.INDUSTRIALS,
+  ODHN: GicsSector.REAL_ESTATE,
+  ORHD: GicsSector.CONSUMER_DISCRETIONARY,
+  OTMT: GicsSector.FINANCIALS,
+  ORWE: GicsSector.CONSUMER_DISCRETIONARY,
+  EBSC: GicsSector.FINANCIALS,
+  PACH: GicsSector.MATERIALS,
+  PHDC: GicsSector.REAL_ESTATE,
+  SIMO: GicsSector.MATERIALS,
+  PTCC: GicsSector.INFORMATION_TECHNOLOGY,
+  ASPI: GicsSector.FINANCIALS,
+  PSAD: GicsSector.INDUSTRIALS,
+  ARAB: GicsSector.REAL_ESTATE,
+  PRMH: GicsSector.FINANCIALS,
+  PHTV: GicsSector.CONSUMER_DISCRETIONARY,
+  QNBA: GicsSector.FINANCIALS,
+  RACC: GicsSector.INFORMATION_TECHNOLOGY,
+  RAYA: GicsSector.INFORMATION_TECHNOLOGY,
+  REAC: GicsSector.FINANCIALS,
+  RTVC: GicsSector.CONSUMER_DISCRETIONARY,
+  RIVA: GicsSector.HEALTH_CARE,
+  RMTV: GicsSector.CONSUMER_DISCRETIONARY,
+  ROTO: GicsSector.CONSUMER_DISCRETIONARY,
+  RUBX: GicsSector.MATERIALS,
+  SIPC: GicsSector.HEALTH_CARE,
+  SMFR: GicsSector.MATERIALS,
+  SMCS: GicsSector.REAL_ESTATE,
+  SMCSA: GicsSector.REAL_ESTATE,
+  SEIG: GicsSector.FINANCIALS,
+  SEIGA: GicsSector.FINANCIALS,
+  SNFC: GicsSector.CONSUMER_STAPLES,
+  SDTI: GicsSector.CONSUMER_DISCRETIONARY,
+  SKPC: GicsSector.ENERGY,
+  SCEM: GicsSector.MATERIALS,
+  OCDI: GicsSector.REAL_ESTATE,
+  SLTD: GicsSector.CONSUMER_DISCRETIONARY,
+  SAIB: GicsSector.FINANCIALS,
+  SNFI: GicsSector.CONSUMER_STAPLES,
+  SCFM: GicsSector.CONSUMER_STAPLES,
+  SVCE: GicsSector.MATERIALS,
+  SCTS: GicsSector.INFORMATION_TECHNOLOGY,
+  SBAG: GicsSector.MATERIALS,
+  CANA: GicsSector.FINANCIALS,
+  SUCE: GicsSector.MATERIALS,
+  TMGH: GicsSector.REAL_ESTATE,
+  TECH: GicsSector.MATERIALS,
+  ADPC: GicsSector.CONSUMER_STAPLES,
+  TORA: GicsSector.MATERIALS,
+  TOUR: GicsSector.CONSUMER_DISCRETIONARY,
+  TRTO: GicsSector.CONSUMER_DISCRETIONARY,
+  UASG: GicsSector.INDUSTRIALS,
+  UNIT: GicsSector.REAL_ESTATE,
+  UNIP: GicsSector.MATERIALS,
+  UEFM: GicsSector.CONSUMER_STAPLES,
+  UTOP: GicsSector.REAL_ESTATE,
+  VERT: GicsSector.CONSUMER_STAPLES,
+  WKOL: GicsSector.INDUSTRIALS,
+  XPIN: GicsSector.INFORMATION_TECHNOLOGY,
+  ZMID: GicsSector.REAL_ESTATE,
+  DOMT: GicsSector.CONSUMER_STAPLES,
+  CLHO: GicsSector.HEALTH_CARE,
+  OLFI: GicsSector.CONSUMER_STAPLES,
+  MTIE: GicsSector.CONSUMER_DISCRETIONARY,
+  CICH: GicsSector.FINANCIALS,
+  CIRA: GicsSector.REAL_ESTATE,
+  CNFN: GicsSector.FINANCIALS,
+  SRWA: GicsSector.FINANCIALS,
+  FWRY: GicsSector.INFORMATION_TECHNOLOGY,
+  ODIN: GicsSector.FINANCIALS,
+  RMDA: GicsSector.HEALTH_CARE,
+  AIVCB: GicsSector.FINANCIALS,
+  SPMD: GicsSector.HEALTH_CARE,
+  OFH: GicsSector.FINANCIALS,
+  ACAMD: GicsSector.FINANCIALS,
+  ISPH: GicsSector.HEALTH_CARE,
+  TALM: GicsSector.CONSUMER_DISCRETIONARY,
+  IDHC: GicsSector.HEALTH_CARE,
+  ISMQ: GicsSector.MATERIALS,
+  TANM: GicsSector.REAL_ESTATE,
+  EFIH: GicsSector.INFORMATION_TECHNOLOGY,
+  GDWA: GicsSector.INDUSTRIALS,
+  PRDC: GicsSector.REAL_ESTATE,
+  KRDI: GicsSector.CONSUMER_STAPLES,
+  MCRO: GicsSector.HEALTH_CARE,
+  ODID: GicsSector.FINANCIALS,
+  // More from egxStocks that need explicit mapping
+  AMPI: GicsSector.INFORMATION_TECHNOLOGY,
+  FNAR: GicsSector.INDUSTRIALS,
+  ATLC: GicsSector.FINANCIALS,
+  ALCN: GicsSector.INDUSTRIALS,
+  AFMC: GicsSector.CONSUMER_STAPLES,
+  AMOC: GicsSector.ENERGY,
+  ANFI: GicsSector.FINANCIALS,
+  AMES: GicsSector.HEALTH_CARE,
+  AXPH: GicsSector.HEALTH_CARE,
+  AMEC: GicsSector.HEALTH_CARE,
+  ALUM: GicsSector.MATERIALS,
+  CERA: GicsSector.MATERIALS,
+  ACGC: GicsSector.MATERIALS,
+  AMIA: GicsSector.FINANCIALS,
+  ADCI: GicsSector.HEALTH_CARE,
+  APSW: GicsSector.CONSUMER_DISCRETIONARY,
+  ARVA: GicsSector.INDUSTRIALS,
+  AIND: GicsSector.FINANCIALS,
+  ASCM: GicsSector.MATERIALS,
+  AITG: GicsSector.FINANCIALS,
+  ALRA: GicsSector.INDUSTRIALS,
+  BIGP: GicsSector.FINANCIALS,
+  BSFR: GicsSector.REAL_ESTATE,
+  CIRF: GicsSector.REAL_ESTATE,
+  CSAG: GicsSector.INDUSTRIALS,
+  PRCL: GicsSector.MATERIALS,
+  DAPH: GicsSector.INDUSTRIALS,
+  DSCW: GicsSector.CONSUMER_DISCRETIONARY,
+  EDFM: GicsSector.CONSUMER_STAPLES,
+  AFDI: GicsSector.REAL_ESTATE,
+  WCDF: GicsSector.CONSUMER_STAPLES,
+  MIPH: GicsSector.HEALTH_CARE,
+  NBKE: GicsSector.FINANCIALS,
+  UNBE: GicsSector.FINANCIALS,
+  VODE: GicsSector.COMMUNICATION_SERVICES,
+  AJWA: GicsSector.CONSUMER_STAPLES,
+};
 
-  // 1) Ensure all 269 stocks exist (upsert from EGX_STOCKS)
+function inferSectorFromName(nameAr: string): GicsSector {
+  const n = nameAr;
+  if (n.includes('بنك') || n.includes('مصرف') || n.includes('تأمين') || n.includes('سمسرة') || n.includes('كابيتال') || n.includes('قابضة مالية')) return GicsSector.FINANCIALS;
+  if (n.includes('أسمنت') || n.includes('حديد') || n.includes('صلب') || n.includes('كيماويات') || n.includes('أسمدة') || n.includes('سيراميك') || n.includes('ألومنيوم') || n.includes('ورق') || n.includes('طباعة') || n.includes('تغليف') || n.includes('زجاج') || n.includes('جرانيت') || n.includes('رخام')) return GicsSector.MATERIALS;
+  if (n.includes('أدوية') || n.includes('دواء') || n.includes('صيدل') || n.includes('طبي') || n.includes('مستشفى') || n.includes('فارما')) return GicsSector.HEALTH_CARE;
+  if (n.includes('عقار') || n.includes('إسكان') || n.includes('تعمير') || n.includes('عمرانية')) return GicsSector.REAL_ESTATE;
+  if (n.includes('اتصالات') || n.includes('تليكوم') || n.includes('نايل سات') || n.includes('فودافون') || n.includes('أورنج') || n.includes('إعلامي')) return GicsSector.COMMUNICATION_SERVICES;
+  if (n.includes('نفط') || n.includes('بترول') || n.includes('غاز') || n.includes('طاقة') || n.includes('بتروكيماويات')) return GicsSector.ENERGY;
+  if (n.includes('فنادق') || n.includes('سياحة') || n.includes('منتجعات') || n.includes('تورز')) return GicsSector.CONSUMER_DISCRETIONARY;
+  if (n.includes('مطاحن') || n.includes('دواجن') || n.includes('سكر') || n.includes('زيوت') || n.includes('غذائ') || n.includes('صابون') || n.includes('لبان')) return GicsSector.CONSUMER_STAPLES;
+  if (n.includes('تقنية') || n.includes('تكنولوجيا') || n.includes('فوري') || n.includes('برمجة')) return GicsSector.INFORMATION_TECHNOLOGY;
+  if (n.includes('إنشاء') || n.includes('مقاولات') || n.includes('نقل') || n.includes('حاويات') || n.includes('كهرباء') || n.includes('كابلات')) return GicsSector.INDUSTRIALS;
+  return GicsSector.INDUSTRIALS;
+}
+
+function buildTickerToGics(): Map<string, GicsSector> {
+  const map = new Map<string, GicsSector>();
+  const keysByLength = Object.keys(SECTOR_MAP).sort((a, b) => b.length - a.length);
+
+  for (const stock of EGX_STOCKS) {
+    const override = TICKER_GICS_OVERRIDES[stock.ticker];
+    if (override !== undefined) {
+      map.set(stock.ticker, override);
+      continue;
+    }
+    let assigned: GicsSector | null = null;
+    for (const key of keysByLength) {
+      if (stock.nameAr.includes(key)) {
+        assigned = SECTOR_MAP[key];
+        break;
+      }
+    }
+    if (assigned) {
+      map.set(stock.ticker, assigned);
+    } else {
+      map.set(stock.ticker, inferSectorFromName(stock.nameAr));
+    }
+  }
+  return map;
+}
+
+async function seedSectors() {
+  console.log('🚀 GICS sector seeding (by ticker)...\n');
+
+  const tickerToGics = buildTickerToGics();
+
   console.log('Syncing stocks from EGX list...');
   for (const s of EGX_STOCKS) {
     await prisma.stock.upsert({
       where: { ticker: s.ticker },
-      create: { ticker: s.ticker, nameAr: s.nameAr, nameEn: s.nameEn },
-      update: { nameAr: s.nameAr, nameEn: s.nameEn },
+      create: { ticker: s.ticker, nameAr: s.nameAr, nameEn: s.nameEn, sector: tickerToGics.get(s.ticker) ?? null },
+      update: { nameAr: s.nameAr, nameEn: s.nameEn, sector: tickerToGics.get(s.ticker) ?? null },
     });
   }
-  console.log(`✅ Synced ${EGX_STOCKS.length} stocks.\n`);
+  console.log(`✅ Synced ${EGX_STOCKS.length} stocks with GICS sector.\n`);
 
-  let updated = 0;
-  let notFound = 0;
-  const missing: string[] = [];
-
-  for (const [nameAr, sector] of Object.entries(SECTOR_MAP)) {
-    const result = await prisma.stock.updateMany({
-      where: { nameAr: { contains: nameAr.trim() } },
-      data: { sector },
-    });
-
-    if (result.count > 0) {
-      updated += result.count;
-      console.log(`✅ ${nameAr} → ${sector}`);
-    } else {
-      notFound++;
-      missing.push(nameAr);
-      console.log(`⚠️  Not found: ${nameAr}`);
-    }
+  const bySector: Record<string, number> = {};
+  for (const sector of tickerToGics.values()) {
+    bySector[sector] = (bySector[sector] || 0) + 1;
   }
+  console.log('By sector:');
+  Object.entries(bySector)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([s, c]) => console.log(`  ${s}: ${c}`));
 
-  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  console.log(`✅ Updated: ${updated} stocks`);
-  console.log(`⚠️  Not found: ${notFound} companies`);
-  if (missing.length > 0) {
-    console.log(`\nMissing companies:\n${missing.join('\n')}`);
+  const nullCount = await prisma.stock.updateMany({
+    where: { sector: null },
+    data: { sector: GicsSector.INDUSTRIALS },
+  });
+  if (nullCount.count > 0) {
+    console.log(`\n✅ Set sector=INDUSTRIALS for ${nullCount.count} stocks that had no sector.`);
   }
 
   await prisma.$disconnect();

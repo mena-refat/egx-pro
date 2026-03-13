@@ -280,57 +280,29 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart({
                   tickLine={false}
                   axisLine={false}
                   tick={{ fill: 'var(--text-muted)' }}
+                  ticks={['6M', '1Y', '3Y', '5Y'].includes(selectedRange) ? data.filter((d) => d.showTick || d.x === data[data.length - 1]?.x).map((d) => d.x) : undefined}
                   tickFormatter={(value: number) => {
                     if (!data.length) return '';
-
                     const firstX = data[0].x;
                     const lastX = data[data.length - 1].x;
-
-                    // لا نكتب أي نص عند أول نقطة (تلاقي X مع Y)
                     if (value === firstX) return '';
-
                     const d = new Date(value);
-
-                    // آخر نقطة = "القيمة الحالية"
                     if (value === lastX) return currentLabel;
-
-                    if (selectedRange === '1D') {
-                      // اليوم: نعرض كل ساعة من بعد 12 AM (أول نقطة مخفية بالفعل)
-                      return formatDateLabelShort(d, selectedRange, locale);
-                    }
-
-                    if (selectedRange === '1W') {
-                      // الأسبوع: نكتب كل يوم (عدا الأول)
-                      return formatDateLabelShort(d, selectedRange, locale);
-                    }
-
+                    if (selectedRange === '1D') return formatDateLabelShort(d, selectedRange, locale);
+                    if (selectedRange === '1W') return formatDateLabelShort(d, selectedRange, locale);
                     if (selectedRange === '1M') {
-                      // الشهر: نكتب كل 7 أيام تقريباً
                       const daysFromStart = Math.round((value - firstX) / 86400000);
-                      if (daysFromStart % 7 === 0) {
-                        return formatDateLabelShort(d, selectedRange, locale);
-                      }
+                      if (daysFromStart % 7 === 0) return formatDateLabelShort(d, selectedRange, locale);
                       return '';
                     }
-
                     if (selectedRange === '6M' || selectedRange === '1Y') {
-                      // 6 شهور / سنة: نعرض اسم الشهر كل ~30 يوماً لضمان وجود بيانات على X حتى لو مفيش أول الشهر
-                      const daysFromStart = Math.round((value - firstX) / 86400000);
-                      if (daysFromStart % 30 === 0) {
-                        return d.toLocaleDateString('en-GB', { month: 'short' });
-                      }
-                      return '';
+                      const point = data.find((p) => p.x === value);
+                      return point?.label ?? d.toLocaleDateString('en-GB', { month: 'short' });
                     }
-
                     if (selectedRange === '3Y' || selectedRange === '5Y') {
-                      // 3 / 5 سنوات: نعرض السنة (مختصرة) كل حوالي سنة (كل 365 يوماً)
-                      const daysFromStart = Math.round((value - firstX) / 86400000);
-                      if (daysFromStart % 365 === 0) {
-                        return "'" + d.getFullYear().toString().slice(-2);
-                      }
-                      return '';
+                      const point = data.find((p) => p.x === value);
+                      return point?.label ?? "'" + d.getFullYear().toString().slice(-2);
                     }
-
                     return '';
                   }}
                 />
