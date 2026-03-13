@@ -90,10 +90,16 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps = {}
         addTargetPrice={screener.addTargetPrice}
         onAddTargetPriceChange={screener.setAddTargetPrice}
         addTargetSubmitting={screener.addTargetSubmitting}
+        addTargetError={screener.addTargetError}
         onSubmitAddTarget={screener.submitAddWithTarget}
-        onCloseAddTarget={() => screener.setAddTargetModal(null)}
+        onCloseAddTarget={() => {
+          screener.setAddTargetModal(null);
+          screener.setAddTargetError(null);
+        }}
         showLimitModal={screener.showWatchlistLimitModal}
         onCloseLimitModal={() => screener.setShowWatchlistLimitModal(false)}
+        showPriceAlertProModal={screener.showPriceAlertProModal}
+        onClosePriceAlertProModal={() => screener.setShowPriceAlertProModal(false)}
         onSubscribe={handleSubscribe}
         t={screener.t}
       />

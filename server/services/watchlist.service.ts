@@ -2,7 +2,7 @@ import { UserRepository } from '../repositories/user.repository.ts';
 import { watchlistTickerSchema, watchlistCheckTargetsSchema } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { createNotification } from '../lib/createNotification.ts';
-import { isPro, FREE_LIMITS } from '../lib/plan.ts';
+import { isPaid, getLimit } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';
 import { WatchlistRepository } from '../repositories/watchlist.repository.ts';
 import type { z } from 'zod';
@@ -26,13 +26,12 @@ export const WatchlistService = {
 
     const planUser = await UserRepository.getPlanUser(userId);
     if (!planUser) throw new AppError('UNAUTHORIZED', 401);
-    if (!isPro(planUser)) {
-      const count = await WatchlistRepository.countByUser(userId);
-      if (count >= FREE_LIMITS.watchlistStocks) {
-        throw new AppError('WATCHLIST_LIMIT_REACHED', 403);
-      }
+    const watchlistLimit = getLimit(planUser, 'watchlistStocks');
+    const count = await WatchlistRepository.countByUser(userId);
+    if (count >= (typeof watchlistLimit === 'number' ? watchlistLimit : 0)) {
+      throw new AppError('WATCHLIST_LIMIT_REACHED', 403);
     }
-    if (bodyTargetPrice != null && !isPro(planUser)) {
+    if (bodyTargetPrice != null && !isPaid(planUser)) {
       throw new AppError('PRICE_ALERTS_PRO', 403);
     }
 
@@ -57,7 +56,7 @@ export const WatchlistService = {
     const targetPrice = typeof body?.targetPrice === 'number' ? body.targetPrice : null;
     if (targetPrice != null) {
       const planUser = await UserRepository.getPlanUser(userId);
-      if (!planUser || !isPro(planUser)) {
+      if (!planUser || !isPaid(planUser)) {
         throw new AppError('PRICE_ALERTS_PRO', 403);
       }
     }

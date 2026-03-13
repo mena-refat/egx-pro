@@ -1,5 +1,5 @@
 /** Subscription / plan */
-export type Plan = 'free' | 'pro' | 'yearly';
+export type Plan = 'free' | 'pro' | 'yearly' | 'ultra' | 'ultra_yearly';
 
 /** UI theme */
 export type Theme = 'dark' | 'light' | 'system';

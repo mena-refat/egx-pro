@@ -1,7 +1,7 @@
 import { marketDataService } from './market-data/market-data.service.ts';
 import { addHoldingSchema } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
-import { isPro, FREE_LIMITS } from '../lib/plan.ts';
+import { isPro, getLimit } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';
 import { PortfolioRepository } from '../repositories/portfolio.repository.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
@@ -67,10 +67,10 @@ export const PortfolioService = {
 
     const planUser = await UserRepository.getPlanUser(user.id);
     if (!planUser) throw new AppError('UNAUTHORIZED', 401);
-    if (!isPro(planUser)) {
-      const count = await PortfolioRepository.countByUser(user.id);
-      if (count >= FREE_LIMITS.portfolioStocks) throw new AppError('PORTFOLIO_LIMIT_REACHED', 403);
-    }
+    const portfolioLimit = getLimit(planUser, 'portfolioStocks');
+    const count = await PortfolioRepository.countByUser(user.id);
+    if (count >= (typeof portfolioLimit === 'number' ? portfolioLimit : 0))
+      throw new AppError('PORTFOLIO_LIMIT_REACHED', 403);
 
     const { ticker, shares, purchasePrice, purchaseDate } = parsed.data;
     const completedBefore = await getCompletedAchievementIds(user.id);

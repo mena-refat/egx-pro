@@ -4,7 +4,7 @@ import { getStockPrice } from '../lib/stockData.ts';
 import { incrWithExpire, getCount, decrCount } from '../lib/redis.ts';
 import { getCairoDateString, getCairoDateStringFromDate, getCairoMidnightExpirySeconds } from '../lib/cairo-date.ts';
 import { PREDICTION_LIMITS } from '../lib/constants.ts';
-import { isPro } from '../lib/plan.ts';
+import { isPaid } from '../lib/plan.ts';
 import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { PredictionRepository } from '../repositories/prediction.repository.ts';
@@ -100,7 +100,7 @@ function computeRank(stats: {
 
 export const PredictionsService = {
   async getDailyLimit(user: { plan?: string | null; planExpiresAt?: Date | null; referralProExpiresAt?: Date | null }): Promise<number> {
-    return isPro(user) ? PREDICTION_LIMITS.proDaily : PREDICTION_LIMITS.freeDaily;
+    return isPaid(user) ? PREDICTION_LIMITS.proDaily : PREDICTION_LIMITS.freeDaily;
   },
 
   async getDailyUsed(userId: string): Promise<number> {

@@ -81,6 +81,7 @@ export function useStockScreener() {
   const { t, i18n } = useTranslation('common');
   const user = useAuthStore((s) => s.user);
   const isPro = user?.plan === 'pro' || user?.plan === 'yearly';
+  const isPaid = isPro || user?.plan === 'ultra' || user?.plan === 'ultra_yearly';
   const { prices: livePrices } = useLivePrices();
   const isAr = i18n.language.startsWith('ar');
   const lang = isAr ? 'ar' : 'en';
@@ -94,9 +95,11 @@ export function useStockScreener() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showWatchlistLimitModal, setShowWatchlistLimitModal] = useState(false);
+  const [showPriceAlertProModal, setShowPriceAlertProModal] = useState(false);
   const [addTargetModal, setAddTargetModal] = useState<{ ticker: string } | null>(null);
   const [addTargetPrice, setAddTargetPrice] = useState('');
   const [addTargetSubmitting, setAddTargetSubmitting] = useState(false);
+  const [addTargetError, setAddTargetError] = useState<string | null>(null);
 
   const fetchData = useCallback(
     async (signal?: AbortSignal) => {
@@ -182,30 +185,53 @@ export function useStockScreener() {
   const submitAddWithTarget = useCallback(async () => {
     if (!addTargetModal) return;
     setAddTargetSubmitting(true);
+    setAddTargetError(null);
+    const targetPriceNum = addTargetPrice.trim() ? parseFloat(addTargetPrice) : undefined;
+    const hasTargetPrice = targetPriceNum != null && Number.isFinite(targetPriceNum) && targetPriceNum > 0;
     try {
-      const targetPriceNum = addTargetPrice.trim() ? parseFloat(addTargetPrice) : undefined;
-      await api.post('/watchlist', {
-        ticker: addTargetModal.ticker,
-        ...(targetPriceNum != null &&
-        Number.isFinite(targetPriceNum) &&
-        targetPriceNum > 0
-          ? { targetPrice: targetPriceNum }
-          : {}),
-      });
-      setWatchlist((prev) => [...prev, addTargetModal.ticker]);
+      try {
+        await api.post('/watchlist', {
+          ticker: addTargetModal.ticker,
+          ...(hasTargetPrice ? { targetPrice: targetPriceNum } : {}),
+        });
+      } catch (postErr: unknown) {
+        const data =
+          postErr && typeof postErr === 'object' && 'response' in postErr
+            ? (postErr as { response?: { data?: { error?: string } } }).response?.data
+            : undefined;
+        if (data?.error === 'ALREADY_IN_WATCHLIST' && hasTargetPrice && isPaid) {
+          await api.patch(`/watchlist/${encodeURIComponent(addTargetModal.ticker)}`, {
+            targetPrice: targetPriceNum,
+          });
+        } else {
+          throw postErr;
+        }
+      }
+      setWatchlist((prev) => (prev.includes(addTargetModal.ticker) ? prev : [...prev, addTargetModal.ticker]));
       setAddTargetModal(null);
-      if (typeof window !== 'undefined')
+      setAddTargetPrice('');
+      if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('profile-completion-changed'));
+        window.dispatchEvent(new CustomEvent('watchlist-changed'));
+      }
     } catch (err: unknown) {
       const data =
         err && typeof err === 'object' && 'response' in err
           ? (err as { response?: { data?: { error?: string } } }).response?.data
           : undefined;
-      if (data?.error === 'WATCHLIST_LIMIT_REACHED') setShowWatchlistLimitModal(true);
+      const code = data?.error;
+      if (code === 'WATCHLIST_LIMIT_REACHED') setShowWatchlistLimitModal(true);
+      else if (code === 'PRICE_ALERTS_PRO') {
+        setAddTargetModal(null);
+        setAddTargetPrice('');
+        setAddTargetError(null);
+        setShowPriceAlertProModal(true);
+      } else if (code === 'ALREADY_IN_WATCHLIST') setAddTargetError(t('stocks.alreadyInWatchlist'));
+      else setAddTargetError(t('stocks.watchlistError'));
     } finally {
       setAddTargetSubmitting(false);
     }
-  }, [addTargetModal, addTargetPrice]);
+  }, [addTargetModal, addTargetPrice, isPaid, t]);
 
   const merged = useMemo(() => {
     return stocks.map((s) =>
@@ -279,6 +305,10 @@ export function useStockScreener() {
     toggleWatchlist,
     showWatchlistLimitModal,
     setShowWatchlistLimitModal,
+    showPriceAlertProModal,
+    setShowPriceAlertProModal,
+    addTargetError,
+    setAddTargetError,
     addTargetModal,
     setAddTargetModal,
     addTargetPrice,

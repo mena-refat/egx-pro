@@ -50,6 +50,12 @@ export function useDashboardMarketWatchlist() {
     };
   }, [fetchMarketOverview, fetchWatchlist]);
 
+  useEffect(() => {
+    const onWatchlistChanged = () => fetchWatchlist();
+    window.addEventListener('watchlist-changed', onWatchlistChanged);
+    return () => window.removeEventListener('watchlist-changed', onWatchlistChanged);
+  }, [fetchWatchlist]);
+
   const toggleMarketOverview = useCallback(() => setShowMarketOverview((v) => !v), []);
 
   const retryMarketOverview = useCallback(async () => {
@@ -66,5 +72,6 @@ export function useDashboardMarketWatchlist() {
     retryMarketOverview,
     watchlist,
     watchlistLoading,
+    refetchWatchlist: fetchWatchlist,
   };
 }

@@ -35,8 +35,13 @@ export const STOCK_QUOTE = {
   AVAILABILITY_TIMEOUT_MS: 5000,
 } as const;
 
-/** Plan prices (EGP) — for billing display/calculation */
-export const PLAN_PRICES = { pro: 149, yearly: 1399 } as const;
+/** Plan prices (EGP): pro monthly/yearly, ultra monthly/yearly */
+export const PLAN_PRICES = {
+  pro: 149,
+  yearly: 1399,
+  ultra: 299,
+  ultra_yearly: 2499,
+} as const;
 
 /** Predictions: daily limits per plan, rate limit for create */
 export const PREDICTION_LIMITS = {

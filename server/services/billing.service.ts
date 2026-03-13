@@ -1,12 +1,12 @@
 import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
-import { isPro, FREE_LIMITS } from '../lib/plan.ts';
+import { isPro, isUltra, getLimit } from '../lib/plan.ts';
 import { PLAN_PRICES } from '../lib/constants.ts';
 import { AppError } from '../lib/errors.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 
-type Plan = 'free' | 'pro' | 'annual';
-export type PlanUpgrade = 'pro_monthly' | 'pro_yearly' | 'pro' | 'annual';
+type Plan = 'free' | 'pro' | 'annual' | 'ultra' | 'ultra_annual';
+export type PlanUpgrade = 'pro_monthly' | 'pro_yearly' | 'ultra_monthly' | 'ultra_yearly' | 'pro' | 'annual';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
@@ -16,11 +16,18 @@ function getCurrentMonthKey(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function resolvePlan(plan: PlanUpgrade): { planValue: 'pro' | 'yearly'; durationMs: number } {
-  if (plan === 'pro_yearly' || plan === 'annual') {
-    return { planValue: 'yearly', durationMs: ONE_YEAR_MS };
-  }
+function resolvePlan(plan: PlanUpgrade): { planValue: 'pro' | 'yearly' | 'ultra' | 'ultra_yearly'; durationMs: number } {
+  if (plan === 'ultra_yearly') return { planValue: 'ultra_yearly', durationMs: ONE_YEAR_MS };
+  if (plan === 'ultra_monthly') return { planValue: 'ultra', durationMs: THIRTY_DAYS_MS };
+  if (plan === 'pro_yearly' || plan === 'annual') return { planValue: 'yearly', durationMs: ONE_YEAR_MS };
   return { planValue: 'pro', durationMs: THIRTY_DAYS_MS };
+}
+
+function getBasePrice(planValue: 'pro' | 'yearly' | 'ultra' | 'ultra_yearly'): number {
+  if (planValue === 'ultra_yearly') return PLAN_PRICES.ultra_yearly;
+  if (planValue === 'ultra') return PLAN_PRICES.ultra;
+  if (planValue === 'yearly') return PLAN_PRICES.yearly;
+  return PLAN_PRICES.pro;
 }
 
 export const BillingService = {
@@ -29,14 +36,16 @@ export const BillingService = {
     const user = await UserRepository.getForBillingPlan(userId);
     if (!user) throw new AppError('NOT_FOUND', 404);
     const now = new Date();
-    const effectivePro = isPro(user);
     const monthKey = getCurrentMonthKey();
     const resetDate = user.aiAnalysisResetDate;
     const inCurrentPeriod = resetDate != null && now < resetDate;
     const usedNew = user.aiAnalysisUsedThisMonth ?? 0;
     const usedThisMonth = inCurrentPeriod ? usedNew : 0;
-    const effectivePlan: Plan = effectivePro ? (user.plan === 'yearly' ? 'annual' : 'pro') : 'free';
-    const quota = effectivePro ? Infinity : FREE_LIMITS.aiAnalysisPerMonth;
+    const p = user.plan || 'free';
+    const effectivePlan: Plan =
+      p === 'ultra_yearly' ? 'ultra_annual' : p === 'ultra' ? 'ultra' : isPro(user) ? (p === 'yearly' ? 'annual' : 'pro') : 'free';
+    const quotaRaw = getLimit(user, 'aiAnalysisPerMonth');
+    const quota = typeof quotaRaw === 'number' ? quotaRaw : 0;
     return {
       plan: effectivePlan,
       planExpiresAt: user.planExpiresAt,
@@ -70,8 +79,8 @@ export const BillingService = {
     });
     if (used) throw new AppError('DISCOUNT_ALREADY_USED', 400);
 
-    const planKey = plan === 'annual' ? 'yearly' : 'pro';
-    const basePrice: number = planKey === 'yearly' ? PLAN_PRICES.yearly : PLAN_PRICES.pro;
+    const planKey = plan === 'ultra_annual' ? 'ultra_yearly' : plan === 'ultra' ? 'ultra' : plan === 'annual' ? 'yearly' : 'pro';
+    const basePrice: number = getBasePrice(planKey as 'pro' | 'yearly' | 'ultra' | 'ultra_yearly');
     let finalPrice: number = basePrice;
     if (discount.type === 'percentage') {
       finalPrice = Math.round(basePrice * (1 - discount.value / 100));
@@ -102,11 +111,11 @@ export const BillingService = {
     options: { discountCode?: string; paymentToken?: string }
   ) {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
-    if (!['pro_monthly', 'pro_yearly', 'pro', 'annual'].includes(plan)) {
+    if (!['pro_monthly', 'pro_yearly', 'ultra_monthly', 'ultra_yearly', 'pro', 'annual'].includes(plan)) {
       throw new AppError('INVALID_PLAN', 400);
     }
 
-    const { planValue, durationMs } = resolvePlan(plan);
+    const { planValue, durationMs } = resolvePlan(plan as PlanUpgrade);
     const planExpiresAt = new Date(Date.now() + durationMs);
 
     let discountPercent = 0;
@@ -130,7 +139,7 @@ export const BillingService = {
       if (alreadyUsed) throw new AppError('DISCOUNT_ALREADY_USED', 400);
 
       discount = { id: code.id, type: code.type, value: code.value, maxUses: code.maxUses, usedCount: code.usedCount };
-      const basePrice = planValue === 'yearly' ? PLAN_PRICES.yearly : PLAN_PRICES.pro;
+      const basePrice = getBasePrice(planValue);
       if (code.type === 'percentage') {
         discountPercent = code.value;
       } else {
@@ -162,7 +171,7 @@ export const BillingService = {
       throw new AppError('PAYMENT_TOKEN_REQUIRED', 400);
     }
 
-    const basePrice = planValue === 'yearly' ? PLAN_PRICES.yearly : PLAN_PRICES.pro;
+    const basePrice = getBasePrice(planValue);
     const finalPrice = Math.round(basePrice * (1 - discountPercent / 100));
     // TODO: verify payment with Paymob using options.paymentToken and finalPrice
 

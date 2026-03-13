@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { logger } from '../lib/logger.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
-import { isPro, FREE_LIMITS } from '../lib/plan.ts';
+import { getLimit } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';
 
 function getFirstDayOfNextMonth(): Date {
@@ -75,7 +75,7 @@ export const AnalysisService = {
       });
     }
 
-    if (!effectivePro && usedThisMonth >= quota) {
+    if (usedThisMonth >= quota) {
       throw new AppError('ANALYSIS_LIMIT_REACHED', 402, 'هذه الميزة متاحة في Pro', {
         code: 'ANALYSIS_LIMIT_REACHED',
         plan: 'free',

@@ -8,11 +8,15 @@ export interface WatchlistTargetModalProps {
   addTargetPrice: string;
   onAddTargetPriceChange: (value: string) => void;
   addTargetSubmitting: boolean;
+  addTargetError: string | null;
   onSubmitAddTarget: () => void;
   onCloseAddTarget: () => void;
   /** Limit reached modal */
   showLimitModal: boolean;
   onCloseLimitModal: () => void;
+  /** Price alerts Pro modal */
+  showPriceAlertProModal?: boolean;
+  onClosePriceAlertProModal?: () => void;
   onSubscribe: () => void;
   t: (key: string) => string;
 }
@@ -22,10 +26,13 @@ export function WatchlistTargetModal({
   addTargetPrice,
   onAddTargetPriceChange,
   addTargetSubmitting,
+  addTargetError,
   onSubmitAddTarget,
   onCloseAddTarget,
   showLimitModal,
   onCloseLimitModal,
+  showPriceAlertProModal = false,
+  onClosePriceAlertProModal,
   onSubscribe,
   t,
 }: WatchlistTargetModalProps) {
@@ -47,6 +54,29 @@ export function WatchlistTargetModal({
                 {t('plan.subscribeNow')}
               </Button>
               <Button type="button" variant="secondary" onClick={onCloseLimitModal}>
+                {t('plan.cancel')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPriceAlertProModal && onClosePriceAlertProModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClick={onClosePriceAlertProModal}
+          role="presentation"
+        >
+          <div
+            className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-sm w-full p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm text-[var(--text-secondary)] mb-6">{t('plan.priceAlertsProMessage')}</p>
+            <div className="flex gap-2 justify-center">
+              <Button type="button" variant="primary" onClick={onSubscribe}>
+                {t('plan.subscribeNow')}
+              </Button>
+              <Button type="button" variant="secondary" onClick={onClosePriceAlertProModal}>
                 {t('plan.cancel')}
               </Button>
             </div>
@@ -81,6 +111,11 @@ export function WatchlistTargetModal({
                 className="w-full"
               />
             </div>
+            {addTargetError && (
+              <p className="text-sm text-[var(--danger)]" role="alert">
+                {addTargetError}
+              </p>
+            )}
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="secondary" onClick={onCloseAddTarget} size="sm">
                 {t('common.cancel')}

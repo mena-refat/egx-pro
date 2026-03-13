@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { goalSchema, goalUpdateSchema, goalAmountSchema } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
-import { isPro, FREE_LIMITS } from '../lib/plan.ts';
+import { getLimit } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';
 import { GoalsRepository } from '../repositories/goals.repository.ts';
 import type { AuthUser } from '../routes/types.ts';
@@ -26,10 +26,10 @@ export const GoalsService = {
     if (!user?.id) throw new AppError('UNAUTHORIZED', 401);
     const planUser = await UserRepository.getPlanUser(user.id);
     if (!planUser) throw new AppError('UNAUTHORIZED', 401);
-    if (!isPro(planUser)) {
-      const count = await GoalsRepository.countByUser(user.id);
-      if (count >= FREE_LIMITS.goals) throw new AppError('GOAL_LIMIT_REACHED', 403);
-    }
+    const goalsLimit = getLimit(planUser, 'goals');
+    const count = await GoalsRepository.countByUser(user.id);
+    if (count >= (typeof goalsLimit === 'number' ? goalsLimit : 0))
+      throw new AppError('GOAL_LIMIT_REACHED', 403);
 
     const raw = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
     const parsed = goalSchema.parse({

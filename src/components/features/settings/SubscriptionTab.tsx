@@ -10,7 +10,9 @@ import { PLAN_PRICES } from '../../../lib/constants';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-type PlanId = 'free' | 'pro_monthly' | 'pro_yearly';
+type TierId = 'free' | 'pro' | 'ultra';
+type PaidPlanId = 'pro_monthly' | 'pro_yearly' | 'ultra_monthly' | 'ultra_yearly';
+type BillingPeriod = 'monthly' | 'yearly';
 
 interface PlanFeature {
   key: string;
@@ -18,10 +20,8 @@ interface PlanFeature {
 }
 
 interface PlanConfig {
-  id: PlanId;
+  id: TierId;
   nameKey: string;
-  price: number;
-  periodKey: 'monthly' | 'yearly' | 'free';
   badgeKey?: string;
   savingsNoteKey?: string;
   highlighted?: boolean;
@@ -62,61 +62,109 @@ function FeatureItem({ featureKey, unavailable, t }: { featureKey: string; unava
   );
 }
 
-// ─── CurrentBadge ──────────────────────────────────────────────────────────
+// ─── Period switch (شهري | سنوي) ───────────────────────────────────────────
 
-function CurrentBadge({ t }: { t: (k: string) => string }) {
+function PeriodSwitch({
+  period,
+  onPeriodChange,
+  t,
+}: {
+  period: BillingPeriod;
+  onPeriodChange: (p: BillingPeriod) => void;
+  t: (k: string) => string;
+}) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--success-bg)] text-[var(--success)] px-3 py-1 text-xs font-bold">
-      <Check className="w-3.5 h-3.5" aria-hidden />
-      {t('billing.currentPlan')}
-    </span>
+    <div
+      className="inline-flex rounded-xl bg-[var(--bg-input)] p-1 border border-[var(--border-subtle)]"
+      role="tablist"
+      aria-label={t('billing.billingPeriod')}
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-selected={period === 'monthly'}
+        onClick={() => onPeriodChange('monthly')}
+        className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+          period === 'monthly'
+            ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm'
+            : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+        }`}
+      >
+        {t('billing.monthly')}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={period === 'yearly'}
+        onClick={() => onPeriodChange('yearly')}
+        className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+          period === 'yearly'
+            ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm'
+            : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+        }`}
+      >
+        {t('billing.yearly')}
+      </button>
+    </div>
   );
 }
 
 // ─── PlanCard ──────────────────────────────────────────────────────────────
 
+function getPaidPlanId(tier: 'pro' | 'ultra', period: BillingPeriod): PaidPlanId {
+  return period === 'yearly' ? `${tier}_yearly` : `${tier}_monthly`;
+}
+
 interface PlanCardProps {
   plan: PlanConfig;
   index: number;
+  period: BillingPeriod;
+  onPeriodChange: (period: BillingPeriod) => void;
   currentPlan: string | null | undefined;
   planExpiresAt: string | null | undefined;
   discountPercent: number | null;
-  getFinalPrice: (plan: 'pro_monthly' | 'pro_yearly') => number;
+  getFinalPrice: (plan: PaidPlanId) => number;
+  getBasePrice: (plan: PaidPlanId) => number;
   upgrading: boolean;
-  onUpgrade: (plan: 'pro_monthly' | 'pro_yearly') => void;
-  onSelectPlan: (plan: 'pro_monthly' | 'pro_yearly') => void;
+  onUpgrade: (plan: PaidPlanId) => void;
+  onSelectPlan: (plan: PaidPlanId) => void;
   t: (k: string, opts?: Record<string, unknown>) => string;
-  /** React key – not used inside component */
-  key?: string | number;
 }
 
 function PlanCard({
   plan,
   index,
+  period,
+  onPeriodChange,
   currentPlan,
   planExpiresAt,
   discountPercent,
   getFinalPrice,
+  getBasePrice,
   upgrading,
   onUpgrade,
   onSelectPlan,
   t,
 }: PlanCardProps) {
   const isFree = plan.id === 'free';
+  const paidPlanId = !isFree ? getPaidPlanId(plan.id as 'pro' | 'ultra', period) : null;
   const isCurrent =
     (isFree && (currentPlan === 'free' || !currentPlan)) ||
-    (plan.id === 'pro_monthly' && (currentPlan === 'pro' || currentPlan === 'monthly')) ||
-    (plan.id === 'pro_yearly' && (currentPlan === 'yearly' || currentPlan === 'annual'));
+    (plan.id === 'pro' && (currentPlan === 'pro' || currentPlan === 'yearly' || currentPlan === 'annual')) ||
+    (plan.id === 'ultra' && (currentPlan === 'ultra' || currentPlan === 'ultra_yearly' || currentPlan === 'ultra_annual'));
 
   const handleCta = () => {
     if (isCurrent && isFree) return;
-    if (isFree) return;
+    if (isFree || !paidPlanId) return;
     if (discountPercent === 100) {
-      onUpgrade(plan.id as 'pro_monthly' | 'pro_yearly');
+      onUpgrade(paidPlanId);
       return;
     }
-    onSelectPlan(plan.id as 'pro_monthly' | 'pro_yearly');
+    onSelectPlan(paidPlanId);
   };
+
+  const basePrice = paidPlanId ? getBasePrice(paidPlanId) : 0;
+  const finalPrice = paidPlanId ? getFinalPrice(paidPlanId) : 0;
 
   return (
     <motion.div
@@ -125,7 +173,7 @@ function PlanCard({
       transition={{ delay: index * 0.1 }}
       className={`relative flex flex-col rounded-2xl border p-6 bg-[var(--bg-card)] ${
         plan.highlighted
-          ? 'border-2 border-[var(--brand)] md:scale-105'
+          ? 'border-2 border-[var(--brand)] md:scale-[1.02]'
           : 'border-[var(--border)]'
       }`}
       style={
@@ -146,6 +194,12 @@ function PlanCard({
         {t(plan.nameKey)}
       </h3>
 
+      {!isFree && (
+        <div className="mt-4">
+          <PeriodSwitch period={period} onPeriodChange={onPeriodChange} t={t} />
+        </div>
+      )}
+
       <div className="mt-4 flex items-baseline gap-1">
         {isFree ? (
           <span className="text-3xl font-black text-[var(--text-primary)] tabular-nums">
@@ -154,7 +208,7 @@ function PlanCard({
         ) : (
           <>
             <span className="text-4xl font-black text-[var(--text-primary)] tabular-nums">
-              {plan.price}
+              {finalPrice}
             </span>
             <span className="text-sm text-[var(--text-secondary)] self-end mb-2 ms-1">
               {t('billing.egp')}
@@ -165,10 +219,7 @@ function PlanCard({
       {!isFree && discountPercent != null && discountPercent < 100 && (
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           <span className="text-sm line-through text-[var(--text-muted)]">
-            {plan.id === 'pro_monthly' ? PLAN_PRICES.pro : PLAN_PRICES.yearly} {t('billing.egp')}
-          </span>
-          <span className="text-lg font-black text-[var(--success)] tabular-nums">
-            {getFinalPrice(plan.id as 'pro_monthly' | 'pro_yearly')} {t('billing.egp')}
+            {basePrice} {t('billing.egp')}
           </span>
           <span className="rounded-full bg-[var(--success-bg)] text-[var(--success)] text-xs px-2 py-0.5 font-bold">
             -{discountPercent}%
@@ -178,7 +229,7 @@ function PlanCard({
       {!isFree && discountPercent === 100 && (
         <div className="mt-1 flex items-center gap-2 flex-wrap">
           <span className="text-sm line-through text-[var(--text-muted)]">
-            {plan.id === 'pro_monthly' ? PLAN_PRICES.pro : PLAN_PRICES.yearly} {t('billing.egp')}
+            {basePrice} {t('billing.egp')}
           </span>
           <span className="rounded-full bg-[var(--success-bg)] text-[var(--success)] text-xs px-2 py-0.5 font-bold">
             {t('billing.free')} 🎉
@@ -187,10 +238,10 @@ function PlanCard({
       )}
       {!isFree && (
         <span className="text-sm text-[var(--text-muted)]">
-          / {plan.periodKey === 'yearly' ? t('billing.yearly') : t('billing.monthly')}
+          / {period === 'yearly' ? t('billing.yearly') : t('billing.monthly')}
         </span>
       )}
-      {plan.savingsNoteKey && !discountPercent && (
+      {!isFree && plan.savingsNoteKey && period === 'yearly' && !discountPercent && (
         <span className="mt-1 inline-block rounded-full bg-[var(--success-bg)] text-[var(--success)] text-xs px-2 py-0.5 w-fit">
           {t(`billing.${plan.savingsNoteKey}`)}
         </span>
@@ -231,7 +282,7 @@ function PlanCard({
               : discountPercent === 100
                 ? t('billing.activateNow')
                 : discountPercent != null && discountPercent > 0
-                  ? t('billing.payDiscounted', { price: getFinalPrice(plan.id as 'pro_monthly' | 'pro_yearly') })
+                  ? t('billing.payDiscounted', { price: finalPrice })
                   : t('billing.startNow')}
         </Button>
       </div>
@@ -243,8 +294,8 @@ function PlanCard({
 
 interface CheckoutModalProps {
   open: boolean;
-  plan: 'pro_monthly' | 'pro_yearly';
-  getFinalPrice: (plan: 'pro_monthly' | 'pro_yearly') => number;
+  plan: PaidPlanId;
+  getFinalPrice: (plan: PaidPlanId) => number;
   discountCode: string;
   onClose: () => void;
   onSuccess: () => void;
@@ -266,7 +317,14 @@ function CheckoutModal({
 }: CheckoutModalProps) {
   const [loading, setLoading] = useState(false);
   const finalPrice = getFinalPrice(plan);
-  const planLabel = plan === 'pro_monthly' ? t('billing.monthly') : t('billing.yearly');
+  const planLabel =
+    plan === 'pro_monthly'
+      ? t('billing.planProMonthly')
+      : plan === 'pro_yearly'
+        ? t('billing.planProYearly')
+        : plan === 'ultra_monthly'
+          ? t('billing.planUltraMonthly')
+          : t('billing.planUltraYearly');
 
   const handleGooglePay = async () => {
     const g = window.google?.payments?.api;
@@ -312,7 +370,7 @@ function CheckoutModal({
       const paymentData = await paymentsClient.loadPaymentData(paymentRequest);
       const token = paymentData.paymentMethodData?.tokenizationData?.token;
       await api.post('/billing/upgrade', {
-        plan: plan === 'pro_monthly' ? 'pro_monthly' : 'pro_yearly',
+        plan,
         paymentToken: token,
         ...(discountCode.trim() ? { discountCode: discountCode.trim() } : {}),
       });
@@ -388,51 +446,65 @@ function CheckoutModal({
 
 // ─── Plans config ───────────────────────────────────────────────────────────
 
+function getBasePriceForPlan(planId: PaidPlanId): number {
+  switch (planId) {
+    case 'pro_monthly':
+      return PLAN_PRICES.pro;
+    case 'pro_yearly':
+      return PLAN_PRICES.yearly;
+    case 'ultra_monthly':
+      return PLAN_PRICES.ultra;
+    case 'ultra_yearly':
+      return PLAN_PRICES.ultra_yearly;
+    default:
+      return PLAN_PRICES.pro;
+  }
+}
+
 function getPlansConfig(): PlanConfig[] {
   return [
     {
       id: 'free',
-      nameKey: 'billing.planFree',
-      price: 0,
-      periodKey: 'free',
+      nameKey: 'billing.planFreeName',
       features: [
-        { key: 'watchlist3' },
-        { key: 'portfolio3' },
-        { key: 'goals1' },
+        { key: 'freeWatchlist' },
+        { key: 'freePortfolio' },
+        { key: 'freeGoals' },
+        { key: 'freeAi' },
         { key: 'delayed10' },
       ],
     },
     {
-      id: 'pro_monthly',
-      nameKey: 'billing.planMonthly',
-      price: PLAN_PRICES.pro,
-      periodKey: 'monthly',
+      id: 'pro',
+      nameKey: 'billing.planPro',
+      badgeKey: 'mostPopular',
+      savingsNoteKey: 'equivalentPro',
+      highlighted: true,
       features: [
-        { key: 'watchlistUnlimited' },
-        { key: 'portfolioUnlimited' },
-        { key: 'goalsUnlimited' },
-        { key: 'aiUnlimited' },
+        { key: 'proWatchlist' },
+        { key: 'proPortfolio' },
+        { key: 'proGoals' },
+        { key: 'proAi' },
         { key: 'realtimePrices' },
+        { key: 'priceAlerts' },
         { key: 'shariaMode' },
-        { key: 'prioritySupport' },
       ],
     },
     {
-      id: 'pro_yearly',
-      nameKey: 'billing.planYearly',
-      price: PLAN_PRICES.yearly,
-      periodKey: 'yearly',
-      badgeKey: 'mostPopular',
-      savingsNoteKey: 'equivalent',
-      highlighted: true,
+      id: 'ultra',
+      nameKey: 'billing.planUltra',
+      badgeKey: 'bestValue',
+      savingsNoteKey: 'equivalentUltra',
       features: [
-        { key: 'watchlistUnlimited' },
-        { key: 'portfolioUnlimited' },
-        { key: 'goalsUnlimited' },
-        { key: 'aiUnlimited' },
+        { key: 'ultraWatchlist' },
+        { key: 'ultraPortfolio' },
+        { key: 'ultraGoals' },
+        { key: 'ultraAi' },
         { key: 'realtimePrices' },
+        { key: 'priceAlerts' },
         { key: 'shariaMode' },
         { key: 'prioritySupport' },
+        { key: 'earlyAccess' },
       ],
     },
   ];
@@ -454,8 +526,10 @@ export function SubscriptionTab() {
   const [discountPercent, setDiscountPercent] = useState<number | null>(null);
   const [validating, setValidating] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
-  const [modalPlan, setModalPlan] = useState<'pro_monthly' | 'pro_yearly' | null>(null);
+  const [modalPlan, setModalPlan] = useState<PaidPlanId | null>(null);
   const [billingMessage, setBillingMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [proPeriod, setProPeriod] = useState<BillingPeriod>('yearly');
+  const [ultraPeriod, setUltraPeriod] = useState<BillingPeriod>('yearly');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -492,19 +566,21 @@ export function SubscriptionTab() {
     }
   };
 
-  const getFinalPrice = (plan: 'pro_monthly' | 'pro_yearly'): number => {
-    const base = plan === 'pro_monthly' ? PLAN_PRICES.pro : PLAN_PRICES.yearly;
+  const getBasePrice = (plan: PaidPlanId): number => getBasePriceForPlan(plan);
+
+  const getFinalPrice = (plan: PaidPlanId): number => {
+    const base = getBasePriceForPlan(plan);
     if (discountPercent == null) return base;
     return Math.round(base * (1 - discountPercent / 100));
   };
 
-  const handleUpgrade = async (plan: 'pro_monthly' | 'pro_yearly') => {
+  const handleUpgrade = async (plan: PaidPlanId) => {
     if (discountPercent === 100) {
       setUpgrading(true);
       setBillingMessage(null);
       try {
         await api.post('/billing/upgrade', {
-          plan: plan === 'pro_monthly' ? 'pro_monthly' : 'pro_yearly',
+          plan,
           discountCode: discountCode.trim(),
         });
         setBillingMessage({ type: 'success', text: t('billing.upgradeSuccess') });
@@ -523,7 +599,7 @@ export function SubscriptionTab() {
     }
   };
 
-  const handleSelectPlan = (plan: 'pro_monthly' | 'pro_yearly') => {
+  const handleSelectPlan = (plan: PaidPlanId) => {
     setModalPlan(plan);
   };
 
@@ -572,10 +648,13 @@ export function SubscriptionTab() {
             key={plan.id}
             plan={plan}
             index={index}
+            period={plan.id === 'pro' ? proPeriod : plan.id === 'ultra' ? ultraPeriod : 'monthly'}
+            onPeriodChange={plan.id === 'pro' ? setProPeriod : plan.id === 'ultra' ? setUltraPeriod : () => {}}
             currentPlan={currentPlan}
             planExpiresAt={planExpiresAt}
             discountPercent={discountPercent}
             getFinalPrice={getFinalPrice}
+            getBasePrice={getBasePrice}
             upgrading={upgrading}
             onUpgrade={handleUpgrade}
             onSelectPlan={handleSelectPlan}
@@ -626,7 +705,7 @@ export function SubscriptionTab() {
 
       <CheckoutModal
         open={modalPlan !== null}
-        plan={modalPlan ?? 'pro_monthly'}
+        plan={modalPlan ?? 'pro_yearly'}
         getFinalPrice={getFinalPrice}
         discountCode={discountCode}
         onClose={() => setModalPlan(null)}
