@@ -64,6 +64,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
     successName?: string;
     error?: string;
   }>({ checking: false });
+  const [finishError, setFinishError] = useState<string | null>(null);
   const finishTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => {
@@ -175,16 +176,17 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
     }
   };
 
-  const mapRiskTolerance = (reaction: string): string => {
+  /** يطابق قيم الاستبيان مع ما يقبله الـ API: conservative | moderate | aggressive */
+  const mapRiskTolerance = (reaction: string): 'conservative' | 'moderate' | 'aggressive' => {
     switch (reaction) {
       case 'sell_immediately':
-        return 'very_conservative';
+        return 'conservative';
       case 'wait_and_see':
         return 'moderate';
       case 'buy_more':
         return 'aggressive';
       case 'long_term_calm':
-        return 'long_term';
+        return 'moderate';
       default:
         return 'moderate';
     }
@@ -202,9 +204,14 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
   });
 
   const handleFinish = async () => {
+    setFinishError(null);
     try {
       setSaving(true);
       const accessToken = useAuthStore.getState().accessToken;
+      if (!accessToken) {
+        setFinishError('يجب تسجيل الدخول أولاً');
+        return;
+      }
       const res = await fetch('/api/user/profile', {
         method: 'PUT',
         headers: {
@@ -226,10 +233,13 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
       if (res.ok) {
         onComplete();
       } else {
-        console.error('Failed to save onboarding', await res.text());
+        const errBody = await res.text();
+        if (import.meta.env.DEV) console.error('Failed to save onboarding', errBody);
+        setFinishError('فشل حفظ البيانات. حاول مرة أخرى.');
       }
     } catch (err) {
-      console.error('Failed to save onboarding', err);
+      if (import.meta.env.DEV) console.error('Failed to save onboarding', err);
+      setFinishError('حدث خطأ في الاتصال. تحقق من الإنترنت وحاول مرة أخرى.');
     } finally {
       setSaving(false);
     }
@@ -712,12 +722,15 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
               {referralState.error && (
                 <p className="text-sm text-[var(--danger)] text-center">{referralState.error}</p>
               )}
+              {finishError && (
+                <p className="text-sm text-[var(--danger)] text-center" role="alert">{finishError}</p>
+              )}
               <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                <Button type="button" variant="primary" size="lg" fullWidth onClick={handleReferralApply} disabled={referralState.checking}>
+                <Button type="button" variant="primary" size="lg" fullWidth onClick={handleReferralApply} disabled={referralState.checking || saving}>
                   {referralState.checking ? 'جاري التحقق...' : 'تأكيد وابدأ'}
                 </Button>
-                <Button type="button" variant="secondary" size="lg" fullWidth onClick={handleFinish}>
-                  تخطي وابدأ
+                <Button type="button" variant="secondary" size="lg" fullWidth onClick={handleFinish} disabled={saving}>
+                  {saving ? 'جارٍ الحفظ...' : 'تخطي وابدأ'}
                 </Button>
               </div>
             </div>
