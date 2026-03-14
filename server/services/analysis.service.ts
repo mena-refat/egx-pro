@@ -173,11 +173,15 @@ export const AnalysisService = {
     await ensureQuota(userId, 1);
     const completedBefore = await getCompletedAchievementIds(userId);
 
+    const stockInfo = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker.toUpperCase());
+    const nameAr = stockInfo?.nameAr ?? ticker;
+    const nameEn = stockInfo?.nameEn ?? ticker;
+
     const [priceResult, historyResult, financialsResult, newsResult, marketCtxResult] = await Promise.allSettled([
       getPriceForAnalysis(ticker),
       getStockHistory(ticker, '6mo').catch(() => []),
       getFinancials(ticker),
-      getStockNews(ticker).catch(() => []),
+      getStockNews(nameAr).catch(() => []),
       getMarketContext().catch(() => ({ egx30: null, usdEgp: null, marketStatus: 'غير متاح', timestamp: new Date().toISOString() })),
     ]);
 
@@ -194,9 +198,6 @@ export const AnalysisService = {
         : { egx30: null, usdEgp: null, marketStatus: 'غير متاح', timestamp: new Date().toISOString() };
 
     const indicators = calculateIndicators(history);
-    const stockInfo = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker.toUpperCase());
-    const nameAr = stockInfo?.nameAr ?? ticker;
-    const nameEn = stockInfo?.nameEn ?? ticker;
 
     const priceBlock = priceData
       ? `السعر الحالي: ${priceData.price} جنيه\nالتغير: ${priceData.changePercent}%\nالحجم: ${priceData.volume ?? '—'}`
@@ -311,14 +312,17 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن 
     if (t1 === t2) throw new AppError('SAME_STOCK_COMPARE', 400);
     await ensureQuota(userId, 2);
 
+    const info1 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t1);
+    const info2 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t2);
+
     const results = await Promise.allSettled([
       marketDataService.getQuotes([t1, t2]),
       getFinancials(t1).catch(() => nullFinancials),
       getFinancials(t2).catch(() => nullFinancials),
       getStockHistory(t1, '3mo').catch(() => []),
       getStockHistory(t2, '3mo').catch(() => []),
-      getStockNews(t1).catch(() => []),
-      getStockNews(t2).catch(() => []),
+      getStockNews(info1?.nameAr ?? t1).catch(() => []),
+      getStockNews(info2?.nameAr ?? t2).catch(() => []),
       getMarketContext().catch(() => defaultMarketCtx),
     ]);
 
@@ -335,8 +339,6 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن 
     const ind2 = calculateIndicators(h2);
     const p1 = quotes.get(t1);
     const p2 = quotes.get(t2);
-    const info1 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t1);
-    const info2 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t2);
 
     const system = COMPARE_SYSTEM;
 

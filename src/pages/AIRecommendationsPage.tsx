@@ -48,7 +48,15 @@ export default function AIRecommendationsPage() {
       } else if (axiosErr?.code === 'ECONNABORTED') {
         setError('التحليل أخد وقت طويل. حاول تاني.');
       } else {
-        setError('حدث خطأ. حاول تاني.');
+        const msg = (err as Error)?.message || '';
+        if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+          setError('مفيش اتصال بالإنترنت. تأكد من الاتصال وحاول تاني.');
+        } else if (msg.includes('empty') || msg.includes('Empty')) {
+          setError('التحليل رجع فاضي — حاول تاني أو جرب سهم تاني.');
+        } else {
+          setError('حدث خطأ غير متوقع. حاول تاني بعد شوية.');
+        }
+        if (import.meta.env.DEV) console.error('Recommendations error:', err);
       }
     } finally {
       setLoading(false);

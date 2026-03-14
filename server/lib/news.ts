@@ -22,7 +22,7 @@ export async function getStockNews(companyName: string) {
     }
 
     const data = await response.json();
-    const articles = data.articles.map((article: { title: string; description: string; source: { name: string }; publishedAt: string; url: string }) => ({
+    const articles = (data?.articles ?? []).map((article: { title: string; description: string; source: { name: string }; publishedAt: string; url: string }) => ({
       title: article.title,
       summary: article.description,
       source: article.source.name,
