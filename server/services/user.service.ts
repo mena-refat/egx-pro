@@ -15,6 +15,8 @@ import { createNotification } from '../lib/createNotification.ts';
 import { ACHIEVEMENT_DEFS, type AchievementLevel } from '../lib/achievements.ts';
 import { verifyPassword } from '../../src/lib/auth.ts';
 import { AppError } from '../lib/errors.ts';
+import { logger } from '../lib/logger.ts';
+import type { Prisma } from '@prisma/client';
 import type { Request } from 'express';
 
 const profileSelect = {
@@ -118,7 +120,10 @@ export const UserService = {
       notifyAchievements,
       notifyGoals,
       hearAboutUs,
-      investorProfile,
+      investorProfile:
+        investorProfile != null && typeof investorProfile === 'object'
+          ? JSON.parse(JSON.stringify(investorProfile))
+          : investorProfile,
     };
 
     if (rawEmail !== undefined) {
@@ -188,10 +193,19 @@ export const UserService = {
       where: { id: userId },
       select: { phone: true, email: true },
     });
-    const completedBefore = await getCompletedAchievementIds(userId);
+    let completedBefore: string[] = [];
+    try {
+      completedBefore = await getCompletedAchievementIds(userId);
+    } catch (e) {
+      logger.warn('getCompletedAchievementIds failed (non-fatal)', { userId, error: (e as Error).message });
+    }
+    // إزالة الحقول undefined حتى لا تسبب مشكلة مع Prisma/DB
+    const dataToUpdate = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined)
+    ) as Prisma.UserUpdateInput;
     const user = await UserRepository.update({
       where: { id: userId },
-      data,
+      data: dataToUpdate,
     });
 
     if (req && before && data.phone !== undefined && String(before.phone ?? '') !== String(data.phone ?? '')) {
@@ -200,7 +214,14 @@ export const UserService = {
     if (req && before && data.email !== undefined && String(before.email ?? '') !== String(data.email ?? '')) {
       await auditLog({ userId, action: 'EMAIL_CHANGED', req, result: 'success' });
     }
-    await addNewlyUnlockedAchievements(userId, completedBefore);
+    try {
+      await addNewlyUnlockedAchievements(userId, completedBefore);
+    } catch (achievementErr) {
+      logger.warn('addNewlyUnlockedAchievements failed (non-fatal)', {
+        userId,
+        error: (achievementErr as Error).message,
+      });
+    }
 
     const responseUser = {
       ...user,
@@ -637,15 +658,16 @@ export const UserService = {
       ReferralRepository.countActiveByReferrer(userId),
       ReferralRepository.findByReferrer(userId, {
         take: 5,
-        orderBy: { createdAt: 'asc' },
-        include: { referred: { select: { fullName: true, createdAt: true } } },
-      } as { take: number; orderBy: { createdAt: string }; include: object }),
+        orderBy: { createdAt: 'asc' } as object,
+        include: { User_Referral_referredUserIdToUser: { select: { fullName: true, createdAt: true } } },
+      }),
       ReferralRepository.countActiveByReferrerSince(userId, weekAgo),
     ]);
-    const completedReferrals = completedReferralsRaw as Array<{ referredId: string; referred?: { fullName: string | null } }>;
+    type RefWithUser = { referredUserId: string; User_Referral_referredUserIdToUser?: { fullName: string | null } };
+    const completedReferrals = completedReferralsRaw as RefWithUser[];
     const friends = completedReferrals.map((ref, index) => ({
-      id: ref.referredId,
-      name: ref.referred?.fullName ?? null,
+      id: ref.referredUserId,
+      name: ref.User_Referral_referredUserIdToUser?.fullName ?? null,
       order: index + 1,
     }));
     return {

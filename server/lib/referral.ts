@@ -35,26 +35,12 @@ export async function generateUniqueReferralCode(): Promise<string> {
  * unrewarded referrals and grant 1 free Pro month per 5.
  */
 export async function checkAndRewardReferrer(referrerId: string): Promise<void> {
-  const unrewardedActive = await prisma.referral.count({
-    where: {
-      referrerId,
-      isActive: true,
-      rewardedAt: null,
-    },
+  const activeCount = await prisma.referral.count({
+    where: { referrerId },
   });
 
-  const rewardsEarned = Math.floor(unrewardedActive / 5);
+  const rewardsEarned = Math.floor(activeCount / 5);
   if (rewardsEarned === 0) return;
-
-  const referralsToReward = await prisma.referral.findMany({
-    where: {
-      referrerId,
-      isActive: true,
-      rewardedAt: null,
-    },
-    take: rewardsEarned * 5,
-    orderBy: { createdAt: 'asc' },
-  });
 
   const now = new Date();
 
@@ -67,18 +53,10 @@ export async function checkAndRewardReferrer(referrerId: string): Promise<void> 
   const baseDate = currentExpiry && currentExpiry > now ? currentExpiry : now;
   const newExpiry = new Date(baseDate.getTime() + rewardsEarned * THIRTY_DAYS_MS);
 
-  await prisma.$transaction([
-    UserRepository.update({
-      where: { id: referrerId },
-      data: { referralProExpiresAt: newExpiry },
-    }),
-    ...referralsToReward.map((r) =>
-      prisma.referral.update({
-        where: { id: r.id },
-        data: { rewardedAt: now },
-      })
-    ),
-  ]);
+  await UserRepository.update({
+    where: { id: referrerId },
+    data: { referralProExpiresAt: newExpiry },
+  });
 
   await createNotification(
     referrerId,

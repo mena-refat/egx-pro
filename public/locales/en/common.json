@@ -276,7 +276,8 @@
       "accountNotFound": "Account not found",
       "wrongPassword": "Wrong password",
       "alreadyRegistered": "Email or phone already registered",
-      "invalidCode": "Invalid code, check your authenticator app"
+      "invalidCode": "Invalid code, check your authenticator app",
+      "connectionFailed": "Could not reach the server. Make sure the app is running and try again."
     }
   },
   "goals": {

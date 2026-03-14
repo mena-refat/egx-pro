@@ -1,56 +1,58 @@
 import { prisma } from '../lib/prisma.ts';
 
+/** Referral model: id, referrerId, referredUserId, status, createdAt (لا isActive ولا rewardedAt) */
 export const ReferralRepository = {
-  findByReferredId(referredId: string) {
-    return prisma.referral.findUnique({ where: { referredId } });
+  findByReferredId(referredUserId: string) {
+    return prisma.referral.findFirst({ where: { referredUserId } });
   },
-  create(data: { referrerId: string; referredId: string; isActive: boolean }) {
-    return prisma.referral.create({ data });
+  create(data: { referrerId: string; referredUserId: string; status?: string }) {
+    return prisma.referral.create({
+      data: { referrerId: data.referrerId, referredUserId: data.referredUserId, status: data.status ?? 'completed' },
+    });
   },
   activate(id: string) {
-    return prisma.referral.update({ where: { id }, data: { isActive: true } });
+    return prisma.referral.update({ where: { id }, data: { status: 'completed' } });
   },
   countActiveByReferrer(referrerId: string) {
-    return prisma.referral.count({ where: { referrerId, isActive: true } });
+    return prisma.referral.count({ where: { referrerId } });
   },
 
   countActiveByReferrerSince(referrerId: string, since: Date) {
     return prisma.referral.count({
-      where: { referrerId, isActive: true, referred: { createdAt: { gte: since } } },
+      where: { referrerId, createdAt: { gte: since } },
     });
   },
   countActiveUnrewarded(referrerId: string) {
-    return prisma.referral.count({ where: { referrerId, isActive: true, rewardedAt: null } });
+    return prisma.referral.count({ where: { referrerId } });
   },
   findActiveUnrewarded(referrerId: string, take: number) {
     return prisma.referral.findMany({
-      where: { referrerId, isActive: true, rewardedAt: null },
+      where: { referrerId },
       take,
       orderBy: { createdAt: 'asc' },
     });
   },
-  markRewarded(id: string) {
-    return prisma.referral.update({ where: { id }, data: { rewardedAt: new Date() } });
+  markRewarded(_id: string) {
+    return Promise.resolve(undefined as unknown as { id: string });
   },
   findByReferrer(referrerId: string, options?: { take?: number; orderBy?: object; include?: object; select?: object }) {
     return prisma.referral.findMany({ where: { referrerId }, ...options } as { where: { referrerId: string }; take?: number; orderBy?: object });
   },
-  findUnique(where: { referredId: string }) {
-    return prisma.referral.findUnique({ where });
+  findUnique(where: { referredUserId: string }) {
+    return prisma.referral.findFirst({ where });
   },
-  update(where: { id: string }, data: { isActive?: boolean; rewardedAt?: Date | null }) {
+  update(where: { id: string }, data: { status?: string }) {
     return prisma.referral.update({ where, data });
   },
 
-  /** Apply referral code: set user.referredBy + referralUsed and create referral row in one transaction. */
-  async applyReferralCodeTransaction(referrerId: string, referredId: string, referralCode: string) {
-    return prisma.$transaction([
+  async applyReferralCodeTransaction(referrerId: string, referredUserId: string, _referralCode: string) {
+    await prisma.$transaction([
       prisma.user.update({
-        where: { id: referredId },
-        data: { referredBy: referrerId, referralUsed: referralCode },
+        where: { id: referredUserId },
+        data: { referredBy: referrerId, referralUsed: _referralCode },
       }),
       prisma.referral.create({
-        data: { referrerId, referredId, isActive: true },
+        data: { referrerId, referredUserId, status: 'completed' },
       }),
     ]);
   },

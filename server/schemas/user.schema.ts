@@ -29,8 +29,8 @@ export const updateProfileBodySchema = z
     notifyNews: z.boolean().optional(),
     notifyAchievements: z.boolean().optional(),
     notifyGoals: z.boolean().optional(),
-    hearAboutUs: z.string().max(200).optional(),
-    investorProfile: z.record(z.string(), z.unknown()).optional(),
+    hearAboutUs: z.string().max(200).optional().nullable(),
+    investorProfile: z.record(z.string(), z.unknown()).optional().nullable(),
   });
   // passthrough — service يتعامل مع الباقي (لا .strict() لأن الفرونت يرسل حقول إضافية)
 

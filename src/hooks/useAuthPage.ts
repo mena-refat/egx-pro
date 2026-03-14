@@ -136,7 +136,12 @@ export function useAuthPage(refCode: string) {
         type: 'success',
       });
     } catch (err: unknown) {
-      setAuthError(err instanceof Error ? err.message : 'Auth failed');
+      const msg = err instanceof Error ? err.message : 'Auth failed';
+      if (msg === 'Failed to fetch' || msg.includes('NetworkError') || msg.includes('Load failed') || msg.includes('fetch')) {
+        setAuthError(t('auth.errors.connectionFailed'));
+      } else {
+        setAuthError(msg);
+      }
     }
   };
 

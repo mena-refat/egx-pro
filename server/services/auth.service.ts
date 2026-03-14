@@ -141,8 +141,8 @@ export async function register(
     if (referrer && referrer.id !== user.id) {
       await ReferralRepository.create({
           referrerId: referrer.id,
-          referredId: user.id,
-          isActive: false,
+          referredUserId: user.id,
+          status: 'pending',
         });
     }
   }
@@ -309,9 +309,9 @@ export async function twoFaAuthenticate(
   });
   if (!valid) throw new AppError('invalid_code', 401);
 
-  const referral = await ReferralRepository.findUnique({ referredId: user.id });
-  if (referral && !referral.isActive) {
-    await ReferralRepository.update({ id: referral.id }, { isActive: true });
+  const referral = await ReferralRepository.findUnique({ referredUserId: user.id });
+  if (referral && referral.status !== 'completed') {
+    await ReferralRepository.update({ id: referral.id }, { status: 'completed' });
     await checkAndRewardReferrer(referral.referrerId);
   }
 

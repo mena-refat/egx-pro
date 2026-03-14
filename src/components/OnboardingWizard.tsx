@@ -212,30 +212,45 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
         setFinishError('يجب تسجيل الدخول أولاً');
         return;
       }
+      const payload: Record<string, unknown> = {
+        riskTolerance: mapRiskTolerance(formData.reaction30),
+        investmentHorizon: mapTimelineToYears(formData.timeline || '3_7'),
+        monthlyBudget: mapBudgetToNumber(formData.budgetBand || '1_5k'),
+        shariaMode: formData.shariaMode,
+        interestedSectors: formData.sectors,
+        investorProfile: buildInvestorProfile(),
+        onboardingCompleted: true,
+        isFirstLogin: false,
+      };
+      const hearValue = formData.hearAboutUs?.trim();
+      if (hearValue) payload.hearAboutUs = hearValue;
+
       const res = await fetch('/api/user/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          riskTolerance: mapRiskTolerance(formData.reaction30),
-          investmentHorizon: mapTimelineToYears(formData.timeline || '3_7'),
-          monthlyBudget: mapBudgetToNumber(formData.budgetBand || '1_5k'),
-          shariaMode: formData.shariaMode,
-          interestedSectors: formData.sectors,
-          hearAboutUs: formData.hearAboutUs || null,
-          investorProfile: buildInvestorProfile(),
-          onboardingCompleted: true,
-          isFirstLogin: false,
-        }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         onComplete();
       } else {
         const errBody = await res.text();
-        if (import.meta.env.DEV) console.error('Failed to save onboarding', errBody);
-        setFinishError('فشل حفظ البيانات. حاول مرة أخرى.');
+        let errJson: { error?: string; message?: string; details?: unknown } = {};
+        try {
+          errJson = JSON.parse(errBody) as typeof errJson;
+        } catch {
+          /* غير JSON */
+        }
+        if (import.meta.env.DEV) {
+          console.error('Onboarding save failed', { status: res.status, error: errJson.error, details: errJson.details, raw: errBody });
+        }
+        if (errJson.error === 'VALIDATION_ERROR' && Array.isArray(errJson.details)) {
+          setFinishError('البيانات المرسلة غير صحيحة. حاول مرة أخرى أو أعد تحميل الصفحة.');
+        } else {
+          setFinishError('فشل حفظ البيانات. حاول مرة أخرى.');
+        }
       }
     } catch (err) {
       if (import.meta.env.DEV) console.error('Failed to save onboarding', err);
