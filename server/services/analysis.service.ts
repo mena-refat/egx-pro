@@ -8,7 +8,7 @@ import { logger } from '../lib/logger.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { getLimit } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';
-import { SINGLE_ANALYSIS_SYSTEM, FACTORS_42_FRAMEWORK } from '../lib/analysisPrompts.ts';
+import { SINGLE_ANALYSIS_SYSTEM, COMPARE_SYSTEM, RECOMMENDATIONS_SYSTEM } from '../lib/analysisPrompts.ts';
 import { analysisEngine } from './ai/index.ts';
 import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
 import { withRetry } from '../lib/retry.ts';
@@ -269,11 +269,30 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن 
     const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, 5000);
     const analysisJson = parseAnalysisJson(rawText);
 
+    const analysisObj = analysisJson as Record<string, unknown>;
+    const pt = analysisObj.priceTarget as
+      | { current?: number; base?: number; targetBase?: number; low?: number; high?: number; stopLoss?: number }
+      | undefined;
+    const trackData = {
+      priceAtAnalysis: priceData?.price ?? (pt?.current != null ? Number(pt.current) : undefined),
+      targetPrice:
+        pt?.targetBase != null
+          ? Number(pt.targetBase)
+          : pt?.base != null
+            ? Number(pt.base)
+            : pt?.high != null
+              ? Number(pt.high)
+              : undefined,
+      stopLoss: pt?.stopLoss != null ? Number(pt.stopLoss) : undefined,
+      verdict: (analysisObj.verdictBadge ?? analysisObj.verdict ?? '') as string,
+    };
+
     await consumeQuota(userId, 1);
     const saved = await AnalysisRepository.create({
       userId,
       ticker,
       content: JSON.stringify(analysisJson),
+      ...trackData,
     });
     const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
     return { analysis: analysisJson, id: saved.id, newUnseenAchievements: newAchievements };
@@ -316,30 +335,7 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن 
     const info1 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker1);
     const info2 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker2);
 
-    const system = `أنت محلل مالي خبير متخصص في البورصة المصرية. قارن بين السهمين بعمق باستخدام إطار الـ 42+ عامل.
-استخدم البيانات الحقيقية المقدمة. ابحث عن أي معلومات ناقصة.
-
-${FACTORS_42_FRAMEWORK}
-
-ردك JSON فقط بالشكل:
-{
-  "summary": "ملخص المقارنة في 3-4 جمل",
-  "ticker1": {
-    "name": "اسم الشركة",
-    "verdict": "شراء قوي / شراء / انتظار / بيع / بيع قوي",
-    "score": 0-100,
-    "fundamental": "تقييم أساسي مختصر",
-    "technical": "تقييم فني مختصر",
-    "strengths": ["نقطة قوة 1", "نقطة قوة 2", "..."],
-    "weaknesses": ["نقطة ضعف 1", "..."],
-    "risks": ["خطر 1", "..."]
-  },
-  "ticker2": { "name": "اسم الشركة", "verdict": "...", "score": 0-100, "fundamental": "...", "technical": "...", "strengths": [], "weaknesses": [], "risks": [] },
-  "winner": "TICKER1 أو TICKER2 أو تعادل",
-  "reason": "سبب التفضيل بالتفصيل",
-  "recommendation": "توصية عملية: ماذا يفعل المستثمر؟",
-  "disclaimer": "هذا التحليل للأغراض التعليمية فقط وليس توصية استثمارية مرخصة"
-}`;
+    const system = COMPARE_SYSTEM;
 
     const buildStockBlock = (
       t: string,
@@ -435,43 +431,9 @@ ${buildStockBlock(ticker2, info2, p2, f2, ind2, news2)}
         .join('\n');
     }
 
-    const system = `أنت مستشار استثماري خبير متخصص في البورصة المصرية. قدم توصيات شخصية حقيقية بناءً على ملف المستخدم ومحفظته وحالة السوق.
-استخدم إطار الـ 42+ عامل. ابحث عن أحدث بيانات الأسهم المصرية وحالة السوق.
-
-${FACTORS_42_FRAMEWORK}
-
-قواعد مهمة:
-- التوصيات لازم تكون أسهم مصرية حقيقية (EGX) برموزها الصحيحة
-- ${shariaMode ? 'المستخدم يريد استثمارات متوافقة مع الشريعة فقط — لا بنوك تقليدية ولا شركات خمور' : ''}
-- خذ في الاعتبار تحمل المخاطر والأفق الزمني والميزانية
-- لو المحفظة فيها تركيز عالي على قطاع واحد، انصح بالتنويع
-- لو سهم خاسر أكتر من 15%، ناقش إذا يبيع أو يحتفظ
-
-ردك JSON فقط:
-{
-  "summary": "ملخص شامل للتوصيات في 3-4 جمل",
-  "portfolioHealth": {
-    "score": 0-100,
-    "diversification": "ممتاز/جيد/ضعيف",
-    "riskLevel": "منخفض/متوسط/مرتفع",
-    "issues": ["مشكلة 1", "..."]
-  },
-  "recommendations": [
-    {
-      "ticker": "رمز السهم",
-      "name": "اسم الشركة",
-      "action": "شراء/بيع/احتفاظ/مراقبة/تقليل",
-      "urgency": "فوري/خلال أسبوع/خلال شهر",
-      "reason": "سبب مفصل",
-      "targetPrice": 0,
-      "stopLoss": 0
-    }
-  ],
-  "sectorsToWatch": ["قطاع 1", "قطاع 2"],
-  "portfolioAdvice": "نصيحة عامة للمحفظة مع خطوات عملية",
-  "marketOutlook": "نظرة سريعة على السوق المصري حالياً",
-  "disclaimer": "هذا التحليل للأغراض التعليمية فقط وليس توصية استثمارية مرخصة"
-}`;
+    const systemWithSharia = shariaMode
+      ? RECOMMENDATIONS_SYSTEM.replace('ردك JSON فقط:', 'المستخدم يريد استثمارات متوافقة مع الشريعة فقط — لا بنوك تقليدية ولا شركات خمور ولا تبغ.\n\nردك JSON فقط:')
+      : RECOMMENDATIONS_SYSTEM;
 
     const prompt = `
 ═══ ملف المستخدم ═══
@@ -493,7 +455,7 @@ USD/EGP: ${marketCtx.usdEgp != null ? marketCtx.usdEgp.toFixed(2) : 'ابحث ع
 قدم 5-8 توصيات عملية محددة بأسعار مستهدفة ووقف خسارة.
 `;
 
-    const raw = await runAnalysisEngine(system, prompt, 5000);
+    const raw = await runAnalysisEngine(systemWithSharia, prompt, 5000);
     const recommendations = parseAnalysisJson(raw);
     await consumeQuota(userId, 1);
     const saved = await AnalysisRepository.create({

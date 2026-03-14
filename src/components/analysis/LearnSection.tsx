@@ -1,0 +1,95 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GraduationCap, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
+import type { LearnCard } from '../../types';
+import styles from './LearnSection.module.scss';
+
+function LearnCardItem({ card, index }: { card: LearnCard; index: number }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className={styles.card}
+    >
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className={styles.cardBtn}
+      >
+        <span className={styles.emoji}>{card.emoji || '📚'}</span>
+        <div className={styles.cardBody}>
+          <p className={styles.cardTerm}>{card.term}</p>
+          <p className={styles.cardSimple}>{card.simple}</p>
+        </div>
+        {expanded ? (
+          <ChevronUp className={styles.chevron} aria-hidden />
+        ) : (
+          <ChevronDown className={styles.chevron} aria-hidden />
+        )}
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className={styles.expanded}
+          >
+            <div className={styles.expandedInner}>
+              {card.detail && (
+                <p className={styles.detail}>{card.detail}</p>
+              )}
+              {card.inThisStock && (
+                <div className={styles.inThisBox}>
+                  <Lightbulb className={styles.inThisIcon} aria-hidden />
+                  <p className={styles.inThisText}>
+                    <span className={styles.inThisLabel}>في السهم ده: </span>
+                    {card.inThisStock}
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+export function LearnSection({ cards }: { cards: LearnCard[] }) {
+  const [showAll, setShowAll] = useState(false);
+
+  if (!cards || cards.length === 0) return null;
+
+  const displayed = showAll ? cards : cards.slice(0, 2);
+
+  return (
+    <div className={styles.wrap}>
+      <div className={styles.header}>
+        <h4 className={styles.title}>
+          <GraduationCap className={styles.titleIcon} aria-hidden />
+          اتعلّم — إيه المصطلحات دي؟
+        </h4>
+        {cards.length > 2 && (
+          <button
+            type="button"
+            onClick={() => setShowAll(!showAll)}
+            className={styles.toggleBtn}
+          >
+            {showAll ? 'أقل' : `عرض الكل (${cards.length})`}
+          </button>
+        )}
+      </div>
+
+      <div className={styles.grid}>
+        {displayed.map((card, i) => (
+          <LearnCardItem key={card.term || i} card={card} index={i} />
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -330,10 +330,22 @@ model Analysis {
   content   String
   createdAt DateTime @default(now())
 
+  priceAtAnalysis  Float?
+  targetPrice      Float?
+  stopLoss         Float?
+  verdict          String?
+  priceAfter7d     Float?
+  priceAfter30d    Float?
+  accuracyScore    Float?
+  accuracyNote     String?
+  checkedAt        DateTime?
+
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, ticker])
+  @@index([checkedAt])
+  @@index([createdAt])
 }
 
 model Referral {

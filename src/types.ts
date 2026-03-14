@@ -68,44 +68,139 @@ export interface Goal {
   type: string;
 }
 
+export interface LearnCard {
+  term: string;
+  emoji?: string;
+  simple: string;
+  detail?: string;
+  inThisStock?: string;
+}
+
 export interface AnalysisResult {
   summary: string;
+  verdictBadge?: string;
+  confidenceScore?: number;
+  confidenceReason?: string;
+  priceTarget?: {
+    current: number;
+    targetLow: number;
+    targetBase: number;
+    targetHigh: number;
+    stopLoss: number;
+    potentialUpside?: string;
+    potentialDownside?: string;
+  };
   fundamental?: {
-    outlook: string;
-    ratios: string;
-    verdict: string;
+    score: number;
+    highlights: string[];
+    keyRatios?: Record<string, { value: string; explain: string }>;
   };
   technical?: {
-    signal: string;
-    indicators: string;
-    levels: string;
+    score: number;
+    trend: string;
+    highlights: string[];
+    keyIndicators?: Record<string, { value: string; explain: string }>;
+    support?: number;
+    resistance?: number;
   };
-  sentiment?: string;
-  verdict: string;
-  priceTarget?: {
-    low: number;
-    base: number;
-    high: number;
+  shortTerm?: {
+    outlook: string;
+    title: string;
+    summary: string;
+    reasons: string[];
+    action: string;
   };
+  mediumTerm?: {
+    outlook: string;
+    title: string;
+    summary: string;
+    reasons: string[];
+    action: string;
+  };
+  longTerm?: {
+    outlook: string;
+    title: string;
+    summary: string;
+    reasons: string[];
+    action: string;
+  };
+  sentiment?:
+    | string
+    | {
+        overall: string;
+        smartMoney?: string;
+        news?: string;
+        explain: string;
+      };
+  risks?: Array<{ risk: string; severity: string; explain: string }>;
+  learnCards?: LearnCard[];
+  suitability?: string;
+  disclaimer: string;
+  verdict?: string;
   shortTermOutlook?: string;
   mediumTermOutlook?: string;
   longTermOutlook?: string;
-  suitability?: string;
-  disclaimer: string;
 }
 
 export interface CompareResult {
   summary: string;
-  ticker1: { verdict: string; strengths: string[]; weaknesses: string[] };
-  ticker2: { verdict: string; strengths: string[]; weaknesses: string[] };
   winner: string;
-  reason: string;
+  winnerReason?: string;
+  stock1?: {
+    ticker: string;
+    name: string;
+    score: number;
+    verdictBadge: string;
+    fundamental: { score: number; summary: string };
+    technical: { score: number; summary: string };
+    strengths: string[];
+    weaknesses: string[];
+    risks: string[];
+    priceTarget?: { target: number; stopLoss: number };
+  };
+  stock2?: {
+    ticker: string;
+    name: string;
+    score: number;
+    verdictBadge: string;
+    fundamental: { score: number; summary: string };
+    technical: { score: number; summary: string };
+    strengths: string[];
+    weaknesses: string[];
+    risks: string[];
+    priceTarget?: { target: number; stopLoss: number };
+  };
+  ticker1?: CompareResult['stock1'];
+  ticker2?: CompareResult['stock2'];
+  reason?: string;
+  recommendation: string;
+  learnCards?: LearnCard[];
   disclaimer?: string;
 }
 
 export interface RecommendationsResult {
   summary: string;
-  recommendations: Array<{ ticker: string; action: string; reason: string }>;
+  portfolioHealth?: {
+    score: number;
+    grade?: string;
+    diversification: string;
+    riskLevel: string;
+    issues: string[];
+  };
+  recommendations: Array<{
+    ticker: string;
+    name?: string;
+    action: string;
+    urgency?: string;
+    reason: string;
+    targetPrice?: number;
+    stopLoss?: number;
+    allocation?: string;
+  }>;
+  actionPlan?: { month1: string; month2: string; month3: string };
+  sectorsToWatch?: string[];
   portfolioAdvice?: string;
+  marketOutlook?: string;
+  learnCards?: LearnCard[];
   disclaimer?: string;
 }

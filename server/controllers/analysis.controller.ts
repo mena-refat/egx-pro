@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { AnalysisService } from '../services/analysis.service.ts';
+import { AnalysisRepository } from '../repositories/analysis.repository.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 
@@ -46,5 +47,11 @@ export const AnalysisController = {
     }
     const result = await AnalysisService.recommendations(userId, req.body);
     sendSuccess(res, { recommendations: result.recommendations, id: result.id });
+  }),
+
+  accuracy: run(async (_req, res) => {
+    const stats = await AnalysisRepository.getAccuracyStats();
+    const recentChecked = await AnalysisRepository.findRecentChecked(10);
+    sendSuccess(res, { stats, recentChecked });
   }),
 };

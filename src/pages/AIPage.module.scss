@@ -113,3 +113,65 @@
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+.trackRecord {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.trackRecordTitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.trackRecordTitleIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--brand);
+}
+
+.trackRecordGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  text-align: center;
+}
+
+.trackRecordStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.trackRecordValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.trackRecordValueBrand {
+  color: var(--brand);
+}
+
+.trackRecordValueSuccess {
+  color: var(--success);
+}
+
+.trackRecordLabel {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.trackRecordNote {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 0.75rem;
+  text-align: center;
+}

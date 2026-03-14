@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { useProfileGuard } from '../hooks/useProfileGuard';
 import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
 import type { RecommendationsResult } from '../types';
+import { LearnSection } from '../components/analysis/LearnSection';
 import styles from './AIRecommendationsPage.module.scss';
 
 export default function AIRecommendationsPage() {
@@ -148,6 +149,9 @@ export default function AIRecommendationsPage() {
                 </li>
               ))}
             </ul>
+          )}
+          {result.learnCards && result.learnCards.length > 0 && (
+            <LearnSection cards={result.learnCards} />
           )}
           {result.disclaimer && (
             <p className={styles.disclaimer}>{result.disclaimer}</p>

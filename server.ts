@@ -45,6 +45,7 @@ import { redis, setCache } from './server/lib/redis.ts';
 import { EGX_TICKERS } from './server/lib/egxTickers.ts';
 import { createNotification } from './server/lib/createNotification.ts';
 import { runResolvePredictions } from './server/jobs/resolve-predictions.ts';
+import { runTrackRecordCheck } from './server/jobs/track-record.ts';
 
 async function startServer() {
   if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
@@ -480,6 +481,14 @@ async function startServer() {
   }
   const resolveCron = cron.schedule('30 15 * * 0-4', runResolvePredictionsJob, { timezone: 'Africa/Cairo' });
 
+  const trackRecordCron = cron.schedule('0 16 * * 0-4', async () => {
+    try {
+      await runTrackRecordCheck();
+    } catch (err) {
+      logger.error('Track record job error', { error: err });
+    }
+  }, { timezone: 'Africa/Cairo' });
+
   const shutdown = (signal: string) => {
     logger.info(`${signal} received — shutting down gracefully`);
     marketDataService.stopPolling();
@@ -487,6 +496,7 @@ async function startServer() {
     archiveCron.stop();
     aiResetCron.stop();
     resolveCron.stop();
+    trackRecordCron.stop();
     clearInterval(pricesInterval);
     server.close(() => {
       logger.info('HTTP server closed');

@@ -9,6 +9,7 @@ import { getStockInfo, searchStocks } from '../lib/egxStocks';
 import { useProfileGuard } from '../hooks/useProfileGuard';
 import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
 import type { CompareResult } from '../types';
+import { LearnSection } from '../components/analysis/LearnSection';
 import styles from './AIComparePage.module.scss';
 
 export default function AIComparePage() {
@@ -135,71 +136,79 @@ export default function AIComparePage() {
 
       {error && <p className={styles.error} role="alert">{error}</p>}
 
-      {result && (
+      {result && (() => {
+        const s1 = result.stock1 ?? result.ticker1;
+        const s2 = result.stock2 ?? result.ticker2;
+        const fund = (f: CompareResult['stock1']['fundamental'] | string | undefined) =>
+          typeof f === 'string' ? f : (f as { summary?: string })?.summary ?? '';
+        const tech = (t: CompareResult['stock1']['technical'] | string | undefined) =>
+          typeof t === 'string' ? t : (t as { summary?: string })?.summary ?? '';
+        const verdict = (s: typeof s1) => (s?.verdictBadge ?? (s as { verdict?: string })?.verdict) ?? '';
+        return (
         <div className={styles.result}>
           <p className={styles.summary}>{result.summary}</p>
           <div className={styles.cards}>
             <div className={styles.card}>
-              <h3 className={styles.cardTitle}>{result.ticker1?.name ?? ticker1.trim().toUpperCase()}</h3>
-              {typeof result.ticker1?.score === 'number' && (
-                <div className={styles.scoreBar} role="progressbar" aria-valuenow={result.ticker1.score} aria-valuemin={0} aria-valuemax={100}>
-                  <div className={styles.scoreFill} style={{ width: `${result.ticker1.score}%` }} />
-                  <span className={styles.scoreLabel}>{result.ticker1.score}/100</span>
+              <h3 className={styles.cardTitle}>{s1?.name ?? ticker1.trim().toUpperCase()}</h3>
+              {typeof s1?.score === 'number' && (
+                <div className={styles.scoreBar} role="progressbar" aria-valuenow={s1.score} aria-valuemin={0} aria-valuemax={100}>
+                  <div className={styles.scoreFill} style={{ width: `${s1.score}%` }} />
+                  <span className={styles.scoreLabel}>{s1.score}/100</span>
                 </div>
               )}
-              <p className={styles.verdict}>{result.ticker1?.verdict}</p>
-              {result.ticker1?.fundamental && <p className={styles.fundamental}>{result.ticker1.fundamental}</p>}
-              {result.ticker1?.technical && <p className={styles.technical}>{result.ticker1.technical}</p>}
-              {result.ticker1?.strengths?.length > 0 && (
+              <p className={styles.verdict}>{verdict(s1)}</p>
+              {fund(s1?.fundamental) && <p className={styles.fundamental}>{fund(s1?.fundamental)}</p>}
+              {tech(s1?.technical) && <p className={styles.technical}>{tech(s1?.technical)}</p>}
+              {s1?.strengths?.length > 0 && (
                 <ul className={styles.list}>
-                  {result.ticker1.strengths.map((s, i) => (
+                  {s1.strengths.map((s, i) => (
                     <li key={i} className={styles.strength}>{s}</li>
                   ))}
                 </ul>
               )}
-              {result.ticker1?.weaknesses?.length > 0 && (
+              {s1?.weaknesses?.length > 0 && (
                 <ul className={styles.list}>
-                  {result.ticker1.weaknesses.map((w, i) => (
+                  {s1.weaknesses.map((w, i) => (
                     <li key={i} className={styles.weakness}>{w}</li>
                   ))}
                 </ul>
               )}
-              {result.ticker1?.risks?.length > 0 && (
+              {s1?.risks?.length > 0 && (
                 <ul className={styles.list} aria-label={t('ai.risks', { defaultValue: 'المخاطر' })}>
-                  {result.ticker1.risks.map((r, i) => (
+                  {s1.risks.map((r, i) => (
                     <li key={i} className={styles.risk}>{r}</li>
                   ))}
                 </ul>
               )}
             </div>
             <div className={styles.card}>
-              <h3 className={styles.cardTitle}>{result.ticker2?.name ?? ticker2.trim().toUpperCase()}</h3>
-              {typeof result.ticker2?.score === 'number' && (
-                <div className={styles.scoreBar} role="progressbar" aria-valuenow={result.ticker2.score} aria-valuemin={0} aria-valuemax={100}>
-                  <div className={styles.scoreFill} style={{ width: `${result.ticker2.score}%` }} />
-                  <span className={styles.scoreLabel}>{result.ticker2.score}/100</span>
+              <h3 className={styles.cardTitle}>{s2?.name ?? ticker2.trim().toUpperCase()}</h3>
+              {typeof s2?.score === 'number' && (
+                <div className={styles.scoreBar} role="progressbar" aria-valuenow={s2.score} aria-valuemin={0} aria-valuemax={100}>
+                  <div className={styles.scoreFill} style={{ width: `${s2.score}%` }} />
+                  <span className={styles.scoreLabel}>{s2.score}/100</span>
                 </div>
               )}
-              <p className={styles.verdict}>{result.ticker2?.verdict}</p>
-              {result.ticker2?.fundamental && <p className={styles.fundamental}>{result.ticker2.fundamental}</p>}
-              {result.ticker2?.technical && <p className={styles.technical}>{result.ticker2.technical}</p>}
-              {result.ticker2?.strengths?.length > 0 && (
+              <p className={styles.verdict}>{verdict(s2)}</p>
+              {fund(s2?.fundamental) && <p className={styles.fundamental}>{fund(s2?.fundamental)}</p>}
+              {tech(s2?.technical) && <p className={styles.technical}>{tech(s2?.technical)}</p>}
+              {s2?.strengths?.length > 0 && (
                 <ul className={styles.list}>
-                  {result.ticker2.strengths.map((s, i) => (
+                  {s2.strengths.map((s, i) => (
                     <li key={i} className={styles.strength}>{s}</li>
                   ))}
                 </ul>
               )}
-              {result.ticker2?.weaknesses?.length > 0 && (
+              {s2?.weaknesses?.length > 0 && (
                 <ul className={styles.list}>
-                  {result.ticker2.weaknesses.map((w, i) => (
+                  {s2.weaknesses.map((w, i) => (
                     <li key={i} className={styles.weakness}>{w}</li>
                   ))}
                 </ul>
               )}
-              {result.ticker2?.risks?.length > 0 && (
+              {s2?.risks?.length > 0 && (
                 <ul className={styles.list} aria-label={t('ai.risks', { defaultValue: 'المخاطر' })}>
-                  {result.ticker2.risks.map((r, i) => (
+                  {s2.risks.map((r, i) => (
                     <li key={i} className={styles.risk}>{r}</li>
                   ))}
                 </ul>
@@ -209,7 +218,7 @@ export default function AIComparePage() {
           <p className={styles.winner}>
             {t('ai.winner')}: <strong>{result.winner}</strong>
           </p>
-          <p className={styles.reason}>{result.reason}</p>
+          <p className={styles.reason}>{result.winnerReason ?? result.reason ?? ''}</p>
           {result.recommendation && (
             <div className={styles.recommendationBox} role="status">
               {result.recommendation}
@@ -218,8 +227,12 @@ export default function AIComparePage() {
           {result.disclaimer && (
             <p className={styles.disclaimer}>{result.disclaimer}</p>
           )}
+          {result.learnCards && result.learnCards.length > 0 && (
+            <LearnSection cards={result.learnCards} />
+          )}
         </div>
-      )}
+        );
+      })() }
 
       <ProfileGuardModal {...profileModalProps} />
 
