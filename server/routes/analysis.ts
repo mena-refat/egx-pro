@@ -1,7 +1,5 @@
 import { Router } from 'express';
-import { rateLimit } from 'express-rate-limit';
-import type { AuthRequest } from './types.ts';
-import { ONE_HOUR_MS } from '../lib/constants.ts';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { authenticate } from '../middleware/auth.middleware.ts';
 import { AnalysisController } from '../controllers/analysis.controller.ts';
 import { validate } from '../middleware/validate.middleware.ts';
@@ -66,19 +64,10 @@ router.get('/test-connection', async (_req, res) => {
 });
 
 const analysisLimiter = rateLimit({
-  windowMs: ONE_HOUR_MS,
-  max: 20,
+  windowMs: 60 * 1000,
+  max: 30,
   message: { error: 'RATE_LIMIT_EXCEEDED' },
-  keyGenerator: (req, res) => {
-    const userId = (req as AuthRequest).user?.id;
-    if (userId) return userId;
-    return (req.ip ?? 'unknown').replace(/^::ffff:/, '');
-  },
-  validate: {
-    xForwardedForHeader: false,
-    trustProxy: false,
-    ip: false,
-  },
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? 'unknown'),
 });
 
 router.get('/accuracy', AnalysisController.accuracy);
