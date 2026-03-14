@@ -63,9 +63,10 @@ router.get('/test-connection', async (_req, res) => {
   res.json({ ok: results.some((r) => r.status.startsWith('✅')), results });
 });
 
+// ipKeyGenerator يُستخدم لمعالجة IPv6 بشكل صحيح (يمنع مشاكل الإقلاع)
 const analysisLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30,
+  max: 20,
   message: { error: 'RATE_LIMIT_EXCEEDED' },
   keyGenerator: (req) => ipKeyGenerator(req.ip ?? 'unknown'),
 });
