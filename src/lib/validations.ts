@@ -144,7 +144,10 @@ export const addHoldingSchema = z.object({
     .min(1, PORTFOLIO_QUANTITY_ERROR_KEYS.quantityMin)
     .max(1_000_000, PORTFOLIO_QUANTITY_ERROR_KEYS.quantityMax),
   purchasePrice: z.coerce.number().positive('Price must be positive'),
-  purchaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
+  purchaseDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format')
+    .refine((dateStr) => dateStr <= new Date().toISOString().slice(0, 10), { message: 'تاريخ الشراء لا يمكن أن يكون في المستقبل' }),
 });
 
 export const watchlistTickerSchema = z.object({

@@ -425,7 +425,7 @@ export default function PortfolioTracker() {
                     inputClassName="input-base"
                   />
                 </div>
-                <Input label={isRTL ? 'تاريخ الشراء' : 'Buy Date'} type="date" required value={newHolding.buyDate} onChange={e => setNewHolding({ ...newHolding, buyDate: e.target.value })} inputClassName="input-base" />
+                <Input label={isRTL ? 'تاريخ الشراء' : 'Buy Date'} type="date" required value={newHolding.buyDate} max={new Date().toISOString().slice(0, 10)} onChange={e => setNewHolding({ ...newHolding, buyDate: e.target.value })} inputClassName="input-base" />
                 
                 {addError && (
                   <div className="p-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-xl text-[var(--danger)] text-sm">
