@@ -17,7 +17,7 @@ import {
   Target,
 } from 'lucide-react';
 import { Skeleton } from './ui/Skeleton';
-const StockPriceChart = lazy(() => import('./features/stocks/StockPriceChart').then((m) => ({ default: m.StockPriceChart })));
+const TradingViewChart = lazy(() => import('./features/stocks/TradingViewChart').then((m) => ({ default: m.TradingViewChart })));
 import { getStockName, getStockInfo } from '../lib/egxStocks';
 import { getSector } from '../lib/egxIndicesSectors';
 import { Button } from './ui/Button';
@@ -27,6 +27,7 @@ import { AnalysisForm } from './analysis/AnalysisForm';
 import { AnalysisResult } from './analysis/AnalysisResult';
 import { formatNum, formatBig } from './analysis/analysisUtils';
 import type { TabId, ChartRange } from '../hooks/useStockAnalysis';
+import styles from './StockAnalysis.module.scss';
 
 export interface StockAnalysisProps {
   stock: Stock;
@@ -212,23 +213,32 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       {/* Tab: Details */}
       {activeTab === 'details' && (
         <div className="space-y-6">
-          {/* Chart */}
-          <section>
-            <div className="flex gap-2 mb-2 overflow-x-auto">
-              {CHART_RANGES.map((r) => (
-                <button 
-                  key={r.id}
-                  type="button"
-                  onClick={() => setChartRange(r.id)}
-                  className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium ${chartRange === r.id ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]'}`}
-                >
-                  {t(r.labelKey)}
-                </button>
-              ))}
+          {/* Chart — TradingView */}
+          <section className={styles.chartSection}>
+            <div className={styles.chartSectionHeader}>
+              <span className={styles.chartSectionTitle}>{t('stockDetail.chartTitle', { defaultValue: 'الرسم البياني' })}</span>
+              <div className={styles.chartSectionRanges}>
+                {CHART_RANGES.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setChartRange(r.id)}
+                    className={`${styles.chartRangeBtn} ${chartRange === r.id ? styles.chartRangeBtnActive : ''}`}
+                  >
+                    {t(r.labelKey)}
+                  </button>
+                ))}
               </div>
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden" style={{ height: 220 }}>
-              <Suspense fallback={<Skeleton height={220} className="w-full" />}>
-                <StockPriceChart data={api.history} height={220} lineColor="#8b5cf6" />
+            </div>
+            <div className={styles.chartSectionBox}>
+              <Suspense fallback={<Skeleton height={440} className={styles.chartSkeleton} />}>
+                <TradingViewChart
+                  symbol={stock.ticker}
+                  height={440}
+                  theme={typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
+                  locale={lang}
+                  interval={chartRange === '1d' ? '60' : chartRange === '1w' ? 'W' : chartRange === '1mo' ? 'D' : chartRange === '6mo' || chartRange === '1y' || chartRange === '5y' ? 'D' : 'D'}
+                />
               </Suspense>
             </div>
           </section>
