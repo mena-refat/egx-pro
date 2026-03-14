@@ -10,8 +10,13 @@ import { tickerParamSchema } from '../schemas/params.ts';
 
 const router = Router();
 
-// ══ تشخيص اتصال Claude — بدون authentication ══
+// ══ تشخيص اتصال Claude — غير متاح في production (لا تسريب API key) ══
 router.get('/test-connection', async (_req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    res.status(404).json({ error: 'NOT_FOUND' });
+    return;
+  }
+
   const rawKey = process.env.CLAUDE_API_KEY;
   const apiKey = typeof rawKey === 'string' ? rawKey.trim() : '';
   if (!apiKey) {
@@ -57,11 +62,7 @@ router.get('/test-connection', async (_req, res) => {
     }
   }
 
-  res.json({
-    ok: results.some((r) => r.status.startsWith('✅')),
-    results,
-    keyPrefix: apiKey.slice(0, 12) + '...',
-  });
+  res.json({ ok: results.some((r) => r.status.startsWith('✅')), results });
 });
 
 const analysisLimiter = rateLimit({

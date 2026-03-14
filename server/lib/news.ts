@@ -18,7 +18,8 @@ export async function getStockNews(companyName: string) {
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`NewsAPI error: ${response.statusText}`);
+      logger.warn('NewsAPI non-ok response', { status: response.status });
+      return [];
     }
 
     const data = await response.json();

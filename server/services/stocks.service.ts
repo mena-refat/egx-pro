@@ -1,5 +1,6 @@
 import { getStockHistory, getFinancials, searchEgxStocks } from '../lib/stockData.ts';
 import { getStockNews } from '../lib/news.ts';
+import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
 import { EGX_TICKERS } from '../lib/egxTickers.ts';
 import { StockRepository } from '../repositories/stock.repository.ts';
 import type { GicsSector } from '@prisma/client';
@@ -103,6 +104,7 @@ export const StocksService = {
   },
 
   getNews(ticker: string) {
-    return getStockNews(ticker);
+    const stockInfo = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker.toUpperCase());
+    return getStockNews(stockInfo?.nameAr ?? ticker);
   },
 };

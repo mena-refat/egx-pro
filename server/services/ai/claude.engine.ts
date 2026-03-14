@@ -9,7 +9,7 @@ export class ClaudeAnalysisEngine implements IAnalysisEngine {
     const apiKey = typeof raw === 'string' ? raw.trim() : '';
     if (!apiKey) throw new Error('CLAUDE_API_KEY is not set');
 
-    const models = ['claude-3-5-sonnet-20241022', 'claude-sonnet-4-6'];
+    const models = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022'];
     let lastStatus = 0;
     let lastErrText = '';
 
