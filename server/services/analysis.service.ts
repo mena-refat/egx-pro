@@ -1,9 +1,9 @@
 import { getStockHistory, getFinancials } from '../lib/stockData.ts';
 import { getStockNews } from '../lib/news.ts';
 import { marketDataService } from './market-data/market-data.service.ts';
-import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { PortfolioRepository } from '../repositories/portfolio.repository.ts';
+import { AnalysisRepository } from '../repositories/analysis.repository.ts';
 import { logger } from '../lib/logger.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { getLimit } from '../lib/plan.ts';
@@ -162,8 +162,10 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن 
     const analysisJson = parseAnalysisJson(rawText);
 
     await consumeQuota(userId, 1);
-    const saved = await prisma.analysis.create({
-      data: { userId, ticker, content: JSON.stringify(analysisJson) },
+    const saved = await AnalysisRepository.create({
+      userId,
+      ticker,
+      content: JSON.stringify(analysisJson),
     });
     const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
     return { analysis: analysisJson, id: saved.id, newUnseenAchievements: newAchievements };
@@ -225,12 +227,10 @@ P/E: ${f2.pe ?? '—'}, ROE: ${f2.roe != null ? (f2.roe * 100).toFixed(2) : '—
     const raw = await runAnalysisEngine(system, prompt, 1500);
     const comparison = parseAnalysisJson(raw);
     await consumeQuota(userId, 2);
-    const saved = await prisma.analysis.create({
-      data: {
-        userId,
-        ticker: `${ticker1}|${ticker2}`,
-        content: JSON.stringify(comparison),
-      },
+    const saved = await AnalysisRepository.create({
+      userId,
+      ticker: `${ticker1}|${ticker2}`,
+      content: JSON.stringify(comparison),
     });
     return { comparison, id: saved.id };
   },
@@ -243,13 +243,14 @@ P/E: ${f2.pe ?? '—'}, ROE: ${f2.roe != null ? (f2.roe * 100).toFixed(2) : '—
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
     await ensureQuota(userId, 1);
 
-    const [[portfolioList], profile] = await Promise.all([
+    const [portfolioResult, profile] = await Promise.all([
       PortfolioRepository.findByUser(userId),
-      prisma.user.findUnique({
+      UserRepository.findUnique({
         where: { id: userId },
         select: { riskTolerance: true, investmentHorizon: true, interestedSectors: true },
       }),
     ]);
+    const portfolioList = (portfolioResult as [Array<{ ticker: string; shares: number; avgPrice: number }>, number])[0] ?? [];
     const risk = _body?.riskTolerance ?? profile?.riskTolerance ?? 'moderate';
     const horizon = _body?.investmentHorizon ?? profile?.investmentHorizon ?? 5;
     let sectors: string[] = [];
@@ -258,7 +259,7 @@ P/E: ${f2.pe ?? '—'}, ROE: ${f2.roe != null ? (f2.roe * 100).toFixed(2) : '—
     } catch {
       // ignore invalid JSON
     }
-    const tickers = (portfolioList ?? []).map((h: { ticker: string }) => h.ticker);
+    const tickers = portfolioList.map((h) => h.ticker);
 
     const system = `أنت مستشار استثماري. بناءً على محفظة المستخدم وملفه (تحمل المخاطر، الأفق الزمني، القطاعات)، قدم توصيات شخصية قصيرة.
 ردك JSON فقط:
@@ -285,12 +286,10 @@ P/E: ${f2.pe ?? '—'}, ROE: ${f2.roe != null ? (f2.roe * 100).toFixed(2) : '—
     const raw = await runAnalysisEngine(system, prompt, 1500);
     const recommendations = parseAnalysisJson(raw);
     await consumeQuota(userId, 1);
-    const saved = await prisma.analysis.create({
-      data: {
-        userId,
-        ticker: '_recommendations',
-        content: JSON.stringify(recommendations),
-      },
+    const saved = await AnalysisRepository.create({
+      userId,
+      ticker: '_recommendations',
+      content: JSON.stringify(recommendations),
     });
     return { recommendations, id: saved.id };
   },

@@ -1,5 +1,7 @@
-import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
+import { FollowRepository } from '../repositories/follow.repository.ts';
+import { PortfolioRepository } from '../repositories/portfolio.repository.ts';
+import { WatchlistRepository } from '../repositories/watchlist.repository.ts';
 import type { AuthUser } from '../routes/types.ts';
 import { AppError } from '../lib/errors.ts';
 import { createNotification } from '../lib/createNotification.ts';
@@ -13,9 +15,7 @@ export const SocialService = {
     if (!target) throw new AppError('NOT_FOUND', 404);
     if (target.id === currentUserId) throw new AppError('CANNOT_FOLLOW_SELF', 400);
 
-    const existing = await prisma.follow.findUnique({
-      where: { followerId_followingId: { followerId: currentUserId, followingId: target.id } },
-    });
+    const existing = await FollowRepository.findByPair(currentUserId, target.id);
 
     if (existing?.status === 'BLOCKED') {
       throw new AppError('FOLLOW_BLOCKED', 403);
@@ -23,11 +23,7 @@ export const SocialService = {
 
     const status = target.isPrivate ? 'PENDING' : 'ACCEPTED';
 
-    const follow = await prisma.follow.upsert({
-      where: { followerId_followingId: { followerId: currentUserId, followingId: target.id } },
-      update: { status },
-      create: { followerId: currentUserId, followingId: target.id, status },
-    });
+    const follow = await FollowRepository.upsert(currentUserId, target.id, status);
 
     if (status === 'ACCEPTED') {
       const follower = await UserRepository.findUnique({
@@ -66,19 +62,13 @@ export const SocialService = {
       select: { id: true },
     });
     if (!target) return;
-    await prisma.follow.deleteMany({
-      where: { followerId: currentUserId, followingId: target.id },
-    });
+    await FollowRepository.deleteByPair(currentUserId, target.id);
   },
 
   async getFollowers(currentUserId: string) {
-    const rows = await prisma.follow.findMany({
-      where: { followingId: currentUserId, status: 'ACCEPTED' },
-      include: {
-        follower: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const rows = await FollowRepository.findFollowers(currentUserId, {
+      include: { follower: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } } },
+    } as { include: object }) as Array<{ follower: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
     return rows.map((row) => ({
       id: row.follower.id,
       username: row.follower.username,
@@ -89,13 +79,9 @@ export const SocialService = {
   },
 
   async getFollowing(currentUserId: string) {
-    const rows = await prisma.follow.findMany({
-      where: { followerId: currentUserId, status: 'ACCEPTED' },
-      include: {
-        following: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const rows = await FollowRepository.findFollowing(currentUserId, {
+      include: { following: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } } },
+    } as { include: object }) as Array<{ following: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
     return rows.map((row) => ({
       id: row.following.id,
       username: row.following.username,
@@ -113,28 +99,18 @@ export const SocialService = {
     if (!profile) throw new AppError('NOT_FOUND', 404);
     const isOwner = viewerId === profile.id;
     if (profile.isPrivate && !isOwner) {
-      const rel = await prisma.follow.findUnique({
-        where: { followerId_followingId: { followerId: viewerId, followingId: profile.id } },
-      });
+      const rel = await FollowRepository.findByPair(viewerId, profile.id);
       if (rel?.status !== 'ACCEPTED') throw new AppError('FORBIDDEN', 403);
     }
     const skip = Math.max(0, (page - 1) * limit);
     const take = limit + 1;
-    const rows = await prisma.follow.findMany({
-      where: { followingId: profile.id, status: 'ACCEPTED' },
-      include: {
-        follower: { select: { id: true, username: true, createdAt: true, isPrivate: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take,
-    });
+    const rows = await FollowRepository.findMany(
+      { followingId: profile.id, status: 'ACCEPTED' },
+      { include: { follower: { select: { id: true, username: true, createdAt: true, isPrivate: true } } }, orderBy: { createdAt: 'desc' }, skip, take }
+    ) as Array<{ follower: { id: string; username: string | null; createdAt: Date; isPrivate: boolean }; createdAt: Date }>;
     const followerIds = rows.map((r) => r.follower.id).filter(Boolean);
     const viewerFollows = viewerId
-      ? await prisma.follow.findMany({
-          where: { followerId: viewerId, followingId: { in: followerIds } },
-          select: { followingId: true, status: true },
-        })
+      ? await FollowRepository.findFollowStatuses(viewerId, followerIds)
       : [];
     const statusByTarget = new Map<string, 'none' | 'pending' | 'following'>(
       viewerFollows.map((r) => [
@@ -160,28 +136,18 @@ export const SocialService = {
     if (!profile) throw new AppError('NOT_FOUND', 404);
     const isOwner = viewerId === profile.id;
     if (profile.isPrivate && !isOwner) {
-      const rel = await prisma.follow.findUnique({
-        where: { followerId_followingId: { followerId: viewerId, followingId: profile.id } },
-      });
+      const rel = await FollowRepository.findByPair(viewerId, profile.id);
       if (rel?.status !== 'ACCEPTED') throw new AppError('FORBIDDEN', 403);
     }
     const skip = Math.max(0, (page - 1) * limit);
     const take = limit + 1;
-    const rows = await prisma.follow.findMany({
-      where: { followerId: profile.id, status: 'ACCEPTED' },
-      include: {
-        following: { select: { id: true, username: true, createdAt: true, isPrivate: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take,
-    });
+    const rows = await FollowRepository.findMany(
+      { followerId: profile.id, status: 'ACCEPTED' },
+      { include: { following: { select: { id: true, username: true, createdAt: true, isPrivate: true } } }, orderBy: { createdAt: 'desc' }, skip, take }
+    ) as Array<{ following: { id: string; username: string | null; createdAt: Date; isPrivate: boolean }; createdAt: Date }>;
     const followingIds = rows.map((r) => r.following.id).filter(Boolean);
     const viewerFollows = viewerId
-      ? await prisma.follow.findMany({
-          where: { followerId: viewerId, followingId: { in: followingIds } },
-          select: { followingId: true, status: true },
-        })
+      ? await FollowRepository.findFollowStatuses(viewerId, followingIds)
       : [];
     const statusByTarget = new Map<string, 'none' | 'pending' | 'following'>(
       viewerFollows.map((r) => [
@@ -200,13 +166,9 @@ export const SocialService = {
   },
 
   async getRequests(currentUserId: string) {
-    const rows = await prisma.follow.findMany({
-      where: { followingId: currentUserId, status: 'PENDING' },
-      include: {
-        follower: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const rows = await FollowRepository.findPending(currentUserId, {
+      include: { follower: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } } },
+    } as { include: object }) as Array<{ follower: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
     return rows.map((row) => ({
       id: row.follower.id,
       username: row.follower.username,
@@ -217,10 +179,7 @@ export const SocialService = {
   },
 
   async acceptRequest(currentUserId: string, followerId: string) {
-    const updated = await prisma.follow.updateMany({
-      where: { followerId, followingId: currentUserId, status: 'PENDING' },
-      data: { status: 'ACCEPTED' },
-    });
+    const updated = await FollowRepository.acceptPending(followerId, currentUserId);
     if (updated.count === 0) {
       throw new AppError('NOT_FOUND', 404);
     }
@@ -239,9 +198,7 @@ export const SocialService = {
   },
 
   async declineRequest(currentUserId: string, followerId: string) {
-    await prisma.follow.deleteMany({
-      where: { followerId, followingId: currentUserId, status: 'PENDING' },
-    });
+    await FollowRepository.declinePending(followerId, currentUserId);
   },
 
   async getPublicProfile(viewer: AuthUser | undefined, username: string) {
@@ -258,8 +215,8 @@ export const SocialService = {
     if (!target) throw new AppError('NOT_FOUND', 404);
 
     const [followersCount, followingCount] = await Promise.all([
-      prisma.follow.count({ where: { followingId: target.id, status: 'ACCEPTED' } }),
-      prisma.follow.count({ where: { followerId: target.id, status: 'ACCEPTED' } }),
+      FollowRepository.countFollowers(target.id),
+      FollowRepository.countFollowing(target.id),
     ]);
 
     const viewerId = viewer?.id;
@@ -268,9 +225,7 @@ export const SocialService = {
     let myFollowStatus: 'none' | 'pending' | 'following' = 'none';
 
     if (viewerId && !isOwner) {
-      const rel = await prisma.follow.findUnique({
-        where: { followerId_followingId: { followerId: viewerId, followingId: target.id } },
-      });
+      const rel = await FollowRepository.findByPair(viewerId, target.id);
       isAcceptedFollower = rel?.status === 'ACCEPTED';
       if (rel?.status === 'ACCEPTED') myFollowStatus = 'following';
       else if (rel?.status === 'PENDING') myFollowStatus = 'pending';
@@ -289,18 +244,14 @@ export const SocialService = {
       return { ...publicMeta, isPrivate: true };
     }
 
-    const [holdings, watchlist] = await Promise.all([
-      target.showPortfolio
-        ? prisma.portfolio.findMany({
-            where: { userId: target.id },
-            select: { ticker: true, shares: true, avgPrice: true },
-          })
-        : Promise.resolve([]),
-      prisma.watchlist.findMany({
-        where: { userId: target.id },
-        select: { ticker: true },
-      }),
+    const [portfolioResult, watchlistList] = await Promise.all([
+      target.showPortfolio ? PortfolioRepository.findByUser(target.id) : Promise.resolve([]),
+      WatchlistRepository.findByUser(target.id),
     ]);
+    const holdings = (target.showPortfolio && Array.isArray(portfolioResult) && portfolioResult.length > 0)
+      ? (portfolioResult as [Array<{ ticker: string; shares: number; avgPrice: number }>, number])[0] ?? []
+      : [];
+    const watchlist = watchlistList;
 
     let portfolio: Array<{ ticker: string; percentage: number }> = [];
     if (holdings.length > 0) {
@@ -368,10 +319,7 @@ export const SocialService = {
 
     const sliced = users;
     const ids = sliced.map((u) => u.id).filter(Boolean);
-    const followRows = await prisma.follow.findMany({
-      where: { followerId: currentUserId, followingId: { in: ids } },
-      select: { followingId: true, status: true },
-    });
+    const followRows = await FollowRepository.findFollowStatuses(currentUserId, ids);
     const statusByTarget = new Map<string, 'NONE' | 'FOLLOWING' | 'PENDING'>(
       followRows.map((r) => [
         r.followingId,
@@ -416,15 +364,9 @@ export const SocialService = {
     if (users.length === 0) return [];
     const ids = users.map((u) => u.id).filter((id): id is string => Boolean(id));
     const followersCount = await Promise.all(
-      ids.map((id) => prisma.follow.count({ where: { followingId: id, status: 'ACCEPTED' } }))
+      ids.map((id) => FollowRepository.countFollowers(id))
     );
-    const followRows = await prisma.follow.findMany({
-      where: {
-        followerId: currentUserId,
-        followingId: { in: ids },
-      },
-      select: { followingId: true, status: true },
-    });
+    const followRows = await FollowRepository.findFollowStatuses(currentUserId, ids);
     const statusByTarget = new Map<string, 'pending' | 'following'>(
       followRows.map((r) => [r.followingId, r.status === 'ACCEPTED' ? 'following' : 'pending'])
     );
@@ -455,15 +397,9 @@ export const SocialService = {
     });
 
     if (current.isPrivate && !nextIsPrivate) {
-      const pending = await prisma.follow.findMany({
-        where: { followingId: userId, status: 'PENDING' },
-        select: { followerId: true, id: true },
-      });
+      const pending = await FollowRepository.findPending(userId);
       if (pending.length > 0) {
-        await prisma.follow.updateMany({
-          where: { followingId: userId, status: 'PENDING' },
-          data: { status: 'ACCEPTED' },
-        });
+        await FollowRepository.acceptAllPending(userId);
         const accepter = await UserRepository.findUnique({
           where: { id: userId },
           select: { username: true },

@@ -1,5 +1,5 @@
-import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
+import { ReferralRepository } from '../repositories/referral.repository.ts';
 import { AppError } from '../lib/errors.ts';
 
 export interface ReferralData {
@@ -21,8 +21,7 @@ export const ReferralService = {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
 
     const [referrals, user] = await Promise.all([
-      prisma.referral.findMany({
-        where: { referrerId: userId },
+      ReferralRepository.findByReferrer(userId, {
         select: {
           id: true,
           isActive: true,
@@ -31,7 +30,7 @@ export const ReferralService = {
           referred: { select: { createdAt: true } },
         },
         orderBy: { createdAt: 'desc' },
-      }),
+      } as { select: object; orderBy: object }),
       UserRepository.findUnique({
         where: { id: userId },
         select: { referralProExpiresAt: true, referralCode: true },

@@ -1,8 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'node:crypto';
-import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
+import { RefreshTokenRepository } from '../repositories/refreshToken.repository.ts';
+import { ReferralRepository } from '../repositories/referral.repository.ts';
+import { AnalysisRepository } from '../repositories/analysis.repository.ts';
+import { PortfolioRepository } from '../repositories/portfolio.repository.ts';
+import { WatchlistRepository } from '../repositories/watchlist.repository.ts';
+import { GoalsRepository } from '../repositories/goals.repository.ts';
 import { normalizePhone, usernameSchema, isValidEgyptianPhone } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { auditLog } from '../lib/audit.ts';
@@ -207,7 +212,7 @@ export const UserService = {
 
   async checkUsername(userId: string, rawUsername: string) {
     const trimmed = rawUsername.trim();
-    if (!trimmed) return { error: 'Username is required' as const };
+    if (!trimmed) throw new AppError('VALIDATION_ERROR', 400, 'اسم المستخدم مطلوب');
     const username = usernameSchema.parse(trimmed);
     const currentUser = await UserRepository.findUnique({
       where: { id: userId },
@@ -221,12 +226,13 @@ export const UserService = {
   },
 
   async getProfileStats(userId: string) {
-    const [user, analysesCount, watchlistCount, portfolioHoldings] = await Promise.all([
+    const [user, analysesCount, watchlistCount, portfolioResult] = await Promise.all([
       UserRepository.findUnique({ where: { id: userId }, select: { createdAt: true } }),
-      prisma.analysis.count({ where: { userId } }),
-      prisma.watchlist.count({ where: { userId } }),
-      prisma.portfolio.findMany({ where: { userId } }),
+      AnalysisRepository.countByUser(userId),
+      WatchlistRepository.countByUser(userId),
+      PortfolioRepository.findByUser(userId),
     ]);
+    const portfolioHoldings = (portfolioResult as readonly [Array<{ shares: number; avgPrice: number }>, number])[0] ?? [];
     if (!user) return null;
     const now = new Date();
     const daysSinceJoined = Math.max(
@@ -296,17 +302,20 @@ export const UserService = {
           planExpiresAt: true,
         },
       }),
-      prisma.analysis.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } }),
-      prisma.analysis.count({ where: { userId } }),
-      prisma.watchlist.count({ where: { userId } }),
-      prisma.watchlist.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } }),
-      prisma.portfolio.count({ where: { userId } }),
-      prisma.portfolio.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } }),
-      prisma.goal.count({ where: { userId } }),
-      prisma.goal.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } }),
-      prisma.goal.count({ where: { userId, achievedAt: { not: null } } }),
-      prisma.referral.count({ where: { referrerId: userId, isActive: true } }),
-      prisma.analysis.groupBy({ by: ['ticker'], where: { userId } }),
+      AnalysisRepository.findFirst({ userId }, { createdAt: 'asc' }),
+      AnalysisRepository.countByUser(userId),
+      WatchlistRepository.countByUser(userId),
+      WatchlistRepository.findByUser(userId).then((list) => list[0] ?? null),
+      PortfolioRepository.countByUser(userId),
+      PortfolioRepository.findByUser(userId).then((res) => {
+        const list = (res as readonly [Array<{ createdAt: Date }>, number])[0];
+        return list?.[0] ?? null;
+      }),
+      GoalsRepository.countByUser(userId),
+      GoalsRepository.findByUser(userId, 1, 1).then(([list]) => list[0] ?? null),
+      GoalsRepository.countAchievedByUser(userId),
+      ReferralRepository.countActiveByReferrer(userId),
+      AnalysisRepository.groupBy({ by: ['ticker'], where: { userId } }),
     ]);
     const accountAgeDays = user ? Math.floor((now.getTime() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24)) : 0;
     const distinctTickers = distinctTickersResult?.length ?? 0;
@@ -622,28 +631,18 @@ export const UserService = {
         select: { referralCode: true, freeReferralRewarded: true, totalReferrals: true },
       }) as typeof user;
     }
-    const [completedCount, completedReferrals, weeklyJoinedCount] = await Promise.all([
-      prisma.referral.count({ where: { referrerId: userId, isActive: true } }),
-      prisma.referral.findMany({
-        where: { referrerId: userId, isActive: true },
-        orderBy: { createdAt: 'asc' },
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const [completedCount, completedReferralsRaw, weeklyJoinedCount] = await Promise.all([
+      ReferralRepository.countActiveByReferrer(userId),
+      ReferralRepository.findByReferrer(userId, {
         take: 5,
-        include: {
-          referred: { select: { fullName: true, createdAt: true } },
-        },
-      }),
-      (async () => {
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return prisma.referral.count({
-          where: {
-            referrerId: userId,
-            isActive: true,
-            referred: { createdAt: { gte: weekAgo } },
-          },
-        });
-      })(),
+        orderBy: { createdAt: 'asc' },
+        include: { referred: { select: { fullName: true, createdAt: true } } },
+      } as { take: number; orderBy: { createdAt: string }; include: object }),
+      ReferralRepository.countActiveByReferrerSince(userId, weekAgo),
     ]);
+    const completedReferrals = completedReferralsRaw as Array<{ referredId: string; referred?: { fullName: string | null } }>;
     const friends = completedReferrals.map((ref, index) => ({
       id: ref.referredId,
       name: ref.referred?.fullName ?? null,
@@ -667,10 +666,8 @@ export const UserService = {
     });
     if (!user) throw new AppError('NOT_FOUND', 404, 'User not found');
     if (user.freeReferralRewarded) throw new AppError('REWARD_ALREADY_CLAIMED', 400, 'المكافأة تم استلامها بالفعل');
-    const completedCount = await prisma.referral.count({
-      where: { referrerId: userId, isActive: true },
-    });
-    if (completedCount < 5) return { error: 'Not enough referrals yet' as const };
+    const completedCount = await ReferralRepository.countActiveByReferrer(userId);
+    if (completedCount < 5) throw new AppError('NOT_ENOUGH_REFERRALS', 400, 'محتاج 5 دعوات ناجحة على الأقل');
     const now = new Date();
     let startsFrom = now;
     if (user.planExpiresAt && user.planExpiresAt > now) startsFrom = user.planExpiresAt;
@@ -699,19 +696,7 @@ export const UserService = {
     });
     if (!referrer) throw new AppError('INVALID_REFERRAL_CODE', 400, 'Invalid referral code');
     if (referrer.id === currentUser.id) throw new AppError('OWN_REFERRAL_CODE', 400, 'You cannot use your own referral code');
-    await prisma.$transaction([
-      UserRepository.update({
-        where: { id: currentUser.id },
-        data: { referredBy: referrer.id, referralUsed: trimmed },
-      }),
-      prisma.referral.create({
-        data: {
-          referrerId: referrer.id,
-          referredId: currentUser.id,
-          isActive: true,
-        },
-      }),
-    ]);
+    await ReferralRepository.applyReferralCodeTransaction(referrer.id, currentUser.id, trimmed);
     const { checkAndRewardReferrer } = await import('../lib/referral.ts');
     await checkAndRewardReferrer(referrer.id);
     await createNotification(
@@ -724,10 +709,7 @@ export const UserService = {
   },
 
   async getSessions(userId: string) {
-    const list = await prisma.refreshToken.findMany({
-      where: { userId, isRevoked: false, expiresAt: { gt: new Date() } },
-      orderBy: { createdAt: 'desc' },
-    });
+    const list = await RefreshTokenRepository.findActiveSessions(userId);
     return list.map((s) => ({
       id: s.id,
       deviceType: s.deviceType ?? undefined,
@@ -743,17 +725,11 @@ export const UserService = {
   },
 
   async revokeSession(userId: string, sessionId: string) {
-    await prisma.refreshToken.updateMany({
-      where: { id: sessionId, userId },
-      data: { isRevoked: true },
-    });
+    await RefreshTokenRepository.updateMany({ id: sessionId, userId }, { isRevoked: true });
   },
 
   async revokeAllOtherSessions(userId: string) {
-    await prisma.refreshToken.updateMany({
-      where: { userId },
-      data: { isRevoked: true },
-    });
+    await RefreshTokenRepository.revokeAllByUser(userId);
   },
 
   async uploadAvatar(userId: string, imageBase64: string) {
@@ -825,7 +801,7 @@ export const UserService = {
         details: `scheduled_${deletionDate.toISOString()}`,
       });
     }
-    await prisma.refreshToken.deleteMany({ where: { userId } });
+    await RefreshTokenRepository.deleteManyByUser(userId);
     return { success: true, deletedAt: now, deletionScheduledFor: deletionDate };
   },
 };

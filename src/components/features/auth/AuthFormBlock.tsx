@@ -47,6 +47,7 @@ export function AuthFormBlock({
               autoComplete="name"
               disabled={isSubmitting}
               error={errors.fullName?.message}
+              aria-required="true"
             />
           </motion.div>
         )}
@@ -59,6 +60,7 @@ export function AuthFormBlock({
         placeholder={t('auth.placeholderEmailPhone')}
         disabled={isSubmitting}
         error={errors.emailOrPhone?.message}
+        aria-required="true"
       />
       <div className="relative">
         <Input
@@ -69,6 +71,7 @@ export function AuthFormBlock({
           placeholder="••••••"
           disabled={isSubmitting}
           error={errors.password?.message}
+          aria-required="true"
         />
         <Button
           type="button"

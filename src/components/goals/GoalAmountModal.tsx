@@ -87,6 +87,7 @@ export function GoalAmountModal({
             inputMode="numeric"
             value={formatWithCommas(value)}
             onChange={(e) => setValue(e.target.value.replace(/\D/g, ''))}
+            aria-required="true"
           />
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="secondary" onClick={onClose} className="flex-1">

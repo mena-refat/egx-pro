@@ -92,8 +92,8 @@ export function DangerZoneTab({ user, onLogout, setRequestStatus }: ProfileTabPr
             <h3 className="text-lg font-bold text-center text-[var(--text-primary)]">{t('settings.deleteTitle')}</h3>
             <p className="text-sm font-medium text-[var(--text-secondary)] mt-2">{t('settings.deleteReadFirst')}</p>
             <p className="text-xs text-[var(--text-muted)] text-center">{t('settings.deleteWarning')}</p>
-            <Input type="text" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder={t('settings.deleteConfirmPlaceholder')} />
-            <Input type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} placeholder={t('settings.password')} />
+            <Input type="text" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder={t('settings.deleteConfirmPlaceholder')} aria-required="true" />
+            <Input type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} placeholder={t('settings.password')} aria-required="true" />
             {deleteError && <p className="text-xs text-[var(--danger)]">{deleteError}</p>}
             <div className="flex gap-2">
               <Button type="button" variant="danger" size="md" fullWidth onClick={handleDeleteAccount} disabled={!deleteConfirmValid || !deletePassword || deleteSubmitting} loading={deleteSubmitting}>

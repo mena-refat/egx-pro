@@ -49,7 +49,6 @@ const AIPage = lazy(() => import('./pages/AIPage'));
 const AIAnalyzePage = lazy(() => import('./pages/AIAnalyzePage'));
 const AIComparePage = lazy(() => import('./pages/AIComparePage'));
 const AIRecommendationsPage = lazy(() => import('./pages/AIRecommendationsPage'));
-const AchievementModal = lazy(() => import('./components/features/achievements/AchievementModal'));
 
 export default function App() {
   const { i18n } = useTranslation('common');

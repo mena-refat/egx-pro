@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
+import { RefreshTokenRepository } from '../repositories/refreshToken.repository.ts';
+import { ReferralRepository } from '../repositories/referral.repository.ts';
 import { generateUniqueReferralCode, checkAndRewardReferrer } from '../lib/referral.ts';
 import {
   hashPassword,
@@ -138,13 +139,11 @@ export async function register(
       select: { id: true },
     });
     if (referrer && referrer.id !== user.id) {
-      await prisma.referral.create({
-        data: {
+      await ReferralRepository.create({
           referrerId: referrer.id,
           referredId: user.id,
           isActive: false,
-        },
-      });
+        });
     }
   }
 
@@ -169,7 +168,7 @@ export async function register(
   const refreshData = await buildRefreshTokenData(user.id, refreshHash, expiresAt, ctx.ip, ctx.userAgent).catch(() =>
     buildRefreshTokenData(user.id, refreshHash, expiresAt, null, ctx.userAgent)
   );
-  await prisma.refreshToken.create({ data: refreshData });
+  await RefreshTokenRepository.create(refreshData);
   await UserRepository.update({
     where: { id: user.id },
     data: { lastLoginAt: new Date(), lastLoginIp: ctx.ip || null },
@@ -250,14 +249,9 @@ export async function login(
     return { requires2FA: true, tempToken };
   }
 
-  const referral = await prisma.referral.findUnique({
-    where: { referredId: user.id },
-  });
+  const referral = await ReferralRepository.findUnique({ referredId: user.id });
   if (referral && !referral.isActive) {
-    await prisma.referral.update({
-      where: { id: referral.id },
-      data: { isActive: true },
-    });
+    await ReferralRepository.update({ id: referral.id }, { isActive: true });
     await checkAndRewardReferrer(referral.referrerId);
   }
 
@@ -269,7 +263,7 @@ export async function login(
   const refreshData = await buildRefreshTokenData(user.id, refreshHash, expiresAt, ctx.ip, ctx.userAgent).catch(() =>
     buildRefreshTokenData(user.id, refreshHash, expiresAt, null, ctx.userAgent)
   );
-  await prisma.refreshToken.create({ data: refreshData });
+  await RefreshTokenRepository.create(refreshData);
   await auditLog({ userId: user.id, action: 'LOGIN_SUCCESS', req: ctx.auditReq ?? undefined, result: 'success' });
   const userPayload = toUserPayload(user);
   return { user: userPayload, accessToken, refreshToken, ...(restored && { restored: true }) };
@@ -315,14 +309,9 @@ export async function twoFaAuthenticate(
   });
   if (!valid) throw new AppError('invalid_code', 401);
 
-  const referral = await prisma.referral.findUnique({
-    where: { referredId: user.id },
-  });
+  const referral = await ReferralRepository.findUnique({ referredId: user.id });
   if (referral && !referral.isActive) {
-    await prisma.referral.update({
-      where: { id: referral.id },
-      data: { isActive: true },
-    });
+    await ReferralRepository.update({ id: referral.id }, { isActive: true });
     await checkAndRewardReferrer(referral.referrerId);
   }
 
@@ -334,7 +323,7 @@ export async function twoFaAuthenticate(
   const refreshData = await buildRefreshTokenData(user.id, refreshHash, expiresAt, ctx.ip, ctx.userAgent).catch(() =>
     buildRefreshTokenData(user.id, refreshHash, expiresAt, null, ctx.userAgent)
   );
-  await prisma.refreshToken.create({ data: refreshData });
+  await RefreshTokenRepository.create(refreshData);
   await UserRepository.update({
     where: { id: user.id },
     data: { lastLoginAt: new Date(), lastLoginIp: ctx.ip || null },
@@ -442,13 +431,10 @@ export async function twoFaDisable(
 export async function refresh(refreshTokenCookie: string | undefined): Promise<{ accessToken: string }> {
   if (!refreshTokenCookie) throw new AppError('UNAUTHORIZED', 401);
   const refreshHash = hashRefreshToken(refreshTokenCookie);
-  const rt = await prisma.refreshToken.findUnique({
-    where: { token: refreshHash },
-    include: { user: true },
-  });
+  const rt = await RefreshTokenRepository.findByToken(refreshHash);
   const now = new Date();
   if (!rt || rt.isRevoked || rt.expiresAt < now) {
-    if (rt?.id) await prisma.refreshToken.updateMany({ where: { id: rt.id }, data: { isRevoked: true } });
+    if (rt?.id) await RefreshTokenRepository.updateMany({ id: rt.id }, { isRevoked: true });
     throw new AppError('UNAUTHORIZED', 401);
   }
   const loginId = rt.user.email ?? rt.user.phone ?? '';
@@ -463,9 +449,9 @@ export async function logout(
   let userId: string | null = null;
   if (refreshTokenCookie) {
     const refreshHash = hashRefreshToken(refreshTokenCookie);
-    const rt = await prisma.refreshToken.findUnique({ where: { token: refreshHash }, select: { userId: true } });
+    const rt = await RefreshTokenRepository.findByTokenSelect(refreshHash, { userId: true });
     if (rt) userId = rt.userId;
-    await prisma.refreshToken.updateMany({ where: { token: refreshHash }, data: { isRevoked: true } });
+    await RefreshTokenRepository.revokeByToken(refreshHash);
   }
   if (userId && ctx?.auditReq) await auditLog({ userId, action: 'LOGOUT', req: ctx.auditReq, result: 'success' });
   return userId ? { userId } : {};
@@ -477,9 +463,9 @@ export async function logoutAll(
 ): Promise<void> {
   if (!refreshTokenCookie) return;
   const refreshHash = hashRefreshToken(refreshTokenCookie);
-  const rt = await prisma.refreshToken.findUnique({ where: { token: refreshHash }, select: { userId: true } });
+  const rt = await RefreshTokenRepository.findByTokenSelect(refreshHash, { userId: true });
   if (rt) {
-    await prisma.refreshToken.updateMany({ where: { userId: rt.userId }, data: { isRevoked: true } });
+    await RefreshTokenRepository.revokeAllByUser(rt.userId);
     if (ctx?.auditReq) await auditLog({ userId: rt.userId, action: 'SESSION_REVOKED', req: ctx.auditReq, result: 'success', details: 'all_sessions' });
   }
 }
@@ -500,20 +486,10 @@ export async function getSessions(refreshTokenCookie: string | undefined): Promi
 > {
   if (!refreshTokenCookie) throw new AppError('UNAUTHORIZED', 401);
   const refreshHash = hashRefreshToken(refreshTokenCookie);
-  const current = await prisma.refreshToken.findUnique({
-    where: { token: refreshHash },
-    select: { id: true, userId: true },
-  });
+  const current = await RefreshTokenRepository.findByTokenSelect(refreshHash, { id: true, userId: true });
   if (!current) throw new AppError('UNAUTHORIZED', 401);
 
-  const list = await prisma.refreshToken.findMany({
-    where: {
-      userId: current.userId,
-      isRevoked: false,
-      expiresAt: { gt: new Date() },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+  const list = await RefreshTokenRepository.findActiveSessions(current.userId);
   const currentId = current.id;
   return list.map((s) => ({
     id: s.id,
@@ -536,15 +512,9 @@ export async function revokeSession(
 ): Promise<{ userId: string }> {
   if (!refreshTokenCookie) throw new AppError('UNAUTHORIZED', 401);
   const refreshHash = hashRefreshToken(refreshTokenCookie);
-  const current = await prisma.refreshToken.findUnique({
-    where: { token: refreshHash },
-    select: { userId: true },
-  });
+  const current = await RefreshTokenRepository.findByTokenSelect(refreshHash, { userId: true });
   if (!current) throw new AppError('UNAUTHORIZED', 401);
-  await prisma.refreshToken.updateMany({
-    where: { id: tokenId, userId: current.userId },
-    data: { isRevoked: true },
-  });
+  await RefreshTokenRepository.revokeById(tokenId, current.userId);
   if (ctx?.auditReq) await auditLog({ userId: current.userId, action: 'SESSION_REVOKED', req: ctx.auditReq, result: 'success', details: tokenId });
   return { userId: current.userId };
 }
@@ -563,7 +533,7 @@ export async function changePassword(
   if (!valid) throw new AppError('wrong_password', 400, 'كلمة المرور الحالية غير صحيحة');
 
   const pwCheck = validateChangePassword(body.newPassword, { email: user.email ?? undefined, username: user.username ?? undefined });
-  if (!pwCheck.ok) fail(400, (pwCheck as { ok: false; message: string }).message);
+  if (!pwCheck.ok) throw new AppError('VALIDATION_ERROR', 400, (pwCheck as { ok: false; message: string }).message);
 
   const { hash, salt } = await hashPassword(body.newPassword);
   await UserRepository.update({
@@ -582,10 +552,7 @@ export async function changePassword(
 export async function getMe(refreshTokenCookie: string | undefined): Promise<{ user: unknown; accessToken: string }> {
   if (!refreshTokenCookie) throw new AppError('UNAUTHORIZED', 401, 'No refresh token');
   const refreshHash = hashRefreshToken(refreshTokenCookie);
-  const rt = await prisma.refreshToken.findUnique({
-    where: { token: refreshHash },
-    include: { user: true },
-  });
+  const rt = await RefreshTokenRepository.findByToken(refreshHash);
   const now = new Date();
   if (!rt || rt.isRevoked || rt.expiresAt < now) throw new AppError('invalid_or_expired_token', 401, 'Invalid or expired refresh token');
 
@@ -661,7 +628,7 @@ export async function googleCallback(
   const refreshData = await buildRefreshTokenData(userId, refreshHash, expiresAt, ctx.ip, ctx.userAgent).catch(() =>
     buildRefreshTokenData(userId, refreshHash, expiresAt, null, ctx.userAgent)
   );
-  await prisma.refreshToken.create({ data: refreshData });
+  await RefreshTokenRepository.create(refreshData);
 
   const origin = process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
   const redirectHtml = `

@@ -116,16 +116,14 @@ export const UserController = {
     }
   },
 
-  redeemReferral: async (req: AuthRequest, res: Response) => {
+  redeemReferral: async (req: AuthRequest, res: Response, next: NextFunction) => {
     const id = userId(req);
     if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       const result = await UserService.redeemReferralReward(id);
-      if (result.error === 'User not found') return sendError(res, 'NOT_FOUND', 404);
-      if (result.error === 'Reward already claimed') return sendError(res, 'REWARD_ALREADY_CLAIMED', 400);
-      if (result.error === 'Not enough referrals yet') return sendError(res, 'NOT_ENOUGH_REFERRALS', 400);
-      sendSuccess(res, (result as { data: unknown }).data);
+      sendSuccess(res, result.data);
     } catch (err) {
+      if (err instanceof AppError) return next(err);
       logger.error('Referral redeem error:', err);
       sendError(res, 'INTERNAL_ERROR', 500);
     }
