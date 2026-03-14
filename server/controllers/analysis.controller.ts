@@ -11,6 +11,16 @@ function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
 }
 
 export const AnalysisController = {
+  quick: run(async (req, res) => {
+    const ticker = (req.params as { ticker?: string }).ticker ?? '';
+    if (!ticker) {
+      sendError(res, 'VALIDATION_ERROR', 400);
+      return;
+    }
+    const result = await AnalysisService.quickAnalysis(ticker);
+    sendSuccess(res, { analysis: result });
+  }),
+
   create: run(async (req, res) => {
     const userId = req.user?.id;
     if (!userId) {

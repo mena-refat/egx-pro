@@ -82,6 +82,8 @@ const analysisLimiter = rateLimit({
 });
 
 router.get('/accuracy', AnalysisController.accuracy);
+// Quick analysis — بدون authenticate (مجاني للجميع، صفر tokens)
+router.get('/quick/:ticker', validate(tickerParamSchema, 'params'), AnalysisController.quick);
 router.post('/compare', authenticate, analysisLimiter, validate(compareStocksBodySchema, 'body'), AnalysisController.compare);
 router.post('/recommendations', authenticate, analysisLimiter, validate(recommendationsBodySchema, 'body'), AnalysisController.recommendations);
 router.post('/:ticker', authenticate, analysisLimiter, validate(tickerParamSchema, 'params'), AnalysisController.create);

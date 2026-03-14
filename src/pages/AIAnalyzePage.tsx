@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { TickerSuggestInput } from '../components/ui/TickerSuggestInput';
 import { AnalysisResult } from '../components/analysis/AnalysisResult';
 import { AnalysisLoadingState } from '../components/analysis/AnalysisLoadingState';
+import { QuickAnalysisCard } from '../components/analysis/QuickAnalysisCard';
 import { getStockInfo, searchStocks } from '../lib/egxStocks';
 import { useProfileGuard } from '../hooks/useProfileGuard';
 import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
@@ -20,8 +21,25 @@ export default function AIAnalyzePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResultType | null>(null);
+  const [quickData, setQuickData] = useState<Record<string, unknown> | null>(null);
+  const [quickLoading, setQuickLoading] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const { guardedAction, profileModalProps } = useProfileGuard();
+
+  const fetchQuick = useCallback(async (resolvedTicker: string) => {
+    setQuickLoading(true);
+    try {
+      const res = await api.get<{ data?: { analysis?: Record<string, unknown> }; analysis?: Record<string, unknown> }>(
+        `/analysis/quick/${resolvedTicker}`
+      );
+      const data = (res.data as { data?: { analysis?: Record<string, unknown> } })?.data?.analysis ?? (res.data as { analysis?: Record<string, unknown> })?.analysis;
+      if (data) setQuickData(data);
+    } catch {
+      // non-critical — just don't show quick
+    } finally {
+      setQuickLoading(false);
+    }
+  }, []);
 
   const runAnalysis = useCallback(async () => {
     const raw = ticker.trim();
@@ -43,7 +61,9 @@ export default function AIAnalyzePage() {
     }
     setError(null);
     setAnalysis(null);
+    setQuickData(null);
     setLoading(true);
+    fetchQuick(resolvedTicker);
     try {
       const res = await api.post<{ data: { analysis: AnalysisResultType } }>(`/analysis/${resolvedTicker}`, undefined, { timeout: ANALYSIS_TIMEOUT_MS });
       const data = res.data?.data?.analysis ?? (res.data as { analysis?: AnalysisResultType })?.analysis;
@@ -81,7 +101,7 @@ export default function AIAnalyzePage() {
     } finally {
       setLoading(false);
     }
-  }, [ticker, t, i18n.language]);
+  }, [ticker, t, i18n.language, fetchQuick]);
 
   return (
     <div className={styles.page}>
@@ -124,6 +144,14 @@ export default function AIAnalyzePage() {
       <AnalysisLoadingState loading={loading} variant="analyze" />
 
       {error && <p className={styles.error} role="alert">{error}</p>}
+
+      {quickData && !analysis && (
+        <QuickAnalysisCard
+          data={quickData as Parameters<typeof QuickAnalysisCard>[0]['data']}
+          onDeepAnalysis={() => guardedAction(runAnalysis)}
+          loading={loading}
+        />
+      )}
 
       {analysis && (
         <div className={styles.result}>

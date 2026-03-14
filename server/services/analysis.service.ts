@@ -14,6 +14,8 @@ import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
 import { withRetry } from '../lib/retry.ts';
 import { calculateIndicators } from '../lib/technicalIndicators.ts';
 import { getMarketContext } from '../lib/marketContext.ts';
+import { getCachedAnalysis, setCachedAnalysis, singleKey, compareKey } from '../lib/analysisCache.ts';
+import { generateQuickAnalysis } from '../lib/quickAnalysis.ts';
 
 const nullFinancials = {
   pe: null as number | null,
@@ -219,6 +221,22 @@ export const AnalysisService = {
   ): Promise<{ analysis: unknown; id: string; newUnseenAchievements: string[] }> {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
     await ensureQuota(userId, 1);
+
+    // ══ الطبقة 1: Cache — لو حد حلل نفس السهم النهارده، ارجع النتيجة المحفوظة ══
+    const cacheKey = singleKey(ticker);
+    const cached = await getCachedAnalysis<unknown>(cacheKey);
+    if (cached) {
+      await consumeQuota(userId, 1);
+      const saved = await AnalysisRepository.create({
+        userId,
+        ticker,
+        content: JSON.stringify(cached),
+      });
+      const completedBefore = await getCompletedAchievementIds(userId);
+      const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
+      return { analysis: cached, id: saved.id, newUnseenAchievements: newAchievements };
+    }
+
     const completedBefore = await getCompletedAchievementIds(userId);
 
     const stockInfo = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker.toUpperCase());
@@ -248,43 +266,39 @@ export const AnalysisService = {
     const indicators = calculateIndicators(history);
 
     const priceBlock = priceData
-      ? `السعر الحالي: ${priceData.price} جنيه\nالتغير: ${priceData.changePercent}%\nالحجم: ${priceData.volume ?? '—'}`
+      ? `السعر: ${priceData.price} جنيه | التغير: ${priceData.changePercent}%`
       : 'السعر: ابحث عنه';
 
-    const technicalBlock =
-      indicators.rsi14 != null
-        ? `
-═══ التحليل الفني (محسوب من بيانات حقيقية) ═══
-الاتجاه: ${indicators.trend}
-RSI(14): ${indicators.rsi14}
-SMA(20): ${indicators.sma20 ?? '—'} | SMA(50): ${indicators.sma50 ?? '—'} | SMA(200): ${indicators.sma200 ?? '—'}
-السعر مقابل SMA200: ${indicators.priceVsSma200}
-MACD: ${indicators.macd ?? '—'} | Signal: ${indicators.macdSignal ?? '—'}
-Bollinger: ${indicators.bollingerLower ?? '—'} — ${indicators.bollingerUpper ?? '—'}
-ATR(14): ${indicators.atr14 ?? '—'}
-VWAP(20): ${indicators.vwap ?? '—'}
-الدعم: ${indicators.support ?? '—'} | المقاومة: ${indicators.resistance ?? '—'}
-الحجم اليوم: ${indicators.lastVolume?.toLocaleString() ?? '—'} | متوسط 20 يوم: ${indicators.avgVolume20?.toLocaleString() ?? '—'}
-`
-        : 'المؤشرات الفنية: غير متاحة — ابحث عنها';
+    const fundLines: string[] = [];
+    if (financials.pe != null) fundLines.push(`P/E: ${financials.pe.toFixed(2)}`);
+    if (financials.roe != null) fundLines.push(`ROE: ${(financials.roe * 100).toFixed(1)}%`);
+    if (financials.profitMargin != null) fundLines.push(`هامش: ${(financials.profitMargin * 100).toFixed(1)}%`);
+    if (financials.debtToEquity != null) fundLines.push(`D/E: ${financials.debtToEquity.toFixed(2)}`);
+    if (financials.eps != null) fundLines.push(`EPS: ${financials.eps.toFixed(2)}`);
+    if (financials.revenue != null) fundLines.push(`إيرادات: ${financials.revenue.toLocaleString()}`);
+    if (financials.freeCashFlow != null) fundLines.push(`FCF: ${financials.freeCashFlow.toLocaleString()}`);
+    if (financials.dividendYield != null) fundLines.push(`توزيعات: ${(financials.dividendYield * 100).toFixed(2)}%`);
+    const fundamentalBlock =
+      fundLines.length > 0 ? `═ أساسي ═\n${fundLines.join(' | ')}` : '═ أساسي ═\nلا تتوفر بيانات — قدّر من معرفتك';
 
-    const fundamentalBlock = `
-═══ التحليل الأساسي ═══
-P/E: ${financials.pe != null ? financials.pe.toFixed(2) : 'ابحث عنه'} | Forward P/E: ${financials.forwardPe != null ? financials.forwardPe.toFixed(2) : '—'}
-EPS: ${financials.eps != null ? financials.eps.toFixed(2) : '—'}
-ROE: ${financials.roe != null ? (financials.roe * 100).toFixed(2) + '%' : 'ابحث عنه'}
-ROA: ${financials.roa != null ? (financials.roa * 100).toFixed(2) + '%' : '—'}
-هامش الربح: ${financials.profitMargin != null ? (financials.profitMargin * 100).toFixed(2) + '%' : 'ابحث عنه'}
-هامش التشغيل: ${financials.operatingMargin != null ? (financials.operatingMargin * 100).toFixed(2) + '%' : '—'}
-الإيرادات: ${financials.revenue != null ? financials.revenue.toLocaleString() : 'ابحث عنه'}
-نمو الإيرادات: ${financials.revenueGrowth != null ? (financials.revenueGrowth * 100).toFixed(2) + '%' : '—'}
-الدين/حقوق الملكية: ${financials.debtToEquity != null ? financials.debtToEquity.toFixed(2) : '—'}
-التدفق النقدي الحر: ${financials.freeCashFlow != null ? financials.freeCashFlow.toLocaleString() : '—'}
-توزيعات الأرباح: ${financials.dividendYield != null ? (financials.dividendYield * 100).toFixed(2) + '%' : '—'}
-القيمة الدفترية: ${financials.bookValue != null ? financials.bookValue.toFixed(2) : '—'} | P/B: ${financials.priceToBook != null ? financials.priceToBook.toFixed(2) : '—'}
-القيمة السوقية: ${financials.marketCap != null ? financials.marketCap.toLocaleString() : '—'}
-Beta: ${financials.beta != null ? financials.beta.toFixed(2) : '—'}
-`;
+    const techLines: string[] = [];
+    if (indicators.rsi14 != null) techLines.push(`RSI: ${indicators.rsi14}`);
+    if (indicators.trend) techLines.push(`اتجاه: ${indicators.trend}`);
+    if (indicators.macd != null) techLines.push(`MACD: ${indicators.macd}`);
+    if (indicators.sma20 != null) techLines.push(`SMA20: ${indicators.sma20}`);
+    if (indicators.sma50 != null) techLines.push(`SMA50: ${indicators.sma50}`);
+    if (indicators.sma200 != null) techLines.push(`SMA200: ${indicators.sma200}`);
+    if (indicators.support != null) techLines.push(`دعم: ${indicators.support}`);
+    if (indicators.resistance != null) techLines.push(`مقاومة: ${indicators.resistance}`);
+    if (indicators.vwap != null) techLines.push(`VWAP: ${indicators.vwap}`);
+    if (indicators.atr14 != null) techLines.push(`ATR: ${indicators.atr14}`);
+    const vol =
+      indicators.lastVolume != null && indicators.avgVolume20 != null
+        ? `حجم: ${indicators.lastVolume.toLocaleString()} (متوسط: ${indicators.avgVolume20.toLocaleString()})`
+        : '';
+    if (vol) techLines.push(vol);
+    const technicalBlock =
+      techLines.length > 0 ? `═ فني ═\n${techLines.join(' | ')}` : '═ فني ═\nلا تتوفر بيانات';
 
     const marketBlock = `
 ═══ سياق السوق ═══
@@ -317,6 +331,8 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن 
 
     const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, 8000);
     const analysisJson = parseAnalysisJson(rawText);
+
+    await setCachedAnalysis(cacheKey, analysisJson, 'claude');
 
     const analysisObj = analysisJson as Record<string, unknown>;
     const pt = analysisObj.priceTarget as
@@ -359,6 +375,18 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن 
     const t2 = ticker2.trim().toUpperCase();
     if (t1 === t2) throw new AppError('SAME_STOCK_COMPARE', 400);
     await ensureQuota(userId, 2);
+
+    const compareCacheKey = compareKey(t1, t2);
+    const cachedCompare = await getCachedAnalysis<unknown>(compareCacheKey);
+    if (cachedCompare) {
+      await consumeQuota(userId, 2);
+      const saved = await AnalysisRepository.create({
+        userId,
+        ticker: `${t1}|${t2}`,
+        content: JSON.stringify(cachedCompare),
+      });
+      return { comparison: cachedCompare, id: saved.id };
+    }
 
     const info1 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t1);
     const info2 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t2);
@@ -418,6 +446,7 @@ ${buildStockBlock(t2, info2, p2, f2, ind2, news2)}
 
     const raw = await runAnalysisEngine(system, prompt, 8000);
     const comparison = parseAnalysisJson(raw);
+    await setCachedAnalysis(compareCacheKey, comparison, 'claude');
     await consumeQuota(userId, 2);
     const saved = await AnalysisRepository.create({
       userId,
@@ -425,6 +454,21 @@ ${buildStockBlock(t2, info2, p2, f2, ind2, news2)}
       content: JSON.stringify(comparison),
     });
     return { comparison, id: saved.id };
+  },
+
+  /** تحليل سريع — صفر tokens، < 1 ثانية */
+  async quickAnalysis(ticker: string) {
+    const [priceResult, historyResult, financialsResult] = await Promise.allSettled([
+      getPriceForAnalysis(ticker),
+      getStockHistory(ticker, '3mo').catch(() => []),
+      getFinancials(ticker),
+    ]);
+
+    const price = priceResult.status === 'fulfilled' ? priceResult.value : null;
+    const history = historyResult.status === 'fulfilled' ? historyResult.value : [];
+    const financials = financialsResult.status === 'fulfilled' ? financialsResult.value : null;
+
+    return generateQuickAnalysis(ticker, price, history, financials);
   },
 
   /** توصيات شخصية بناءً على المحفظة وملف المستخدم — نقطة واحدة */

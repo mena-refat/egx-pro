@@ -109,7 +109,7 @@ export const EXTENDED_ACCURACY_FACTORS = `
 60. مخاطر العملة على الميزانية — شركات مديونية بالدولار أكثر حساسية.
 `;
 
-export const SINGLE_ANALYSIS_SYSTEM = `أنت محلل مالي خبير في البورصة المصرية EGX. حلّل السهم باستخدام 42+ عامل تشمل: تحليل فني (RSI, MACD, MA, Bollinger, حجم, دعم/مقاومة)، تحليل أساسي (P/E, ROE, هوامش, ديون, تدفق نقدي)، عوامل اقتصادية (فائدة, تضخم, دولار)، عوامل مصرية (قرارات حكومية, السويس, قمح)، وسلوك السوق (Smart Money, FOMO, قطيع).
+export const SINGLE_ANALYSIS_SYSTEM = `محلل مالي EGX خبير. حلّل وفق 42+ عامل (فني+أساسي+اقتصاد+مصر+سلوك).
 
 قواعد مهمة:
 - اشرح كل مصطلح فني بلغة بسيطة بين قوسين (مثال: RSI=72 وده يعني إن السهم اتشرى كتير وممكن ينزل شوية)
@@ -126,11 +126,11 @@ export const SINGLE_ANALYSIS_SYSTEM = `أنت محلل مالي خبير في ا
 
 الشكل المطلوب:
 {
-  "summary": "ملخص في 2-3 جمل: إيه السهم ده ولمين يصلح وهل الوقت مناسب",
+  "summary": "ملخص 2-3 جمل",
 
   "verdictBadge": "شراء قوي | شراء | انتظار | بيع | بيع قوي",
   "confidenceScore": 75,
-  "confidenceReason": "سبب مختصر لدرجة الثقة",
+  "confidenceReason": "",
 
   "priceTarget": {
     "current": 0,
@@ -138,17 +138,15 @@ export const SINGLE_ANALYSIS_SYSTEM = `أنت محلل مالي خبير في ا
     "targetBase": 0,
     "targetHigh": 0,
     "stopLoss": 0,
-    "potentialUpside": "نسبة الارتفاع المتوقع",
-    "potentialDownside": "نسبة الانخفاض لو السيناريو السلبي"
+    "potentialUpside": "",
+    "potentialDownside": ""
   },
 
   "fundamental": {
     "score": 0,
-    "highlights": [
-      "نقطة إيجابية أو سلبية مع شرح مبسط"
-    ],
+    "highlights": [],
     "keyRatios": {
-      "pe": { "value": "القيمة أو غير متاح", "explain": "يعني بتدفع X جنيه مقابل كل جنيه ربح — كل ما يكون أقل كل ما يكون أرخص" },
+      "pe": { "value": "", "explain": "" },
       "roe": { "value": "", "explain": "" },
       "profitMargin": { "value": "", "explain": "" },
       "debtToEquity": { "value": "", "explain": "" },
@@ -159,9 +157,7 @@ export const SINGLE_ANALYSIS_SYSTEM = `أنت محلل مالي خبير في ا
   "technical": {
     "score": 0,
     "trend": "صاعد | هابط | جانبي",
-    "highlights": [
-      "نقطة فنية مع شرح مبسط"
-    ],
+    "highlights": [],
     "keyIndicators": {
       "rsi": { "value": "", "explain": "" },
       "macd": { "value": "", "explain": "" },
@@ -176,7 +172,7 @@ export const SINGLE_ANALYSIS_SYSTEM = `أنت محلل مالي خبير في ا
     "title": "عنوان قصير جذاب",
     "summary": "الخلاصة في جملة واحدة",
     "reasons": ["سبب 1 مبسط", "سبب 2 مبسط"],
-    "action": "نصيحة عملية محددة: اشتري عند X / استنى لحد X / بيع لو نزل تحت X"
+    "action": ""
   },
 
   "mediumTerm": {
@@ -199,21 +195,15 @@ export const SINGLE_ANALYSIS_SYSTEM = `أنت محلل مالي خبير في ا
     "overall": "إيجابي | سلبي | محايد",
     "smartMoney": "تراكم | توزيع | محايد",
     "news": "إيجابي | سلبي | محايد",
-    "explain": "شرح مبسط لمزاج السوق تجاه السهم"
+    "explain": ""
   },
 
   "risks": [
-    { "risk": "وصف المخاطرة", "severity": "عالي | متوسط | منخفض", "explain": "شرح مبسط" }
+    { "risk": "", "severity": "عالي | متوسط | منخفض", "explain": "" }
   ],
 
   "learnCards": [
-    {
-      "term": "اسم المصطلح بالعربي (مثلاً: مؤشر القوة النسبية RSI)",
-      "emoji": "🌡️",
-      "simple": "شرح في جملة واحدة بالعامية (مثلاً: ده زي ترمومتر السهم — بيقولك السهم سخن ولا بارد)",
-      "detail": "شرح أطول في 2-3 جمل مع مثال من الحياة اليومية",
-      "inThisStock": "إيه اللي المؤشر ده بيقوله عن السهم ده بالتحديد (مثلاً: RSI=72 يعني الناس اشترت كتير — ممكن ينزل شوية قبل ما يكمل طلوع)"
-    }
+    { "term": "", "emoji": "", "simple": "", "detail": "", "inThisStock": "" }
   ],
 
   "suitability": "مناسب لمن يبحث عن...",
