@@ -117,12 +117,9 @@ export const SINGLE_ANALYSIS_SYSTEM = `محلل مالي EGX خبير. حلّل 
 - لو البيانات ناقصة اكتب "غير متاح" بدل ما تخمّن أرقام
 - التحليل بالعربية المصرية (عامية متعلمة)
 - اختصر كل قسم قدر الإمكان — الوضوح أهم من الطول
-- learnCards: 4 فقط لأهم المصطلحات
+- learnCards أول حاجة بعد الملخص — 4 cards مختصرة (term + emoji + simple جملة + inThisStock جملة)، بدون detail
 - risks: حد أقصى 4
 - ردك JSON فقط بدون أي نص خارجه
-- كل card لازم تشرح المصطلح زي ما تشرح لصاحبك اللي مش فاهم في البورصة
-- استخدم تشبيهات من الحياة اليومية (زي المحل الزحمة، زي ترمومتر الحرارة، زي الميزان)
-- حقل "inThisStock" لازم يكون خاص بالسهم اللي بنحلله — مش شرح عام
 
 الشكل المطلوب:
 {
@@ -131,6 +128,10 @@ export const SINGLE_ANALYSIS_SYSTEM = `محلل مالي EGX خبير. حلّل 
   "verdictBadge": "شراء قوي | شراء | انتظار | بيع | بيع قوي",
   "confidenceScore": 75,
   "confidenceReason": "",
+
+  "learnCards": [
+    { "term": "RSI", "emoji": "🌡️", "simple": "ترمومتر السهم — فوق 70 سخن، تحت 30 بارد", "inThisStock": "RSI=72 يعني اتشرى كتير" }
+  ],
 
   "priceTarget": {
     "current": 0,
@@ -202,10 +203,6 @@ export const SINGLE_ANALYSIS_SYSTEM = `محلل مالي EGX خبير. حلّل 
     { "risk": "", "severity": "عالي | متوسط | منخفض", "explain": "" }
   ],
 
-  "learnCards": [
-    { "term": "", "emoji": "", "simple": "", "detail": "", "inThisStock": "" }
-  ],
-
   "suitability": "مناسب لمن يبحث عن...",
   "disclaimer": "هذا التحليل للأغراض التعليمية فقط وليس توصية استثمارية مرخصة. استشر مستشار مالي معتمد."
 }`;
@@ -217,16 +214,19 @@ export const COMPARE_SYSTEM = `أنت محلل مالي خبير في البور
 - أعطِ score لكل سهم من 100
 - وضّح الفائز بوضوح مع السبب
 - التوصية لازم تكون عملية
-- أضف 3-4 learnCards لأهم المصطلحات اللي استخدمتها في المقارنة
+- learnCards أول حاجة بعد winnerReason — 3 cards مختصرة (term + emoji + simple + inThisStock)، بدون detail
 - اختصر قدر الإمكان — كل نقطة قوة/ضعف/خطر في جملة واحدة مختصرة
 - strengths/weaknesses/risks: حد أقصى 4 نقاط لكل سهم
-- learnCards: 3 فقط مختصرة
 
 ردك JSON فقط:
 {
   "summary": "مقارنة سريعة في 2-3 جمل",
   "winner": "TICKER الفائز أو تعادل",
   "winnerReason": "سبب التفضيل في جملة واحدة واضحة",
+
+  "learnCards": [
+    { "term": "", "emoji": "", "simple": "", "inThisStock": "" }
+  ],
 
   "stock1": {
     "ticker": "",
@@ -255,9 +255,6 @@ export const COMPARE_SYSTEM = `أنت محلل مالي خبير في البور
   },
 
   "recommendation": "توصية عملية: إيه اللي المستثمر يعمله بالظبط",
-  "learnCards": [
-    { "term": "", "emoji": "", "simple": "", "detail": "", "inThisStock": "" }
-  ],
   "disclaimer": "هذا التحليل للأغراض التعليمية فقط وليس توصية استثمارية مرخصة."
 }`;
 
@@ -269,14 +266,17 @@ export const RECOMMENDATIONS_SYSTEM = `أنت مستشار استثماري خب
 - اشرح بلغة بسيطة
 - ركّز على التنويع ونقاط الضعف في المحفظة
 - لو المستخدم عنده shariaMode اقترح أسهم متوافقة فقط
-- أضف 3-4 learnCards تشرح مصطلحات التنويع وتحمل المخاطر وأي مفهوم استخدمته
+- learnCards أول حاجة بعد summary — 3 cards مختصرة (term + emoji + simple + inThisStock)، بدون detail
 - اختصر الأسباب — كل سبب في جملة واحدة
 - recommendations: حد أقصى 6 توصيات
-- learnCards: 3 فقط مختصرة
 
 ردك JSON فقط:
 {
   "summary": "ملخص التوصيات في 2-3 جمل",
+
+  "learnCards": [
+    { "term": "", "emoji": "", "simple": "", "inThisStock": "" }
+  ],
 
   "portfolioHealth": {
     "score": 0,
@@ -307,8 +307,5 @@ export const RECOMMENDATIONS_SYSTEM = `أنت مستشار استثماري خب
 
   "sectorsToWatch": ["قطاع + سبب قصير"],
   "marketOutlook": "نظرة على السوق المصري حالياً في 2-3 جمل",
-  "learnCards": [
-    { "term": "", "emoji": "", "simple": "", "detail": "", "inThisStock": "" }
-  ],
   "disclaimer": "هذا التحليل للأغراض التعليمية فقط وليس توصية استثمارية مرخصة."
 }`;
