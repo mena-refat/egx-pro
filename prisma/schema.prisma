@@ -7,250 +7,97 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum GicsSector {
-  INFORMATION_TECHNOLOGY
-  HEALTH_CARE
-  FINANCIALS
-  CONSUMER_DISCRETIONARY
-  CONSUMER_STAPLES
-  ENERGY
-  INDUSTRIALS
-  MATERIALS
-  UTILITIES
-  REAL_ESTATE
-  COMMUNICATION_SERVICES
-}
-
 model Stock {
-  id      String       @id @default(cuid())
-  ticker  String       @unique
-  nameAr  String
-  nameEn  String
-  sector  GicsSector?
+  id     String      @id @default(cuid())
+  ticker String      @unique
+  nameAr String
+  nameEn String
+  sector GicsSector?
 
   @@index([sector])
 }
 
-model StockQuoteCache {
-  id            String    @id @default(cuid())
-  ticker        String    @unique
-  price         Float?
-  change        Float?
-  changePercent Float?
-  high          Float?
-  low           Float?
-  open          Float?
-  previousClose Float?
-  volume        Int?
-  currency      String?
-  symbol        String?
-  longName      String?
-  marketTime    DateTime?
-  cachedAt      DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  @@index([updatedAt])
-}
-
 model User {
-  id                String    @id @default(uuid())
-  email             String?   @unique
-  phone             String?   @unique
-  passwordHash      String?
-  salt              String?
-  fullName          String?
-  username          String?   @unique
-  isPrivate         Boolean   @default(false)
-  showPortfolio     Boolean   @default(true)
-  isEmailVerified   Boolean   @default(false)
-  twoFactorEnabled   Boolean   @default(false)
-  twoFactorSecret    String?
-  twoFactorEnabledAt DateTime?
-  avatarUrl         String?
-  riskTolerance     String?   @default("moderate")
-  investmentHorizon Int?      @default(5)
-  monthlyBudget     Float?    @default(0)
-  shariaMode        Boolean   @default(false)
-  onboardingCompleted Boolean @default(false)
-  interestedSectors   String?   @default("[]")
-  language          String    @default("system")
-  theme             String    @default("system")
-  plan              String    @default("free") // "free" | "pro" | "yearly"
-  planExpiresAt     DateTime?
-  aiAnalysisUsedThisMonth Int  @default(0)
-  aiAnalysisResetDate    DateTime?
-  referralCode      String?   @unique
-  referredBy        String?
-  referralUsed      String?
-  totalReferrals    Int       @default(0)
-  referralProDaysRemaining Int @default(0)
-  referralProExpiresAt DateTime?
-  notifySignals     Boolean   @default(true)
-  notifyPortfolio   Boolean   @default(true)
-  notifyNews        Boolean   @default(true)
-  notifyAchievements Boolean  @default(true)
-  notifyGoals       Boolean   @default(true)
-  lastLoginAt       DateTime?
-  lastLoginIp       String?
-  loginStreak       Int       @default(0)
-  freeReferralRewarded Boolean @default(false)
-  lastPasswordChangeAt DateTime?
-  lastUsernameChangeAt DateTime?
-  usernameChangeCount Int       @default(0)
-  isDeleted         Boolean   @default(false)
-  deletedAt         DateTime?
-  deletionScheduledFor DateTime?
-  isFirstLogin      Boolean   @default(true)
-  hearAboutUs       String?
-  investorProfile   Json?
-  userTitle         String    @default("ناشئ") // ناشئ | مستثمر | محترف | أسطورة
-  failedLoginAttempts Int     @default(0)
-  lockedUntil       DateTime?
-  unseenAchievements String[] @default([])
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  refreshTokens      RefreshToken[]
-  auditLogs          AuditLog[]
-  portfolios         Portfolio[]
-  goals              Goal[]
-  watchlists         Watchlist[]
-  analyses           Analysis[]
-  referralsSent      Referral[] @relation("ReferralsSent")
-  referralsReceived  Referral[] @relation("ReferralsReceived")
-  notifications      Notification[]
-  discountUsages   DiscountUsage[]
-
-  followers Follow[] @relation("FollowingRelation")
-  following Follow[] @relation("FollowerRelation")
-
-  predictions         Prediction[]
-  predictionLikes    PredictionLike[]
-  predictionStats    UserPredictionStats?
-}
-
-enum PredictionDir {
-  UP
-  DOWN
-}
-
-enum PredictionTime {
-  WEEK
-  MONTH
-  THREE_MONTHS
-  SIX_MONTHS
-  NINE_MONTHS
-  YEAR
-}
-
-enum PredictionStatus {
-  ACTIVE
-  HIT
-  MISSED
-  EXPIRED
-}
-
-enum UserRank {
-  BEGINNER
-  ANALYST
-  SENIOR
-  EXPERT
-  LEGEND
-}
-
-model Prediction {
-  id               String            @id @default(cuid())
-  userId           String
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ticker           String
-  direction        PredictionDir
-  targetPrice      Float
-  priceAtCreation  Float
-  timeframe        PredictionTime
-  reason           String           @db.VarChar(500)
-  status           PredictionStatus  @default(ACTIVE)
-  pointsEarned     Int?
-  accuracyPct      Float?
-  resolvedPrice    Float?
-  createdAt        DateTime          @default(now())
-  expiresAt        DateTime
-  resolvedAt       DateTime?
-  isPublic         Boolean           @default(true)
-  likes            PredictionLike[]
-
-  @@index([ticker, status])
-  @@index([userId, status])
-  @@index([status, expiresAt])
-}
-
-model PredictionLike {
-  id           String     @id @default(cuid())
-  predictionId String
-  prediction   Prediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt    DateTime   @default(now())
-
-  @@unique([predictionId, userId])
-  @@index([predictionId])
-  @@index([userId])
-}
-
-model UserPredictionStats {
-  id                  Int      @id @default(autoincrement())
-  userId              String   @unique
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  totalPredictions    Int      @default(0)
-  correctPredictions  Int      @default(0)
-  totalPoints         Int      @default(0)
-  accuracyRate        Float    @default(0)
-  currentStreak       Int      @default(0)
-  bestStreak          Int      @default(0)
-  rank                UserRank @default(BEGINNER)
-  updatedAt           DateTime @updatedAt
-
-  @@index([userId])
-}
-
-enum FollowStatus {
-  PENDING
-  ACCEPTED
-  BLOCKED
-}
-
-model Follow {
-  id          String       @id @default(cuid())
-  followerId  String
-  followingId String
-  status      FollowStatus @default(PENDING)
-  createdAt   DateTime     @default(now())
-
-  follower  User @relation("FollowerRelation", fields: [followerId], references: [id], onDelete: Cascade)
-  following User @relation("FollowingRelation", fields: [followingId], references: [id], onDelete: Cascade)
-
-  @@unique([followerId, followingId])
-  @@index([followerId])
-  @@index([followingId])
+  id                                     String         @id @default(uuid())
+  email                                  String?        @unique
+  phone                                  String?        @unique
+  passwordHash                           String?
+  salt                                   String?
+  fullName                               String?
+  username                               String?        @unique
+  isEmailVerified                        Boolean        @default(false)
+  twoFactorEnabled                       Boolean        @default(false)
+  twoFactorSecret                        String?
+  twoFactorEnabledAt                     DateTime?
+  avatarUrl                              String?
+  riskTolerance                          String?        @default("moderate")
+  investmentHorizon                      Int?           @default(5)
+  monthlyBudget                          Float?         @default(0)
+  shariaMode                             Boolean        @default(false)
+  onboardingCompleted                    Boolean        @default(false)
+  interestedSectors                      String?        @default("[]")
+  language                               String         @default("system")
+  theme                                  String         @default("system")
+  plan                                   String         @default("free")
+  planExpiresAt                          DateTime?
+  aiAnalysisUsedThisMonth                Int            @default(0)
+  aiAnalysisResetDate                    DateTime?
+  referralCode                           String?        @unique
+  referredBy                             String?
+  referralUsed                           String?
+  totalReferrals                         Int            @default(0)
+  referralProDaysRemaining               Int            @default(0)
+  referralProExpiresAt                   DateTime?
+  notifySignals                          Boolean        @default(true)
+  notifyPortfolio                        Boolean        @default(true)
+  notifyNews                             Boolean        @default(true)
+  notifyAchievements                     Boolean        @default(true)
+  notifyGoals                            Boolean        @default(true)
+  lastLoginAt                            DateTime?
+  lastLoginIp                            String?
+  loginStreak                            Int            @default(0)
+  freeReferralRewarded                   Boolean        @default(false)
+  lastPasswordChangeAt                   DateTime?
+  lastUsernameChangeAt                   DateTime?
+  usernameChangeCount                    Int            @default(0)
+  isDeleted                              Boolean        @default(false)
+  deletedAt                              DateTime?
+  deletionScheduledFor                   DateTime?
+  isFirstLogin                           Boolean        @default(true)
+  hearAboutUs                            String?
+  investorProfile                        Json?
+  userTitle                              String         @default("ناشئ")
+  failedLoginAttempts                    Int            @default(0)
+  lockedUntil                            DateTime?
+  unseenAchievements                     String[]       @default([])
+  createdAt                              DateTime       @default(now())
+  updatedAt                              DateTime       @updatedAt
+  analyses                               Analysis[]
+  auditLogs                              AuditLog[]
+  goals                                  Goal[]
+  notifications                          Notification[]
+  portfolios                             Portfolio[]
+  Referral_Referral_referredUserIdToUser Referral[]     @relation("Referral_referredUserIdToUser")
+  referralsSent                          Referral[]     @relation("ReferralsSent")
+  refreshTokens                          RefreshToken[]
+  watchlists                             Watchlist[]
 }
 
 model RefreshToken {
-  id         String    @id @default(cuid())
-  token      String    @unique // hash of the refresh token (for lookup)
+  id         String   @id @default(cuid())
+  token      String   @unique
   userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt  DateTime
-  createdAt  DateTime  @default(now())
-  deviceInfo String?   // legacy raw UA; prefer deviceType/browser/os
-  deviceType String?   // desktop | mobile | tablet
-  browser    String?   // Chrome | Firefox | Safari | Edge | etc.
-  os         String?   // Windows | macOS | iOS | Android | etc.
+  createdAt  DateTime @default(now())
+  deviceInfo String?
+  deviceType String?
+  browser    String?
+  os         String?
   ipAddress  String?
   city       String?
   country    String?
-  isRevoked  Boolean   @default(false)
-
-  @@index([expiresAt])
-  @@index([userId, isRevoked])
+  isRevoked  Boolean  @default(false)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {
@@ -260,18 +107,16 @@ model AuditLog {
   details   String?
   ipAddress String?
   userAgent String?
-  ipHash    String?  // للتوافق مع الكود القديم
-  result    String?  // success | failure
-  metadata  String?  // JSON string
+  ipHash    String?
+  result    String?
+  metadata  String?
   createdAt DateTime @default(now())
-  timestamp DateTime @default(now()) // للتوافق
-
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  timestamp DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([userId, createdAt])
   @@index([action])
-  @@index([createdAt])
 }
 
 model Portfolio {
@@ -283,7 +128,6 @@ model Portfolio {
   buyDate   DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -293,7 +137,6 @@ model Portfolio {
 model Goal {
   id            String    @id @default(cuid())
   userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   title         String
   targetAmount  Float
   currentAmount Float     @default(0)
@@ -304,6 +147,7 @@ model Goal {
   achievedAt    DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, status])
@@ -316,31 +160,28 @@ model Watchlist {
   targetPrice             Float?
   targetReachedNotifiedAt DateTime?
   createdAt               DateTime  @default(now())
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, ticker])
 }
 
 model Analysis {
-  id        String   @id @default(uuid())
-  userId    String
-  ticker    String
-  content   String
-  createdAt DateTime @default(now())
-
-  priceAtAnalysis  Float?
-  targetPrice      Float?
-  stopLoss         Float?
-  verdict          String?
-  priceAfter7d     Float?
-  priceAfter30d    Float?
-  accuracyScore    Float?
-  accuracyNote     String?
-  checkedAt        DateTime?
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String    @id @default(uuid())
+  userId          String
+  ticker          String
+  content         String
+  createdAt       DateTime  @default(now())
+  priceAtAnalysis Float?
+  targetPrice     Float?
+  stopLoss        Float?
+  verdict         String?
+  priceAfter7d    Float?
+  priceAfter30d   Float?
+  accuracyScore   Float?
+  accuracyNote    String?
+  checkedAt       DateTime?
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, ticker])
@@ -349,59 +190,38 @@ model Analysis {
 }
 
 model Referral {
-  id          String    @id @default(cuid())
-  referrerId  String
-  referredId  String    @unique
-  isActive    Boolean   @default(false)
-  rewardedAt  DateTime?
-  createdAt   DateTime  @default(now())
-
-  referrer User @relation("ReferralsSent", fields: [referrerId], references: [id], onDelete: Cascade)
-  referred User @relation("ReferralsReceived", fields: [referredId], references: [id], onDelete: Cascade)
-
-  @@index([referrerId])
-  @@index([referrerId, isActive])
+  id                                 String   @id @default(cuid())
+  referrerId                         String
+  referredUserId                     String
+  status                             String   @default("pending")
+  createdAt                          DateTime @default(now())
+  User_Referral_referredUserIdToUser User     @relation("Referral_referredUserIdToUser", fields: [referredUserId], references: [id], onDelete: Cascade)
+  referrer                           User     @relation("ReferralsSent", fields: [referrerId], references: [id], onDelete: Cascade)
 }
 
 model DiscountCode {
-  id         String   @id @default(uuid())
-  code       String   @unique
-  type       String   // percentage or amount
-  value      Float
-  active     Boolean  @default(true)
-  expiresAt  DateTime?
-  maxUses    Int?
-  usedCount  Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  usages     DiscountUsage[]
-}
-
-model DiscountUsage {
-  id        String   @id @default(cuid())
-  userId    String
-  codeId    String
-  createdAt DateTime @default(now())
-
-  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  code DiscountCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, codeId])
-  @@index([userId])
-  @@index([codeId])
+  id        String    @id @default(uuid())
+  code      String    @unique
+  type      String
+  value     Float
+  active    Boolean   @default(true)
+  expiresAt DateTime?
+  maxUses   Int?
+  usedCount Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String   // achievement | stock_target | referral | goal | portfolio
+  type      String
   title     String
   body      String
-  route     String?  // frontend route to navigate to when clicked e.g. /goals /stocks/COMI
+  route     String?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, isRead])
@@ -409,12 +229,26 @@ model Notification {
 }
 
 model ArchivedUser {
-  id          String   @id @default(uuid())
-  originalId  String   @unique
-  email       String?
-  phone       String?
-  username    String?
-  name        String?
-  userData    Json
-  archivedAt  DateTime @default(now())
+  id         String   @id @default(uuid())
+  originalId String   @unique
+  email      String?
+  phone      String?
+  username   String?
+  name       String?
+  userData   Json
+  archivedAt DateTime @default(now())
+}
+
+enum GicsSector {
+  INFORMATION_TECHNOLOGY
+  HEALTH_CARE
+  FINANCIALS
+  CONSUMER_DISCRETIONARY
+  CONSUMER_STAPLES
+  ENERGY
+  INDUSTRIALS
+  MATERIALS
+  UTILITIES
+  REAL_ESTATE
+  COMMUNICATION_SERVICES
 }
