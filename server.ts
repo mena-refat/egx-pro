@@ -80,7 +80,11 @@ async function startServer() {
 
   app.use('/api', sanitizeInput);
 
-  const frontendOrigin = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
+  // يمكن أن يكون origin واحد أو عدة أصول مفصولة بفاصلة (مثلاً Vercel + Railway)
+  const frontendOriginRaw = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
+  const frontendOrigins = frontendOriginRaw.split(',').map((o) => o.trim()).filter(Boolean);
+  const frontendOrigin = frontendOrigins.length === 1 ? frontendOrigins[0] : frontendOrigins;
+
   // في التطوير نعطّل CSP بالكامل عشان Vite و HMR يشتغلوا بسرعة من غير أخطاء
   const isDev = process.env.NODE_ENV !== 'production';
   app.use(helmet({
@@ -89,9 +93,9 @@ async function startServer() {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "blob:", frontendOrigin],
-        connectSrc: ["'self'", "https://api.anthropic.com", "https://api.gemini.com", "https://*.run.app", "wss://*.run.app", "ws://localhost:3000", "ws://localhost:8080"],
-        frameAncestors: ["'self'", "https://*.google.com", "https://*.aistudio.google", "https://*.run.app"],
+        imgSrc: ["'self'", "data:", "blob:", ...(Array.isArray(frontendOrigin) ? frontendOrigin : [frontendOrigin])],
+        connectSrc: ["'self'", "https://api.anthropic.com", "https://api.gemini.com", "https://*.run.app", "https://*.vercel.app", "wss://*.run.app", "ws://localhost:3000", "ws://localhost:8080"],
+        frameAncestors: ["'self'", "https://*.google.com", "https://*.aistudio.google", "https://*.run.app", "https://*.vercel.app"],
       },
     },
     crossOriginEmbedderPolicy: false,

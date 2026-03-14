@@ -1,8 +1,15 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
+// عند نشر الفرونت على دومين والـ API على آخر (مثلاً Vercel + Railway) ضع VITE_API_URL في بيئة البناء
+const apiBase =
+  (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL?.trim();
+const baseURL = apiBase
+  ? `${apiBase.replace(/\/$/, '')}/api`
+  : '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL,
   timeout: 10000,
   withCredentials: true, // إرسال httpOnly cookie مع كل طلب (للـ refresh)
   headers: {
@@ -83,7 +90,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await axios.post('/api/auth/refresh', null, {
+        const response = await api.post('/auth/refresh', null, {
           withCredentials: true,
         });
         const payload = (response.data as { data?: { accessToken?: string } })?.data ?? response.data;
