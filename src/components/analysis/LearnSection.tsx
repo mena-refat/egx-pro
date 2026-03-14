@@ -4,7 +4,7 @@ import { GraduationCap, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
 import type { LearnCard } from '../../types';
 import styles from './LearnSection.module.scss';
 
-function LearnCardItem({ card, index }: { card: LearnCard; index: number }) {
+function LearnCardItem({ card, index }: { card: LearnCard; index: number; key?: React.Key }) {
   const [expanded, setExpanded] = useState(false);
 
   return (

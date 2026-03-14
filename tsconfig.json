@@ -1,4 +1,6 @@
 {
+  "include": ["src", "server"],
+  "exclude": ["node_modules", "server/tests"],
   "compilerOptions": {
     "target": "ES2022",
     "experimentalDecorators": true,

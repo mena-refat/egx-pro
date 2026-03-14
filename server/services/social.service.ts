@@ -66,9 +66,9 @@ export const SocialService = {
   },
 
   async getFollowers(currentUserId: string) {
-    const rows = await FollowRepository.findFollowers(currentUserId, {
+    const rows = (await FollowRepository.findFollowers(currentUserId, {
       include: { follower: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } } },
-    } as { include: object }) as Array<{ follower: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
+    } as { include: object })) as unknown as Array<{ follower: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
     return rows.map((row) => ({
       id: row.follower.id,
       username: row.follower.username,
@@ -79,9 +79,9 @@ export const SocialService = {
   },
 
   async getFollowing(currentUserId: string) {
-    const rows = await FollowRepository.findFollowing(currentUserId, {
+    const rows = (await FollowRepository.findFollowing(currentUserId, {
       include: { following: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } } },
-    } as { include: object }) as Array<{ following: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
+    } as { include: object })) as unknown as Array<{ following: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
     return rows.map((row) => ({
       id: row.following.id,
       username: row.following.username,
@@ -104,10 +104,10 @@ export const SocialService = {
     }
     const skip = Math.max(0, (page - 1) * limit);
     const take = limit + 1;
-    const rows = await FollowRepository.findMany(
+    const rows = (await FollowRepository.findMany(
       { followingId: profile.id, status: 'ACCEPTED' },
       { include: { follower: { select: { id: true, username: true, createdAt: true, isPrivate: true } } }, orderBy: { createdAt: 'desc' }, skip, take }
-    ) as Array<{ follower: { id: string; username: string | null; createdAt: Date; isPrivate: boolean }; createdAt: Date }>;
+    )) as unknown as Array<{ follower: { id: string; username: string | null; createdAt: Date; isPrivate: boolean }; createdAt: Date }>;
     const followerIds = rows.map((r) => r.follower.id).filter(Boolean);
     const viewerFollows = viewerId
       ? await FollowRepository.findFollowStatuses(viewerId, followerIds)
@@ -141,10 +141,10 @@ export const SocialService = {
     }
     const skip = Math.max(0, (page - 1) * limit);
     const take = limit + 1;
-    const rows = await FollowRepository.findMany(
+    const rows = (await FollowRepository.findMany(
       { followerId: profile.id, status: 'ACCEPTED' },
       { include: { following: { select: { id: true, username: true, createdAt: true, isPrivate: true } } }, orderBy: { createdAt: 'desc' }, skip, take }
-    ) as Array<{ following: { id: string; username: string | null; createdAt: Date; isPrivate: boolean }; createdAt: Date }>;
+    )) as unknown as Array<{ following: { id: string; username: string | null; createdAt: Date; isPrivate: boolean }; createdAt: Date }>;
     const followingIds = rows.map((r) => r.following.id).filter(Boolean);
     const viewerFollows = viewerId
       ? await FollowRepository.findFollowStatuses(viewerId, followingIds)
@@ -166,9 +166,9 @@ export const SocialService = {
   },
 
   async getRequests(currentUserId: string) {
-    const rows = await FollowRepository.findPending(currentUserId, {
+    const rows = (await FollowRepository.findPending(currentUserId, {
       include: { follower: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } } },
-    } as { include: object }) as Array<{ follower: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
+    } as { include: object })) as unknown as Array<{ follower: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
     return rows.map((row) => ({
       id: row.follower.id,
       username: row.follower.username,
@@ -334,7 +334,7 @@ export const SocialService = {
       isPrivate: boolean;
       predictionStats: { rank: string; accuracyRate: number; totalPredictions: number } | null;
     }
-    const typed = sliced as UserWithStats[];
+    const typed = sliced as unknown as UserWithStats[];
     return typed.map((u) => {
       const un = u.username ?? '';
       const stats = u.predictionStats;

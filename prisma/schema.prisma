@@ -70,13 +70,21 @@ model User {
   failedLoginAttempts                    Int            @default(0)
   lockedUntil                            DateTime?
   unseenAchievements                     String[]       @default([])
+  isPrivate                              Boolean        @default(true)
+  showPortfolio                          Boolean        @default(true)
   createdAt                              DateTime       @default(now())
   updatedAt                              DateTime       @updatedAt
   analyses                               Analysis[]
   auditLogs                              AuditLog[]
+  discountUsages                         DiscountUsage[]
+  followsReceived                        Follow[]       @relation("FollowFollowing")
+  followsSent                            Follow[]       @relation("FollowFollower")
   goals                                  Goal[]
   notifications                          Notification[]
   portfolios                             Portfolio[]
+  predictionLikes                        PredictionLike[]
+  predictions                            Prediction[]
+  predictionStats                        UserPredictionStats?
   Referral_Referral_referredUserIdToUser Referral[]     @relation("Referral_referredUserIdToUser")
   referralsSent                          Referral[]     @relation("ReferralsSent")
   refreshTokens                          RefreshToken[]
@@ -199,17 +207,127 @@ model Referral {
   referrer                           User     @relation("ReferralsSent", fields: [referrerId], references: [id], onDelete: Cascade)
 }
 
+enum FollowStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+enum PredictionDir {
+  UP
+  DOWN
+}
+
+enum PredictionTime {
+  WEEK
+  MONTH
+  THREE_MONTHS
+  SIX_MONTHS
+  NINE_MONTHS
+  YEAR
+}
+
+enum PredictionStatus {
+  ACTIVE
+  HIT
+  MISSED
+  EXPIRED
+}
+
+enum UserRank {
+  BEGINNER
+  ANALYST
+  SENIOR
+  EXPERT
+  LEGEND
+}
+
+model Follow {
+  id          String       @id @default(cuid())
+  followerId  String
+  followingId String
+  status      FollowStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  follower    User         @relation("FollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User         @relation("FollowFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@index([followingId, status])
+}
+
+model Prediction {
+  id              String           @id @default(cuid())
+  userId          String
+  ticker          String
+  direction       PredictionDir
+  targetPrice     Float
+  priceAtCreation Float
+  timeframe       PredictionTime
+  reason          String?
+  expiresAt       DateTime
+  isPublic        Boolean         @default(true)
+  status          PredictionStatus @default(ACTIVE)
+  resolvedAt      DateTime?
+  resolvedPrice   Float?
+  pointsEarned    Int?
+  accuracyPct     Float?
+  createdAt       DateTime        @default(now())
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes           PredictionLike[]
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([ticker, status])
+  @@index([status, isPublic])
+  @@index([resolvedAt])
+}
+
+model PredictionLike {
+  predictionId String
+  userId       String
+  prediction   Prediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([predictionId, userId])
+  @@index([userId])
+}
+
+model UserPredictionStats {
+  userId            String   @id
+  totalPredictions   Int      @default(0)
+  correctPredictions Int     @default(0)
+  totalPoints        Int      @default(0)
+  accuracyRate       Float   @default(0)
+  currentStreak      Int     @default(0)
+  bestStreak         Int     @default(0)
+  rank               UserRank @default(BEGINNER)
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DiscountUsage {
+  userId       String
+  codeId       String
+  discountCode DiscountCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, codeId])
+  @@index([codeId])
+}
+
 model DiscountCode {
-  id        String    @id @default(uuid())
-  code      String    @unique
-  type      String
-  value     Float
-  active    Boolean   @default(true)
-  expiresAt DateTime?
-  maxUses   Int?
-  usedCount Int       @default(0)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id           String          @id @default(uuid())
+  code         String          @unique
+  type         String
+  value        Float
+  active       Boolean         @default(true)
+  expiresAt    DateTime?
+  maxUses      Int?
+  usedCount    Int             @default(0)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  discountUsages DiscountUsage[]
 }
 
 model Notification {

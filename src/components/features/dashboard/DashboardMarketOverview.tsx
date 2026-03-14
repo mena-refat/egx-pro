@@ -53,7 +53,17 @@ export function DashboardMarketOverview({ overview, loading, error, onRetry }: P
   const items = INDICATOR_KEYS.map(({ key, tKey }) => {
     const data = key in overview ? overview[key as keyof Overview] : undefined;
     const label = tKey.startsWith('market.') ? t(tKey) : tKey;
-    return { label, value: data?.value, change: data?.changePercent };
+    const value =
+      typeof data === 'object' && data !== null && 'value' in data
+        ? (data as { value: number }).value
+        : typeof data === 'number'
+          ? data
+          : undefined;
+    const change =
+      typeof data === 'object' && data !== null && 'changePercent' in data
+        ? (data as { changePercent: number }).changePercent
+        : undefined;
+    return { label, value, change };
   });
 
   return (

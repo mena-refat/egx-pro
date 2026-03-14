@@ -283,10 +283,10 @@ export const PredictionsService = {
       isPrivate: boolean;
       predictionStats: { rank: UserRank; accuracyRate: number; totalPredictions: number } | null;
     }
-    const user = await UserRepository.findUnique({
+    const user = (await UserRepository.findUnique({
       where: { username },
       select: { id: true, isPrivate: true, predictionStats: true },
-    }) as StatsUser | null;
+    })) as unknown as StatsUser | null;
     if (!user) throw new AppError('NOT_FOUND', 404, 'المستخدم غير موجود');
     const stats = user.predictionStats;
     if (!stats) {

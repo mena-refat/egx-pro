@@ -249,9 +249,9 @@ export async function login(
     return { requires2FA: true, tempToken };
   }
 
-  const referral = await ReferralRepository.findUnique({ referredId: user.id });
-  if (referral && !referral.isActive) {
-    await ReferralRepository.update({ id: referral.id }, { isActive: true });
+  const referral = await ReferralRepository.findUnique({ referredUserId: user.id });
+  if (referral && referral.status !== 'completed') {
+    await ReferralRepository.update({ id: referral.id }, { status: 'completed' });
     await checkAndRewardReferrer(referral.referrerId);
   }
 
