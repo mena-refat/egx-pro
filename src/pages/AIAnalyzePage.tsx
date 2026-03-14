@@ -6,6 +6,7 @@ import api, { ANALYSIS_TIMEOUT_MS } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { TickerSuggestInput } from '../components/ui/TickerSuggestInput';
 import { AnalysisResult } from '../components/analysis/AnalysisResult';
+import { AnalysisLoadingState } from '../components/analysis/AnalysisLoadingState';
 import { getStockInfo, searchStocks } from '../lib/egxStocks';
 import { useProfileGuard } from '../hooks/useProfileGuard';
 import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
@@ -108,13 +109,14 @@ export default function AIAnalyzePage() {
           type="button"
           variant="primary"
           onClick={() => guardedAction(runAnalysis)}
-          loading={loading}
           disabled={loading}
           className={styles.btn}
         >
           {t('ai.getAnalysis')}
         </Button>
       </div>
+
+      <AnalysisLoadingState loading={loading} variant="analyze" />
 
       {error && <p className={styles.error} role="alert">{error}</p>}
 

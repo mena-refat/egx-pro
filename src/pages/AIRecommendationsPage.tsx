@@ -8,6 +8,7 @@ import { useProfileGuard } from '../hooks/useProfileGuard';
 import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
 import type { RecommendationsResult } from '../types';
 import { LearnSection } from '../components/analysis/LearnSection';
+import { AnalysisLoadingState } from '../components/analysis/AnalysisLoadingState';
 import styles from './AIRecommendationsPage.module.scss';
 
 export default function AIRecommendationsPage() {
@@ -80,13 +81,14 @@ export default function AIRecommendationsPage() {
           type="button"
           variant="primary"
           onClick={() => guardedAction(runRecommendations)}
-          loading={loading}
           disabled={loading}
           className={styles.btn}
         >
           {t('ai.getRecommendations')}
         </Button>
       </div>
+
+      <AnalysisLoadingState loading={loading} variant="recommendations" />
 
       {error && <p className={styles.error} role="alert">{error}</p>}
 

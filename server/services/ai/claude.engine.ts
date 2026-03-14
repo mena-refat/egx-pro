@@ -5,10 +5,13 @@ export class ClaudeAnalysisEngine implements IAnalysisEngine {
   readonly name = 'claude';
 
   async generate(request: AnalysisEngineRequest): Promise<AnalysisEngineResponse> {
-    const apiKey = process.env.CLAUDE_API_KEY;
+    const raw = process.env.CLAUDE_API_KEY;
+    const apiKey = typeof raw === 'string' ? raw.trim() : '';
     if (!apiKey) throw new Error('CLAUDE_API_KEY is not set');
 
-    const models = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022'];
+    const models = ['claude-3-5-sonnet-20241022', 'claude-sonnet-4-6'];
+    let lastStatus = 0;
+    let lastErrText = '';
 
     for (const model of models) {
       try {
@@ -37,9 +40,17 @@ export class ClaudeAnalysisEngine implements IAnalysisEngine {
         }
 
         if (!res.ok) {
-          const errText = await res.text().catch(() => '');
-          logger.error('Claude API Error', { model, status: res.status, err: errText.slice(0, 300) });
-          continue; // جرب الموديل اللي بعده
+          lastStatus = res.status;
+          const raw = await res.text().catch(() => '');
+          lastErrText = raw;
+          logger.error('Claude API Error', { model, status: res.status, err: raw.slice(0, 300) });
+          try {
+            const errJson = JSON.parse(raw) as { error?: { message?: string } };
+            if (errJson?.error?.message) lastErrText = errJson.error.message;
+          } catch {
+            /* keep lastErrText as raw */
+          }
+          continue;
         }
 
         const data = (await res.json()) as {
@@ -56,15 +67,23 @@ export class ClaudeAnalysisEngine implements IAnalysisEngine {
           return { text, provider: `${this.name}/${model}` };
         }
 
+        lastStatus = res.status;
+        lastErrText = 'empty response';
         logger.warn('Claude empty response', { model });
         continue;
 
       } catch (err) {
-        logger.warn(`Model ${model} failed: ${(err as Error).message}`);
+        const msg = (err as Error).message ?? '';
+        if (msg.includes('abort') || msg.includes('AbortError')) {
+          lastStatus = 504;
+          lastErrText = 'timeout';
+        }
+        logger.warn(`Model ${model} failed: ${msg}`);
         continue;
       }
     }
 
-    throw new Error('All Claude models failed');
+    const detail = lastStatus ? ` [${lastStatus}] ${lastErrText.slice(0, 100)}` : '';
+    throw new Error(`All Claude models failed${detail}`);
   }
 }

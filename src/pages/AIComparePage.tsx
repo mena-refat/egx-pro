@@ -10,6 +10,7 @@ import { useProfileGuard } from '../hooks/useProfileGuard';
 import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
 import type { CompareResult } from '../types';
 import { LearnSection } from '../components/analysis/LearnSection';
+import { AnalysisLoadingState } from '../components/analysis/AnalysisLoadingState';
 import styles from './AIComparePage.module.scss';
 
 export default function AIComparePage() {
@@ -126,13 +127,14 @@ export default function AIComparePage() {
           type="button"
           variant="primary"
           onClick={() => guardedAction(runCompare)}
-          loading={loading}
           disabled={loading}
           className={styles.btn}
         >
           {t('ai.getComparison')}
         </Button>
       </div>
+
+      <AnalysisLoadingState loading={loading} variant="compare" />
 
       {error && <p className={styles.error} role="alert">{error}</p>}
 

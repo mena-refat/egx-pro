@@ -113,10 +113,10 @@ async function runAnalysisEngine(system: string, userMessage: string, maxTokens 
     if (msg.includes('rate') || msg.includes('429')) {
       throw new AppError('RATE_LIMITED', 429, 'خدمة التحليل مشغولة حالياً. حاول بعد دقيقة.');
     }
-    if (msg.includes('timeout') || msg.includes('ECONNABORTED')) {
+    if (msg.includes('timeout') || msg.includes('ECONNABORTED') || msg.includes('504') || msg.includes('abort')) {
       throw new AppError('ANALYSIS_TIMEOUT', 504, 'التحليل أخد وقت طويل. حاول تاني.');
     }
-    throw new AppError('ANALYSIS_FAILED', 502, 'فشل في الحصول على التحليل. حاول تاني.');
+    throw new AppError('ANALYSIS_FAILED', 502, msg || 'فشل في الحصول على التحليل. حاول تاني.');
   }
 }
 
