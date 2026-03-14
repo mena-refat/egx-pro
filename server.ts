@@ -13,7 +13,6 @@ import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import cron from 'node-cron';
 
-import { createServer } from 'http';
 import * as Sentry from '@sentry/node';
 import { setupWebSocket } from './server/websocket.ts';
 import { validateEnv } from './server/lib/env.ts';
@@ -61,8 +60,7 @@ async function startServer() {
 
   const app = express();
   app.set('trust proxy', 1);
-  const server = createServer(app);
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = process.env.PORT || 3000;
 
   // ESM-safe equivalent of __dirname
   const __filename = fileURLToPath(import.meta.url);
@@ -319,35 +317,36 @@ async function startServer() {
 
   let wsHandlers: ReturnType<typeof setupWebSocket> | null = null;
 
-  server.listen(PORT, '0.0.0.0', async () => {
+  const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    logger.info(`🚀 Borsa Server running on http://localhost:${PORT}`);
-    wsHandlers = setupWebSocket(server);
-    wsHandlersRef = wsHandlers;
-    marketDataService.setBroadcastFn(wsHandlers.broadcastPrices);
+    void (async () => {
+      logger.info(`🚀 Borsa Server running on http://localhost:${PORT}`);
+      wsHandlers = setupWebSocket(server);
+      wsHandlersRef = wsHandlers;
+      marketDataService.setBroadcastFn(wsHandlers.broadcastPrices);
 
-    try {
-      let symbols: string[] = [...EGX_TICKERS];
       try {
-        // Use DB stocks if the model exists on the generated Prisma client
-        // Optional Stock model — not all Prisma schemas have it; use EGX_TICKERS fallback
-        type PrismaWithStock = { stock?: { findMany: (args: { select: { ticker: true } }) => Promise<{ ticker: string }[]> } };
-        const prismaWithStock = prisma as unknown as PrismaWithStock;
-        if (prismaWithStock.stock?.findMany) {
-          const stocks = await prismaWithStock.stock.findMany({ select: { ticker: true } });
-          if (stocks.length > 0) {
-            symbols = stocks.map((s) => s.ticker);
+        let symbols: string[] = [...EGX_TICKERS];
+        try {
+          // Use DB stocks if the model exists on the generated Prisma client
+          type PrismaWithStock = { stock?: { findMany: (args: { select: { ticker: true } }) => Promise<{ ticker: string }[]> } };
+          const prismaWithStock = prisma as unknown as PrismaWithStock;
+          if (prismaWithStock.stock?.findMany) {
+            const stocks = await prismaWithStock.stock.findMany({ select: { ticker: true } });
+            if (stocks.length > 0) {
+              symbols = stocks.map((s) => s.ticker);
+            }
           }
+        } catch {
+          // إذا ما كانش فيه موديل Stock في Prisma client هنكمل باستخدام EGX_TICKERS
         }
-      } catch {
-        // إذا ما كانش فيه موديل Stock في Prisma client هنكمل باستخدام EGX_TICKERS
-      }
 
-      logger.info(`Starting market data polling for ${symbols.length} symbols`);
-      marketDataService.startPolling(symbols);
-    } catch (err) {
-      logger.error('Failed to start market polling', { error: err });
-    }
+        logger.info(`Starting market data polling for ${symbols.length} symbols`);
+        marketDataService.startPolling(symbols);
+      } catch (err) {
+        logger.error('Failed to start market polling', { error: err });
+      }
+    })();
   });
 
   // أرشفة الحسابات المحذوفة بعد 30 يوم + انتهاء الـ refresh tokens — يومياً 3:00 صباحاً القاهرة
