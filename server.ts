@@ -518,6 +518,6 @@ async function startServer() {
   process.on('SIGINT',  () => shutdown('SIGINT'));
 }
 
-startServer().catch(err => {
-  logger.error('Failed to start server', { error: err });
+startServer().catch((error) => {
+  console.error('Failed to start server:', error);
 });
