@@ -121,34 +121,82 @@ async function runAnalysisEngine(system: string, userMessage: string, maxTokens 
 }
 
 function parseAnalysisJson(rawText: string): unknown {
+  // 1. حاول مباشرة
   try {
     return JSON.parse(rawText);
-  } catch {
-    // ignore
-  }
+  } catch {}
 
+  // 2. شيل backticks وأي text قبل/بعد الـ JSON
   const cleaned = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
   try {
     return JSON.parse(cleaned);
-  } catch {
-    // ignore
-  }
+  } catch {}
 
+  // 3. استخرج أول { ... } block
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace > firstBrace) {
     const extracted = cleaned.slice(firstBrace, lastBrace + 1);
     try {
       return JSON.parse(extracted);
-    } catch {
-      // ignore
+    } catch {}
+  }
+
+  // 4. ══ JSON REPAIR — لو مقطوع (Claude وصل limit) ══
+  if (firstBrace !== -1) {
+    let partial = cleaned.slice(firstBrace);
+
+    // أغلق أي string مفتوح
+    const quoteCount = (partial.match(/(?<!\\)"/g) || []).length;
+    if (quoteCount % 2 !== 0) partial += '"';
+
+    // أغلق brackets مفتوحة
+    let openBraces = 0;
+    let openBrackets = 0;
+    for (const ch of partial) {
+      if (ch === '{') openBraces++;
+      else if (ch === '}') openBraces--;
+      else if (ch === '[') openBrackets++;
+      else if (ch === ']') openBrackets--;
+    }
+
+    // شيل آخر value مقطوع (ممكن يكون string أو number ناقص)
+    partial = partial.replace(/,\s*"[^"]*"?\s*:?\s*[^}\]]*$/, '');
+
+    // أغلق الـ brackets
+    for (let i = 0; i < openBrackets; i++) partial += ']';
+    for (let i = 0; i < openBraces; i++) partial += '}';
+
+    try {
+      return JSON.parse(partial);
+    } catch {}
+
+    // محاولة أخيرة — شيل آخر property وحاول
+    const lastComma = partial.lastIndexOf(',');
+    if (lastComma > 0) {
+      let trimmed = partial.slice(0, lastComma);
+      openBraces = 0;
+      openBrackets = 0;
+      for (const ch of trimmed) {
+        if (ch === '{') openBraces++;
+        else if (ch === '}') openBraces--;
+        else if (ch === '[') openBrackets++;
+        else if (ch === ']') openBrackets--;
+      }
+      for (let i = 0; i < openBrackets; i++) trimmed += ']';
+      for (let i = 0; i < openBraces; i++) trimmed += '}';
+      try {
+        return JSON.parse(trimmed);
+      } catch {}
     }
   }
 
-  logger.warn('Could not parse Claude response as JSON — returning raw text as summary');
+  // 5. كل المحاولات فشلت — ارجع الـ raw text كملخص
+  logger.warn('Could not parse Claude response as JSON', { length: rawText.length, first100: rawText.slice(0, 100) });
   return {
     summary: rawText.slice(0, 500),
-    verdict: 'غير متاح — حاول تاني',
+    verdict: 'غير متاح',
+    verdictBadge: 'غير متاح',
     disclaimer: 'هذا التحليل للأغراض التعليمية فقط',
   };
 }
@@ -267,7 +315,7 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن 
 المطلوب: JSON فقط بالشكل المحدد في الـ system prompt.
 `;
 
-    const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, 5000);
+    const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, 8000);
     const analysisJson = parseAnalysisJson(rawText);
 
     const analysisObj = analysisJson as Record<string, unknown>;
@@ -368,7 +416,7 @@ ${buildStockBlock(t2, info2, p2, f2, ind2, news2)}
 قارن بعمق واعطِ التوصية.
 `;
 
-    const raw = await runAnalysisEngine(system, prompt, 4000);
+    const raw = await runAnalysisEngine(system, prompt, 8000);
     const comparison = parseAnalysisJson(raw);
     await consumeQuota(userId, 2);
     const saved = await AnalysisRepository.create({
@@ -460,7 +508,7 @@ USD/EGP: ${marketCtx.usdEgp != null ? marketCtx.usdEgp.toFixed(2) : 'ابحث ع
 قدم 5-8 توصيات عملية محددة بأسعار مستهدفة ووقف خسارة.
 `;
 
-    const raw = await runAnalysisEngine(systemWithSharia, prompt, 5000);
+    const raw = await runAnalysisEngine(systemWithSharia, prompt, 8000);
     const recommendations = parseAnalysisJson(raw);
     await consumeQuota(userId, 1);
     const saved = await AnalysisRepository.create({
