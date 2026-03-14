@@ -77,6 +77,7 @@
   margin-bottom: 1rem;
 }
 
+/* ══ Result Container ══ */
 .result {
   margin-top: 2rem;
   padding: 1.5rem;
@@ -88,10 +89,100 @@
 .summary {
   color: var(--text-secondary);
   font-size: 0.9375rem;
+  line-height: 1.7;
+  margin: 0 0 1.25rem;
+}
+
+/* ══ Recommendation Box ══ */
+.recommendationBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--brand-subtle, rgba(139, 92, 246, 0.08));
+  border: 1px solid var(--brand, #8b5cf6);
+  border-radius: 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  font-weight: 500;
   line-height: 1.6;
   margin: 0 0 1.5rem;
 }
 
+.recommendationIcon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+/* ══ Quick Compare Table ══ */
+.quickCompare {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.quickRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.quickLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: start;
+}
+
+.quickValue {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.quickVs {
+  font-size: 0.625rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ══ Winner Box ══ */
+.winnerBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.winnerIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.winnerText {
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  margin: 0 0 0.25rem;
+}
+
+.winnerReason {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ══ Cards Grid ══ */
 .cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -106,111 +197,160 @@
 }
 
 .card {
-  padding: 1rem;
+  position: relative;
+  padding: 1.25rem;
   background: var(--bg-secondary);
-  border-radius: 0.75rem;
-  border: 1px solid var(--border-subtle);
+  border-radius: 0.875rem;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.cardWinner {
+  border-color: var(--success, #10b981);
+}
+
+.winnerBadge {
+  position: absolute;
+  top: -0.625rem;
+  inset-inline-end: 1rem;
+  padding: 0.125rem 0.625rem;
+  background: var(--success, #10b981);
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border-radius: 1rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .cardTitle {
   color: var(--text-primary);
   font-size: 1rem;
   font-weight: 700;
-  margin: 0 0 0.5rem;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
 }
 
-.scoreBar {
-  position: relative;
-  height: 1.25rem;
-  background: var(--bg-input);
-  border-radius: 0.5rem;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
-}
-
-.scoreFill {
-  height: 100%;
-  background: var(--brand);
-  border-radius: 0.5rem;
-  transition: width 0.3s ease;
-}
-
-.scoreLabel {
-  position: absolute;
-  inset: 0;
+/* ══ Score Circle ══ */
+.scoreCircle {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 3px solid;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  flex-shrink: 0;
 }
 
-.verdict {
-  color: var(--brand);
+.scoreNum {
   font-size: 0.875rem;
-  font-weight: 600;
-  margin: 0 0 0.75rem;
+  font-weight: 800;
 }
 
-.fundamental,
-.technical {
+/* ══ Verdict Badge ══ */
+.verdictBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.verdictBuy {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.verdictSell {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.verdictWait {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* ══ Section Blocks ══ */
+.sectionBlock {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sectionIcon {
+  font-size: 0.875rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.sectionText {
   color: var(--text-secondary);
   font-size: 0.8125rem;
   line-height: 1.5;
-  margin: 0 0 0.5rem;
-}
-
-.risk {
-  color: var(--danger);
-  margin-bottom: 0.25rem;
-}
-
-.recommendationBox {
-  padding: 1rem;
-  background: var(--brand-subtle);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  color: var(--text-primary);
-  font-size: 0.9375rem;
-  font-weight: 500;
-  margin: 0 0 1rem;
-}
-
-.list {
-  list-style: none;
-  padding: 0;
   margin: 0;
+}
+
+/* ══ Points ══ */
+.points {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+.pointGood,
+.pointBad,
+.pointRisk {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
   font-size: 0.8125rem;
-  line-height: 1.5;
+  line-height: 1.4;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.5rem;
 }
 
-.strength {
-  color: var(--success);
-  margin-bottom: 0.25rem;
+.pointGood {
+  background: rgba(16, 185, 129, 0.06);
+  color: var(--success, #10b981);
 }
 
-.weakness {
-  color: var(--danger);
-  margin-bottom: 0.25rem;
+.pointBad {
+  background: rgba(239, 68, 68, 0.06);
+  color: var(--danger, #ef4444);
 }
 
-.winner {
-  color: var(--text-primary);
-  font-size: 0.9375rem;
-  margin: 0 0 0.5rem;
+.pointRisk {
+  background: rgba(245, 158, 11, 0.06);
+  color: var(--warning, #f59e0b);
 }
 
-.reason {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  margin: 0 0 1rem;
+.pointIcon {
+  flex-shrink: 0;
+  font-size: 0.75rem;
 }
 
+/* ══ Disclaimer ══ */
 .disclaimer {
   color: var(--text-muted);
-  font-size: 0.75rem;
-  margin: 0;
+  font-size: 0.6875rem;
+  margin: 0 0 1rem;
+  line-height: 1.4;
 }
 
 .overlay {

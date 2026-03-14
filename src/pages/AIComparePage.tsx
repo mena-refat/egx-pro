@@ -150,92 +150,142 @@ export default function AIComparePage() {
         const s2 = result.stock2 ?? result.ticker2;
         const fund = (f: CompareResult['stock1']['fundamental'] | string | undefined) =>
           typeof f === 'string' ? f : (f as { summary?: string })?.summary ?? '';
-        const tech = (t: CompareResult['stock1']['technical'] | string | undefined) =>
-          typeof t === 'string' ? t : (t as { summary?: string })?.summary ?? '';
-        const verdict = (s: typeof s1) => (s?.verdictBadge ?? (s as { verdict?: string })?.verdict) ?? '';
+        const tech = (tc: CompareResult['stock1']['technical'] | string | undefined) =>
+          typeof tc === 'string' ? tc : (tc as { summary?: string })?.summary ?? '';
+        const getVerdict = (s: typeof s1) => (s?.verdictBadge ?? (s as { verdict?: string })?.verdict) ?? '';
+
+        const score1 = s1?.score ?? 0;
+        const score2 = s2?.score ?? 0;
+        const winnerTicker = result.winner?.toUpperCase() ?? '';
+        const t1Upper = ticker1.trim().toUpperCase();
+        const t2Upper = ticker2.trim().toUpperCase();
+        const is1Winner = winnerTicker.includes(t1Upper) || winnerTicker.includes(s1?.ticker ?? '');
+        const is2Winner = winnerTicker.includes(t2Upper) || winnerTicker.includes(s2?.ticker ?? '');
+
+        const scoreColor = (score: number) =>
+          score >= 65 ? 'var(--success)' : score >= 45 ? 'var(--warning)' : 'var(--danger)';
+
+        const verdictBadge = (v: string) => {
+          const isBuy = v.includes('شراء');
+          const isSell = v.includes('بيع');
+          const cls = isBuy ? styles.verdictBuy : isSell ? styles.verdictSell : styles.verdictWait;
+          return <span className={`${styles.verdictBadge} ${cls}`}>{v}</span>;
+        };
+
         return (
         <div className={styles.result}>
           <p className={styles.summary}>{result.summary}</p>
-          <div className={styles.cards}>
-            <div className={styles.card}>
-              <h3 className={styles.cardTitle}>{s1?.name ?? ticker1.trim().toUpperCase()}</h3>
-              {typeof s1?.score === 'number' && (
-                <div className={styles.scoreBar} role="progressbar" aria-valuenow={s1.score} aria-valuemin={0} aria-valuemax={100}>
-                  <div className={styles.scoreFill} style={{ width: `${s1.score}%` }} />
-                  <span className={styles.scoreLabel}>{s1.score}/100</span>
-                </div>
-              )}
-              <p className={styles.verdict}>{verdict(s1)}</p>
-              {fund(s1?.fundamental) && <p className={styles.fundamental}>{fund(s1?.fundamental)}</p>}
-              {tech(s1?.technical) && <p className={styles.technical}>{tech(s1?.technical)}</p>}
-              {s1?.strengths?.length > 0 && (
-                <ul className={styles.list}>
-                  {s1.strengths.map((s, i) => (
-                    <li key={i} className={styles.strength}>{s}</li>
-                  ))}
-                </ul>
-              )}
-              {s1?.weaknesses?.length > 0 && (
-                <ul className={styles.list}>
-                  {s1.weaknesses.map((w, i) => (
-                    <li key={i} className={styles.weakness}>{w}</li>
-                  ))}
-                </ul>
-              )}
-              {s1?.risks?.length > 0 && (
-                <ul className={styles.list} aria-label={t('ai.risks', { defaultValue: 'المخاطر' })}>
-                  {s1.risks.map((r, i) => (
-                    <li key={i} className={styles.risk}>{r}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className={styles.card}>
-              <h3 className={styles.cardTitle}>{s2?.name ?? ticker2.trim().toUpperCase()}</h3>
-              {typeof s2?.score === 'number' && (
-                <div className={styles.scoreBar} role="progressbar" aria-valuenow={s2.score} aria-valuemin={0} aria-valuemax={100}>
-                  <div className={styles.scoreFill} style={{ width: `${s2.score}%` }} />
-                  <span className={styles.scoreLabel}>{s2.score}/100</span>
-                </div>
-              )}
-              <p className={styles.verdict}>{verdict(s2)}</p>
-              {fund(s2?.fundamental) && <p className={styles.fundamental}>{fund(s2?.fundamental)}</p>}
-              {tech(s2?.technical) && <p className={styles.technical}>{tech(s2?.technical)}</p>}
-              {s2?.strengths?.length > 0 && (
-                <ul className={styles.list}>
-                  {s2.strengths.map((s, i) => (
-                    <li key={i} className={styles.strength}>{s}</li>
-                  ))}
-                </ul>
-              )}
-              {s2?.weaknesses?.length > 0 && (
-                <ul className={styles.list}>
-                  {s2.weaknesses.map((w, i) => (
-                    <li key={i} className={styles.weakness}>{w}</li>
-                  ))}
-                </ul>
-              )}
-              {s2?.risks?.length > 0 && (
-                <ul className={styles.list} aria-label={t('ai.risks', { defaultValue: 'المخاطر' })}>
-                  {s2.risks.map((r, i) => (
-                    <li key={i} className={styles.risk}>{r}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-          <p className={styles.winner}>
-            {t('ai.winner')}: <strong>{result.winner}</strong>
-          </p>
-          <p className={styles.reason}>{result.winnerReason ?? result.reason ?? ''}</p>
+
           {result.recommendation && (
             <div className={styles.recommendationBox} role="status">
-              {result.recommendation}
+              <span className={styles.recommendationIcon}>💡</span>
+              <span>{result.recommendation}</span>
             </div>
           )}
+
+          <div className={styles.quickCompare}>
+            <div className={styles.quickRow}>
+              <span className={styles.quickLabel}>الإجمالي</span>
+              <span className={styles.quickValue} style={{ color: scoreColor(score1) }}>{score1}/100</span>
+              <span className={styles.quickVs}>vs</span>
+              <span className={styles.quickValue} style={{ color: scoreColor(score2) }}>{score2}/100</span>
+            </div>
+            <div className={styles.quickRow}>
+              <span className={styles.quickLabel}>الحكم</span>
+              <span className={styles.quickValue}>{getVerdict(s1) || '—'}</span>
+              <span className={styles.quickVs}>vs</span>
+              <span className={styles.quickValue}>{getVerdict(s2) || '—'}</span>
+            </div>
+            {(s1?.priceTarget || s2?.priceTarget) && (
+              <div className={styles.quickRow}>
+                <span className={styles.quickLabel}>الهدف</span>
+                <span className={styles.quickValue}>{(s1?.priceTarget as { target?: number })?.target ?? '—'}</span>
+                <span className={styles.quickVs}>vs</span>
+                <span className={styles.quickValue}>{(s2?.priceTarget as { target?: number })?.target ?? '—'}</span>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.winnerBox}>
+            <span className={styles.winnerIcon}>🏆</span>
+            <div>
+              <p className={styles.winnerText}>الأفضل: <strong>{result.winner}</strong></p>
+              <p className={styles.winnerReason}>{result.winnerReason ?? result.reason ?? ''}</p>
+            </div>
+          </div>
+
+          <div className={styles.cards}>
+            {[
+              { s: s1, label: s1?.name ?? t1Upper, isWinner: is1Winner },
+              { s: s2, label: s2?.name ?? t2Upper, isWinner: is2Winner },
+            ].map(({ s, label, isWinner }, idx) => (
+              <div key={idx} className={`${styles.card} ${isWinner ? styles.cardWinner : ''}`}>
+                {isWinner && <div className={styles.winnerBadge}>✨ الأفضل</div>}
+
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>{label}</h3>
+                  {typeof s?.score === 'number' && (
+                    <div className={styles.scoreCircle} style={{ borderColor: scoreColor(s.score) }}>
+                      <span className={styles.scoreNum} style={{ color: scoreColor(s.score) }}>{s.score}</span>
+                    </div>
+                  )}
+                </div>
+
+                {getVerdict(s) && verdictBadge(getVerdict(s))}
+
+                {fund(s?.fundamental) && (
+                  <div className={styles.sectionBlock}>
+                    <span className={styles.sectionIcon}>📊</span>
+                    <p className={styles.sectionText}>{fund(s?.fundamental)}</p>
+                  </div>
+                )}
+                {tech(s?.technical) && (
+                  <div className={styles.sectionBlock}>
+                    <span className={styles.sectionIcon}>📈</span>
+                    <p className={styles.sectionText}>{tech(s?.technical)}</p>
+                  </div>
+                )}
+
+                {s?.strengths?.length > 0 && (
+                  <div className={styles.points}>
+                    {s.strengths.map((str, i) => (
+                      <div key={i} className={styles.pointGood}>
+                        <span className={styles.pointIcon}>✅</span>
+                        <span>{str}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {s?.weaknesses?.length > 0 && (
+                  <div className={styles.points}>
+                    {s.weaknesses.map((w, i) => (
+                      <div key={i} className={styles.pointBad}>
+                        <span className={styles.pointIcon}>❌</span>
+                        <span>{w}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {s?.risks?.length > 0 && (
+                  <div className={styles.points}>
+                    {s.risks.map((r, i) => (
+                      <div key={i} className={styles.pointRisk}>
+                        <span className={styles.pointIcon}>⚠️</span>
+                        <span>{r}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
           {result.disclaimer && (
-            <p className={styles.disclaimer}>{result.disclaimer}</p>
+            <p className={styles.disclaimer}>⚖️ {result.disclaimer}</p>
           )}
+
           {result.learnCards && result.learnCards.length > 0 && (
             <LearnSection cards={result.learnCards} />
           )}
