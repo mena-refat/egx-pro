@@ -356,6 +356,7 @@ export const SocialService = {
     const users = await UserRepository.findMany({
       where: {
         isDeleted: false,
+        id: { not: currentUserId },
         username: { contains: term, mode: 'insensitive' },
       },
       select: { id: true, username: true, avatarUrl: true },

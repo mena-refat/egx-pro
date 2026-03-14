@@ -32,9 +32,12 @@ export function useDiscoverAutocomplete(
           `/api/social/username-search?q=${encodeURIComponent(q.trim())}&limit=${DISCOVER.autocompleteLimit}`,
           { headers: { Authorization: `Bearer ${accessToken}` }, signal }
         );
-        const data = await res.json().catch(() => []);
+        const data = await res.json().catch(() => ({}));
         if (signal?.aborted) return;
-        setSuggestions(Array.isArray(data) ? data : []);
+        const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+        const myUsername = typeof window !== 'undefined' ? (await import('../store/authStore')).useAuthStore.getState().user?.username : null;
+        const filtered = myUsername ? list.filter((s: AutocompleteSuggestion) => (s?.username ?? '') !== myUsername) : list;
+        setSuggestions(filtered);
       } catch (err: unknown) {
         if ((err as { name?: string }).name === 'AbortError') return;
         setSuggestions([]);

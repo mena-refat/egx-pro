@@ -24,8 +24,10 @@ export function useDiscoverSearchQuery() {
         );
         const data = await res.json().catch(() => ({}));
         if (signal?.aborted) return;
-        if (res.ok && Array.isArray(data?.data)) setResults(data.data);
-        else setResults([]);
+        const raw = res.ok && Array.isArray(data?.data) ? data.data : [];
+        const myId = useAuthStore.getState().user?.id;
+        const filtered = myId ? raw.filter((u: SearchResult) => u.id !== myId) : raw;
+        setResults(filtered);
       } catch (err: unknown) {
         if ((err as { name?: string }).name === 'AbortError') return;
         setResults([]);

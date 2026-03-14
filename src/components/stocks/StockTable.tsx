@@ -3,7 +3,9 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { StockCard } from './StockCard';
 import type { StockWithMeta } from '../../hooks/useStockScreener';
 
-const ROW_HEIGHT_ESTIMATE = 96;
+/** ارتفاع الصف = ارتفاع البطاقة + مسافة؛ البطاقة تحتوي على سطرين + شريط سفلي */
+const ROW_HEIGHT_ESTIMATE = 132;
+const ROW_GAP = 4;
 const OVERSCAN = 5;
 
 export interface StockTableProps {
@@ -28,7 +30,7 @@ export function StockTable({
   const virtualizer = useVirtualizer({
     count: stocks.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => ROW_HEIGHT_ESTIMATE,
+    estimateSize: () => ROW_HEIGHT_ESTIMATE + ROW_GAP,
     overscan: OVERSCAN,
   });
 
@@ -41,7 +43,7 @@ export function StockTable({
       style={{ maxHeight: 'min(70vh, 600px)' }}
     >
       <ul
-        className="relative w-full space-y-3"
+        className="relative w-full list-none p-0 m-0"
         style={{ height: `${virtualizer.getTotalSize()}px` }}
       >
         {virtualizer.getVirtualItems().map((virtualRow) => {
@@ -49,10 +51,12 @@ export function StockTable({
           return (
             <li
               key={stock.ticker}
-              className="absolute left-0 w-full px-0"
+              className="absolute left-0 w-full px-0 box-border"
               style={{
                 top: virtualRow.start,
                 height: `${virtualRow.size}px`,
+                paddingBottom: ROW_GAP,
+                boxSizing: 'border-box',
               }}
             >
               <StockCard
