@@ -192,6 +192,14 @@
   font-size: 0.75rem;
 }
 
+.supportLabel {
+  color: var(--danger);
+}
+
+.resistLabel {
+  color: var(--success);
+}
+
 .outlookSection {
   display: flex;
   flex-direction: column;
@@ -302,6 +310,10 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  color: var(--text-muted);
+}
+
+.outlookReason {
   color: var(--text-muted);
 }
 

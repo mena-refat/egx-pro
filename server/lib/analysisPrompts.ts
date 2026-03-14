@@ -126,8 +126,8 @@ export const SINGLE_ANALYSIS_SYSTEM = `محلل مالي EGX خبير. حلّل 
   "summary": "ملخص 2-3 جمل",
 
   "verdictBadge": "شراء قوي | شراء | انتظار | بيع | بيع قوي",
-  "confidenceScore": 75,
-  "confidenceReason": "",
+  "confidenceScore": 70,
+  "confidenceReason": "جملة واحدة — ليه ده الـ score (مثلاً: البيانات الفنية قوية بس الأساسية ناقصة)",
 
   "learnCards": [
     { "term": "RSI", "emoji": "🌡️", "simple": "ترمومتر السهم — فوق 70 سخن، تحت 30 بارد", "inThisStock": "RSI=72 يعني اتشرى كتير" }
@@ -144,7 +144,7 @@ export const SINGLE_ANALYSIS_SYSTEM = `محلل مالي EGX خبير. حلّل 
   },
 
   "fundamental": {
-    "score": 0,
+    "score": 65,
     "highlights": [],
     "keyRatios": {
       "pe": { "value": "", "explain": "" },
@@ -156,7 +156,7 @@ export const SINGLE_ANALYSIS_SYSTEM = `محلل مالي EGX خبير. حلّل 
   },
 
   "technical": {
-    "score": 0,
+    "score": 55,
     "trend": "صاعد | هابط | جانبي",
     "highlights": [],
     "keyIndicators": {

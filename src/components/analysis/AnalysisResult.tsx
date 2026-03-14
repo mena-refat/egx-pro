@@ -24,6 +24,7 @@ function ScoreGauge({
   score: number;
   size?: 'sm' | 'md';
 }) {
+  if (!score || score <= 0) return null;
   const color =
     score >= 70
       ? 'var(--success)'
@@ -218,7 +219,10 @@ function OutlookCard({
           <div>
             <p className={styles.outlookLabel}>{label}</p>
             <p className={styles.outlookTitle}>
-              {data.title || data.summary?.slice(0, 50)}
+              {data.title ||
+                (data.summary && data.summary.length > 60
+                  ? data.summary.slice(0, 60) + '...'
+                  : data.summary)}
             </p>
           </div>
         </div>
@@ -239,11 +243,13 @@ function OutlookCard({
           animate={{ height: 'auto', opacity: 1 }}
           className={styles.outlookBody}
         >
-          <p className={styles.outlookSummary}>{data.summary}</p>
+          {data.summary && data.summary.length > 60 && (
+            <p className={styles.outlookSummary}>{data.summary}</p>
+          )}
           {data.reasons?.length > 0 && (
             <ul className={styles.outlookReasons}>
               {data.reasons.map((r, i) => (
-                <li key={i}>
+                <li key={i} className={styles.outlookReason}>
                   <span className={styles.outlookBullet}>•</span> {r}
                 </li>
               ))}
@@ -251,7 +257,7 @@ function OutlookCard({
           )}
           {data.action && (
             <div className={styles.actionBox}>
-              <p className={styles.actionLabel}>النصيحة</p>
+              <p className={styles.actionLabel}>💡 النصيحة</p>
               <p className={styles.actionText}>{data.action}</p>
             </div>
           )}
@@ -267,46 +273,95 @@ export interface AnalysisResultProps {
 }
 
 export function AnalysisResult({ analysis: raw, t }: AnalysisResultProps) {
+  // ══ Backward compat — يحوّل أي format قديم للجديد ══
+
+  // 1. Fundamental — لو string بدل object
+  let fundamental = raw.fundamental;
+  if (fundamental && typeof (fundamental as { score?: unknown }).score !== 'number') {
+    const old = fundamental as { outlook?: string; ratios?: string; verdict?: string };
+    fundamental = {
+      score: old.verdict === 'قوي' ? 75 : old.verdict === 'ضعيف' ? 30 : 50,
+      highlights: [old.outlook, old.ratios].filter(Boolean) as string[],
+      keyRatios: undefined,
+    };
+  }
+  if (
+    fundamental &&
+    (fundamental as { score: number }).score === 0 &&
+    !(fundamental as { highlights?: string[] }).highlights?.length
+  ) {
+    fundamental = undefined;
+  }
+
+  // 2. Technical — نفس الشيء
+  let technical = raw.technical;
+  if (technical && typeof (technical as { score?: unknown }).score !== 'number') {
+    const old = technical as { signal?: string; indicators?: string; levels?: string };
+    technical = {
+      score: old.signal?.includes('صاعد') ? 70 : old.signal?.includes('هابط') ? 30 : 50,
+      trend: old.signal || 'جانبي',
+      highlights: [old.indicators, old.levels].filter(Boolean) as string[],
+      keyIndicators: undefined,
+      support: undefined,
+      resistance: undefined,
+    };
+  }
+  if (
+    technical &&
+    (technical as { score: number }).score === 0 &&
+    !(technical as { highlights?: string[] }).highlights?.length
+  ) {
+    technical = undefined;
+  }
+
+  // 3. Verdict → confidence mapping (لو مفيش confidenceScore)
+  const verdictText = raw.verdictBadge || raw.verdict || '';
+  let defaultConfidence = 50;
+  if (verdictText.includes('شراء قوي')) defaultConfidence = 82;
+  else if (verdictText.includes('شراء')) defaultConfidence = 68;
+  else if (verdictText.includes('بيع قوي')) defaultConfidence = 20;
+  else if (verdictText.includes('بيع')) defaultConfidence = 32;
+  else if (verdictText.includes('انتظار')) defaultConfidence = 50;
+
+  // 4. Outlook — استخرج الاتجاه من النص لو مفيش outlook
+  const inferOutlook = (text: string): string => {
+    if (!text) return 'محايد';
+    const positive = ['صاعد', 'إيجابي', 'ارتفاع', 'شراء', 'فرصة', 'نمو', 'اختراق'];
+    const negative = ['هابط', 'سلبي', 'انخفاض', 'بيع', 'خطر', 'تراجع', 'ضغط'];
+    const posCount = positive.filter((w) => text.includes(w)).length;
+    const negCount = negative.filter((w) => text.includes(w)).length;
+    if (posCount > negCount + 1) return 'إيجابي';
+    if (negCount > posCount + 1) return 'سلبي';
+    return 'محايد';
+  };
+
+  const makeOutlook = (
+    term: (typeof raw)['shortTerm'] | undefined,
+    oldText: string | undefined
+  ) => {
+    if (term) return term;
+    if (!oldText) return undefined;
+    return {
+      outlook: inferOutlook(oldText),
+      title: oldText.slice(0, 60) + (oldText.length > 60 ? '...' : ''),
+      summary: oldText,
+      reasons: [],
+      action: '',
+    };
+  };
+
   const analysis: AnalysisResultType = {
     ...raw,
-    verdictBadge: raw.verdictBadge || raw.verdict || '',
-    confidenceScore: raw.confidenceScore ?? 50,
-    shortTerm:
-      raw.shortTerm ||
-      (raw.shortTermOutlook
-        ? {
-            outlook: 'محايد',
-            title: '',
-            summary: raw.shortTermOutlook,
-            reasons: [],
-            action: '',
-          }
-        : undefined),
-    mediumTerm:
-      raw.mediumTerm ||
-      (raw.mediumTermOutlook
-        ? {
-            outlook: 'محايد',
-            title: '',
-            summary: raw.mediumTermOutlook,
-            reasons: [],
-            action: '',
-          }
-        : undefined),
-    longTerm:
-      raw.longTerm ||
-      (raw.longTermOutlook
-        ? {
-            outlook: 'محايد',
-            title: '',
-            summary: raw.longTermOutlook,
-            reasons: [],
-            action: '',
-          }
-        : undefined),
+    verdictBadge: verdictText,
+    confidenceScore: raw.confidenceScore ?? defaultConfidence,
+    fundamental: fundamental as AnalysisResultType['fundamental'],
+    technical: technical as AnalysisResultType['technical'],
+    shortTerm: makeOutlook(raw.shortTerm, raw.shortTermOutlook),
+    mediumTerm: makeOutlook(raw.mediumTerm, raw.mediumTermOutlook),
+    longTerm: makeOutlook(raw.longTerm, raw.longTermOutlook),
     sentiment:
       typeof raw.sentiment === 'string'
-        ? { overall: 'محايد', explain: raw.sentiment }
+        ? { overall: inferOutlook(raw.sentiment), explain: raw.sentiment }
         : raw.sentiment ?? undefined,
   };
 
@@ -367,50 +422,64 @@ export function AnalysisResult({ analysis: raw, t }: AnalysisResultProps) {
         {analysis.fundamental && (
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              <h4 className={styles.cardTitle}>التحليل الأساسي</h4>
-              <ScoreGauge score={analysis.fundamental.score} size="sm" />
+              <h4 className={styles.cardTitle}>📊 التحليل الأساسي</h4>
+              {analysis.fundamental.score > 0 && (
+                <ScoreGauge score={analysis.fundamental.score} size="sm" />
+              )}
             </div>
-            <div className={styles.highlights}>
-              {analysis.fundamental.highlights?.map((h, i) => (
-                <p key={i} className={styles.highlightItem}>
-                  • {h}
-                </p>
-              ))}
-            </div>
-            {analysis.fundamental.keyRatios && (
-              <div className={styles.ratios}>
-                {Object.entries(analysis.fundamental.keyRatios).map(
-                  ([key, val]: [string, { value: string; explain: string }]) => (
-                    <div key={key} className={styles.ratioRow}>
-                      <span className={styles.ratioKey}>{key}</span>
-                      <span className={styles.ratioVal}>{val.value}</span>
-                    </div>
-                  )
-                )}
+            {analysis.fundamental.highlights?.length ? (
+              <div className={styles.highlights}>
+                {analysis.fundamental.highlights.map((h, i) => (
+                  <p key={i} className={styles.highlightItem}>
+                    • {h}
+                  </p>
+                ))}
               </div>
-            )}
+            ) : null}
+            {analysis.fundamental.keyRatios &&
+              Object.keys(analysis.fundamental.keyRatios).length > 0 && (
+                <div className={styles.ratios}>
+                  {Object.entries(analysis.fundamental.keyRatios)
+                    .filter(
+                      ([, val]) =>
+                        val.value &&
+                        val.value !== '' &&
+                        val.value !== 'غير متاح'
+                    )
+                    .map(([key, val]: [string, { value: string; explain: string }]) => (
+                      <div key={key} className={styles.ratioRow}>
+                        <span className={styles.ratioKey}>{key.toUpperCase()}</span>
+                        <span className={styles.ratioVal}>{val.value}</span>
+                      </div>
+                    ))}
+                </div>
+              )}
           </div>
         )}
         {analysis.technical && (
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              <h4 className={styles.cardTitle}>التحليل الفني</h4>
-              <ScoreGauge score={analysis.technical.score} size="sm" />
+              <h4 className={styles.cardTitle}>📈 التحليل الفني</h4>
+              {analysis.technical.score > 0 && (
+                <ScoreGauge score={analysis.technical.score} size="sm" />
+              )}
             </div>
-            <div className={styles.highlights}>
-              {analysis.technical.highlights?.map((h, i) => (
-                <p key={i} className={styles.highlightItem}>
-                  • {h}
-                </p>
-              ))}
-            </div>
+            {analysis.technical.highlights?.length ? (
+              <div className={styles.highlights}>
+                {analysis.technical.highlights.map((h, i) => (
+                  <p key={i} className={styles.highlightItem}>
+                    • {h}
+                  </p>
+                ))}
+              </div>
+            ) : null}
             {analysis.technical.support != null &&
               analysis.technical.resistance != null && (
                 <div className={styles.supportResistance}>
-                  <span style={{ color: 'var(--danger)' }}>
+                  <span className={styles.supportLabel}>
                     دعم: {analysis.technical.support}
                   </span>
-                  <span style={{ color: 'var(--success)' }}>
+                  <span className={styles.resistLabel}>
                     مقاومة: {analysis.technical.resistance}
                   </span>
                 </div>

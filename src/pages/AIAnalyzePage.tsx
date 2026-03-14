@@ -70,31 +70,38 @@ export default function AIAnalyzePage() {
       if (data) setAnalysis(data);
       else setError(t('common.error'));
     } catch (err: unknown) {
-      const axiosErr = err as { code?: string; response?: { status?: number; data?: { error?: string; message?: string } } };
+      const axiosErr = err as {
+        code?: string;
+        error?: string;
+        message?: string;
+        response?: { status?: number; data?: { error?: string; message?: string } };
+      };
       const res = axiosErr?.response;
-      const code = res?.data?.error;
+      const code = res?.data?.error ?? axiosErr?.error;
       const status = res?.status;
+      const msg = (err as Error)?.message ?? axiosErr?.message ?? '';
 
       if (code === 'ANALYSIS_LIMIT_REACHED') {
         setShowLimitModal(true);
+      } else if (code === 'NETWORK_ERROR' || msg.includes('لا يوجد اتصال') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        setError('مفيش اتصال بالإنترنت. تأكد من الاتصال وحاول تاني.');
       } else if (status === 401) {
         setError(t('ai.sessionExpired'));
-      } else if (status === 429) {
+      } else if (status === 429 || code === 'RATE_LIMITED') {
         setError('خدمة التحليل مشغولة حالياً. حاول بعد دقيقة.');
-      } else if (status === 502 || status === 504) {
-        setError('التحليل أخد وقت طويل. حاول تاني.');
-      } else if (status === 503) {
+      } else if (status === 502 || status === 504 || code === 'ANALYSIS_FAILED' || code === 'ANALYSIS_TIMEOUT') {
+        setError('التحليل أخد وقت طويل أو فشل. حاول تاني.');
+      } else if (status === 503 || code === 'SERVICE_UNAVAILABLE') {
         setError(t('ai.serviceUnavailable'));
       } else if (axiosErr?.code === 'ECONNABORTED') {
         setError('التحليل أخد وقت طويل. حاول تاني.');
+      } else if (status === 500) {
+        setError('خطأ من الخادم. حاول تاني بعد شوية.');
       } else {
-        const msg = (err as Error)?.message || '';
-        if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-          setError('مفيش اتصال بالإنترنت. تأكد من الاتصال وحاول تاني.');
-        } else if (msg.includes('empty') || msg.includes('Empty')) {
+        if (msg.includes('empty') || msg.includes('Empty')) {
           setError('التحليل رجع فاضي — حاول تاني أو جرب سهم تاني.');
         } else {
-          setError('حدث خطأ غير متوقع. حاول تاني بعد شوية.');
+          setError('التحليل فشل أو أخد وقت طويل. حاول تاني بعد شوية.');
         }
         if (import.meta.env.DEV) console.error('Analysis error:', err);
       }
