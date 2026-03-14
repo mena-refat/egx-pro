@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 
 export default function SecuritySettings() {
-  const { i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const { user, accessToken, setUser } = useAuthStore();
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [qrCode, setQrCode] = useState('');
@@ -51,11 +51,11 @@ export default function SecuritySettings() {
         if (user) setUser({ ...user, twoFactorEnabled: true });
       } else {
         const data = await res.json();
-        setError(data.error || 'Invalid token');
+        setError(t('common.error'));
       }
     } catch (err) {
       console.error('2FA verification error', err);
-      setError('Verification failed');
+      setError(t('common.error'));
     }
   };
 

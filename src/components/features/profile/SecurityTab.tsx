@@ -166,7 +166,7 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setRequestStatus({ type: 'error', message: data?.error || t('common.error') });
+        setRequestStatus({ type: 'error', message: t('common.error') });
         return;
       }
       const payload = (data as { data?: { isPrivate?: boolean; showPortfolio?: boolean } }).data ?? data;
@@ -212,7 +212,7 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
       setShowPasswordForm(false);
       setLastPasswordChangeAt(new Date().toISOString());
     } catch (err) {
-      setPasswordMessage((err as Error).message || t('settings.changePasswordFailed'));
+      setPasswordMessage(t('settings.changePasswordFailed'));
     } finally {
       setChangingPassword(false);
     }
@@ -272,7 +272,7 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
         if (data?.error === 'invalid_code') setEnable2FAError(t('settings.invalidCodeLong'));
         else if (data?.error === 'no_secret') setEnable2FAError(t('settings.noSecret'));
         else if (data?.error === '2fa_already_enabled') setEnable2FAError(t('settings.twoFaAlreadyEnabled'));
-        else setEnable2FAError(data?.message || t('settings.twoFaInvalidCodeTryAgain'));
+        else setEnable2FAError(t('settings.twoFaInvalidCodeTryAgain'));
         return;
       }
       setTwoFactorEnabled(true);

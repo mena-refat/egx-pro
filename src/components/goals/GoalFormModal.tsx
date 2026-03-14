@@ -120,7 +120,7 @@ export function GoalFormModal({
       toast.success(mode === 'add' ? t('goals.added', { defaultValue: t('common.success') }) : t('common.success'));
       onSaved();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : t('goals.errorAdd'));
+      setErr(t('goals.errorAdd'));
     } finally {
       setSubmitting(false);
     }

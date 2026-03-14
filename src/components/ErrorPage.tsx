@@ -90,19 +90,11 @@ export function ErrorPage({ code, onPrimaryAction }: ErrorPageProps) {
           </div>
 
           <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-3xl bg-[var(--brand-subtle)] border border-[var(--brand)]/40 flex items-center justify-center">
-                <Icon className="w-10 h-10 text-[var(--brand)]" />
-              </div>
-              <span className="absolute -bottom-3 inset-x-0 text-label text-[var(--text-muted)]">
-                {t('error.codeLabel', { code })}
-              </span>
+            <div className="w-20 h-20 rounded-3xl bg-[var(--brand-subtle)] border border-[var(--brand)]/40 flex items-center justify-center">
+              <Icon className="w-10 h-10 text-[var(--brand)]" />
             </div>
 
             <div>
-              <p className="text-6xl font-extrabold tracking-tight text-[var(--brand)] mb-2">
-                {code}
-              </p>
               <h1 className="text-title font-bold mb-2">{t(titleKey)}</h1>
               <p className="text-[var(--text-secondary)] text-body leading-relaxed">{t(descriptionKey)}</p>
             </div>

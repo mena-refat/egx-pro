@@ -92,7 +92,8 @@ const GoalTracker = memo(function GoalTracker({ currentWealth }: { currentWealth
           useAuthStore.getState().addUnseenAchievementsCount(payload.newUnseenAchievements.length);
         }
       } else {
-        setError((data as { error?: string })?.error || t('goals.errorAdd'));
+        const code = (data as { error?: string })?.error;
+        setError(code && t('apiErrors.' + code) !== 'apiErrors.' + code ? t('apiErrors.' + code) : t('goals.errorAdd'));
       }
     } catch (err) {
       console.error('Add goal error', err);

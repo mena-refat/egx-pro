@@ -94,7 +94,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
       fetchMy(1);
       fetchLimits();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'فشل النشر');
+      setError(t('common.error'));
     } finally {
       setSubmitting(false);
     }

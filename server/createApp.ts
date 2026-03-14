@@ -197,12 +197,7 @@ export async function createApp(): Promise<express.Express> {
 
       if (err instanceof AppError) {
         logger.warn('AppError', { reqId, code: err.code, status: err.status });
-        return res.status(err.status).json({
-          ok: false,
-          error: err.code,
-          ...(err.message && err.message !== err.code && { message: err.message }),
-          ...(err.details && { details: err.details }),
-        });
+        return res.status(err.status).json({ ok: false, error: err.code });
       }
       if (err && typeof err === 'object' && (err as { name?: string }).name === 'ZodError') {
         return res.status(400).json({ ok: false, error: 'VALIDATION_ERROR' });

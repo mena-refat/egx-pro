@@ -10,7 +10,7 @@ const api = axios.create({
   },
 });
 
-/** وقت أطول لطلبات التحليل والتوصيات — Claude مع web_search قد يأخذ ٦٠–٩٠ ثانية */
+/** وقت أطول لطلبات التحليل والتوصيات (قد يأخذ دقيقة أو دقيقتين) */
 export const ANALYSIS_TIMEOUT_MS = 120_000; // 2 دقيقة
 
 // Request interceptor to add JWT token

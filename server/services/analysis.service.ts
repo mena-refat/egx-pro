@@ -305,17 +305,20 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن 
     ticker2: string
   ): Promise<{ comparison: unknown; id: string }> {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
-    if (!ticker1 || !ticker2 || ticker1 === ticker2) throw new AppError('VALIDATION_ERROR', 400);
+    if (!ticker1 || !ticker2) throw new AppError('VALIDATION_ERROR', 400);
+    const t1 = ticker1.trim().toUpperCase();
+    const t2 = ticker2.trim().toUpperCase();
+    if (t1 === t2) throw new AppError('SAME_STOCK_COMPARE', 400);
     await ensureQuota(userId, 2);
 
     const results = await Promise.allSettled([
-      marketDataService.getQuotes([ticker1, ticker2]),
-      getFinancials(ticker1).catch(() => nullFinancials),
-      getFinancials(ticker2).catch(() => nullFinancials),
-      getStockHistory(ticker1, '3mo').catch(() => []),
-      getStockHistory(ticker2, '3mo').catch(() => []),
-      getStockNews(ticker1).catch(() => []),
-      getStockNews(ticker2).catch(() => []),
+      marketDataService.getQuotes([t1, t2]),
+      getFinancials(t1).catch(() => nullFinancials),
+      getFinancials(t2).catch(() => nullFinancials),
+      getStockHistory(t1, '3mo').catch(() => []),
+      getStockHistory(t2, '3mo').catch(() => []),
+      getStockNews(t1).catch(() => []),
+      getStockNews(t2).catch(() => []),
       getMarketContext().catch(() => defaultMarketCtx),
     ]);
 
@@ -330,10 +333,10 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن 
 
     const ind1 = calculateIndicators(h1);
     const ind2 = calculateIndicators(h2);
-    const p1 = quotes.get(ticker1);
-    const p2 = quotes.get(ticker2);
-    const info1 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker1);
-    const info2 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker2);
+    const p1 = quotes.get(t1);
+    const p2 = quotes.get(t2);
+    const info1 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t1);
+    const info2 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t2);
 
     const system = COMPARE_SYSTEM;
 
@@ -355,8 +358,8 @@ SMA20: ${ind.sma20 ?? '—'} | SMA50: ${ind.sma50 ?? '—'} | الدعم: ${ind.
 `;
 
     const prompt = `
-${buildStockBlock(ticker1, info1, p1, f1, ind1, news1)}
-${buildStockBlock(ticker2, info2, p2, f2, ind2, news2)}
+${buildStockBlock(t1, info1, p1, f1, ind1, news1)}
+${buildStockBlock(t2, info2, p2, f2, ind2, news2)}
 
 سياق السوق: ${marketCtx.marketStatus} | EGX30: ${marketCtx.egx30?.price ?? '—'} | USD/EGP: ${marketCtx.usdEgp ?? '—'}
 
@@ -368,7 +371,7 @@ ${buildStockBlock(ticker2, info2, p2, f2, ind2, news2)}
     await consumeQuota(userId, 2);
     const saved = await AnalysisRepository.create({
       userId,
-      ticker: `${ticker1}|${ticker2}`,
+      ticker: `${t1}|${t2}`,
       content: JSON.stringify(comparison),
     });
     return { comparison, id: saved.id };

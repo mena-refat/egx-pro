@@ -54,12 +54,9 @@ export default function AIAnalyzePage() {
       const res = axiosErr?.response;
       const code = res?.data?.error;
       const status = res?.status;
-      const serverMessage = res?.data?.message;
 
       if (code === 'ANALYSIS_LIMIT_REACHED') {
         setShowLimitModal(true);
-      } else if (serverMessage) {
-        setError(serverMessage);
       } else if (status === 401) {
         setError(t('ai.sessionExpired'));
       } else if (status === 429) {
@@ -69,7 +66,7 @@ export default function AIAnalyzePage() {
       } else if (status === 503) {
         setError(t('ai.serviceUnavailable'));
       } else if (axiosErr?.code === 'ECONNABORTED') {
-        setError('التحليل أخد وقت طويل. حاول تاني — Claude بيبحث عن البيانات.');
+        setError('التحليل أخد وقت طويل. حاول تاني.');
       } else {
         setError('حدث خطأ. حاول تاني.');
       }

@@ -107,10 +107,10 @@ export default function PortfolioTracker() {
         if ((err as Error & { code?: string }).code === 'PORTFOLIO_LIMIT_REACHED' || (err as Error & { code?: string }).code === 'PORTFOLIO_LIMIT') {
           setShowPortfolioLimitModal(true);
         } else {
-          setAddError(err.message);
+          setAddError(t('common.error'));
         }
       } else {
-        setAddError('An unknown error occurred');
+        setAddError(t('common.error'));
       }
     }
   };
@@ -120,8 +120,7 @@ export default function PortfolioTracker() {
     try {
       await removeHolding(id);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t('errors.internal', { defaultValue: 'An unknown error occurred' });
-      toast.error(msg);
+      toast.error(t('errors.internal', { defaultValue: 'An unknown error occurred' }));
     }
   };
 

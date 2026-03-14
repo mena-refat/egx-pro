@@ -162,7 +162,7 @@ export function AccountTab({ user, onUpdateProfile, setRequestStatus }: ProfileT
           successTimeoutRef.current = null;
         }, TIMEOUTS.successFeedback);
       } catch (e) {
-        setRequestStatus({ type: 'error', message: (e as Error).message || t('common.error') });
+        setRequestStatus({ type: 'error', message: t('common.error') });
       } finally {
         setSavingField(null);
       }
