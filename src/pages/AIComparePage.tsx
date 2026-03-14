@@ -58,22 +58,28 @@ export default function AIComparePage() {
       if (data) setResult(data);
       else setError(t('common.error'));
     } catch (err: unknown) {
-      const axiosErr = err as { code?: string; response?: { status?: number; data?: { error?: string } } };
+      const axiosErr = err as { code?: string; response?: { status?: number; data?: { error?: string; message?: string } } };
       const res = axiosErr?.response;
       const code = res?.data?.error;
       const status = res?.status;
+      const serverMessage = res?.data?.message;
+
       if (code === 'ANALYSIS_LIMIT_REACHED') {
         setShowLimitModal(true);
+      } else if (serverMessage) {
+        setError(serverMessage);
       } else if (status === 401) {
         setError(t('ai.sessionExpired'));
-      } else if (status === 404) {
-        setError(t('ai.error404Stock'));
-      } else if (status === 503 || code === 'SERVICE_UNAVAILABLE') {
+      } else if (status === 429) {
+        setError('خدمة التحليل مشغولة حالياً. حاول بعد دقيقة.');
+      } else if (status === 502 || status === 504) {
+        setError('التحليل أخد وقت طويل. حاول تاني.');
+      } else if (status === 503) {
         setError(t('ai.serviceUnavailable'));
       } else if (axiosErr?.code === 'ECONNABORTED') {
-        setError(t('ai.analysisTimeout'));
+        setError('التحليل أخد وقت طويل. حاول تاني — Claude بيبحث عن البيانات.');
       } else {
-        setError(t('common.error'));
+        setError('حدث خطأ. حاول تاني.');
       }
     } finally {
       setLoading(false);
@@ -134,8 +140,16 @@ export default function AIComparePage() {
           <p className={styles.summary}>{result.summary}</p>
           <div className={styles.cards}>
             <div className={styles.card}>
-              <h3 className={styles.cardTitle}>{ticker1.trim().toUpperCase()}</h3>
+              <h3 className={styles.cardTitle}>{result.ticker1?.name ?? ticker1.trim().toUpperCase()}</h3>
+              {typeof result.ticker1?.score === 'number' && (
+                <div className={styles.scoreBar} role="progressbar" aria-valuenow={result.ticker1.score} aria-valuemin={0} aria-valuemax={100}>
+                  <div className={styles.scoreFill} style={{ width: `${result.ticker1.score}%` }} />
+                  <span className={styles.scoreLabel}>{result.ticker1.score}/100</span>
+                </div>
+              )}
               <p className={styles.verdict}>{result.ticker1?.verdict}</p>
+              {result.ticker1?.fundamental && <p className={styles.fundamental}>{result.ticker1.fundamental}</p>}
+              {result.ticker1?.technical && <p className={styles.technical}>{result.ticker1.technical}</p>}
               {result.ticker1?.strengths?.length > 0 && (
                 <ul className={styles.list}>
                   {result.ticker1.strengths.map((s, i) => (
@@ -150,10 +164,25 @@ export default function AIComparePage() {
                   ))}
                 </ul>
               )}
+              {result.ticker1?.risks?.length > 0 && (
+                <ul className={styles.list} aria-label={t('ai.risks', { defaultValue: 'المخاطر' })}>
+                  {result.ticker1.risks.map((r, i) => (
+                    <li key={i} className={styles.risk}>{r}</li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className={styles.card}>
-              <h3 className={styles.cardTitle}>{ticker2.trim().toUpperCase()}</h3>
+              <h3 className={styles.cardTitle}>{result.ticker2?.name ?? ticker2.trim().toUpperCase()}</h3>
+              {typeof result.ticker2?.score === 'number' && (
+                <div className={styles.scoreBar} role="progressbar" aria-valuenow={result.ticker2.score} aria-valuemin={0} aria-valuemax={100}>
+                  <div className={styles.scoreFill} style={{ width: `${result.ticker2.score}%` }} />
+                  <span className={styles.scoreLabel}>{result.ticker2.score}/100</span>
+                </div>
+              )}
               <p className={styles.verdict}>{result.ticker2?.verdict}</p>
+              {result.ticker2?.fundamental && <p className={styles.fundamental}>{result.ticker2.fundamental}</p>}
+              {result.ticker2?.technical && <p className={styles.technical}>{result.ticker2.technical}</p>}
               {result.ticker2?.strengths?.length > 0 && (
                 <ul className={styles.list}>
                   {result.ticker2.strengths.map((s, i) => (
@@ -168,12 +197,24 @@ export default function AIComparePage() {
                   ))}
                 </ul>
               )}
+              {result.ticker2?.risks?.length > 0 && (
+                <ul className={styles.list} aria-label={t('ai.risks', { defaultValue: 'المخاطر' })}>
+                  {result.ticker2.risks.map((r, i) => (
+                    <li key={i} className={styles.risk}>{r}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
           <p className={styles.winner}>
             {t('ai.winner')}: <strong>{result.winner}</strong>
           </p>
           <p className={styles.reason}>{result.reason}</p>
+          {result.recommendation && (
+            <div className={styles.recommendationBox} role="status">
+              {result.recommendation}
+            </div>
+          )}
           {result.disclaimer && (
             <p className={styles.disclaimer}>{result.disclaimer}</p>
           )}

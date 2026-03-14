@@ -49,22 +49,28 @@ export default function AIAnalyzePage() {
       if (data) setAnalysis(data);
       else setError(t('common.error'));
     } catch (err: unknown) {
-      const axiosErr = err as { code?: string; response?: { status?: number; data?: { error?: string } } };
+      const axiosErr = err as { code?: string; response?: { status?: number; data?: { error?: string; message?: string } } };
       const res = axiosErr?.response;
       const code = res?.data?.error;
       const status = res?.status;
+      const serverMessage = res?.data?.message;
+
       if (code === 'ANALYSIS_LIMIT_REACHED') {
         setShowLimitModal(true);
+      } else if (serverMessage) {
+        setError(serverMessage);
       } else if (status === 401) {
         setError(t('ai.sessionExpired'));
-      } else if (status === 404) {
-        setError(t('ai.error404Stock'));
-      } else if (status === 503 || code === 'SERVICE_UNAVAILABLE') {
+      } else if (status === 429) {
+        setError('خدمة التحليل مشغولة حالياً. حاول بعد دقيقة.');
+      } else if (status === 502 || status === 504) {
+        setError('التحليل أخد وقت طويل. حاول تاني.');
+      } else if (status === 503) {
         setError(t('ai.serviceUnavailable'));
       } else if (axiosErr?.code === 'ECONNABORTED') {
-        setError(t('ai.analysisTimeout'));
+        setError('التحليل أخد وقت طويل. حاول تاني — Claude بيبحث عن البيانات.');
       } else {
-        setError(t('common.error'));
+        setError('حدث خطأ. حاول تاني.');
       }
     } finally {
       setLoading(false);

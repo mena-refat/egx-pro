@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
 import type { AuthRequest } from './types.ts';
 import { ONE_HOUR_MS } from '../lib/constants.ts';
 import { authenticate } from '../middleware/auth.middleware.ts';
@@ -17,7 +17,7 @@ const analysisLimiter = rateLimit({
   keyGenerator: (req, res) => {
     const userId = (req as AuthRequest).user?.id;
     if (userId) return userId;
-    return ipKeyGenerator(req.ip ?? 'unknown');
+    return (req.ip ?? 'unknown').replace(/^::ffff:/, '');
   },
   validate: {
     xForwardedForHeader: false,

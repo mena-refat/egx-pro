@@ -30,9 +30,9 @@ export const updateProfileBodySchema = z
     notifyAchievements: z.boolean().optional(),
     notifyGoals: z.boolean().optional(),
     hearAboutUs: z.string().max(200).optional(),
-    investorProfile: z.record(z.unknown()).optional(),
-  })
-  .strict();
+    investorProfile: z.record(z.string(), z.unknown()).optional(),
+  });
+  // passthrough — service يتعامل مع الباقي (لا .strict() لأن الفرونت يرسل حقول إضافية)
 
 export const deleteAccountBodySchema = z.object({
   confirmText: z.string().min(1),

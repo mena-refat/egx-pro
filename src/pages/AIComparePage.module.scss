@@ -119,11 +119,62 @@
   margin: 0 0 0.5rem;
 }
 
+.scoreBar {
+  position: relative;
+  height: 1.25rem;
+  background: var(--bg-input);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.scoreFill {
+  height: 100%;
+  background: var(--brand);
+  border-radius: 0.5rem;
+  transition: width 0.3s ease;
+}
+
+.scoreLabel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 .verdict {
   color: var(--brand);
   font-size: 0.875rem;
   font-weight: 600;
   margin: 0 0 0.75rem;
+}
+
+.fundamental,
+.technical {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin: 0 0 0.5rem;
+}
+
+.risk {
+  color: var(--danger);
+  margin-bottom: 0.25rem;
+}
+
+.recommendationBox {
+  padding: 1rem;
+  background: var(--brand-subtle);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin: 0 0 1rem;
 }
 
 .list {

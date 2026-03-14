@@ -37,17 +37,52 @@ export interface AnalysisResult {
 /** Compare two stocks — API response */
 export interface CompareResult {
   summary: string;
-  ticker1: { verdict: string; strengths: string[]; weaknesses: string[] };
-  ticker2: { verdict: string; strengths: string[]; weaknesses: string[] };
+  ticker1: {
+    name: string;
+    verdict: string;
+    score: number;
+    fundamental: string;
+    technical: string;
+    strengths: string[];
+    weaknesses: string[];
+    risks: string[];
+  };
+  ticker2: {
+    name: string;
+    verdict: string;
+    score: number;
+    fundamental: string;
+    technical: string;
+    strengths: string[];
+    weaknesses: string[];
+    risks: string[];
+  };
   winner: string;
   reason: string;
+  recommendation: string;
   disclaimer?: string;
 }
 
 /** Personal recommendations — API response */
 export interface RecommendationsResult {
   summary: string;
-  recommendations: Array<{ ticker: string; action: string; reason: string }>;
+  portfolioHealth?: {
+    score: number;
+    diversification: string;
+    riskLevel: string;
+    issues: string[];
+  };
+  recommendations: Array<{
+    ticker: string;
+    name?: string;
+    action: string;
+    urgency?: string;
+    reason: string;
+    targetPrice?: number;
+    stopLoss?: number;
+  }>;
+  sectorsToWatch?: string[];
   portfolioAdvice?: string;
+  marketOutlook?: string;
   disclaimer?: string;
 }

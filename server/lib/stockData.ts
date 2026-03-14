@@ -2,6 +2,7 @@ import { getCache } from './redis.ts';
 import { EGX_TICKERS } from './egxTickers.ts';
 import { prisma } from './prisma.ts';
 import { marketDataService } from '../services/market-data/market-data.service.ts';
+import { logger } from './logger.ts';
 
 const DELAY_MINUTES = 10;
 
@@ -114,19 +115,98 @@ export async function getStockHistory(ticker: string, range = '1mo'): Promise<Ar
   }
 }
 
-/** Financials — stubbed; use Twelve Data or another provider in future if needed. */
-export async function getFinancials(_ticker: string) {
-  return {
+/** Financials from yahoo-finance2 quoteSummary. لا ترمي أبداً — ترجع nulls عند الفشل. Claude يبحث عن الباقي. */
+export async function getFinancials(ticker: string): Promise<{
+  pe: number | null;
+  forwardPe: number | null;
+  eps: number | null;
+  roe: number | null;
+  roa: number | null;
+  debtToEquity: number | null;
+  grossMargin: number | null;
+  profitMargin: number | null;
+  operatingMargin: number | null;
+  revenue: number | null;
+  revenueGrowth: number | null;
+  netIncome: number | null;
+  freeCashFlow: number | null;
+  dividendYield: number | null;
+  bookValue: number | null;
+  priceToBook: number | null;
+  marketCap: number | null;
+  beta: number | null;
+}> {
+  const yahooTicker = ticker.endsWith('.CA') ? ticker : `${ticker}.CA`;
+  const nulls = {
     pe: null as number | null,
+    forwardPe: null as number | null,
+    eps: null as number | null,
     roe: null as number | null,
     roa: null as number | null,
     debtToEquity: null as number | null,
     grossMargin: null as number | null,
     profitMargin: null as number | null,
+    operatingMargin: null as number | null,
     revenue: null as number | null,
+    revenueGrowth: null as number | null,
     netIncome: null as number | null,
-    eps: null as number | null,
+    freeCashFlow: null as number | null,
+    dividendYield: null as number | null,
+    bookValue: null as number | null,
+    priceToBook: null as number | null,
+    marketCap: null as number | null,
+    beta: null as number | null,
   };
+
+  try {
+    const YahooFinance = (await import('yahoo-finance2')).default;
+    const yahoo = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
+
+    let summary: Record<string, unknown> | null = null;
+    try {
+      summary = (await yahoo.quoteSummary(yahooTicker, {
+        modules: ['defaultKeyStatistics', 'financialData', 'summaryDetail'] as ('defaultKeyStatistics' | 'financialData' | 'summaryDetail')[],
+      })) as Record<string, unknown>;
+    } catch {
+      logger.info(`quoteSummary unavailable for ${yahooTicker} — Claude will search`);
+      return nulls;
+    }
+
+    if (!summary) return nulls;
+
+    const fin = summary.financialData as Record<string, unknown> | undefined;
+    const keys = summary.defaultKeyStatistics as Record<string, unknown> | undefined;
+
+    const num = (v: unknown): number | null => {
+      if (v == null) return null;
+      const n = typeof v === 'object' && v !== null && 'raw' in v ? (v as { raw: number }).raw : Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    return {
+      pe: num(keys?.trailingPE),
+      forwardPe: num(keys?.forwardPE),
+      eps: num(keys?.trailingEps),
+      roe: num(fin?.returnOnEquity),
+      roa: num(fin?.returnOnAssets),
+      debtToEquity: num(fin?.debtToEquity),
+      grossMargin: num(fin?.grossMargins),
+      profitMargin: num(fin?.profitMargins),
+      operatingMargin: num(fin?.operatingMargins),
+      revenue: num(fin?.totalRevenue),
+      revenueGrowth: num(fin?.revenueGrowth),
+      netIncome: null,
+      freeCashFlow: num(fin?.freeCashflow),
+      dividendYield: num(keys?.dividendYield),
+      bookValue: num(keys?.bookValue),
+      priceToBook: num(keys?.priceToBook),
+      marketCap: null,
+      beta: num(keys?.beta),
+    };
+  } catch (err) {
+    logger.warn('getFinancials failed completely', { ticker, error: (err as Error).message });
+    return nulls;
+  }
 }
 
 /** Search EGX stocks by name from database. */

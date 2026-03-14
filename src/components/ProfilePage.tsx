@@ -4,7 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useProfileStore } from '../store/profileStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Lock, Settings, Bell, Trash2, Trophy } from 'lucide-react';
+import { User as UserIcon, Lock, Settings, Bell, Trash2, Trophy } from 'lucide-react';
 import { AccountTab, SecurityTab, PreferencesTab, NotificationsTab, DangerZoneTab, FollowersFollowingModal, ProfileCounterRow } from './features/profile';
 import { usePredictionsApi } from '../hooks/usePredictionsApi';
 import type { User } from '../types';
@@ -31,7 +31,7 @@ function userToProfileUser(u: User): ProfileUser {
 }
 
 const TABS = [
-  { id: 'account', labelKey: 'settings.accountData', icon: User },
+  { id: 'account', labelKey: 'settings.accountData', icon: UserIcon },
   { id: 'security', labelKey: 'settings.securityPrivacy', icon: Lock },
   { id: 'preferences', labelKey: 'settings.preferences', icon: Settings },
   { id: 'notifications', labelKey: 'settings.notifications', icon: Bell },
@@ -147,7 +147,7 @@ export default function ProfilePage() {
             {user?.avatarUrl ? (
               <img src={user.avatarUrl} alt="" width={80} height={80} className="w-full h-full rounded-full object-cover" loading="lazy" />
             ) : (
-              <User className="w-6 h-6 text-[var(--text-muted)]" />
+              <UserIcon className="w-6 h-6 text-[var(--text-muted)]" />
             )}
           </div>
           <div>

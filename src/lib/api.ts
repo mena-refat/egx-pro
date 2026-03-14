@@ -10,8 +10,8 @@ const api = axios.create({
   },
 });
 
-/** وقت أطول لطلبات التحليل والتوصيات (Claude قد يأخذ ٣٠–٦٠ ثانية) */
-export const ANALYSIS_TIMEOUT_MS = 90_000;
+/** وقت أطول لطلبات التحليل والتوصيات — Claude مع web_search قد يأخذ ٦٠–٩٠ ثانية */
+export const ANALYSIS_TIMEOUT_MS = 120_000; // 2 دقيقة
 
 // Request interceptor to add JWT token
 api.interceptors.request.use(

@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useToastStore, type ToastItem } from '../../store/toastStore';
 import styles from './ToastContainer.module.scss';
 
-function ToastItem({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => void }) {
+function ToastItemView({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => void; key?: string }) {
   const variant = toast.variant;
   return (
     <motion.div
@@ -29,7 +29,7 @@ export function ToastContainer() {
     <div className={styles.container} aria-label="Notifications">
       <AnimatePresence mode="popLayout">
         {visible.map((t) => (
-          <ToastItem key={t.id} toast={t} onDismiss={() => removeToast(t.id)} />
+          <ToastItemView key={t.id} toast={t} onDismiss={() => removeToast(t.id)} />
         ))}
       </AnimatePresence>
     </div>
