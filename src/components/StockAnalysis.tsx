@@ -87,6 +87,8 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
     showWatchlistLimitModal,
     setShowWatchlistLimitModal,
     egxStatus,
+    sameSectorStocks,
+    effectiveSectorLabel,
     pivots,
     fibLevels,
     isRTL,
@@ -354,10 +356,35 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             </div>
           </section>
 
-          {/* Similar sector - placeholder scroll */}
+          {/* أسهم من نفس القطاع — حتى 5 أسهم */}
           <section>
             <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.similarSector')}</h3>
-            <p className="text-sm text-[var(--text-muted)] ">{sector || '—'}</p>
+            <p className="text-xs text-[var(--text-muted)] mb-3">{effectiveSectorLabel ? t('stockDetail.sameSectorDesc', { sector: effectiveSectorLabel, defaultValue: `أسهم أخرى من قطاع: ${effectiveSectorLabel}` }) : '—'}</p>
+            {sameSectorStocks.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'thin' }}>
+                {sameSectorStocks.map((s) => {
+                  const ch = s.changePercent ?? 0;
+                  const isUp = ch >= 0;
+                  return (
+                    <button
+                      key={s.ticker}
+                      type="button"
+                      onClick={() => navigate(`/stocks/${s.ticker}`)}
+                      className="flex-shrink-0 w-[140px] rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-3 text-start hover:border-[var(--brand)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                    >
+                      <p className="text-label font-semibold text-[var(--text-primary)] truncate">{s.ticker}</p>
+                      <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">{getStockName(s.ticker, lang as 'ar' | 'en')}</p>
+                      <p className="text-sm font-bold tabular-nums text-[var(--text-primary)] mt-2">{(s.price ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ج.م</p>
+                      <span className={`inline-block text-xs font-semibold tabular-nums mt-1 ${isUp ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
+                        {isUp ? '+' : ''}{(ch).toFixed(2)}%
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--text-muted)] rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">{t('stockDetail.noSameSector', { defaultValue: 'لا توجد أسهم أخرى من نفس القطاع في القائمة الحالية.' })}</p>
+            )}
           </section>
         </div>
       )}

@@ -123,8 +123,8 @@ function useAchievements() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get<{ data?: BackendAchievement[] }>('/user/achievements');
-      const raw = Array.isArray(res.data?.data) ? res.data.data : [];
+      const res = await api.get<BackendAchievement[] | { data?: BackendAchievement[] }>('/user/achievements');
+      const raw = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
       const completedSet = new Set(raw.filter((a) => a.completed).map((a) => a.id));
       const completedDates: Record<string, string> = {};
       raw.filter((a) => a.completed && a.date).forEach((a) => { completedDates[a.id] = String(a.date); });

@@ -770,6 +770,8 @@
     "aboutCompany": "About",
     "listedIn": "Listed",
     "similarSector": "Same sector",
+    "sameSectorDesc": "Other stocks from sector: {{sector}}",
+    "noSameSector": "No other stocks from the same sector in the current list.",
     "investorCategories": "Investor categories",
     "investorCategoriesDesc": "Who bought and who sold?",
     "investorCategoriesUnavailable": "Investor categories not available",

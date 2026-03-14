@@ -53,9 +53,11 @@ function ReferralTabInner() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get<{ data: ReferralData }>('/referral', { signal });
-      const raw = res.data?.data;
-      if (!raw) {
+      const res = await api.get<ReferralData | { data: ReferralData }>('/referral', { signal });
+      const raw = res.data && typeof res.data === 'object' && 'referralCode' in res.data
+        ? (res.data as ReferralData)
+        : (res.data as { data?: ReferralData })?.data;
+      if (!raw || typeof raw !== 'object') {
         setData(null);
         setError(t('error.loadFailed'));
         return;

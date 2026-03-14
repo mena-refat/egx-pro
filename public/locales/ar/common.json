@@ -767,6 +767,8 @@
     "aboutCompany": "عن الشركة",
     "listedIn": "مدرج في",
     "similarSector": "أسهم من نفس القطاع",
+    "sameSectorDesc": "أسهم أخرى من قطاع: {{sector}}",
+    "noSameSector": "لا توجد أسهم أخرى من نفس القطاع في القائمة الحالية.",
     "investorCategories": "فئات المستثمرين اليوم",
     "investorCategoriesDesc": "من الأكثر شراءً ومن الأكثر بيعاً؟",
     "investorCategoriesUnavailable": "بيانات فئات المستثمرين غير متاحة حالياً",

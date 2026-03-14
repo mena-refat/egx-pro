@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import { getStockName, getStockInfo } from '../../../lib/egxStocks';
 import { Skeleton } from '../../ui/Skeleton';
@@ -18,6 +19,7 @@ type Props = {
 
 export const DashboardWatchlistList = memo(function DashboardWatchlistList({ watchlist, livePrices, loading, onGoToStocks, lang }: Props) {
   const { t } = useTranslation('common');
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -49,9 +51,12 @@ export const DashboardWatchlistList = memo(function DashboardWatchlistList({ wat
         const ch = (stock.changePercent ?? stock.change ?? 0) as number;
         const isUp = ch >= 0;
         return (
-          <div
+          <button
+            type="button"
             key={stock.ticker}
-            className="flex justify-between items-center p-5 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5 transition-all duration-200"
+            onClick={() => navigate(`/stocks/${stock.ticker}`)}
+            className="w-full text-start flex justify-between items-center p-5 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+            aria-label={t('stockDetail.viewStock', { ticker: stock.ticker, defaultValue: `عرض ${getStockName(stock.ticker, lang)}` })}
           >
             <div className="min-w-0">
               <p className="font-semibold text-body text-[var(--text-primary)]">{getStockName(stock.ticker, lang)}</p>
@@ -72,7 +77,7 @@ export const DashboardWatchlistList = memo(function DashboardWatchlistList({ wat
                 />
               </div>
             </div>
-          </div>
+          </button>
         );
       })}
     </div>

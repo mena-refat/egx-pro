@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import api, { ANALYSIS_TIMEOUT_MS } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { getSector, isShariaCompliant } from '../lib/egxIndicesSectors';
+import { getStockInfo } from '../lib/egxStocks';
 import { Stock, AnalysisResult } from '../types';
 import { pivotPoints, fibonacciLevels } from '../components/analysis/analysisUtils';
 
@@ -45,6 +46,8 @@ export function useStockAnalysis(stock: Stock) {
   const [showAnalysisLimitModal, setShowAnalysisLimitModal] = useState(false);
   const [showWatchlistLimitModal, setShowWatchlistLimitModal] = useState(false);
   const [egxStatus, setEgxStatus] = useState<{ status: string; label?: { ar: string; en: string } } | null>(null);
+  const [sameSectorStocks, setSameSectorStocks] = useState<Stock[]>([]);
+  const [effectiveSectorLabel, setEffectiveSectorLabel] = useState<string>('');
 
   const open = (priceDetail?.open as number) ?? stock.open ?? 0;
   const previousClose = (priceDetail?.previousClose as number) ?? stock.previousClose ?? 0;
@@ -73,7 +76,7 @@ export function useStockAnalysis(stock: Stock) {
     const signal = controller.signal;
     (async () => {
       try {
-        const [priceRes, statusRes, histRes, finRes, depthRes, invRes, statsRes, newsRes, watchRes] =
+        const [priceRes, statusRes, histRes, finRes, depthRes, invRes, statsRes, newsRes, watchRes, allPricesRes] =
           await Promise.all([
             api.get(`/stocks/${stock.ticker}/price`, { signal }).catch((err) => {
               if (import.meta.env.DEV) console.error('Stock price fetch failed', err);
@@ -116,6 +119,7 @@ export function useStockAnalysis(stock: Stock) {
               if (import.meta.env.DEV) console.error('Watchlist fetch failed', err);
               return { data: { items: [] } };
             }),
+            api.get<Stock[] | { data: Stock[] }>('/stocks/prices', { signal, timeout: 60_000 }).catch(() => ({ data: [] })),
           ]);
         if (signal.aborted) return;
         const priceData = (priceRes.data as { data?: Record<string, unknown> })?.data ?? priceRes.data;
@@ -136,6 +140,22 @@ export function useStockAnalysis(stock: Stock) {
         setNews(Array.isArray(newsData) ? newsData : []);
         const rawList = (watchRes.data as { items?: { ticker: string }[] })?.items;
         setWatchlist(Array.isArray(rawList) ? rawList.map((w) => w.ticker) : []);
+
+        const allPrices = (allPricesRes.data as { data?: Stock[] })?.data ?? (Array.isArray(allPricesRes.data) ? allPricesRes.data : []);
+        const list = Array.isArray(allPrices) ? allPrices : [];
+        const curInfo = getStockInfo(stock.ticker);
+        const currentSectorKey = getSector(stock.ticker, curInfo?.nameAr ?? '', curInfo?.nameEn ?? '', lang as 'ar' | 'en');
+        setEffectiveSectorLabel(currentSectorKey);
+        const sameSector = list
+          .filter((s: Stock) => {
+            if (s.ticker === stock.ticker) return false;
+            const info = getStockInfo(s.ticker);
+            const sectorKey = getSector(s.ticker, info?.nameAr ?? '', info?.nameEn ?? '', lang as 'ar' | 'en');
+            return sectorKey === currentSectorKey;
+          })
+          .slice(0, 5)
+          .map((s: Stock) => ({ ...s, name: s.name || getStockInfo(s.ticker)?.nameAr || s.ticker, description: s.description || '', marketCap: s.marketCap ?? 0 }));
+        setSameSectorStocks(sameSector);
       } catch (err: unknown) {
         if (
           err instanceof Error &&
@@ -146,7 +166,7 @@ export function useStockAnalysis(stock: Stock) {
       }
     })();
     return () => controller.abort();
-  }, [stock.ticker, chartRange]);
+  }, [stock.ticker, chartRange, lang]);
 
   useEffect(() => {
     if (activeTab !== 'ai') return;
@@ -268,6 +288,8 @@ export function useStockAnalysis(stock: Stock) {
     showWatchlistLimitModal,
     setShowWatchlistLimitModal,
     egxStatus,
+    sameSectorStocks,
+    effectiveSectorLabel,
     open,
     previousClose,
     high,
