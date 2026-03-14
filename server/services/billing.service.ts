@@ -1,5 +1,5 @@
-import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
+import { DiscountRepository } from '../repositories/discount.repository.ts';
 import { isPro, isUltra, getLimit } from '../lib/plan.ts';
 import { PLAN_PRICES } from '../lib/constants.ts';
 import { AppError } from '../lib/errors.ts';
@@ -64,7 +64,7 @@ export const BillingService = {
   async validateDiscount(userId: string, code: string, plan?: Plan) {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
     if (!code?.trim()) throw new AppError('INVALID_REQUEST', 400);
-    const discount = await prisma.discountCode.findUnique({ where: { code: code.trim() } });
+    const discount = await DiscountRepository.findByCode(code.trim());
     if (
       !discount ||
       !discount.active ||
@@ -73,9 +73,7 @@ export const BillingService = {
     ) {
       throw new AppError('INVALID_DISCOUNT_CODE', 400);
     }
-    const used = await prisma.discountUsage.findUnique({
-      where: { userId_codeId: { userId, codeId: discount.id } },
-    });
+    const used = await DiscountRepository.findUsage(userId, discount.id);
     if (used) throw new AppError('DISCOUNT_ALREADY_USED', 400);
 
     const planKey = plan === 'ultra_annual' ? 'ultra_yearly' : plan === 'ultra' ? 'ultra' : plan === 'annual' ? 'yearly' : 'pro';
@@ -121,9 +119,7 @@ export const BillingService = {
     let discount: { id: string; type: string; value: number; maxUses: number | null; usedCount: number } | null = null;
 
     if (options.discountCode?.trim()) {
-      const code = await prisma.discountCode.findUnique({
-        where: { code: options.discountCode.trim() },
-      });
+      const code = await DiscountRepository.findByCode(options.discountCode.trim());
       if (
         !code ||
         !code.active ||
@@ -132,9 +128,7 @@ export const BillingService = {
       ) {
         throw new AppError('INVALID_DISCOUNT_CODE', 400);
       }
-      const alreadyUsed = await prisma.discountUsage.findUnique({
-        where: { userId_codeId: { userId, codeId: code.id } },
-      });
+      const alreadyUsed = await DiscountRepository.findUsage(userId, code.id);
       if (alreadyUsed) throw new AppError('DISCOUNT_ALREADY_USED', 400);
 
       discount = { id: code.id, type: code.type, value: code.value, maxUses: code.maxUses, usedCount: code.usedCount };
@@ -146,22 +140,14 @@ export const BillingService = {
       }
 
       if (discountPercent >= 100) {
-        await prisma.$transaction([
-          UserRepository.update({
-            where: { id: userId },
-            data: { plan: planValue, planExpiresAt },
-          }),
-          prisma.discountUsage.create({
-            data: { userId, codeId: code.id },
-          }),
-          prisma.discountCode.update({
-            where: { id: code.id },
-            data: {
-              usedCount: code.usedCount + 1,
-              ...(code.maxUses === 1 ? { active: false } : {}),
-            },
-          }),
-        ]);
+        await DiscountRepository.applyFullDiscount(
+          userId,
+          planValue,
+          planExpiresAt,
+          code.id,
+          code.usedCount,
+          code.maxUses
+        );
         return { success: true };
       }
     }
@@ -174,26 +160,7 @@ export const BillingService = {
     const finalPrice = Math.round(basePrice * (1 - discountPercent / 100));
     // TODO: verify payment with Paymob using options.paymentToken and finalPrice
 
-    await prisma.$transaction([
-      UserRepository.update({
-        where: { id: userId },
-        data: { plan: planValue, planExpiresAt },
-      }),
-      ...(discount
-        ? [
-            prisma.discountUsage.create({
-              data: { userId, codeId: discount.id },
-            }),
-            prisma.discountCode.update({
-              where: { id: discount.id },
-              data: {
-                usedCount: discount.usedCount + 1,
-                ...(discount.maxUses === 1 ? { active: false } : {}),
-              },
-            }),
-          ]
-        : []),
-    ]);
+    await DiscountRepository.applyUpgrade(userId, planValue, planExpiresAt, discount ? { id: discount.id, usedCount: discount.usedCount, maxUses: discount.maxUses } : undefined);
 
     return { success: true };
   },

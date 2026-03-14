@@ -1,7 +1,7 @@
 import { getStockHistory, getFinancials, searchEgxStocks } from '../lib/stockData.ts';
 import { getStockNews } from '../lib/news.ts';
 import { EGX_TICKERS } from '../lib/egxTickers.ts';
-import { prisma } from '../lib/prisma.ts';
+import { StockRepository } from '../repositories/stock.repository.ts';
 import type { GicsSector } from '@prisma/client';
 import { marketDataService } from './market-data/market-data.service.ts';
 
@@ -31,17 +31,14 @@ export const StocksService = {
   async getBulkPrices(_delayed: boolean, sector?: string) {
     let tickers = EGX_TICKERS;
     if (sector && GICS_VALUES.includes(sector as GicsSector)) {
-      const stocks = await prisma.stock.findMany({
-        where: { sector: sector as GicsSector },
-        select: { ticker: true },
-      });
+      const stocks = await StockRepository.findTickersBySector(sector as GicsSector);
       tickers = stocks.map((s) => s.ticker);
       if (tickers.length === 0) return [];
     }
 
     const [cached, allStocks] = await Promise.all([
       marketDataService.getCachedQuotes(tickers),
-      prisma.stock.findMany({ select: { ticker: true, sector: true } }),
+      StockRepository.findAllWithSector(),
     ]);
 
     // If cache is warm, serve instantly. If completely cold (server just started),
