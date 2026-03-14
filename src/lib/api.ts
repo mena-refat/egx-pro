@@ -8,6 +8,11 @@ const baseURL = apiBase
   ? `${apiBase.replace(/\/$/, '')}/api`
   : '/api';
 
+/** عنوان أساس الـ API (للاستخدام مع fetch عند فصل الفرونت عن الباكند) */
+export function getApiBase(): string {
+  return baseURL;
+}
+
 const api = axios.create({
   baseURL,
   timeout: 10000,

@@ -35,7 +35,8 @@ export const useAuthStore = create<AuthState>()(
       addUnseenAchievementsCount: (by) => set((state) => ({ unseenAchievementsCount: state.unseenAchievementsCount + by })),
       logout: async () => {
         try {
-          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+          const { getApiBase } = await import('../lib/api');
+          await fetch(`${getApiBase()}/auth/logout`, { method: 'POST', credentials: 'include' });
         } catch (err) {
           if (import.meta.env.DEV) console.error('Logout failed', err);
         }

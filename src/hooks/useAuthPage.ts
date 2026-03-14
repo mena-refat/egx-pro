@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
+import { getApiBase } from '../lib/api';
 import { loginSchema, registerSchema, validateRegisterPassword, normalizePhone } from '../lib/validations';
 import type { User } from '../types';
 
@@ -34,7 +35,7 @@ export function useAuthPage(refCode: string) {
       if (!event.origin.endsWith('.run.app') && !event.origin.includes('localhost')) return;
       if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
         try {
-          const res = await fetch('/api/auth/me', { credentials: 'include' });
+          const res = await fetch(`${getApiBase()}/auth/me`, { credentials: 'include' });
           if (res.ok) {
             const data = await res.json();
             const payload = data?.data ?? data;
@@ -85,7 +86,7 @@ export function useAuthPage(refCode: string) {
         }
       }
 
-      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+      const endpoint = isLogin ? `${getApiBase()}/auth/login` : `${getApiBase()}/auth/register`;
       const body = isLogin
         ? { emailOrPhone: data.emailOrPhone, password: data.password }
         : { emailOrPhone: data.emailOrPhone, password: data.password, fullName: data.fullName ?? '', referralCode: refCode || undefined };
@@ -118,7 +119,7 @@ export function useAuthPage(refCode: string) {
 
       let profileData = payload.user as Record<string, unknown> | undefined;
       try {
-        const profileRes = await fetch('/api/user/profile', { headers: { Authorization: `Bearer ${payload.accessToken}` }, credentials: 'include' });
+        const profileRes = await fetch(`${getApiBase()}/user/profile`, { headers: { Authorization: `Bearer ${payload.accessToken}` }, credentials: 'include' });
         if (profileRes.ok) {
           const text = await profileRes.text();
           if (text) {
@@ -158,7 +159,7 @@ export function useAuthPage(refCode: string) {
       return;
     }
     try {
-      const res = await fetch('/api/auth/2fa/authenticate', {
+      const res = await fetch(`${getApiBase()}/auth/2fa/authenticate`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -174,7 +175,7 @@ export function useAuthPage(refCode: string) {
       }
       const authPayload = (data as { data?: { accessToken?: string; user?: unknown } })?.data ?? data;
       const accessToken = authPayload?.accessToken ?? (data as { accessToken?: string }).accessToken;
-      const profileRes = await fetch('/api/user/profile', { headers: { Authorization: `Bearer ${accessToken}` } });
+      const profileRes = await fetch(`${getApiBase()}/user/profile`, { headers: { Authorization: `Bearer ${accessToken}` } });
       const profileJson = profileRes.ok ? await profileRes.json() : { data: authPayload?.user ?? data.user };
       const profileData = (profileJson as { data?: unknown })?.data ?? profileJson;
       setAuth(profileData, accessToken);
@@ -189,7 +190,7 @@ export function useAuthPage(refCode: string) {
 
   const handleGoogleLogin = async () => {
     try {
-      const res = await fetch('/api/auth/google/url');
+      const res = await fetch(`${getApiBase()}/auth/google/url`);
       if (!res.ok) throw new Error('Failed to get Google login URL');
       const data = await res.json();
       const url = (data as { data?: { url?: string } })?.data?.url ?? (data as { url?: string }).url;
