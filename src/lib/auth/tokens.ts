@@ -1,4 +1,5 @@
-import { getApiBase } from '../api';
+const API = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL?.trim();
+const AUTH_BASE = API ? `${API.replace(/\/$/, '')}/api` : '/api';
 
 let _token: string | null = null;
 
@@ -7,7 +8,7 @@ export const setAccessToken = (token: string): void => { _token = token; };
 export const clearTokens = (): void => { _token = null; };
 
 export const refreshAccessToken = async (): Promise<string> => {
-  const res = await fetch(`${getApiBase()}/auth/refresh`, { method: 'POST', credentials: 'include' });
+  const res = await fetch(`${AUTH_BASE}/auth/refresh`, { method: 'POST', credentials: 'include' });
   if (!res.ok) throw new Error('Refresh failed');
   const data = await res.json();
   const payload = (data as { data?: { accessToken?: string } })?.data ?? data;

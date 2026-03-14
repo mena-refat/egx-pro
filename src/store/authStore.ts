@@ -35,8 +35,9 @@ export const useAuthStore = create<AuthState>()(
       addUnseenAchievementsCount: (by) => set((state) => ({ unseenAchievementsCount: state.unseenAchievementsCount + by })),
       logout: async () => {
         try {
-          const { getApiBase } = await import('../lib/api');
-          await fetch(`${getApiBase()}/auth/logout`, { method: 'POST', credentials: 'include' });
+          const API = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL?.trim();
+          const base = API ? `${API.replace(/\/$/, '')}/api` : '/api';
+          await fetch(`${base}/auth/logout`, { method: 'POST', credentials: 'include' });
         } catch (err) {
           if (import.meta.env.DEV) console.error('Logout failed', err);
         }
