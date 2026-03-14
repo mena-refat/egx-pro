@@ -9,16 +9,17 @@ export type SidebarProps = {
   onToggle: () => void;
 };
 
+// الترتيب: الرئيسية → السوق → الأسهم → المحفظة → التحليل الذكي → التوقعات → الأهداف → اكتشف → الحاسبة → الملف الشخصي → الإعدادات
 const NAV_ITEMS = [
   { id: 'dashboard', path: '/', icon: LayoutDashboard },
-  { id: 'ai', path: '/ai', icon: Brain },
-  { id: 'portfolio', path: '/portfolio', icon: PieChart },
   { id: 'market', path: '/market', icon: BarChart3 },
   { id: 'stocks', path: '/stocks', icon: Search },
-  { id: 'goals', path: '/goals', icon: Target },
+  { id: 'portfolio', path: '/portfolio', icon: PieChart },
+  { id: 'ai', path: '/ai', icon: Brain },
   { id: 'predictions', path: '/predictions', icon: Crosshair },
-  { id: 'calculator', path: '/calculator', icon: Calculator },
+  { id: 'goals', path: '/goals', icon: Target },
   { id: 'discover', path: '/discover', icon: Users },
+  { id: 'calculator', path: '/calculator', icon: Calculator },
   { id: 'profile', path: '/profile', icon: UserIcon },
   { id: 'settings', path: '/settings/account', icon: Settings },
 ] as const;

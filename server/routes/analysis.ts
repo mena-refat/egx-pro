@@ -10,6 +10,38 @@ import { tickerParamSchema } from '../schemas/params.ts';
 
 const router = Router();
 
+// ══ تشخيص اتصال Claude — بدون authentication ══
+router.get('/test-connection', async (_req, res) => {
+  const apiKey = process.env.CLAUDE_API_KEY;
+  if (!apiKey) {
+    res.json({ ok: false, error: 'CLAUDE_API_KEY not configured' });
+    return;
+  }
+
+  const results: Array<{ model: string; status: string; ms: number }> = [];
+  const models = ['claude-sonnet-4-6', 'claude-3-5-sonnet-20241022'];
+
+  for (const model of models) {
+    const start = Date.now();
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+        body: JSON.stringify({ model, max_tokens: 20, messages: [{ role: 'user', content: 'قل مرحبا' }] }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const body = await r.json().catch(() => ({})) as { content?: Array<{ text?: string }> };
+      const text = body?.content?.[0]?.text ?? '';
+      results.push({ model, status: r.ok ? `✅ ${text}` : `❌ ${r.status}`, ms: Date.now() - start });
+      if (r.ok) break;
+    } catch (e) {
+      results.push({ model, status: `❌ ${(e as Error).message}`, ms: Date.now() - start });
+    }
+  }
+
+  res.json({ ok: results.some(r => r.status.startsWith('✅')), results, keyPrefix: apiKey.slice(0, 12) + '...' });
+});
+
 const analysisLimiter = rateLimit({
   windowMs: ONE_HOUR_MS,
   max: 20,
