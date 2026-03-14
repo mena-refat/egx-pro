@@ -320,6 +320,7 @@ async function startServer() {
   let wsHandlers: ReturnType<typeof setupWebSocket> | null = null;
 
   server.listen(PORT, '0.0.0.0', async () => {
+    console.log(`Server running on port ${PORT}`);
     logger.info(`🚀 Borsa Server running on http://localhost:${PORT}`);
     wsHandlers = setupWebSocket(server);
     wsHandlersRef = wsHandlers;
