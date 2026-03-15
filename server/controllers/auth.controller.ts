@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { verifyAccessToken } from '../../src/lib/auth.ts';
 import * as AuthService from '../services/auth.service.ts';
-import { prisma } from '../lib/prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { getCache, setCache } from '../lib/redis.ts';
 import { EmailService } from '../services/email.service.ts';

@@ -1,0 +1,43 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 2rem;
+  text-align: center;
+  border-radius: 1rem;
+  border: 1px dashed var(--border);
+  background: var(--bg-secondary);
+}
+
+.iconWrap {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  background: var(--brand-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.icon {
+  width: 4rem;
+  height: 4rem;
+  color: var(--brand);
+}
+
+.title {
+  font-size: var(--text-header, 1.125rem);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem;
+}
+
+.description {
+  font-size: var(--text-body, 1rem);
+  color: var(--text-secondary);
+  max-width: 20rem;
+  margin: 0 0 2rem;
+  line-height: 1.6;
+}

@@ -54,7 +54,7 @@ export const useLiveStockPrices = () => {
           setLastUpdated(message.timestamp || Date.now());
         }
       } catch (err) {
-        console.error('❌ WebSocket Message Error:', err);
+        if (import.meta.env.DEV) console.error('❌ WebSocket Message Error:', err);
       }
     };
 
@@ -68,7 +68,7 @@ export const useLiveStockPrices = () => {
     };
 
     socket.onerror = (err) => {
-      console.error('❌ WebSocket Error:', err);
+      if (import.meta.env.DEV) console.error('❌ WebSocket Error:', err);
       socket.close();
     };
 

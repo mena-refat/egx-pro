@@ -1,0 +1,102 @@
+.skeleton {
+  border-radius: 0.25rem;
+  background: var(--bg-secondary);
+  &.sm {
+    height: 1.5rem;
+    width: 5rem;
+  }
+  &.md {
+    height: 2rem;
+    width: 6rem;
+  }
+  &.lg {
+    height: 2.5rem;
+    width: 8rem;
+  }
+}
+
+.skeletonPulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.error {
+  color: var(--danger);
+  font-size: var(--text-body, 1rem);
+}
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.price {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  &.sm {
+    font-size: var(--text-body, 1rem);
+  }
+  &.md {
+    font-size: var(--text-body, 1rem);
+    font-weight: 600;
+  }
+  &.lg {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+}
+
+.currency {
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-inline-start: 0.25rem;
+}
+
+.change {
+  display: inline-flex;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  &.positive {
+    color: var(--success);
+  }
+  &.negative {
+    color: var(--danger);
+  }
+}
+
+.staleWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--warning);
+  flex-shrink: 0;
+}
+
+.staleIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.delayedBadge {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}

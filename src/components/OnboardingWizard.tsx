@@ -290,7 +290,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
         finishTimeoutRef.current = null;
       }, TIMEOUTS.successFeedback);
     } catch (err) {
-      console.error('Failed to apply referral code', err);
+      if (import.meta.env.DEV) console.error('Failed to apply referral code', err);
       setReferralState({ checking: false, error: 'حدث خطأ أثناء التحقق من الكود' });
     }
   };

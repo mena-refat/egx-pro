@@ -1,11 +1,14 @@
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
+import styles from './PageLoader.module.scss';
 
 const PageLoader = memo(function PageLoader() {
+  const { t } = useTranslation('common');
   return (
-    <div className="flex items-center justify-center min-h-[400px]" role="status" aria-label="Loading">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-10 h-10 border-4 border-[var(--brand)] border-t-transparent rounded-full animate-spin" aria-hidden />
-        <p className="text-[var(--text-secondary)] text-sm">جاري التحميل...</p>
+    <div className={styles.root} role="status" aria-label={t('common.loading')}>
+      <div className={styles.inner}>
+        <div className={styles.spinner} aria-hidden />
+        <p className={styles.text}>{t('common.loading')}</p>
       </div>
     </div>
   );

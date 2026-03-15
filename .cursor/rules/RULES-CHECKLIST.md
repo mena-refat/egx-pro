@@ -34,8 +34,8 @@
 
 | # | البند | الحالة | ملاحظات |
 |---|--------|--------|----------|
-| 1 | Route = method + middleware + controller فقط | ⚠️ | **ناقص**: analysis route فيه كل الـ logic داخل الـ handler. يجب استخراج AnalysisService + AnalysisController. |
-| 2 | Controller لا يستدعي prisma | ✅ | |
+| 1 | Route = method + middleware + controller فقط | ✅ | analysis، profile، market-data: كل الـ logic في Controller/Service. test-connection في AnalysisController. |
+| 2 | Controller لا يستدعي prisma | ✅ | إزالة استيراد prisma غير المستخدم من auth.controller؛ profile/completion في ProfileService + Repository. |
 | 3 | Service فيه business logic ويستخدم Repository | ✅ | UserService و AuthService وغيرهما يستخدمون UserRepository. |
 | 4 | تنسيق الاستجابة: { data } / { items, pagination } / { error } | ✅ | مطبّق على كل الـ APIs. |
 | 5 | authenticate على المسارات المحمية | ✅ | |

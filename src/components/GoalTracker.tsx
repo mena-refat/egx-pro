@@ -96,7 +96,7 @@ const GoalTracker = memo(function GoalTracker({ currentWealth }: { currentWealth
         setError(code && t('apiErrors.' + code) !== 'apiErrors.' + code ? t('apiErrors.' + code) : t('goals.errorAdd'));
       }
     } catch (err) {
-      console.error('Add goal error', err);
+      if (import.meta.env.DEV) console.error('Add goal error', err);
       setError(t('goals.errorAdd'));
     } finally {
       setIsSubmitting(false);

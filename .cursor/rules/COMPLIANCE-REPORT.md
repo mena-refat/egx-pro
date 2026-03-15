@@ -36,6 +36,9 @@
 21. **AbortController + cleanup (components.mdc §2.4)** — `useDashboardStats`: تمرير `signal` لجميع استدعاءات `fetch`، cleanup عبر `controller.abort()`، إزالة `console.error`. `useNotifications`: تمرير `signal` لـ fetch الأولي في `useEffect` مع cleanup.
 22. **UserRepository = كل استعلامات User (api.mdc §4)** — توسيع `server/repositories/user.repository.ts` بـ `findUnique`, `findFirst`, `create`, `update`, `findMany` واستبدال كل استدعاءات `prisma.user` في: UserService، AuthService، WatchlistService، GoalsService، AnalysisService، BillingService، ReferralService، SocialService، PredictionsService؛ والـ controllers (Auth، Referral، Predictions)، والـ middleware (auth)، و`server/lib/referral.ts`، `server/lib/achievementCheck.ts`، `server/routes/profile.ts`، MarketController، StocksController. السكربتات في `server/scripts/` ما زالت تستخدم `prisma` مباشرة (مقبول).
 23. **استبدال raw &lt;button&gt; بمكون Button** — Header (profile completion، theme، notifications، user menu)، NotificationDropdown، DashboardMarketOverview (retry)، SecurityTab (change password link، end session، copy 2FA، show/hide password). مكوّن Button يدعم الآن `...rest` و`aria-label` عبر تمديد `ButtonHTMLAttributes`.
+24. **Route = method + middleware + controller (api.mdc)** — نقل `/api/profile/completion` من منطق داخل الـ route إلى `ProfileService.getCompletion` + `ProfileController.completion`؛ نقل `/api/market-data/quotes` و`/health` و`/debug/:symbol` إلى `MarketDataController`؛ إزالة استيراد `prisma` غير المستخدم من `auth.controller.ts`.
+25. **Console في الفرونت (components.mdc)** — كل استدعاءات `console.*` داخل `if (import.meta.env.DEV)` (SecuritySettings، useLiveStockPrices، OnboardingWizard، GoalTracker).
+26. **SecuritySettings: SCSS Module بدل Tailwind** — إنشاء `SecuritySettings.module.scss` واستبدال كل utility classes بـ styles من الـ module؛ استخدام `clsx` للـ conditional classes.
 
 قائمة تحقق تفصيلية: **RULES-CHECKLIST.md**.
 

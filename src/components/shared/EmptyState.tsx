@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { LucideIcon } from 'lucide-react';
 import { Button } from '../ui/Button';
+import styles from './EmptyState.module.scss';
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -18,50 +19,12 @@ const EmptyState = memo(function EmptyState({
   onAction,
 }: EmptyStateProps) {
   return (
-    <div
-      className="
-        flex flex-col items-center justify-center
-        py-20 px-8 text-center
-        rounded-2xl border border-dashed border-[var(--border)]
-        bg-[var(--bg-secondary)]
-      "
-      role="status"
-      aria-label={title}
-    >
-      <div
-        className="
-          w-20 h-20 rounded-full
-          bg-[var(--brand-subtle)]
-          flex items-center justify-center
-          mb-6
-        "
-      >
-        <Icon
-          className="w-16 h-16 text-[var(--brand)]"
-          aria-hidden="true"
-        />
+    <div className={styles.root} role="status" aria-label={title}>
+      <div className={styles.iconWrap}>
+        <Icon className={styles.icon} aria-hidden />
       </div>
-
-      <h3
-        className="
-          text-header font-semibold
-          text-[var(--text-primary)] mb-2
-        "
-      >
-        {title}
-      </h3>
-
-      {description && (
-        <p
-          className="
-            text-body text-[var(--text-secondary)]
-            max-w-xs mb-8 leading-relaxed
-          "
-        >
-          {description}
-        </p>
-      )}
-
+      <h3 className={styles.title}>{title}</h3>
+      {description && <p className={styles.description}>{description}</p>}
       {actionLabel && onAction && (
         <Button variant="primary" size="lg" onClick={onAction}>
           {actionLabel}

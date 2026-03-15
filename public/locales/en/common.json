@@ -26,6 +26,11 @@
     "NEWS_API_MISSING": "News service unavailable",
     "loadFailed": "Failed to load data"
   },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "We're sorry for the inconvenience. Please try again or contact support if the problem persists.",
+    "retry": "Try again"
+  },
   "common": {
     "appName": "Borsa",
     "loading": "Loading...",
