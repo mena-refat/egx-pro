@@ -1,5 +1,6 @@
 import type { IAnalysisEngine, AnalysisEngineRequest, AnalysisEngineResponse } from './types.ts';
 import { logger } from '../../lib/logger.ts';
+import { ANALYSIS_CLAUDE_TIMEOUT_MS } from '../../lib/constants.ts';
 
 export class ClaudeAnalysisEngine implements IAnalysisEngine {
   readonly name = 'claude';
@@ -16,7 +17,7 @@ export class ClaudeAnalysisEngine implements IAnalysisEngine {
     for (const model of models) {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 90_000);
+        const timeout = setTimeout(() => controller.abort(), ANALYSIS_CLAUDE_TIMEOUT_MS);
 
         let res: Response;
         try {

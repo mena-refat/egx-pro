@@ -22,8 +22,8 @@ const api = axios.create({
   },
 });
 
-/** وقت أطول لطلبات التحليل والتوصيات (قد يأخذ دقيقة أو دقيقتين) */
-export const ANALYSIS_TIMEOUT_MS = 120_000; // 2 دقيقة
+/** وقت أطول لطلبات التحليل (جمع بيانات + محرك AI مع إعادة محاولة قد تصل لـ 3 دقائق) */
+export const ANALYSIS_TIMEOUT_MS = 300_000; // 5 دقائق
 
 // Request interceptor to add JWT token
 api.interceptors.request.use(

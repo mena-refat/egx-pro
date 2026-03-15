@@ -86,18 +86,18 @@ export default function AIAnalyzePage() {
       } else if (status === 429 || code === 'RATE_LIMITED') {
         setError('خدمة التحليل مشغولة حالياً. حاول بعد دقيقة.');
       } else if (status === 502 || status === 504 || code === 'ANALYSIS_FAILED' || code === 'ANALYSIS_TIMEOUT') {
-        setError('التحليل أخد وقت طويل أو فشل. حاول تاني.');
+        setError(t('ai.analysisTimeout'));
       } else if (status === 503 || code === 'SERVICE_UNAVAILABLE') {
         setError(t('ai.serviceUnavailable'));
       } else if (axiosErr?.code === 'ECONNABORTED') {
-        setError('التحليل أخد وقت طويل. حاول تاني.');
+        setError(t('ai.analysisTimeout'));
       } else if (status === 500) {
         setError('خطأ من الخادم. حاول تاني بعد شوية.');
       } else {
         if (msg.includes('empty') || msg.includes('Empty')) {
           setError('التحليل رجع فاضي — حاول تاني أو جرب سهم تاني.');
         } else {
-          setError('التحليل فشل أو أخد وقت طويل. حاول تاني بعد شوية.');
+          setError(t('ai.analysisTimeout'));
         }
         if (import.meta.env.DEV) console.error('Analysis error:', err);
       }

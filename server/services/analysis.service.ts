@@ -17,6 +17,7 @@ import { getMarketContext } from '../lib/marketContext.ts';
 import { getCachedAnalysis, setCachedAnalysis, singleKey, compareKey } from '../lib/analysisCache.ts';
 import { generateQuickAnalysis } from '../lib/quickAnalysis.ts';
 import { getAnalysisNewsCutoff, getAnalysisSessionDateString } from '../lib/cairo-date.ts';
+import { ANALYSIS_DATA_GATHER_TIMEOUT_MS } from '../lib/constants.ts';
 
 const nullFinancials = {
   pe: null as number | null,
@@ -98,9 +99,17 @@ async function consumeQuota(userId: string, points: number): Promise<void> {
   });
 }
 
-/** يستدعي محرك التحليل الافتراضي (حالياً Claude) للحصول على أفضل نتيجة. */
+/** لا نعيد المحاولة على rate limit أو عدم توفر الخدمة */
+function isRetryableAnalysisError(err: unknown): boolean {
+  const msg = (err as Error)?.message ?? '';
+  if (msg.includes('rate') || msg.includes('429') || msg.includes('RATE_LIMITED')) return false;
+  if (msg.includes('SERVICE_UNAVAILABLE') || msg.includes('not set') || msg.includes('API_KEY')) return false;
+  return true;
+}
+
+/** يستدعي محرك التحليل (Claude ثم OpenAI fallback) مع إعادة محاولة عند timeout/فشل مؤقت. */
 async function runAnalysisEngine(system: string, userMessage: string, maxTokens = 4000): Promise<string> {
-  if (!process.env.CLAUDE_API_KEY) {
+  if (!process.env.CLAUDE_API_KEY && !process.env.OPENAI_API_KEY) {
     throw new AppError('SERVICE_UNAVAILABLE', 503, 'خدمة التحليل غير متاحة حالياً. حاول لاحقاً.');
   }
   try {
@@ -113,7 +122,7 @@ async function runAnalysisEngine(system: string, userMessage: string, maxTokens 
         responseType: 'text',
         temperature: 0.1,
       }),
-      { maxAttempts: 2, baseDelayMs: 2000 }
+      { maxAttempts: 3, baseDelayMs: 3000, retryable: isRetryableAnalysisError }
     );
     return text;
   } catch (err) {
@@ -123,7 +132,7 @@ async function runAnalysisEngine(system: string, userMessage: string, maxTokens 
     if (msg.includes('rate') || msg.includes('429')) {
       throw new AppError('RATE_LIMITED', 429, 'خدمة التحليل مشغولة حالياً. حاول بعد دقيقة.');
     }
-    if (msg.includes('timeout') || msg.includes('ECONNABORTED') || msg.includes('504') || msg.includes('abort')) {
+    if (msg.includes('timeout') || msg.includes('ECONNABORTED') || msg.includes('504') || msg.includes('abort') || msg.includes('AbortError')) {
       throw new AppError('ANALYSIS_TIMEOUT', 504, 'التحليل أخد وقت طويل. حاول تاني.');
     }
     throw new AppError('ANALYSIS_FAILED', 502, msg || 'فشل في الحصول على التحليل. حاول تاني.');
@@ -211,6 +220,14 @@ function parseAnalysisJson(rawText: string): unknown {
   };
 }
 
+/** تنفيذ promise مع وقت أقصى؛ عند انتهاء الوقت نرجع fallback بدل ما نعلق. */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
 /** يجيب السعر من market data (كاش أو جلب مباشر) بدل الاعتماد على Redis فقط */
 async function getPriceForAnalysis(ticker: string): Promise<{ price: number; changePercent: number; volume: number | null } | null> {
   const quote = await marketDataService.getQuote(ticker);
@@ -251,26 +268,21 @@ export const AnalysisService = {
     const nameEn = stockInfo?.nameEn ?? ticker;
     const analysisSessionDate = getAnalysisSessionDateString();
     const newsCutoff = getAnalysisNewsCutoff();
+    const dataMs = ANALYSIS_DATA_GATHER_TIMEOUT_MS;
 
-    const [priceResult, historyResult, financialsResult, newsResult, marketCtxResult] = await Promise.allSettled([
-      getPriceForAnalysis(ticker),
-      getStockHistory(ticker, '6mo').catch(() => []),
-      getFinancials(ticker),
-      getStockNews(nameAr, newsCutoff).catch(() => []),
-      getMarketContext().catch(() => ({ egx30: null, usdEgp: null, marketStatus: 'غير متاح', timestamp: new Date().toISOString() })),
+    const [priceData, history, financialsRaw, news, marketCtx] = await Promise.all([
+      withTimeout(getPriceForAnalysis(ticker), dataMs, null),
+      withTimeout(getStockHistory(ticker, '6mo').catch(() => []), dataMs, []),
+      withTimeout(getFinancials(ticker), dataMs, null),
+      withTimeout(getStockNews(nameAr, newsCutoff).catch(() => []), dataMs, [] as Array<{ title: string }>),
+      withTimeout(
+        getMarketContext().catch(() => ({ egx30: null, usdEgp: null, marketStatus: 'غير متاح', timestamp: new Date().toISOString() })),
+        dataMs,
+        { egx30: null, usdEgp: null, marketStatus: 'غير متاح', timestamp: new Date().toISOString() }
+      ),
     ]);
 
-    const priceData = priceResult.status === 'fulfilled' ? priceResult.value : null;
-    const history = historyResult.status === 'fulfilled' ? historyResult.value : [];
-    const financials =
-      financialsResult.status === 'fulfilled' && financialsResult.value
-        ? financialsResult.value
-        : nullFinancials;
-    const news = newsResult.status === 'fulfilled' ? (newsResult.value as Array<{ title: string }>) : [];
-    const marketCtx =
-      marketCtxResult.status === 'fulfilled'
-        ? marketCtxResult.value
-        : { egx30: null, usdEgp: null, marketStatus: 'غير متاح', timestamp: new Date().toISOString() };
+    const financials = financialsRaw ?? nullFinancials;
 
     const indicators = calculateIndicators(history);
 
@@ -401,26 +413,18 @@ ${news.length > 0 ? news.map((n) => `- ${n.title} | ${'source' in n ? String(n.s
     const info1 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t1);
     const info2 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t2);
     const newsCutoff = getAnalysisNewsCutoff();
+    const dataMs = ANALYSIS_DATA_GATHER_TIMEOUT_MS;
 
-    const results = await Promise.allSettled([
-      marketDataService.getQuotes([t1, t2]),
-      getFinancials(t1).catch(() => nullFinancials),
-      getFinancials(t2).catch(() => nullFinancials),
-      getStockHistory(t1, '3mo').catch(() => []),
-      getStockHistory(t2, '3mo').catch(() => []),
-      getStockNews(info1?.nameAr ?? t1, newsCutoff).catch(() => []),
-      getStockNews(info2?.nameAr ?? t2, newsCutoff).catch(() => []),
-      getMarketContext().catch(() => defaultMarketCtx),
+    const [quotes, f1, f2, h1, h2, news1, news2, marketCtx] = await Promise.all([
+      withTimeout(marketDataService.getQuotes([t1, t2]), dataMs, new Map<string, { price: number; changePercent: number }>()),
+      withTimeout(getFinancials(t1).catch(() => nullFinancials), dataMs, nullFinancials),
+      withTimeout(getFinancials(t2).catch(() => nullFinancials), dataMs, nullFinancials),
+      withTimeout(getStockHistory(t1, '3mo').catch(() => []), dataMs, []),
+      withTimeout(getStockHistory(t2, '3mo').catch(() => []), dataMs, []),
+      withTimeout(getStockNews(info1?.nameAr ?? t1, newsCutoff).catch(() => []), dataMs, [] as Array<{ title: string }>),
+      withTimeout(getStockNews(info2?.nameAr ?? t2, newsCutoff).catch(() => []), dataMs, [] as Array<{ title: string }>),
+      withTimeout(getMarketContext().catch(() => defaultMarketCtx), dataMs, defaultMarketCtx),
     ]);
-
-    const quotes = results[0].status === 'fulfilled' ? results[0].value : new Map<string, { price: number; changePercent: number }>();
-    const f1 = results[1].status === 'fulfilled' ? results[1].value : nullFinancials;
-    const f2 = results[2].status === 'fulfilled' ? results[2].value : nullFinancials;
-    const h1 = results[3].status === 'fulfilled' ? results[3].value : [];
-    const h2 = results[4].status === 'fulfilled' ? results[4].value : [];
-    const news1 = results[5].status === 'fulfilled' ? (results[5].value as Array<{ title: string }>) : [];
-    const news2 = results[6].status === 'fulfilled' ? (results[6].value as Array<{ title: string }>) : [];
-    const marketCtx = results[7].status === 'fulfilled' ? results[7].value : defaultMarketCtx;
 
     const ind1 = calculateIndicators(h1);
     const ind2 = calculateIndicators(h2);
@@ -490,29 +494,29 @@ ${buildStockBlock(t2, info2, p2, f2, ind2, news2)}
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
     await ensureQuota(userId, 1);
 
-    const [portfolioResult, profileResult, marketCtxResult] = await Promise.allSettled([
-      PortfolioRepository.findByUser(userId),
-      UserRepository.findUnique({
-        where: { id: userId },
-        select: {
-          riskTolerance: true,
-          investmentHorizon: true,
-          interestedSectors: true,
-          monthlyBudget: true,
-          shariaMode: true,
-          investorProfile: true,
-          onboardingCompleted: true,
-        },
-      }),
-      getMarketContext().catch(() => defaultMarketCtx),
+    const dataMs = ANALYSIS_DATA_GATHER_TIMEOUT_MS;
+    const [portfolioRows, profile, marketCtx] = await Promise.all([
+      withTimeout(PortfolioRepository.findByUser(userId), dataMs, [[], 0] as [Array<{ ticker: string; shares: number; avgPrice: number }>, number]),
+      withTimeout(
+        UserRepository.findUnique({
+          where: { id: userId },
+          select: {
+            riskTolerance: true,
+            investmentHorizon: true,
+            interestedSectors: true,
+            monthlyBudget: true,
+            shariaMode: true,
+            investorProfile: true,
+            onboardingCompleted: true,
+          },
+        }),
+        dataMs,
+        null
+      ),
+      withTimeout(getMarketContext().catch(() => defaultMarketCtx), dataMs, defaultMarketCtx),
     ]);
 
-    const portfolioList =
-      portfolioResult.status === 'fulfilled'
-        ? ((portfolioResult.value as [Array<{ ticker: string; shares: number; avgPrice: number }>, number])[0] ?? [])
-        : [];
-    const profile = profileResult.status === 'fulfilled' ? profileResult.value : null;
-    const marketCtx = marketCtxResult.status === 'fulfilled' ? marketCtxResult.value : defaultMarketCtx;
+    const portfolioList = Array.isArray(portfolioRows[0]) ? portfolioRows[0] : [];
     const risk = _body?.riskTolerance ?? profile?.riskTolerance ?? 'moderate';
     const horizon = _body?.investmentHorizon ?? profile?.investmentHorizon ?? 5;
     let sectors: string[] = [];

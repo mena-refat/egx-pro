@@ -1,5 +1,6 @@
 import type { IAnalysisEngine, AnalysisEngineRequest, AnalysisEngineResponse } from './types.ts';
 import { logger } from '../../lib/logger.ts';
+import { ANALYSIS_OPENAI_TIMEOUT_MS } from '../../lib/constants.ts';
 
 function extractOpenAiText(content: unknown): string {
   if (typeof content === 'string') return content;
@@ -31,7 +32,7 @@ export class OpenAiAnalysisEngine implements IAnalysisEngine {
     for (const model of models) {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 60_000);
+        const timeout = setTimeout(() => controller.abort(), ANALYSIS_OPENAI_TIMEOUT_MS);
         let res: Response;
         try {
           res = await fetch('https://api.openai.com/v1/chat/completions', {

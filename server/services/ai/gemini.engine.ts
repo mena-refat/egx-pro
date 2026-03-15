@@ -1,5 +1,6 @@
 import type { IAnalysisEngine, AnalysisEngineRequest, AnalysisEngineResponse } from './types.ts';
 import { logger } from '../../lib/logger.ts';
+import { ANALYSIS_GEMINI_TIMEOUT_MS } from '../../lib/constants.ts';
 
 function extractGeminiText(data: {
   candidates?: Array<{
@@ -29,7 +30,7 @@ export class GeminiAnalysisEngine implements IAnalysisEngine {
     for (const model of models) {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 45_000);
+        const timeout = setTimeout(() => controller.abort(), ANALYSIS_GEMINI_TIMEOUT_MS);
         let res: Response;
         try {
           res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {

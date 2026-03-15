@@ -74,11 +74,11 @@ export default function AIComparePage() {
       } else if (status === 429) {
         setError('خدمة التحليل مشغولة حالياً. حاول بعد دقيقة.');
       } else if (status === 502 || status === 504) {
-        setError('التحليل أخد وقت طويل. حاول تاني.');
+        setError(t('ai.analysisTimeout'));
       } else if (status === 503) {
         setError(t('ai.serviceUnavailable'));
       } else if (axiosErr?.code === 'ECONNABORTED') {
-        setError('التحليل أخد وقت طويل. حاول تاني.');
+        setError(t('ai.analysisTimeout'));
       } else {
         const msg = (err as Error)?.message || '';
         if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
