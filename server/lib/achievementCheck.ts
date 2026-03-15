@@ -5,6 +5,7 @@ import { prisma } from './prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { ACHIEVEMENT_DEFS } from './achievements.ts';
 import { createNotification } from './createNotification.ts';
+import { REFERRAL_REQUIRED } from './constants/plans.ts';
 
 export type AchievementContext = {
   now: Date;
@@ -156,7 +157,7 @@ function buildOne(
       completed = (user?.loginStreak ?? 0) >= 30 || accountAgeDays >= 30;
       break;
     case 'network':
-      completed = completedReferrals >= 5;
+      completed = completedReferrals >= REFERRAL_REQUIRED;
       break;
     case 'diversified':
       completed = portfolioCount >= 3;

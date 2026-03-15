@@ -12,6 +12,9 @@ export const YEARLY_SAVINGS_PERCENT = {
   ultra: Math.round((1 - PLAN_PRICES.ultra_yearly / (PLAN_PRICES.ultra * 12)) * 100),
 } as const;
 
+/** عدد الدعوات المطلوبة لمكافأة شهر Pro — MUST match server REFERRAL_REQUIRED */
+export const REFERRAL_REQUIRED = 15;
+
 /** Free tier limits — MUST match server/lib/plan.ts */
 export const FREE_LIMITS = {
   aiAnalysisPerMonth: 3,

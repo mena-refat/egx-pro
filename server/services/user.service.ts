@@ -15,6 +15,7 @@ import { createNotification } from '../lib/createNotification.ts';
 import { ACHIEVEMENT_DEFS, type AchievementLevel } from '../lib/achievements.ts';
 import { verifyPassword } from '../../src/lib/auth.ts';
 import { AppError } from '../lib/errors.ts';
+import { REFERRAL_REQUIRED } from '../lib/constants/plans.ts';
 import { logger } from '../lib/logger.ts';
 import type { Prisma } from '@prisma/client';
 import type { Request } from 'express';
@@ -689,7 +690,7 @@ export const UserService = {
     if (!user) throw new AppError('NOT_FOUND', 404, 'User not found');
     if (user.freeReferralRewarded) throw new AppError('REWARD_ALREADY_CLAIMED', 400, 'المكافأة تم استلامها بالفعل');
     const completedCount = await ReferralRepository.countActiveByReferrer(userId);
-    if (completedCount < 5) throw new AppError('NOT_ENOUGH_REFERRALS', 400, 'محتاج 5 دعوات ناجحة على الأقل');
+    if (completedCount < REFERRAL_REQUIRED) throw new AppError('NOT_ENOUGH_REFERRALS', 400, `محتاج ${REFERRAL_REQUIRED} دعوات ناجحة على الأقل`);
     const now = new Date();
     let startsFrom = now;
     if (user.planExpiresAt && user.planExpiresAt > now) startsFrom = user.planExpiresAt;

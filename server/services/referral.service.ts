@@ -1,12 +1,14 @@
 import { UserRepository } from '../repositories/user.repository.ts';
 import { ReferralRepository } from '../repositories/referral.repository.ts';
 import { AppError } from '../lib/errors.ts';
+import { REFERRAL_REQUIRED } from '../lib/constants/plans.ts';
 
 export interface ReferralData {
   referralCode: string;
   totalReferrals: number;
   activeReferrals: number;
   nextRewardAt: number;
+  referralsRequired: number;
   totalMonthsEarned: number;
   referralProExpiresAt: string | null;
   recentReferrals: Array<{
@@ -31,15 +33,16 @@ export const ReferralService = {
     const referralCode = user?.referralCode ?? '';
     const totalReferrals = referrals.length;
     const activeReferrals = referrals.filter((r) => (r as { status?: string }).status === 'completed').length;
-    const unrewarded = totalReferrals;
-    const nextRewardAt = unrewarded % 5 === 0 && unrewarded > 0 ? 5 : 5 - (unrewarded % 5);
-    const totalMonthsEarned = Math.floor(totalReferrals / 5);
+    const rem = totalReferrals % REFERRAL_REQUIRED;
+    const nextRewardAt = rem === 0 && totalReferrals > 0 ? REFERRAL_REQUIRED : REFERRAL_REQUIRED - rem;
+    const totalMonthsEarned = Math.floor(totalReferrals / REFERRAL_REQUIRED);
 
     return {
       referralCode,
       totalReferrals,
       activeReferrals,
       nextRewardAt,
+      referralsRequired: REFERRAL_REQUIRED,
       totalMonthsEarned,
       referralProExpiresAt: user?.referralProExpiresAt?.toISOString() ?? null,
       recentReferrals: referrals.slice(0, 10).map((r) => ({

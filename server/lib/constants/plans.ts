@@ -6,6 +6,9 @@ export const PLAN_PRICES = {
   ultra_yearly: 3970, // 397 × 10 — وفر شهرين
 } as const;
 
+/** عدد الدعوات النشطة المطلوبة لمكافأة شهر Pro مجاناً */
+export const REFERRAL_REQUIRED = 15;
+
 /** Predictions: daily limits per plan, rate limit for create */
 export const PREDICTION_LIMITS = {
   freeDaily: 3,

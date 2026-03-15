@@ -1024,7 +1024,7 @@
   },
   "referral": {
     "title": "Invite your friends",
-    "subtitle": "Share your code — every 5 friends who join earns you 1 free Pro month",
+    "subtitle": "Share your code — 15 successful referrals = 1 free Pro month",
     "totalReferrals": "Total referrals",
     "activeReferrals": "Active referrals",
     "monthsEarned": "Free months",
@@ -1039,7 +1039,7 @@
     "howItWorks": "How does it work?",
     "step1": "Copy your personal code or invite link",
     "step2": "Share it with friends to sign up on Borsa",
-    "step3": "When 5 accounts activate you automatically get 1 free Pro month",
+    "step3": "When 15 accounts activate you automatically get 1 free Pro month",
     "recentReferrals": "Recent referrals",
     "user": "User",
     "active": "Active ✓",

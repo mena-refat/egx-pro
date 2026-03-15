@@ -17,13 +17,14 @@ import api from '../../../lib/api';
 import { Button } from '../../ui/Button';
 import EmptyState from '../../shared/EmptyState';
 import { Skeleton } from '../../ui/Skeleton';
-import { TIMEOUTS } from '../../../lib/constants';
+import { TIMEOUTS, REFERRAL_REQUIRED } from '../../../lib/constants';
 
 interface ReferralData {
   referralCode: string;
   totalReferrals: number;
   activeReferrals: number;
   nextRewardAt: number;
+  referralsRequired?: number;
   totalMonthsEarned: number;
   referralProExpiresAt: string | null;
   recentReferrals: {
@@ -164,7 +165,8 @@ function ReferralTabInner() {
 
   if (!data) return null;
 
-  const progressPercent = ((5 - data.nextRewardAt) / 5) * 100;
+  const required = data.referralsRequired ?? REFERRAL_REQUIRED;
+  const progressPercent = ((required - data.nextRewardAt) / required) * 100;
 
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -249,7 +251,7 @@ function ReferralTabInner() {
             </span>
           </div>
           <span className="text-sm font-bold text-[var(--brand)]">
-            {5 - data.nextRewardAt} / 5
+            {required - data.nextRewardAt} / {required}
           </span>
         </div>
 
@@ -263,7 +265,7 @@ function ReferralTabInner() {
         </div>
 
         <p className="text-xs text-[var(--text-secondary)] mt-2">
-          {data.nextRewardAt === 5
+          {data.nextRewardAt === required
             ? t('referral.startInviting')
             : t('referral.progressNote', { count: data.nextRewardAt })}
         </p>

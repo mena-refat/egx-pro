@@ -93,7 +93,7 @@ const ACHIEVEMENT_LEVELS: LevelDef[] = [
     bg: 'rgba(245,158,11,0.1)',
     icon: 'Crown',
     achievements: [
-      { id: 'referral_5', backendId: 'network', titleAr: 'السفير', titleEn: 'Ambassador', descAr: 'ادعُ 5 أصدقاء وانضموا للمنصة', descEn: 'Invite 5 friends who join the platform', howToAr: 'شارك كود دعوتك مع أصدقائك', howToEn: 'Share your referral code with friends', navigateTo: '/settings/referrals' },
+      { id: 'referral_15', backendId: 'network', titleAr: 'السفير', titleEn: 'Ambassador', descAr: 'ادعُ 15 صديقاً وانضموا للمنصة واحصل على شهر Pro مجاناً', descEn: 'Invite 15 friends who join the platform and get 1 free Pro month', howToAr: 'شارك كود دعوتك مع أصدقائك', howToEn: 'Share your referral code with friends', navigateTo: '/settings/referrals' },
       { id: 'goal_complete', backendId: 'strategist', titleAr: 'المنجز', titleEn: 'Achiever', descAr: 'أكمل هدفاً مالياً بالكامل', descEn: 'Complete a financial goal 100%', howToAr: 'حقق هدفاً مالياً حتى 100%', howToEn: 'Reach 100% of a financial goal', navigateTo: '/goals' },
       { id: 'pro_subscriber', backendId: 'subscriber', titleAr: 'المستثمر الحقيقي', titleEn: 'True Investor', descAr: 'اشترك في الخطة الاحترافية', descEn: 'Subscribe to the Pro plan', howToAr: 'اشترك في خطة Pro أو السنوية', howToEn: 'Subscribe to Pro or Yearly plan', navigateTo: '/settings/subscription' },
       { id: 'portfolio_profit', backendId: 'wealth-builder', titleAr: 'الربح الأول', titleEn: 'First Profit', descAr: 'حقق ربحاً في محفظتك الاستثمارية', descEn: 'Achieve a profit in your portfolio', howToAr: 'تابع أسهمك حتى تصعد قيمتها', howToEn: 'Track your stocks until they rise in value', navigateTo: '/portfolio' },

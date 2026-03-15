@@ -1,6 +1,7 @@
 import { prisma } from './prisma.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { createNotification } from './createNotification.ts';
+import { REFERRAL_REQUIRED } from './constants/plans.ts';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -31,15 +32,15 @@ export async function generateUniqueReferralCode(): Promise<string> {
 }
 
 /**
- * When a referred user activates (first login), check if referrer reached 5 active
- * unrewarded referrals and grant 1 free Pro month per 5.
+ * When a referred user activates (first login), check if referrer reached REFERRAL_REQUIRED
+ * active referrals and grant 1 free Pro month per REFERRAL_REQUIRED (حالياً 15).
  */
 export async function checkAndRewardReferrer(referrerId: string): Promise<void> {
   const activeCount = await prisma.referral.count({
     where: { referrerId },
   });
 
-  const rewardsEarned = Math.floor(activeCount / 5);
+  const rewardsEarned = Math.floor(activeCount / REFERRAL_REQUIRED);
   if (rewardsEarned === 0) return;
 
   const now = new Date();
@@ -62,7 +63,7 @@ export async function checkAndRewardReferrer(referrerId: string): Promise<void> 
     referrerId,
     'referral',
     '🎉 مكافأة إحالة!',
-    `وصلت لـ ${rewardsEarned * 5} دعوات ناجحة — حصلت على ${rewardsEarned} شهر Pro مجاناً!`,
+    `وصلت لـ ${rewardsEarned * REFERRAL_REQUIRED} دعوات ناجحة — حصلت على ${rewardsEarned} شهر Pro مجاناً!`,
     { route: '/profile?tab=referrals' }
   );
 }
