@@ -304,6 +304,9 @@ export const AnalysisService = {
     if (financials.revenue != null) fundLines.push(`إيرادات: ${financials.revenue.toLocaleString()}`);
     if (financials.freeCashFlow != null) fundLines.push(`FCF: ${financials.freeCashFlow.toLocaleString()}`);
     if (financials.dividendYield != null) fundLines.push(`توزيعات: ${(financials.dividendYield * 100).toFixed(2)}%`);
+    if (financials.bookValue != null) fundLines.push(`قيمة دفترية: ${financials.bookValue.toFixed(2)}`);
+    if (financials.marketCap != null && financials.marketCap > 0) fundLines.push(`قيمية سوقية: ${(financials.marketCap / 1e9).toFixed(2)} مليار`);
+    if (financials.revenueGrowth != null) fundLines.push(`نمو إيرادات: ${(financials.revenueGrowth * 100).toFixed(1)}%`);
     const techLines: string[] = [];
     if (indicators.rsi14 != null) techLines.push(`RSI: ${indicators.rsi14}`);
     if (indicators.trend) techLines.push(`اتجاه: ${indicators.trend}`);
@@ -315,6 +318,8 @@ export const AnalysisService = {
     if (indicators.resistance != null) techLines.push(`مقاومة: ${indicators.resistance}`);
     if (indicators.vwap != null) techLines.push(`VWAP: ${indicators.vwap}`);
     if (indicators.atr14 != null) techLines.push(`ATR: ${indicators.atr14}`);
+    if (indicators.bollingerUpper != null && indicators.bollingerLower != null)
+      techLines.push(`Bollinger: ${indicators.bollingerLower.toFixed(1)}–${indicators.bollingerUpper.toFixed(1)}`);
     const vol =
       indicators.lastVolume != null && indicators.avgVolume20 != null
         ? `حجم: ${indicators.lastVolume.toLocaleString()} (متوسط: ${indicators.avgVolume20.toLocaleString()})`
@@ -333,14 +338,17 @@ export const AnalysisService = {
             .join(' | ')
         : 'لا أخبار';
 
+    const hasFund = fundLines.length > 0;
+    const hasTech = techLines.length > 0;
     const prompt = `سهم: ${ticker} — ${nameAr} (${nameEn}). EGX.
 ${priceBlock}
-أساسي: ${fundLines.length > 0 ? fundLines.join(' | ') : 'غير متاح'}
-فني: ${techLines.length > 0 ? techLines.join(' | ') : 'غير متاح'}
+أساسي: ${hasFund ? fundLines.join(' | ') : 'غير متوفرة من المصدر'}
+فني: ${hasTech ? techLines.join(' | ') : 'غير متوفرة من المصدر'}
 ${marketLine}
 أخبار: ${newsLine}
+${!hasFund ? '\nملاحظة: عند غياب البيانات الأساسية قدّم تحليلاً مفيداً من الفني والسوق والأخبار فقط. لا تذكر للمستخدم أن "البيانات الأساسية غير متاحة"؛ اكتب التحليل بشكل إيجابي واملأ fundamental من السياق إن أمكن.' : ''}
 
-حلل من البيانات أعلاه فقط. اخرج JSON بالشكل المحدد في الـ system.`;
+حلل من البيانات أعلاه فقط وفق عوامل التحليل (فني/أساسي/سوق/اقتصاد/مصر). اخرج JSON بالشكل المحدد.`;
 
     const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_SINGLE);
     const analysisJson = parseAnalysisJson(rawText);

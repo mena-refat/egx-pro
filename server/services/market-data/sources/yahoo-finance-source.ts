@@ -24,6 +24,7 @@ import type { IMarketDataSource, DataSourceResult, StockQuote } from '../types.t
 import { logger } from '../../../lib/logger.ts';
 import { STOCK_QUOTE, MARKET_DATA } from '../../../lib/constants.ts';
 import { withRetry } from '../../../lib/retry.ts';
+import { toYahooSymbol } from '../../../lib/yahooSymbolMap.ts';
 
 /** yahoo-finance2 v3 requires an instance; static methods throw. */
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
@@ -35,14 +36,6 @@ const CONCURRENCY_LIMIT = 8;
 /** نجيب 5 أيام عشان نضمن إن فيه يومين على الأقل بعد العطلة (للـ 1d interval) */
 const CHART_RANGE_DAYS = 5;
 
-/**
- * Tickers whose Yahoo Finance symbol differs from the standard TICKER.CA pattern.
- * Key = EGX ticker, Value = Yahoo Finance base symbol (without .CA suffix).
- */
-const SYMBOL_MAP: Record<string, string> = {
-  OTMT: 'EGS693V1C014', // Orascom Investment Holding
-  ODHN: 'EGS70321C012', // Orascom Development Holding
-};
 
 /** تشغيل دالة async على مصفوفة مع تحديد عدد الطلبات المتزامنة */
 async function mapWithConcurrency<T, R>(
@@ -120,11 +113,6 @@ export class YahooFinanceSource implements IMarketDataSource {
     return false;
   }
 
-  private toYahooSymbol(symbol: string): string {
-    const mapped = SYMBOL_MAP[symbol];
-    return `${mapped ?? symbol}.CA`;
-  }
-
   async fetchQuotes(symbols: string[]): Promise<DataSourceResult> {
     const start = Date.now();
     const quotes = new Map<string, StockQuote>();
@@ -140,7 +128,7 @@ export class YahooFinanceSource implements IMarketDataSource {
     const interval = marketOpen ? '5m' : '1d';
 
     await mapWithConcurrency(symbols, CONCURRENCY_LIMIT, async (egxSymbol) => {
-      const yahooSymbol = this.toYahooSymbol(egxSymbol);
+      const yahooSymbol = toYahooSymbol(egxSymbol);
 
       try {
         const chart = await withRetry(

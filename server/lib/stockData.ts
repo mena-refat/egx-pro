@@ -1,6 +1,7 @@
 import { getCache } from './redis.ts';
 import { EGX_TICKERS } from './egxTickers.ts';
 import { prisma } from './prisma.ts';
+import { toYahooSymbol } from './yahooSymbolMap.ts';
 import { marketDataService } from '../services/market-data/market-data.service.ts';
 import { logger } from './logger.ts';
 
@@ -92,7 +93,7 @@ const RANGE_DAYS: Record<string, number> = { '1w': 7, '1mo': 30, '3mo': 90, '6mo
 
 /** Historical OHLCV from Yahoo Finance chart endpoint. */
 export async function getStockHistory(ticker: string, range = '1mo'): Promise<Array<{ date: Date; open: number; high: number; low: number; close: number; volume: number }>> {
-  const yahooTicker = ticker.endsWith('.CA') ? ticker : `${ticker}.CA`;
+  const yahooTicker = toYahooSymbol(ticker);
   const days = RANGE_DAYS[range] ?? 30;
   const period1 = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   try {
@@ -136,7 +137,7 @@ export async function getFinancials(ticker: string): Promise<{
   marketCap: number | null;
   beta: number | null;
 }> {
-  const yahooTicker = ticker.endsWith('.CA') ? ticker : `${ticker}.CA`;
+  const yahooTicker = toYahooSymbol(ticker);
   const nulls = {
     pe: null as number | null,
     forwardPe: null as number | null,

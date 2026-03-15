@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { GraduationCap, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
 import type { LearnCard } from '../../types';
 import styles from './LearnSection.module.scss';
@@ -32,31 +32,24 @@ function LearnCardItem({ card, index }: { card: LearnCard; index: number; key?: 
         )}
       </button>
 
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className={styles.expanded}
-          >
-            <div className={styles.expandedInner}>
-              {card.detail && (
-                <p className={styles.detail}>{card.detail}</p>
-              )}
-              {card.inThisStock && (
-                <div className={styles.inThisBox}>
-                  <Lightbulb className={styles.inThisIcon} aria-hidden />
-                  <p className={styles.inThisText}>
-                    <span className={styles.inThisLabel}>في السهم ده: </span>
-                    {card.inThisStock}
-                  </p>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {expanded && (
+        <div className={styles.expanded} aria-hidden={false}>
+          <div className={styles.expandedInner}>
+            {card.detail && (
+              <p className={styles.detail}>{card.detail}</p>
+            )}
+            {card.inThisStock && (
+              <div className={styles.inThisBox}>
+                <Lightbulb className={styles.inThisIcon} aria-hidden />
+                <p className={styles.inThisText}>
+                  <span className={styles.inThisLabel}>في السهم ده: </span>
+                  {card.inThisStock}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
