@@ -8,7 +8,14 @@ import { logger } from '../lib/logger.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { getLimit } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';
-import { SINGLE_ANALYSIS_SYSTEM, COMPARE_SYSTEM, RECOMMENDATIONS_SYSTEM } from '../lib/analysisPrompts.ts';
+import {
+  SINGLE_ANALYSIS_SYSTEM,
+  COMPARE_SYSTEM,
+  RECOMMENDATIONS_SYSTEM,
+  EXPLAIN_SINGLE_SYSTEM,
+  EXPLAIN_COMPARE_SYSTEM,
+} from '../lib/analysisPrompts.ts';
+import { computeScore, DECISION_LABELS_AR } from '../lib/scoringEngine.ts';
 import { analysisEngine } from './ai/index.ts';
 import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
 import { withRetry } from '../lib/retry.ts';
@@ -290,6 +297,18 @@ export const AnalysisService = {
     const financials = financialsRaw ?? nullFinancials;
 
     const indicators = calculateIndicators(history);
+    const price = priceData?.price ?? (history.length > 0 ? history[history.length - 1].close : 0);
+    const changePercent = priceData?.changePercent ?? 0;
+
+    const scoringResult = computeScore({
+      price,
+      changePercent,
+      volume: priceData?.volume ?? (history.length > 0 ? history[history.length - 1].volume : null),
+      history,
+      indicators,
+      financials,
+      market: marketCtx,
+    });
 
     const priceBlock = priceData
       ? `السعر: ${priceData.price} جنيه | التغير: ${priceData.changePercent}%`
@@ -340,18 +359,57 @@ export const AnalysisService = {
 
     const hasFund = fundLines.length > 0;
     const hasTech = techLines.length > 0;
+
+    const scoreBlock = `النتيجة المحسوبة آلياً (لا تغيّرها): المجموع=${scoringResult.score} | القرار=${DECISION_LABELS_AR[scoringResult.decision]} | فني=${scoringResult.technical_score} | زخم=${scoringResult.momentum_score} | أساسي=${scoringResult.fundamental_score} | سوق=${scoringResult.market_score} | اقتصاد كلي=${scoringResult.macro_score} | مخاطر=${scoringResult.risk_score}.`;
+
     const prompt = `سهم: ${ticker} — ${nameAr} (${nameEn}). EGX.
+${scoreBlock}
 ${priceBlock}
 أساسي: ${hasFund ? fundLines.join(' | ') : 'غير متوفرة من المصدر'}
 فني: ${hasTech ? techLines.join(' | ') : 'غير متوفرة من المصدر'}
 ${marketLine}
 أخبار: ${newsLine}
-${!hasFund ? '\nملاحظة: عند غياب البيانات الأساسية قدّم تحليلاً مفيداً من الفني والسوق والأخبار فقط. لا تذكر للمستخدم أن "البيانات الأساسية غير متاحة"؛ اكتب التحليل بشكل إيجابي واملأ fundamental من السياق إن أمكن.' : ''}
+اشرح لماذا هذا التقييم (${scoringResult.score}) وهذا القرار منطقيان بناءً على البيانات أعلاه. اخرج JSON بالشكل المحدد. لا تغيّر القرار ولا الأرقام.`;
 
-حلل من البيانات أعلاه فقط وفق عوامل التحليل (فني/أساسي/سوق/اقتصاد/مصر). اخرج JSON بالشكل المحدد.`;
+    const rawText = await runAnalysisEngine(EXPLAIN_SINGLE_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_SINGLE);
+    const aiJson = parseAnalysisJson(rawText) as Record<string, unknown>;
 
-    const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_SINGLE);
-    const analysisJson = parseAnalysisJson(rawText);
+    const verdictBadge = DECISION_LABELS_AR[scoringResult.decision];
+    const analysisJson = {
+      ...aiJson,
+      score: scoringResult.score,
+      decision: scoringResult.decision,
+      verdictBadge,
+      verdict: verdictBadge,
+      confidenceScore: scoringResult.score,
+      technical_score: scoringResult.technical_score,
+      momentum_score: scoringResult.momentum_score,
+      fundamental_score: scoringResult.fundamental_score,
+      market_score: scoringResult.market_score,
+      macro_score: scoringResult.macro_score,
+      risk_score: scoringResult.risk_score,
+      fundamental:
+        aiJson.fundamental && typeof aiJson.fundamental === 'object'
+          ? { ...(aiJson.fundamental as object), score: Math.round(scoringResult.fundamental_score * 4) }
+          : { score: Math.round(scoringResult.fundamental_score * 4), highlights: [], keyRatios: {} },
+      technical:
+        aiJson.technical && typeof aiJson.technical === 'object'
+          ? {
+              ...(aiJson.technical as object),
+              score: Math.round(scoringResult.technical_score * 2.5),
+              trend: indicators.trend,
+              support: indicators.support,
+              resistance: indicators.resistance,
+            }
+          : {
+              score: Math.round(scoringResult.technical_score * 2.5),
+              trend: indicators.trend,
+              highlights: [],
+              keyIndicators: {},
+              support: indicators.support,
+              resistance: indicators.resistance,
+            },
+    };
 
     await setCachedAnalysis(cacheKey, analysisJson, 'claude');
 
@@ -370,7 +428,7 @@ ${!hasFund ? '\nملاحظة: عند غياب البيانات الأساسية 
               ? Number(pt.high)
               : undefined,
       stopLoss: pt?.stopLoss != null ? Number(pt.stopLoss) : undefined,
-      verdict: (analysisObj.verdictBadge ?? analysisObj.verdict ?? '') as string,
+      verdict: (analysisObj.verdictBadge ?? verdictBadge ?? '') as string,
     };
 
     await consumeQuota(userId, 1);
@@ -429,22 +487,104 @@ ${!hasFund ? '\nملاحظة: عند غياب البيانات الأساسية 
     const p1 = quotes.get(t1);
     const p2 = quotes.get(t2);
 
-    const system = COMPARE_SYSTEM;
+    const price1 = p1?.price ?? (h1.length > 0 ? h1[h1.length - 1].close : 0);
+    const price2 = p2?.price ?? (h2.length > 0 ? h2[h2.length - 1].close : 0);
 
+    const score1 = computeScore({
+      price: price1,
+      changePercent: p1?.changePercent ?? 0,
+      volume: h1.length > 0 ? h1[h1.length - 1].volume : null,
+      history: h1,
+      indicators: ind1,
+      financials: f1,
+      market: marketCtx,
+    });
+    const score2 = computeScore({
+      price: price2,
+      changePercent: p2?.changePercent ?? 0,
+      volume: h2.length > 0 ? h2[h2.length - 1].volume : null,
+      history: h2,
+      indicators: ind2,
+      financials: f2,
+      market: marketCtx,
+    });
+
+    const winner = score1.score >= score2.score ? t1 : t2;
     const line = (
       t: string,
       info: typeof info1,
       price: typeof p1,
       fin: typeof f1,
       ind: typeof ind1,
-      news: typeof news1
+      news: typeof news1,
+      scr: { score: number; decision: (typeof score1)['decision'] }
     ) =>
-      `${t} ${info?.nameAr ?? t}: سعر ${price?.price ?? '—'} | P/E ${fin.pe ?? '—'} ROE ${fin.roe != null ? (fin.roe * 100).toFixed(0) + '%' : '—'} | ${ind.trend} RSI ${ind.rsi14 ?? '—'} | أخبار: ${news.length ? news.slice(0, 2).map((n) => n.title).join('; ') : '—'}`;
+      `${t} ${info?.nameAr ?? t}: سعر ${price?.price ?? '—'} | التقييم المحسوب=${scr.score} القرار=${DECISION_LABELS_AR[scr.decision]} | P/E ${fin.pe ?? '—'} ROE ${fin.roe != null ? (fin.roe * 100).toFixed(0) + '%' : '—'} | ${ind.trend} RSI ${ind.rsi14 ?? '—'} | أخبار: ${news.length ? news.slice(0, 2).map((n) => n.title).join('; ') : '—'}`;
 
-    const prompt = `${line(t1, info1, p1, f1, ind1, news1)}\n${line(t2, info2, p2, f2, ind2, news2)}\nسوق: ${marketCtx.marketStatus} EGX30: ${marketCtx.egx30?.price ?? '—'} USD/EGP: ${marketCtx.usdEgp ?? '—'}\nقارن واعطِ التوصية. JSON فقط.`;
+    const prompt = `${line(t1, info1, p1, f1, ind1, news1, score1)}\n${line(t2, info2, p2, f2, ind2, news2, score2)}\nسوق: ${marketCtx.marketStatus} EGX30: ${marketCtx.egx30?.price ?? '—'} USD/EGP: ${marketCtx.usdEgp ?? '—'}\nالفائز محسوب آلياً: ${winner} (درجته أعلى). اشرح لماذا بناءً على الأرقام فقط. لا تغيّر winner ولا الـ scores. JSON فقط.`;
 
-    const raw = await runAnalysisEngine(system, prompt, ANALYSIS_MAX_TOKENS_COMPARE);
-    const comparison = parseAnalysisJson(raw);
+    const raw = await runAnalysisEngine(EXPLAIN_COMPARE_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_COMPARE);
+    const aiCompare = parseAnalysisJson(raw) as Record<string, unknown>;
+
+    const comparison = {
+      ...aiCompare,
+      winner,
+      winnerReason:
+        aiCompare.winnerReason ||
+        (winner === t1
+          ? `درجة ${t1} (${score1.score}) أعلى من درجة ${t2} (${score2.score}).`
+          : `درجة ${t2} (${score2.score}) أعلى من درجة ${t1} (${score1.score}).`),
+      stock1: {
+        ...(typeof aiCompare.stock1 === 'object' && aiCompare.stock1 !== null ? aiCompare.stock1 : {}),
+        ticker: t1,
+        name: info1?.nameAr ?? t1,
+        score: score1.score,
+        verdictBadge: DECISION_LABELS_AR[score1.decision],
+        technical_score: score1.technical_score,
+        momentum_score: score1.momentum_score,
+        fundamental_score: score1.fundamental_score,
+        market_score: score1.market_score,
+        macro_score: score1.macro_score,
+        risk_score: score1.risk_score,
+        fundamental: {
+          ...(typeof (aiCompare.stock1 as Record<string, unknown>)?.fundamental === 'object'
+            ? (aiCompare.stock1 as Record<string, unknown>).fundamental
+            : {}),
+          score: score1.fundamental_score,
+        },
+        technical: {
+          ...(typeof (aiCompare.stock1 as Record<string, unknown>)?.technical === 'object'
+            ? (aiCompare.stock1 as Record<string, unknown>).technical
+            : {}),
+          score: score1.technical_score,
+        },
+      },
+      stock2: {
+        ...(typeof aiCompare.stock2 === 'object' && aiCompare.stock2 !== null ? aiCompare.stock2 : {}),
+        ticker: t2,
+        name: info2?.nameAr ?? t2,
+        score: score2.score,
+        verdictBadge: DECISION_LABELS_AR[score2.decision],
+        technical_score: score2.technical_score,
+        momentum_score: score2.momentum_score,
+        fundamental_score: score2.fundamental_score,
+        market_score: score2.market_score,
+        macro_score: score2.macro_score,
+        risk_score: score2.risk_score,
+        fundamental: {
+          ...(typeof (aiCompare.stock2 as Record<string, unknown>)?.fundamental === 'object'
+            ? (aiCompare.stock2 as Record<string, unknown>).fundamental
+            : {}),
+          score: score2.fundamental_score,
+        },
+        technical: {
+          ...(typeof (aiCompare.stock2 as Record<string, unknown>)?.technical === 'object'
+            ? (aiCompare.stock2 as Record<string, unknown>).technical
+            : {}),
+          score: score2.technical_score,
+        },
+      },
+    };
     await setCachedAnalysis(compareCacheKey, comparison, 'claude');
     await consumeQuota(userId, 2);
     const saved = await AnalysisRepository.create({
@@ -523,7 +663,9 @@ ${!hasFund ? '\nملاحظة: عند غياب البيانات الأساسية 
     const investorProfile = profile?.investorProfile ?? null;
 
     let portfolioData = '';
-    if (tickers.length > 0) {
+    let portfolioScoresBlock = '';
+    const toScore = portfolioList.slice(0, 5);
+    if (toScore.length > 0) {
       const quotes = await marketDataService.getQuotes(tickers);
       portfolioData = portfolioList
         .map((h) => {
@@ -533,6 +675,28 @@ ${!hasFund ? '\nملاحظة: عند غياب البيانات الأساسية 
           return `- ${h.ticker}: ${h.shares} سهم × ${h.avgPrice} ج.م (الحالي: ${currentPrice} ج.م، ${Number(gainPct) >= 0 ? '+' : ''}${gainPct}%)`;
         })
         .join('\n');
+
+      const scorePromises = toScore.map(async (h) => {
+        const [hist, fin] = await Promise.all([
+          withTimeout(getStockHistory(h.ticker, '3mo').catch(() => []), 8000, []),
+          withTimeout(getFinancials(h.ticker).catch(() => nullFinancials), 8000, nullFinancials),
+        ]);
+        const q = quotes.get(h.ticker);
+        const price = q?.price ?? (hist.length > 0 ? hist[hist.length - 1].close : 0);
+        const ind = calculateIndicators(hist);
+        const result = computeScore({
+          price,
+          changePercent: q?.changePercent ?? 0,
+          volume: hist.length > 0 ? hist[hist.length - 1].volume : null,
+          history: hist,
+          indicators: ind,
+          financials: fin ?? nullFinancials,
+          market: marketCtx,
+        });
+        return { ticker: h.ticker, score: result.score, decision: result.decision };
+      });
+      const scoreResults = await Promise.all(scorePromises);
+      portfolioScoresBlock = `تقييم محسوب آلياً (نفس محرك التحليل — لا تخالفه): ${scoreResults.map((r) => `${r.ticker}=${r.score} (${DECISION_LABELS_AR[r.decision]})`).join('؛ ')}.`;
     }
 
     const systemWithSharia = shariaMode
@@ -542,8 +706,8 @@ ${!hasFund ? '\nملاحظة: عند غياب البيانات الأساسية 
     const shariaNote = shariaMode ? ' شريعة فقط.' : '';
     const prompt = `ملف: مخاطر ${risk === 'conservative' ? 'محافظ' : risk === 'aggressive' ? 'مغامر' : 'متوازن'} | أفق ${horizon}س | ميزانية ${budget > 0 ? budget.toLocaleString() + ' ج' : '—'}${shariaNote} | قطاعات ${sectors.length ? sectors.slice(0, 3).join(',') : '—'}
 محفظة: ${portfolioData || 'فارغة'}
-سوق: ${marketCtx.marketStatus} EGX30: ${marketCtx.egx30?.price ?? '—'} USD/EGP: ${marketCtx.usdEgp ?? '—'}
-توصيات EGX: سعر مستهدف، وقف خسارة، سبب جملة واحدة. JSON فقط.`;
+${portfolioScoresBlock ? portfolioScoresBlock + '\n' : ''}سوق: ${marketCtx.marketStatus} EGX30: ${marketCtx.egx30?.price ?? '—'} USD/EGP: ${marketCtx.usdEgp ?? '—'}
+توصيات EGX: سعر مستهدف، وقف خسارة، سبب جملة واحدة. عند التوصية على أسهم المحفظة استند إلى التقييم المحسوب أعلاه. JSON فقط.`;
 
     const raw = await runAnalysisEngine(systemWithSharia, prompt, ANALYSIS_MAX_TOKENS_RECOMMENDATIONS);
     const recommendations = parseAnalysisJson(raw);

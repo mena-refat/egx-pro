@@ -25,7 +25,7 @@ export function useStockAnalysis(stock: Stock) {
   const shariaMode = user?.shariaMode ?? false;
   const isRTL = i18n.language.startsWith('ar');
   const lang = isRTL ? 'ar' : 'en';
-  const isPro = user?.plan === 'pro' || user?.plan === 'yearly';
+  const isPro = user?.plan === 'pro' || user?.plan === 'yearly' || user?.plan === 'ultra' || user?.plan === 'ultra_yearly';
 
   const [activeTab, setActiveTab] = useState<TabId>('details');
   const [priceDetail, setPriceDetail] = useState<Record<string, unknown> | null>(null);
