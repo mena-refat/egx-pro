@@ -89,6 +89,11 @@ model User {
   referralsSent                          Referral[]     @relation("ReferralsSent")
   refreshTokens                          RefreshToken[]
   watchlists                             Watchlist[]
+
+  @@index([isDeleted, deletionScheduledFor])
+  @@index([plan, planExpiresAt])
+  @@index([username])
+  @@index([createdAt])
 }
 
 model RefreshToken {
@@ -106,6 +111,10 @@ model RefreshToken {
   country    String?
   isRevoked  Boolean  @default(false)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRevoked, expiresAt])
+  @@index([expiresAt])
 }
 
 model AuditLog {
@@ -140,6 +149,7 @@ model Portfolio {
 
   @@index([userId])
   @@index([userId, ticker])
+  @@index([ticker])
 }
 
 model Goal {
@@ -159,6 +169,7 @@ model Goal {
 
   @@index([userId])
   @@index([userId, status])
+  @@index([deadline])
 }
 
 model Watchlist {
@@ -171,6 +182,7 @@ model Watchlist {
   user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@unique([userId, ticker])
   @@index([userId, ticker])
 }
 
@@ -195,6 +207,7 @@ model Analysis {
   @@index([userId, ticker])
   @@index([checkedAt])
   @@index([createdAt])
+  @@index([ticker, createdAt])
 }
 
 model Referral {
@@ -205,6 +218,9 @@ model Referral {
   createdAt                          DateTime @default(now())
   User_Referral_referredUserIdToUser User     @relation("Referral_referredUserIdToUser", fields: [referredUserId], references: [id], onDelete: Cascade)
   referrer                           User     @relation("ReferralsSent", fields: [referrerId], references: [id], onDelete: Cascade)
+
+  @@unique([referredUserId])
+  @@index([referrerId, status, createdAt])
 }
 
 enum FollowStatus {
@@ -282,6 +298,8 @@ model Prediction {
   @@index([ticker, status])
   @@index([status, isPublic])
   @@index([resolvedAt])
+  @@index([status, expiresAt])
+  @@index([userId, createdAt])
 }
 
 model PredictionLike {
@@ -328,6 +346,8 @@ model DiscountCode {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   discountUsages DiscountUsage[]
+
+  @@index([active, expiresAt])
 }
 
 model Notification {
@@ -344,6 +364,7 @@ model Notification {
   @@index([userId])
   @@index([userId, isRead])
   @@index([userId, createdAt])
+  @@index([createdAt])
 }
 
 model ArchivedUser {
