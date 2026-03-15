@@ -9,3 +9,8 @@ export const ANALYSIS_OPENAI_TIMEOUT_MS = 120_000;  // 2 دقيقة
 export const ANALYSIS_GEMINI_TIMEOUT_MS = 90_000;   // 1.5 دقيقة
 /** وقت أقصى لجمع البيانات قبل استدعاء المحرك (سعر، أخبار، أساسي، إلخ) */
 export const ANALYSIS_DATA_GATHER_TIMEOUT_MS = 25_000;
+
+/** حد أقصى لتوكينز المخرجات — توفير تكلفة مع الحفاظ على جودة التحليل */
+export const ANALYSIS_MAX_TOKENS_SINGLE = 2_800;
+export const ANALYSIS_MAX_TOKENS_COMPARE = 2_600;
+export const ANALYSIS_MAX_TOKENS_RECOMMENDATIONS = 2_600;

@@ -17,7 +17,12 @@ import { getMarketContext } from '../lib/marketContext.ts';
 import { getCachedAnalysis, setCachedAnalysis, singleKey, compareKey } from '../lib/analysisCache.ts';
 import { generateQuickAnalysis } from '../lib/quickAnalysis.ts';
 import { getAnalysisNewsCutoff, getAnalysisSessionDateString } from '../lib/cairo-date.ts';
-import { ANALYSIS_DATA_GATHER_TIMEOUT_MS } from '../lib/constants.ts';
+import {
+  ANALYSIS_DATA_GATHER_TIMEOUT_MS,
+  ANALYSIS_MAX_TOKENS_SINGLE,
+  ANALYSIS_MAX_TOKENS_COMPARE,
+  ANALYSIS_MAX_TOKENS_RECOMMENDATIONS,
+} from '../lib/constants.ts';
 
 const nullFinancials = {
   pe: null as number | null,
@@ -299,9 +304,6 @@ export const AnalysisService = {
     if (financials.revenue != null) fundLines.push(`إيرادات: ${financials.revenue.toLocaleString()}`);
     if (financials.freeCashFlow != null) fundLines.push(`FCF: ${financials.freeCashFlow.toLocaleString()}`);
     if (financials.dividendYield != null) fundLines.push(`توزيعات: ${(financials.dividendYield * 100).toFixed(2)}%`);
-    const fundamentalBlock =
-      fundLines.length > 0 ? `═ أساسي ═\n${fundLines.join(' | ')}` : '═ أساسي ═\nلا تتوفر بيانات — قدّر من معرفتك';
-
     const techLines: string[] = [];
     if (indicators.rsi14 != null) techLines.push(`RSI: ${indicators.rsi14}`);
     if (indicators.trend) techLines.push(`اتجاه: ${indicators.trend}`);
@@ -318,41 +320,29 @@ export const AnalysisService = {
         ? `حجم: ${indicators.lastVolume.toLocaleString()} (متوسط: ${indicators.avgVolume20.toLocaleString()})`
         : '';
     if (vol) techLines.push(vol);
-    const technicalBlock =
-      techLines.length > 0 ? `═ فني ═\n${techLines.join(' | ')}` : '═ فني ═\nلا تتوفر بيانات';
+    const marketLine =
+      marketCtx.egx30 != null
+        ? `سوق: ${marketCtx.marketStatus} | EGX30: ${marketCtx.egx30.price} (${marketCtx.egx30.changePercent > 0 ? '+' : ''}${marketCtx.egx30.changePercent.toFixed(2)}%) | USD/EGP: ${marketCtx.usdEgp ?? '—'}`
+        : `سوق: ${marketCtx.marketStatus} | USD/EGP: ${marketCtx.usdEgp ?? '—'}`;
 
-    const marketBlock = `
-═══ سياق السوق ═══
-حالة السوق: ${marketCtx.marketStatus}
-EGX30: ${marketCtx.egx30 ? `${marketCtx.egx30.price} (${marketCtx.egx30.changePercent > 0 ? '+' : ''}${marketCtx.egx30.changePercent.toFixed(2)}%)` : 'ابحث عنه'}
-USD/EGP: ${marketCtx.usdEgp != null ? marketCtx.usdEgp.toFixed(2) : 'ابحث عنه'}
-`;
+    const newsLine =
+      news.length > 0
+        ? news
+            .slice(0, 5)
+            .map((n) => n.title)
+            .join(' | ')
+        : 'لا أخبار';
 
-    const prompt = `
-حلل السهم التالي اعتمادًا فقط على البيانات المنظمة الموجودة أدناه.
-لا تقل إنك بحثت في الإنترنت، ولا تخترع مصادر خارج هذه البيانات. إذا كان حقل غير متوفر فاذكره كغير متوفر ثم أكمل التحليل بحذر.
-
-═══ هوية السهم ═══
-الرمز: ${ticker}
-الشركة: ${nameAr} (${nameEn})
-البورصة: EGX — Yahoo Finance: ${ticker}.CA
-جلسة التحليل: ${analysisSessionDate}
-آخر خبر مسموح في هذه الجلسة: ${newsCutoff.toISOString()}
-
-═══ السعر الحالي ═══
+    const prompt = `سهم: ${ticker} — ${nameAr} (${nameEn}). EGX.
 ${priceBlock}
+أساسي: ${fundLines.length > 0 ? fundLines.join(' | ') : 'غير متاح'}
+فني: ${techLines.length > 0 ? techLines.join(' | ') : 'غير متاح'}
+${marketLine}
+أخبار: ${newsLine}
 
-${fundamentalBlock}
-${technicalBlock}
-${marketBlock}
+حلل من البيانات أعلاه فقط. اخرج JSON بالشكل المحدد في الـ system.`;
 
-═══ الأخبار ═══
-${news.length > 0 ? news.map((n) => `- ${n.title} | ${'source' in n ? String(n.source) : ''} | ${'publishedAt' in n ? String(n.publishedAt) : ''}`).join('\n') : 'لا توجد أخبار مخزنة حديثًا'}
-
-المطلوب: JSON فقط بالشكل المحدد في الـ system prompt.
-`;
-
-    const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, 4500);
+    const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_SINGLE);
     const analysisJson = parseAnalysisJson(rawText);
 
     await setCachedAnalysis(cacheKey, analysisJson, 'claude');
@@ -433,33 +423,19 @@ ${news.length > 0 ? news.map((n) => `- ${n.title} | ${'source' in n ? String(n.s
 
     const system = COMPARE_SYSTEM;
 
-    const buildStockBlock = (
+    const line = (
       t: string,
       info: typeof info1,
       price: typeof p1,
       fin: typeof f1,
       ind: typeof ind1,
       news: typeof news1
-    ) => `
-═══ ${t} — ${info?.nameAr ?? t} ═══
-السعر: ${price && price.price > 0 ? `${price.price} جنيه (${price.changePercent > 0 ? '+' : ''}${price.changePercent.toFixed(2)}%)` : 'غير متاح'}
-P/E: ${fin.pe != null ? fin.pe.toFixed(2) : '—'} | ROE: ${fin.roe != null ? (fin.roe * 100).toFixed(1) + '%' : '—'} | هامش الربح: ${fin.profitMargin != null ? (fin.profitMargin * 100).toFixed(1) + '%' : '—'}
-D/E: ${fin.debtToEquity != null ? fin.debtToEquity.toFixed(2) : '—'} | FCF: ${fin.freeCashFlow != null ? fin.freeCashFlow.toLocaleString() : '—'} | Div Yield: ${fin.dividendYield != null ? (fin.dividendYield * 100).toFixed(2) + '%' : '—'}
-الاتجاه: ${ind.trend} | RSI: ${ind.rsi14 ?? '—'} | MACD: ${ind.macd ?? '—'}
-SMA20: ${ind.sma20 ?? '—'} | SMA50: ${ind.sma50 ?? '—'} | الدعم: ${ind.support ?? '—'} | المقاومة: ${ind.resistance ?? '—'}
-أخبار: ${news.length ? news.slice(0, 3).map((n) => n.title).join(' | ') : 'ابحث عن الأخبار'}
-`;
+    ) =>
+      `${t} ${info?.nameAr ?? t}: سعر ${price?.price ?? '—'} | P/E ${fin.pe ?? '—'} ROE ${fin.roe != null ? (fin.roe * 100).toFixed(0) + '%' : '—'} | ${ind.trend} RSI ${ind.rsi14 ?? '—'} | أخبار: ${news.length ? news.slice(0, 2).map((n) => n.title).join('; ') : '—'}`;
 
-    const prompt = `
-${buildStockBlock(t1, info1, p1, f1, ind1, news1)}
-${buildStockBlock(t2, info2, p2, f2, ind2, news2)}
+    const prompt = `${line(t1, info1, p1, f1, ind1, news1)}\n${line(t2, info2, p2, f2, ind2, news2)}\nسوق: ${marketCtx.marketStatus} EGX30: ${marketCtx.egx30?.price ?? '—'} USD/EGP: ${marketCtx.usdEgp ?? '—'}\nقارن واعطِ التوصية. JSON فقط.`;
 
-سياق السوق: ${marketCtx.marketStatus} | EGX30: ${marketCtx.egx30?.price ?? '—'} | USD/EGP: ${marketCtx.usdEgp ?? '—'}
-
-قارن بعمق واعطِ التوصية.
-`;
-
-    const raw = await runAnalysisEngine(system, prompt, 5000);
+    const raw = await runAnalysisEngine(system, prompt, ANALYSIS_MAX_TOKENS_COMPARE);
     const comparison = parseAnalysisJson(raw);
     await setCachedAnalysis(compareCacheKey, comparison, 'claude');
     await consumeQuota(userId, 2);
@@ -547,27 +523,13 @@ ${buildStockBlock(t2, info2, p2, f2, ind2, news2)}
       ? RECOMMENDATIONS_SYSTEM.replace('ردك JSON فقط:', 'المستخدم يريد استثمارات متوافقة مع الشريعة فقط — لا بنوك تقليدية ولا شركات خمور ولا تبغ.\n\nردك JSON فقط:')
       : RECOMMENDATIONS_SYSTEM;
 
-    const prompt = `
-═══ ملف المستخدم ═══
-تحمل المخاطر: ${risk === 'conservative' ? 'محافظ' : risk === 'aggressive' ? 'مغامر' : 'متوازن'}
-الأفق الزمني: ${horizon} سنوات
-الميزانية الشهرية: ${budget > 0 ? budget.toLocaleString() + ' جنيه' : 'غير محدد'}
-الشريعة: ${shariaMode ? 'نعم — متوافق مع الشريعة فقط' : 'لا قيود'}
-قطاعات مهتم بها: ${sectors.length ? sectors.join(', ') : 'غير محدد'}
-${investorProfile ? `بيانات الاستبيان: ${JSON.stringify(investorProfile)}` : ''}
+    const shariaNote = shariaMode ? ' استثمارات متوافقة مع الشريعة فقط (لا بنوك تقليدية ولا خمور ولا تبغ).' : '';
+    const prompt = `ملف: مخاطر ${risk === 'conservative' ? 'محافظ' : risk === 'aggressive' ? 'مغامر' : 'متوازن'} | أفق ${horizon}س | ميزانية ${budget > 0 ? budget.toLocaleString() + ' ج' : '—'} | شريعة ${shariaMode ? 'نعم' : 'لا'} | قطاعات ${sectors.length ? sectors.slice(0, 3).join(',') : '—'}
+محفظة: ${portfolioData || 'فارغة'}
+سوق: ${marketCtx.marketStatus} EGX30: ${marketCtx.egx30?.price ?? '—'} USD/EGP: ${marketCtx.usdEgp ?? '—'}${shariaNote}
+قدم توصيات EGX (سعر مستهدف، وقف خسارة، سبب قصير). JSON فقط.`;
 
-═══ المحفظة الحالية ═══
-${portfolioData || 'المحفظة فاضية — اقترح أسهم للبدء'}
-
-═══ سياق السوق ═══
-حالة السوق: ${marketCtx.marketStatus}
-EGX30: ${marketCtx.egx30 ? `${marketCtx.egx30.price} (${marketCtx.egx30.changePercent > 0 ? '+' : ''}${marketCtx.egx30.changePercent.toFixed(2)}%)` : 'ابحث عنه'}
-USD/EGP: ${marketCtx.usdEgp != null ? marketCtx.usdEgp.toFixed(2) : 'ابحث عنه'}
-
-قدم 5-8 توصيات عملية محددة بأسعار مستهدفة ووقف خسارة.
-`;
-
-    const raw = await runAnalysisEngine(systemWithSharia, prompt, 5000);
+    const raw = await runAnalysisEngine(systemWithSharia, prompt, ANALYSIS_MAX_TOKENS_RECOMMENDATIONS);
     const recommendations = parseAnalysisJson(raw);
     await consumeQuota(userId, 1);
     const saved = await AnalysisRepository.create({
