@@ -4,15 +4,25 @@
  * (Claude, OpenAI, Gemini, etc.) to get the most accurate analysis.
  */
 
+export type AiTaskType =
+  | 'news_summarization'
+  | 'news_extraction'
+  | 'financial_analysis'
+  | 'news_market_impact';
+
 export interface AnalysisEngineRequest {
+  taskType: AiTaskType;
   systemPrompt: string;
   userMessage: string;
   maxTokens?: number;
+  temperature?: number;
+  responseType?: 'text' | 'json';
 }
 
 export interface AnalysisEngineResponse {
   text: string;
   provider: string;
+  model?: string;
 }
 
 /**

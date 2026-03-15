@@ -104,7 +104,14 @@ async function runAnalysisEngine(system: string, userMessage: string, maxTokens 
   }
   try {
     const { text } = await withRetry(
-      () => analysisEngine.generate({ systemPrompt: system, userMessage, maxTokens }),
+      () => analysisEngine.generate({
+        taskType: 'financial_analysis',
+        systemPrompt: system,
+        userMessage,
+        maxTokens,
+        responseType: 'text',
+        temperature: 0.1,
+      }),
       { maxAttempts: 2, baseDelayMs: 2000 }
     );
     return text;

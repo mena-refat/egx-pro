@@ -1,16 +1,11 @@
-/**
- * AI Analysis Engine — single entry point for the app.
- * Today: Claude only (best accuracy for EGX stock analysis).
- * Later: you can add a router that calls multiple models and picks the best result,
- * similar to how Cursor uses OpenAI, Gemini, Claude under one layer.
- */
-
 import type { IAnalysisEngine } from './types.ts';
-import { ClaudeAnalysisEngine } from './claude.engine.ts';
+import { aiRouter } from './router.ts';
 
-const claudeEngine = new ClaudeAnalysisEngine();
+/** Default engine used for all AI tasks through centralized routing. */
+export const analysisEngine: IAnalysisEngine = aiRouter;
 
-/** Default engine used for all analysis (single-stock, compare, recommendations). */
-export const analysisEngine: IAnalysisEngine = claudeEngine;
-
-export type { IAnalysisEngine, AnalysisEngineRequest, AnalysisEngineResponse } from './types.ts';
+export { aiRouter } from './router.ts';
+export { ClaudeAnalysisEngine } from './claude.engine.ts';
+export { GeminiAnalysisEngine } from './gemini.engine.ts';
+export { OpenAiAnalysisEngine } from './openai.engine.ts';
+export type { IAnalysisEngine, AnalysisEngineRequest, AnalysisEngineResponse, AiTaskType } from './types.ts';

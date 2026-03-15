@@ -12,3 +12,4 @@ export * from './user.schema.ts';
 export * from './analysis.schema.ts';
 export * from './billing.schema.ts';
 export * from './idempotency.schema.ts';
+export * from './news.schema.ts';

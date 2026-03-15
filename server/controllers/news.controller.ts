@@ -1,10 +1,12 @@
 import { Response, NextFunction } from 'express';
 import { NewsService } from '../services/news.service.ts';
+import { NewsAnalysisService } from '../services/news-analysis.service.ts';
 import { logger } from '../lib/logger.ts';
 import { sendSuccess, sendError } from '../lib/apiResponse.ts';
+import type { AuthRequest } from '../routes/types.ts';
 
-function run(fn: (req: { params: { ticker?: string } }, res: Response) => Promise<void>) {
-  return (req: { params: { ticker?: string } }, res: Response, next: NextFunction) => {
+function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
     fn(req, res).catch(next);
   };
 }
@@ -19,6 +21,20 @@ export const NewsController = {
     const ticker = req.params.ticker ?? '';
     const items = await NewsService.getByTicker(ticker);
     sendSuccess(res, items);
+  }),
+
+  analyze: run(async (req, res) => {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) {
+      sendError(res, 'UNAUTHORIZED', 401);
+      return;
+    }
+    const body = req.body as { title?: string; description?: string };
+    const result = await NewsAnalysisService.analyzeArticle({
+      title: body.title ?? '',
+      description: body.description,
+    });
+    sendSuccess(res, result);
   }),
 };
 
