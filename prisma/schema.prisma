@@ -368,6 +368,37 @@ model Notification {
   @@index([createdAt])
 }
 
+model NewsItem {
+  id           String         @id @default(cuid())
+  externalId   String         @unique
+  title        String
+  summary      String?
+  source       String
+  sourceType   NewsSourceType
+  url          String
+  publishedAt  DateTime
+  fetchedAt    DateTime       @default(now())
+  isMarketWide Boolean        @default(false)
+  language     String?
+  sentiment    String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  tickers      NewsTicker[]
+
+  @@index([publishedAt])
+  @@index([sourceType, publishedAt])
+  @@index([isMarketWide, publishedAt])
+}
+
+model NewsTicker {
+  newsId  String
+  ticker  String
+  news    NewsItem @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  @@id([newsId, ticker])
+  @@index([ticker])
+}
+
 model IdempotencyKey {
   id             String   @id @default(cuid())
   userId         String
@@ -412,4 +443,10 @@ enum GicsSector {
   UTILITIES
   REAL_ESTATE
   COMMUNICATION_SERVICES
+}
+
+enum NewsSourceType {
+  NEWS_API
+  GOOGLE_RSS
+  EGX_DISCLOSURE
 }

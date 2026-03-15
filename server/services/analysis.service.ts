@@ -226,7 +226,6 @@ export const AnalysisService = {
     const cacheKey = singleKey(ticker);
     const cached = await getCachedAnalysis<unknown>(cacheKey);
     if (cached) {
-      await consumeQuota(userId, 1);
       const saved = await AnalysisRepository.create({
         userId,
         ticker,
@@ -308,8 +307,8 @@ USD/EGP: ${marketCtx.usdEgp != null ? marketCtx.usdEgp.toFixed(2) : 'ابحث ع
 `;
 
     const prompt = `
-ابحث في الإنترنت عن أحدث بيانات السهم التالي من مصادر مالية موثوقة، ثم حلله وفق إطار الـ 42+ عامل.
-البيانات أدناه محسوبة من بيانات حقيقية — استخدمها مباشرة ولا تتجاهلها. إذا كان أي حقل "ابحث عنه" فابحث عنه فعلاً.
+حلل السهم التالي اعتمادًا فقط على البيانات المنظمة الموجودة أدناه.
+لا تقل إنك بحثت في الإنترنت، ولا تخترع مصادر خارج هذه البيانات. إذا كان حقل غير متوفر فاذكره كغير متوفر ثم أكمل التحليل بحذر.
 
 ═══ هوية السهم ═══
 الرمز: ${ticker}
@@ -324,12 +323,12 @@ ${technicalBlock}
 ${marketBlock}
 
 ═══ الأخبار ═══
-${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن أحدث الأخبار'}
+${news.length > 0 ? news.map((n) => `- ${n.title} | ${'source' in n ? String(n.source) : ''} | ${'publishedAt' in n ? String(n.publishedAt) : ''}`).join('\n') : 'لا توجد أخبار مخزنة حديثًا'}
 
 المطلوب: JSON فقط بالشكل المحدد في الـ system prompt.
 `;
 
-    const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, 8000);
+    const rawText = await runAnalysisEngine(SINGLE_ANALYSIS_SYSTEM, prompt, 4500);
     const analysisJson = parseAnalysisJson(rawText);
 
     await setCachedAnalysis(cacheKey, analysisJson, 'claude');
@@ -379,7 +378,6 @@ ${news.length > 0 ? news.map((n) => '- ' + n.title).join('\n') : 'ابحث عن 
     const compareCacheKey = compareKey(t1, t2);
     const cachedCompare = await getCachedAnalysis<unknown>(compareCacheKey);
     if (cachedCompare) {
-      await consumeQuota(userId, 2);
       const saved = await AnalysisRepository.create({
         userId,
         ticker: `${t1}|${t2}`,
@@ -444,7 +442,7 @@ ${buildStockBlock(t2, info2, p2, f2, ind2, news2)}
 قارن بعمق واعطِ التوصية.
 `;
 
-    const raw = await runAnalysisEngine(system, prompt, 8000);
+    const raw = await runAnalysisEngine(system, prompt, 5000);
     const comparison = parseAnalysisJson(raw);
     await setCachedAnalysis(compareCacheKey, comparison, 'claude');
     await consumeQuota(userId, 2);
@@ -552,7 +550,7 @@ USD/EGP: ${marketCtx.usdEgp != null ? marketCtx.usdEgp.toFixed(2) : 'ابحث ع
 قدم 5-8 توصيات عملية محددة بأسعار مستهدفة ووقف خسارة.
 `;
 
-    const raw = await runAnalysisEngine(systemWithSharia, prompt, 8000);
+    const raw = await runAnalysisEngine(systemWithSharia, prompt, 5000);
     const recommendations = parseAnalysisJson(raw);
     await consumeQuota(userId, 1);
     const saved = await AnalysisRepository.create({

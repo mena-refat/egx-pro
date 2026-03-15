@@ -44,6 +44,7 @@ import { EGX_TICKERS } from './server/lib/egxTickers.ts';
 import { createNotification } from './server/lib/createNotification.ts';
 import { runResolvePredictions } from './server/jobs/resolve-predictions.ts';
 import { runTrackRecordCheck } from './server/jobs/track-record.ts';
+import { runNewsSyncJob } from './server/jobs/sync-news.ts';
 
 async function startServer() {
   if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
@@ -492,6 +493,18 @@ async function startServer() {
     }
   }, { timezone: 'Africa/Cairo' });
 
+  const newsSyncCron = cron.schedule('*/30 * * * *', async () => {
+    try {
+      await runNewsSyncJob();
+    } catch (err) {
+      logger.error('News sync job error', { error: err });
+    }
+  }, { timezone: 'Africa/Cairo' });
+
+  void runNewsSyncJob().catch((err) => {
+    logger.error('Initial news sync job error', { error: err });
+  });
+
   const shutdown = (signal: string) => {
     logger.info(`${signal} received — shutting down gracefully`);
     marketDataService.stopPolling();
@@ -500,6 +513,7 @@ async function startServer() {
     aiResetCron.stop();
     resolveCron.stop();
     trackRecordCron.stop();
+    newsSyncCron.stop();
     clearInterval(pricesInterval);
     server.close(() => {
       logger.info('HTTP server closed');
