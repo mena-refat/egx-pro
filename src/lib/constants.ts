@@ -1,9 +1,9 @@
-/** Plan prices (EGP): pro monthly/yearly, ultra monthly/yearly */
+/** Plan prices (EGP): pro monthly/yearly, ultra monthly/yearly. السنوي = شهرين مجاناً (دفع 10). */
 export const PLAN_PRICES = {
-  pro: 149,
-  yearly: 1399,
-  ultra: 299,
-  ultra_yearly: 2499,
+  pro: 189,
+  yearly: 1890,   // وفر شهرين (~17%)
+  ultra: 397,
+  ultra_yearly: 3970, // وفر شهرين (~17%)
 } as const;
 
 /** Yearly savings vs monthly * 12 (percent). Used for "Save X%" on toggle. */

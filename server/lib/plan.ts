@@ -11,18 +11,18 @@ export const FREE_LIMITS = {
   priceAlerts: false,
 } as const;
 
-/** Pro: higher limits than free, still capped */
+/** Pro: 20 تحليل شهرياً، حدود أعلى من Free */
 export const PRO_LIMITS = {
-  aiAnalysisPerMonth: 30,
+  aiAnalysisPerMonth: 20,
   portfolioStocks: 10,
   watchlistStocks: 5,
   goals: 3,
   priceAlerts: true,
 } as const;
 
-/** Ultra: highest limits (effectively unlimited for display) */
+/** Ultra: 45 تحليل شهرياً، حدود أعلى من Pro */
 export const ULTRA_LIMITS = {
-  aiAnalysisPerMonth: 999,
+  aiAnalysisPerMonth: 45,
   portfolioStocks: 999,
   watchlistStocks: 999,
   goals: 999,
