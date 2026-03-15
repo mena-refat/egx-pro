@@ -8,13 +8,16 @@ datasource db {
 }
 
 model Stock {
-  id     String      @id @default(cuid())
-  ticker String      @unique
-  nameAr String
-  nameEn String
-  sector GicsSector?
+  id                 String      @id @default(cuid())
+  ticker             String      @unique
+  nameAr             String
+  nameEn             String
+  sector             GicsSector?
+  description        String?     /// وصف منظم للنشاط والقطاع (عربي)
+  isShariaCompliant  Boolean?    /// true = متوافق مع الشريعة، false = غير متوافق، null = غير محدد
 
   @@index([sector])
+  @@index([isShariaCompliant])
 }
 
 model User {

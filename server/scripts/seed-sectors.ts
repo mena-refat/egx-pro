@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.ts';
 import { GicsSector } from '@prisma/client';
 import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
+import { getOfficialGics, getOfficialSharia } from '../lib/egxStockOfficialData.ts';
 
 // ─── 1) Name-based map (longest match wins per stock) ─────────────────────
 const SECTOR_MAP: Record<string, GicsSector> = {
@@ -549,6 +550,68 @@ const TICKER_GICS_OVERRIDES: Partial<Record<string, GicsSector>> = {
   AJWA: GicsSector.CONSUMER_STAPLES,
 };
 
+// ─── 3) تسميات GICS بالعربية + شرح قصير لكل قطاع (للوصف «عن الشركة») ───
+const GICS_LABEL_AR: Record<GicsSector, string> = {
+  [GicsSector.INFORMATION_TECHNOLOGY]: 'تقنية المعلومات',
+  [GicsSector.HEALTH_CARE]: 'الرعاية الصحية',
+  [GicsSector.FINANCIALS]: 'المالية',
+  [GicsSector.CONSUMER_DISCRETIONARY]: 'السلع والخدمات الاختيارية',
+  [GicsSector.CONSUMER_STAPLES]: 'السلع والخدمات الأساسية',
+  [GicsSector.ENERGY]: 'الطاقة',
+  [GicsSector.INDUSTRIALS]: 'الصناعات',
+  [GicsSector.MATERIALS]: 'المواد',
+  [GicsSector.UTILITIES]: 'المرافق',
+  [GicsSector.REAL_ESTATE]: 'العقارات',
+  [GicsSector.COMMUNICATION_SERVICES]: 'خدمات الاتصالات',
+};
+
+/** شرح موجز لكل قطاع GICS — يُستخدم في وصف «عن الشركة» */
+const GICS_SECTOR_DESCRIPTION_AR: Record<GicsSector, string> = {
+  [GicsSector.INFORMATION_TECHNOLOGY]: 'يضم الشركات الناشطة في البرمجيات، الأجهزة، الاتصالات التقنية، والخدمات السحابية.',
+  [GicsSector.HEALTH_CARE]: 'يشمل شركات الأدوية، المستشفيات، الأجهزة الطبية، والخدمات الصحية.',
+  [GicsSector.FINANCIALS]: 'يتضمن البنوك، شركات التأمين، السماسرة، والاستثمارات المالية.',
+  [GicsSector.CONSUMER_DISCRETIONARY]: 'يغطي السلع والخدمات غير الضرورية مثل السيارات، السياحة، الترفيه، والبيع بالتجزئة الاختياري.',
+  [GicsSector.CONSUMER_STAPLES]: 'يضم منتجي المواد الغذائية، المشروبات، التبغ، والسلع الاستهلاكية الأساسية.',
+  [GicsSector.ENERGY]: 'يشمل شركات النفط والغاز، التكرير، والطاقة.',
+  [GicsSector.INDUSTRIALS]: 'يتضمن المقاولات، النقل، الآلات الصناعية، والخدمات اللوجستية.',
+  [GicsSector.MATERIALS]: 'يغطي الأسمنت، الحديد والصلب، الكيماويات، التعدين، والمواد الخام.',
+  [GicsSector.UTILITIES]: 'يشمل شركات الكهرباء، الغاز، والمياه.',
+  [GicsSector.REAL_ESTATE]: 'يتضمن التطوير العقاري، الإسكان، وإدارة العقارات.',
+  [GicsSector.COMMUNICATION_SERVICES]: 'يضم الاتصالات، الإعلام، والمنصات الرقمية.',
+};
+
+// ─── 4) أسهم غير متوافقة مع الشريعة (بنوك تقليدية، دخان، خمور، إلخ) ───
+const SHARIA_NON_COMPLIANT_TICKERS = new Set<string>([
+  'COMI', 'CIEB', 'EGBE', 'QNBA', 'HDBK', 'CCAP', 'CCAPP', 'HRHO', 'BTFH', 'BCAP', 'EFIC', 'MOIN', 'NBKE', 'UNBE',
+  'EAST', // الشرقية للدخان
+  'ORWE', // أوراسكوم للاستثمار - قد تكون مختلطة
+]);
+
+// ─── 5) أسهم متوافقة مع الشريعة (بنوك إسلامية، تمويل إسلامي) ─────────
+const SHARIA_COMPLIANT_TICKERS = new Set<string>([
+  'ADIB', 'SAUD', // أبوظبي الإسلامي، البركة
+]);
+
+function buildDescription(nameAr: string, nameEn: string, sector: GicsSector): string {
+  const sectorAr = GICS_LABEL_AR[sector];
+  const sectorDetail = GICS_SECTOR_DESCRIPTION_AR[sector];
+  return `${nameAr} شركة مسجلة في البورصة المصرية (EGX). تنتمي إلى قطاع «${sectorAr}» حسب التصنيف العالمي لقطاعات الصناعة GICS. ${sectorDetail} النشاط الرئيسي: ${nameAr}.`;
+}
+
+function getShariaCompliant(ticker: string, nameAr: string, sector: GicsSector | null): boolean | null {
+  const official = getOfficialSharia(ticker);
+  if (official !== undefined) return official;
+  if (SHARIA_NON_COMPLIANT_TICKERS.has(ticker)) return false;
+  if (SHARIA_COMPLIANT_TICKERS.has(ticker)) return true;
+  if (sector === GicsSector.FINANCIALS) {
+    const n = nameAr;
+    if (n.includes('إسلامي') || n.includes('بركة') || n.includes('فيصل') || n.includes('أبوظبي الإسلامي')) return true;
+    if (n.includes('بنك') || n.includes('مصرف') || n.includes('تأمين') || n.includes('سمسرة') || n.includes('كابيتال')) return false;
+  }
+  if (nameAr.includes('دخان') || nameAr.includes('تبغ')) return false;
+  return null;
+}
+
 function inferSectorFromName(nameAr: string): GicsSector {
   const n = nameAr;
   if (n.includes('بنك') || n.includes('مصرف') || n.includes('تأمين') || n.includes('سمسرة') || n.includes('كابيتال') || n.includes('قابضة مالية')) return GicsSector.FINANCIALS;
@@ -569,6 +632,11 @@ function buildTickerToGics(): Map<string, GicsSector> {
   const keysByLength = Object.keys(SECTOR_MAP).sort((a, b) => b.length - a.length);
 
   for (const stock of EGX_STOCKS) {
+    const official = getOfficialGics(stock.ticker);
+    if (official !== undefined) {
+      map.set(stock.ticker, official);
+      continue;
+    }
     const override = TICKER_GICS_OVERRIDES[stock.ticker];
     if (override !== undefined) {
       map.set(stock.ticker, override);
@@ -595,15 +663,31 @@ async function seedSectors() {
 
   const tickerToGics = buildTickerToGics();
 
-  console.log('Syncing stocks from EGX list...');
+  console.log('Syncing stocks from EGX list (كل سهم ضمن أحد الـ 11 قطاع GICS فقط، وصف عن الشركة، شريعة)...');
   for (const s of EGX_STOCKS) {
+    const sector = tickerToGics.get(s.ticker) ?? inferSectorFromName(s.nameAr);
+    const description = buildDescription(s.nameAr, s.nameEn, sector);
+    const isShariaCompliant = getShariaCompliant(s.ticker, s.nameAr, sector);
     await prisma.stock.upsert({
       where: { ticker: s.ticker },
-      create: { ticker: s.ticker, nameAr: s.nameAr, nameEn: s.nameEn, sector: tickerToGics.get(s.ticker) ?? null },
-      update: { nameAr: s.nameAr, nameEn: s.nameEn, sector: tickerToGics.get(s.ticker) ?? null },
+      create: {
+        ticker: s.ticker,
+        nameAr: s.nameAr,
+        nameEn: s.nameEn,
+        sector,
+        description,
+        isShariaCompliant,
+      },
+      update: {
+        nameAr: s.nameAr,
+        nameEn: s.nameEn,
+        sector,
+        description,
+        isShariaCompliant,
+      },
     });
   }
-  console.log(`✅ Synced ${EGX_STOCKS.length} stocks with GICS sector.\n`);
+  console.log(`✅ Synced ${EGX_STOCKS.length} stocks. كل سهم مصنّف ضمن أحد الـ 11 قطاع GICS فقط.\n`);
 
   const bySector: Record<string, number> = {};
   for (const sector of tickerToGics.values()) {
@@ -614,12 +698,13 @@ async function seedSectors() {
     .sort((a, b) => b[1] - a[1])
     .forEach(([s, c]) => console.log(`  ${s}: ${c}`));
 
-  const nullCount = await prisma.stock.updateMany({
-    where: { sector: null },
-    data: { sector: GicsSector.INDUSTRIALS },
-  });
-  if (nullCount.count > 0) {
-    console.log(`\n✅ Set sector=INDUSTRIALS for ${nullCount.count} stocks that had no sector.`);
+  const nullSectorCount = await prisma.stock.count({ where: { sector: null } });
+  if (nullSectorCount > 0) {
+    await prisma.stock.updateMany({
+      where: { sector: null },
+      data: { sector: GicsSector.INDUSTRIALS },
+    });
+    console.log(`\n✅ تعيين قطاع INDUSTRIALS لـ ${nullSectorCount} سهم كان بدون قطاع (لا يوجد «أخرى»).`);
   }
 
   await prisma.$disconnect();

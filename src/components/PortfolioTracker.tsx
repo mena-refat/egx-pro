@@ -7,6 +7,7 @@ import api from '../lib/api';
 import { useLivePrices } from '../hooks/useLivePrices';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { getStockName, getStockInfo, searchStocks } from '../lib/egxStocks';
+import { getSectorGicsKey } from '../lib/egxIndicesSectors';
 import { GICS_SECTOR_LABELS } from '../hooks/useStockScreener';
 import { Stock } from '../types';
 import { Button } from './ui/Button';
@@ -128,7 +129,10 @@ export default function PortfolioTracker() {
     const sectorData: Record<string, number> = {};
     holdings.forEach(h => {
       const currentPrice = livePrices[h.ticker]?.price || h.avgPrice;
-      const sectorKey = livePrices[h.ticker]?.sector || allStocks.find(s => s.ticker === h.ticker)?.sector || 'OTHER';
+      const fromApi = livePrices[h.ticker]?.sector ?? allStocks.find(s => s.ticker === h.ticker)?.sector;
+      const info = getStockInfo(h.ticker);
+      const fallbackGics = getSectorGicsKey(h.ticker, info?.nameAr ?? '', info?.nameEn ?? '');
+      const sectorKey = (fromApi && String(fromApi).trim()) || fallbackGics || 'OTHER';
       sectorData[sectorKey] = (sectorData[sectorKey] || 0) + (h.shares * currentPrice);
     });
     const labels = GICS_SECTOR_LABELS as Record<string, { ar: string; en: string }>;

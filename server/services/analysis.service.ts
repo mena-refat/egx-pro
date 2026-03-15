@@ -479,8 +479,16 @@ ${!hasFund ? '\nملاحظة: عند غياب البيانات الأساسية 
     await ensureQuota(userId, 1);
 
     const dataMs = ANALYSIS_DATA_GATHER_TIMEOUT_MS;
+    const portfolioFallback: [Array<{ ticker: string; shares: number; avgPrice: number }>, number] = [[], 0];
     const [portfolioRows, profile, marketCtx] = await Promise.all([
-      withTimeout(PortfolioRepository.findByUser(userId), dataMs, [[], 0] as [Array<{ ticker: string; shares: number; avgPrice: number }>, number]),
+      withTimeout(
+        PortfolioRepository.findByUser(userId).then(([list, n]) => [
+          list.map((h) => ({ ticker: h.ticker, shares: h.shares, avgPrice: h.avgPrice })),
+          n,
+        ] as [Array<{ ticker: string; shares: number; avgPrice: number }>, number]),
+        dataMs,
+        portfolioFallback
+      ),
       withTimeout(
         UserRepository.findUnique({
           where: { id: userId },

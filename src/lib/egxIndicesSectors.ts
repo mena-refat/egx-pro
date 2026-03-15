@@ -1,12 +1,14 @@
 /**
  * EGX index members and sector mapping for filters.
- * EGX30/70/100 are representative subsets; EGX33 = Sharia-compliant index.
+ * مصدر المؤشرات والشريعة: بيانات رسمية من الإيرادات (جدول المستخدم).
+ * EGX30/70/100 = مؤشرات تمثيلية؛ EGX33 = مؤشر الشرعية.
  */
 
+/** مؤشر EGX 30 — من عمود المؤشر (EGX 30 / 100 / 33 أو EGX 30) */
 export const INDEX_EGX30 = [
-  'COMI', 'CCAP', 'SWDY', 'HRHO', 'EFID', 'EXPA', 'ADIB', 'SAUD', 'CIEB', 'BTFH',
-  'TMGH', 'OCDI', 'ETEL', 'ORAS', 'AMER', 'PIOH', 'ORWE', 'FWRY', 'EMFD', 'CIRA',
-  'DCRC', 'EAST', 'ABUK', 'ESRS', 'CLHO', 'AMOC', 'ARCC', 'ECAP', 'IRON', 'MPRC',
+  'ABUK', 'ADIB', 'AMOC', 'EFID', 'EGAL', 'ARCC', 'ECAP', 'ESRS', 'FAIT', 'FAITA',
+  'AUTO', 'SWDY', 'EMFD', 'TMGH', 'PHDC', 'OCDI', 'ETEL', 'CLHO', 'OLFI', 'MTIE',
+  'ISPH', 'RMDA', 'FWRY', 'VLMR', 'VLMRA', 'EAST', 'COMI', 'HRHO',
 ] as const;
 
 export const INDEX_EGX70 = [
@@ -27,12 +29,28 @@ export const INDEX_EGX100 = [
 /** EGX 35 LV — low volatility index (Aug 2025); extend as official list is confirmed */
 export const INDEX_EGX35_LV: readonly string[] = [];
 
-/** EGX 33 Sharia-compliant index (subset; used for Sharia badge) */
+/** EGX 33 / متوافق مع الشريعة — من عمود «متوافق مع الشريعة: نعم» في الجدول الرسمي */
 export const INDEX_EGX33_SHARIA = [
-  'COMI', 'ADIB', 'SAUD', 'EXPA', 'FWRY', 'EFID', 'TMGH', 'CIRA', 'EMFD', 'SWDY',
-  'HRHO', 'BTFH', 'BCAP', 'AMER', 'PIOH', 'ORWE', 'DCRC', 'EAST', 'CLHO', 'ARCC',
-  'ECAP', 'MPRC', 'AMOC', 'PHAR', 'ETEL', 'ORAS', 'OCDI', 'ABUK', 'ESRS', 'IRON',
-  'CERA', 'PRCL', 'IDRE',
+  'ABUK', 'ADIB', 'ACRO', 'APPC', 'AJWA', 'SAUD', 'FNAR', 'AMPI', 'ATLC', 'ALCN',
+  'AFMC', 'AMOC', 'AMES', 'AXPH', 'SPIN', 'AMEC', 'AMER', 'ALUM', 'CERA', 'ACGC',
+  'AMIA', 'ADCI', 'APSW', 'RREI', 'ARVA', 'AIND', 'ARCC', 'ASCM', 'AITG', 'ALRA',
+  'BIGP', 'BSFR', 'CAED', 'CPCI', 'POUL', 'CSAG', 'PRCL', 'DCRC', 'DTPP', 'SUGR',
+  'DAPH', 'DSCW', 'EDFM', 'EFID', 'EGAL', 'EPCO', 'MISR', 'EGCH', 'EFIC', 'EDBM',
+  'EGTS', 'PHAR', 'IRON', 'MOED', 'AREH', 'AREHA', 'ESGI', 'ETRS', 'ABRD', 'EIUD',
+  'EHDR', 'AFDI', 'EEII', 'EALR', 'ICFC', 'IRAX', 'ECAP', 'ELKA', 'ELNA', 'OBRI',
+  'ELSH', 'ELWA', 'NIPH', 'ELEC', 'UEGC', 'SWDY', 'EMFD', 'ENGC', 'ZEOT', 'ESRS',
+  'FAIT', 'FAITA', 'FIRED', 'AUTO', 'GETO', 'GIHD', 'GGCC', 'BIOC', 'GOCO', 'CCRS',
+  'HELI', 'INEE', 'INEG', 'ICAL', 'IFAP', 'IBCT', 'ICMI', 'DIFC', 'IPPM', 'IDRE',
+  'ISMA', 'INFI', 'ITSY', 'JUFO', 'LCSW', 'MPCO', 'MOIL', 'MMAT', 'MAAL', 'MBEN',
+  'MEPA', 'MNHD', 'MPCI', 'MENA', 'WCDF', 'MEGM', 'CEFM', 'MIPH', 'MBSC', 'MCQE',
+  'MICH', 'MRCO', 'MFPC', 'ATQA', 'MOSC', 'WATP', 'SMPP', 'NCMP', 'NDRL', 'EGAS',
+  'NCIS', 'MILS', 'NEDA', 'NINH', 'OCPH', 'OCIC', 'ODHN', 'ORHD', 'OTMT', 'ORWE',
+  'PACH', 'PHDC', 'PTCC', 'ASPI', 'PSAD', 'ARAB', 'RACC', 'RAYA', 'REAC', 'RIVA',
+  'RUBX', 'SIPC', 'SMFR', 'SNFC', 'SDTI', 'SKPC', 'SCEM', 'OCDI', 'SNFI', 'SCFM',
+  'SVCE', 'SCTS', 'SBAG', 'TMGH', 'ADPC', 'TOUR', 'UNIT', 'UNFO', 'UEFM', 'VERT',
+  'WKOL', 'DOMT', 'CLHO', 'OLFI', 'MTIE', 'CICH', 'CIRA', 'FWRY', 'RMDA', 'AIVCB',
+  'SPMD', 'OFH', 'ACAMD', 'ISPH', 'TALM', 'IDHC', 'ISMQ', 'KRDI', 'MCRO', 'AIHC',
+  'ETEL',
 ] as const;
 
 const EGX30_SET = new Set(INDEX_EGX30);
@@ -58,14 +76,18 @@ export function isShariaCompliant(ticker: string): boolean {
 }
 
 /** Sector by ticker (keywords from name; fallback "other") */
-const SECTOR_KEYWORDS: { keys: string[]; sectorAr: string; sectorEn: string }[] = [
-  { keys: ['بنك', 'بنوك', 'bank', 'credit', 'قابضة مالية', 'سمسرة'], sectorAr: 'بنوك', sectorEn: 'Banks' },
-  { keys: ['عقار', 'عقارية', 'إسكان', 'real estate', 'إنشاء'], sectorAr: 'عقارات', sectorEn: 'Real Estate' },
-  { keys: ['صناع', 'صناعة', 'industry', 'مطاحن', 'حديد', 'صلب', 'أسمنت', 'سيراميك'], sectorAr: 'صناعة', sectorEn: 'Industry' },
-  { keys: ['طبي', 'مستشفى', 'أدوية', 'دواء', 'pharma', 'medical', 'صيدل'], sectorAr: 'رعاية صحية', sectorEn: 'Healthcare' },
-  { keys: ['اتصال', 'اتصالات', 'telecom', 'فوري', 'تقني'], sectorAr: 'اتصالات وتقنية', sectorEn: 'Telecom & Tech' },
-  { keys: ['سياحة', 'فندق', 'فنادق', 'tourist'], sectorAr: 'سياحة', sectorEn: 'Tourism' },
-  { keys: ['زراع', 'غذائ', 'سكر', 'دواجن', 'أسمدة'], sectorAr: 'زراعة وغذاء', sectorEn: 'Agriculture & Food' },
+const SECTOR_KEYWORDS: { keys: string[]; sectorAr: string; sectorEn: string; gics: string }[] = [
+  { keys: ['بنك', 'بنوك', 'bank', 'credit', 'قابضة مالية', 'سمسرة'], sectorAr: 'بنوك', sectorEn: 'Banks', gics: 'FINANCIALS' },
+  { keys: ['عقار', 'عقارية', 'إسكان', 'real estate', 'إنشاء'], sectorAr: 'عقارات', sectorEn: 'Real Estate', gics: 'REAL_ESTATE' },
+  { keys: ['حديد', 'صلب', 'أسمنت', 'سيراميك', 'ألومنيوم', 'كيماويات', 'أسمدة', 'ورق', 'زجاج', 'جرانيت'], sectorAr: 'المواد والصناعات', sectorEn: 'Materials', gics: 'MATERIALS' },
+  { keys: ['صناع', 'صناعة', 'industry', 'مطاحن', 'مقاولات', 'نقل', 'حاويات', 'كهرباء', 'كابلات'], sectorAr: 'صناعة', sectorEn: 'Industry', gics: 'INDUSTRIALS' },
+  { keys: ['طبي', 'مستشفى', 'أدوية', 'دواء', 'pharma', 'medical', 'صيدل'], sectorAr: 'رعاية صحية', sectorEn: 'Healthcare', gics: 'HEALTH_CARE' },
+  { keys: ['اتصال', 'اتصالات', 'telecom', 'فوري', 'تليكوم', 'نايل سات'], sectorAr: 'اتصالات', sectorEn: 'Telecom', gics: 'COMMUNICATION_SERVICES' },
+  { keys: ['تقنية', 'تكنولوجيا', 'برمجة', 'software'], sectorAr: 'تقنية المعلومات', sectorEn: 'Information Technology', gics: 'INFORMATION_TECHNOLOGY' },
+  { keys: ['سياحة', 'فندق', 'فنادق', 'tourist'], sectorAr: 'سياحة', sectorEn: 'Tourism', gics: 'CONSUMER_DISCRETIONARY' },
+  { keys: ['زراع', 'غذائ', 'سكر', 'دواجن', 'زيوت', 'صابون', 'لبان'], sectorAr: 'زراعة وغذاء', sectorEn: 'Agriculture & Food', gics: 'CONSUMER_STAPLES' },
+  { keys: ['نفط', 'بترول', 'غاز', 'طاقة', 'بتروكيماويات'], sectorAr: 'الطاقة', sectorEn: 'Energy', gics: 'ENERGY' },
+  { keys: ['كهرباء', 'مياه', 'مرافق'], sectorAr: 'المرافق', sectorEn: 'Utilities', gics: 'UTILITIES' },
 ];
 
 export function getSector(ticker: string, nameAr: string, nameEn: string, lang: 'ar' | 'en'): string {
@@ -74,4 +96,13 @@ export function getSector(ticker: string, nameAr: string, nameEn: string, lang: 
     if (keys.some(k => text.includes(k.toLowerCase()))) return lang === 'ar' ? sectorAr : sectorEn;
   }
   return lang === 'ar' ? 'أخرى' : 'Other';
+}
+
+/** مفتاح GICS من اسم السهم (للمحفظة والرسوم عندما لا يرجع الـ API القطاع) */
+export function getSectorGicsKey(ticker: string, nameAr: string, nameEn: string): string | null {
+  const text = `${nameAr} ${nameEn}`.toLowerCase();
+  for (const { keys, gics } of SECTOR_KEYWORDS) {
+    if (keys.some(k => text.includes(k.toLowerCase()))) return gics;
+  }
+  return null;
 }
