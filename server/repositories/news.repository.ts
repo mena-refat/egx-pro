@@ -99,9 +99,10 @@ export const NewsRepository = {
     });
   },
 
-  findLatestForAi(ticker: string, limit: number) {
+  findLatestForAi(ticker: string, limit: number, publishedBefore?: Date) {
     return prisma.newsItem.findMany({
       where: {
+        ...(publishedBefore ? { publishedAt: { lte: publishedBefore } } : {}),
         OR: [
           { tickers: { some: { ticker: ticker.toUpperCase() } } },
           { isMarketWide: true },

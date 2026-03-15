@@ -16,6 +16,7 @@ import { calculateIndicators } from '../lib/technicalIndicators.ts';
 import { getMarketContext } from '../lib/marketContext.ts';
 import { getCachedAnalysis, setCachedAnalysis, singleKey, compareKey } from '../lib/analysisCache.ts';
 import { generateQuickAnalysis } from '../lib/quickAnalysis.ts';
+import { getAnalysisNewsCutoff, getAnalysisSessionDateString } from '../lib/cairo-date.ts';
 
 const nullFinancials = {
   pe: null as number | null,
@@ -248,12 +249,14 @@ export const AnalysisService = {
     const stockInfo = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker.toUpperCase());
     const nameAr = stockInfo?.nameAr ?? ticker;
     const nameEn = stockInfo?.nameEn ?? ticker;
+    const analysisSessionDate = getAnalysisSessionDateString();
+    const newsCutoff = getAnalysisNewsCutoff();
 
     const [priceResult, historyResult, financialsResult, newsResult, marketCtxResult] = await Promise.allSettled([
       getPriceForAnalysis(ticker),
       getStockHistory(ticker, '6mo').catch(() => []),
       getFinancials(ticker),
-      getStockNews(nameAr).catch(() => []),
+      getStockNews(nameAr, newsCutoff).catch(() => []),
       getMarketContext().catch(() => ({ egx30: null, usdEgp: null, marketStatus: 'غير متاح', timestamp: new Date().toISOString() })),
     ]);
 
@@ -321,6 +324,8 @@ USD/EGP: ${marketCtx.usdEgp != null ? marketCtx.usdEgp.toFixed(2) : 'ابحث ع
 الرمز: ${ticker}
 الشركة: ${nameAr} (${nameEn})
 البورصة: EGX — Yahoo Finance: ${ticker}.CA
+جلسة التحليل: ${analysisSessionDate}
+آخر خبر مسموح في هذه الجلسة: ${newsCutoff.toISOString()}
 
 ═══ السعر الحالي ═══
 ${priceBlock}
@@ -395,6 +400,7 @@ ${news.length > 0 ? news.map((n) => `- ${n.title} | ${'source' in n ? String(n.s
 
     const info1 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t1);
     const info2 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t2);
+    const newsCutoff = getAnalysisNewsCutoff();
 
     const results = await Promise.allSettled([
       marketDataService.getQuotes([t1, t2]),
@@ -402,8 +408,8 @@ ${news.length > 0 ? news.map((n) => `- ${n.title} | ${'source' in n ? String(n.s
       getFinancials(t2).catch(() => nullFinancials),
       getStockHistory(t1, '3mo').catch(() => []),
       getStockHistory(t2, '3mo').catch(() => []),
-      getStockNews(info1?.nameAr ?? t1).catch(() => []),
-      getStockNews(info2?.nameAr ?? t2).catch(() => []),
+      getStockNews(info1?.nameAr ?? t1, newsCutoff).catch(() => []),
+      getStockNews(info2?.nameAr ?? t2, newsCutoff).catch(() => []),
       getMarketContext().catch(() => defaultMarketCtx),
     ]);
 

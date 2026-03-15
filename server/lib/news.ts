@@ -1,7 +1,7 @@
 import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
 import { NewsService } from '../services/news.service.ts';
 
-export async function getStockNews(companyNameOrTicker: string) {
+export async function getStockNews(companyNameOrTicker: string, publishedBefore?: Date) {
   const normalized = companyNameOrTicker.trim().toUpperCase();
   const stock = EGX_STOCKS.find(
     (item) =>
@@ -11,5 +11,5 @@ export async function getStockNews(companyNameOrTicker: string) {
   );
   const ticker = stock?.ticker ?? normalized;
   const companyName = stock?.nameAr ?? stock?.nameEn ?? companyNameOrTicker;
-  return NewsService.getForAnalysis(ticker, companyName);
+  return NewsService.getForAnalysis(ticker, companyName, 5, publishedBefore);
 }

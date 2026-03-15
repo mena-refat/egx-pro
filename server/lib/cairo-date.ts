@@ -48,3 +48,41 @@ export function getCairoMidnightExpirySeconds(): number {
   const midnightCairoUtc = Date.UTC(y, m - 1, d + 1, -offset, 0, 0, 0);
   return Math.ceil(midnightCairoUtc / 1000);
 }
+
+function getCairoDateParts(date: Date): { year: number; month: number; day: number; hour: number } {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Cairo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  return {
+    year: Number(parts.find((p) => p.type === 'year')?.value ?? '0'),
+    month: Number(parts.find((p) => p.type === 'month')?.value ?? '0'),
+    day: Number(parts.find((p) => p.type === 'day')?.value ?? '0'),
+    hour: Number(parts.find((p) => p.type === 'hour')?.value ?? '0'),
+  };
+}
+
+export function getAnalysisSessionDateString(now = new Date()): string {
+  const parts = getCairoDateParts(now);
+  const sessionAnchor = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 12, 0, 0, 0));
+  if (parts.hour < 12) {
+    sessionAnchor.setUTCDate(sessionAnchor.getUTCDate() - 1);
+  }
+  return getCairoDateStringFromDate(sessionAnchor);
+}
+
+export function getAnalysisNewsCutoff(now = new Date()): Date {
+  const parts = getCairoDateParts(now);
+  const cutoffAnchor = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 12, 0, 0, 0));
+  if (parts.hour < 12) {
+    cutoffAnchor.setUTCDate(cutoffAnchor.getUTCDate() - 1);
+    cutoffAnchor.setUTCHours(21, 59, 59, 999);
+    return cutoffAnchor;
+  }
+  return now;
+}

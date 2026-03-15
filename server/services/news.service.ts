@@ -336,14 +336,19 @@ export const NewsService = {
     return items.map(toNewsArticle);
   },
 
-  async getForAnalysis(ticker: string, companyName?: string, limit = ANALYSIS_LIMIT): Promise<NewsArticle[]> {
+  async getForAnalysis(
+    ticker: string,
+    companyName?: string,
+    limit = ANALYSIS_LIMIT,
+    publishedBefore?: Date
+  ): Promise<NewsArticle[]> {
     const normalizedTicker = ticker.trim().toUpperCase();
     if (!normalizedTicker) return [];
-    const latest = await NewsRepository.findLatestForAi(normalizedTicker, limit);
+    const latest = await NewsRepository.findLatestForAi(normalizedTicker, limit, publishedBefore);
     if (latest.length === 0 || await isStale(TICKER_REFRESH_MS, normalizedTicker)) {
       await this.syncTickerSources(normalizedTicker, companyName).catch(() => {});
     }
-    const refreshed = await NewsRepository.findLatestForAi(normalizedTicker, limit);
+    const refreshed = await NewsRepository.findLatestForAi(normalizedTicker, limit, publishedBefore);
     return refreshed.map((item) =>
       toNewsArticle({
         ...item,
