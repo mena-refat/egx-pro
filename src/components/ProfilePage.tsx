@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -10,23 +10,22 @@ import { usePredictionsApi } from '../hooks/usePredictionsApi';
 import type { User } from '../types';
 import type { ProfileUser } from './features/profile';
 
-/** Map auth User to ProfileUser (overlapping fields only). */
-function userToProfileUser(u: User): ProfileUser {
+function userToProfileUser(user: User): ProfileUser {
   return {
-    id: u.id,
-    fullName: u.fullName ?? null,
-    username: u.username ?? null,
-    email: u.email ?? null,
-    isEmailVerified: u.isEmailVerified,
-    phone: u.phone ?? null,
-    avatarUrl: u.avatarUrl ?? null,
-    twoFactorEnabled: u.twoFactorEnabled,
-    language: u.language,
-    theme: u.theme,
-    shariaMode: u.shariaMode,
-    notifySignals: u.notifySignals,
-    notifyPortfolio: u.notifyPortfolio,
-    notifyNews: u.notifyNews,
+    id: user.id,
+    fullName: user.fullName ?? null,
+    username: user.username ?? null,
+    email: user.email ?? null,
+    isEmailVerified: user.isEmailVerified,
+    phone: user.phone ?? null,
+    avatarUrl: user.avatarUrl ?? null,
+    twoFactorEnabled: user.twoFactorEnabled,
+    language: user.language,
+    theme: user.theme,
+    shariaMode: user.shariaMode,
+    notifySignals: user.notifySignals,
+    notifyPortfolio: user.notifyPortfolio,
+    notifyNews: user.notifyNews,
   };
 }
 
@@ -42,19 +41,24 @@ export default function ProfilePage() {
   const { t, i18n } = useTranslation('common');
   const [searchParams, setSearchParams] = useSearchParams();
   const { user: authUser, accessToken, updateUser, logout } = useAuthStore();
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') ?? 'account');
+  const resolvedTab = useMemo(() => {
+    const tab = searchParams.get('tab');
+    return tab && TABS.some((item) => item.id === tab) ? tab : 'account';
+  }, [searchParams]);
+  const [activeTab, setActiveTab] = useState(resolvedTab);
   const [requestStatus, setRequestStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [user, setUser] = useState<ProfileUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profileUser, setProfileUser] = useState<ProfileUser | null>(() => (authUser ? userToProfileUser(authUser) : null));
+  const [loading, setLoading] = useState(() => !authUser);
   const { setCounts, followersCount, followingCount } = useProfileStore();
   const navigate = useNavigate();
   const { fetchMyStats } = usePredictionsApi();
   const [predictionStats, setPredictionStats] = useState<{ rank: string; totalPredictions: number; accuracyRate?: number; totalPoints?: number; bestStreak?: number } | null>(null);
 
   useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && TABS.some((tb) => tb.id === tab)) setActiveTab(tab);
-  }, [searchParams]);
+    if (resolvedTab !== activeTab) {
+      setActiveTab(resolvedTab);
+    }
+  }, [activeTab, resolvedTab]);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
@@ -63,58 +67,82 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (authUser) {
-      setUser(userToProfileUser(authUser));
-      setLoading(false);
+      queueMicrotask(() => {
+        setProfileUser(userToProfileUser(authUser));
+        setLoading(false);
+      });
       return;
     }
-    if (!accessToken) { setLoading(false); return; }
+    if (!accessToken) {
+      queueMicrotask(() => setLoading(false));
+      return;
+    }
+
     let cancelled = false;
-    fetch('/api/user/profile', { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => { if (!cancelled && data) setUser((data as { data?: ProfileUser }).data ?? (data as ProfileUser)); })
-      .catch((err) => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/user/profile', { headers: { Authorization: `Bearer ${accessToken}` } });
+        const data = res.ok ? await res.json() : null;
+        if (!cancelled && data) {
+          setProfileUser((data as { data?: ProfileUser }).data ?? (data as ProfileUser));
+        }
+      } catch (err) {
         if (import.meta.env.DEV) console.error('Profile fetch failed:', err);
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [authUser, accessToken]);
 
   useEffect(() => {
-    if (!user?.username || !accessToken) return;
+    if (!profileUser?.username || !accessToken) return;
+
     let cancelled = false;
-    fetch(`/api/social/profile/${encodeURIComponent(user.username)}`, {
+    void fetch(`/api/social/profile/${encodeURIComponent(profileUser.username)}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled || !data) return;
-        const d = data?.data ?? data;
-        setCounts(d.followersCount ?? 0, d.followingCount ?? 0);
+        const payload = data?.data ?? data;
+        setCounts(payload.followersCount ?? 0, payload.followingCount ?? 0);
       })
       .catch((err) => {
         if (import.meta.env.DEV) console.error('Social profile fetch failed:', err);
       });
-    return () => { cancelled = true; };
-  }, [user?.username, accessToken, setCounts]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profileUser?.username, accessToken, setCounts]);
 
   useEffect(() => {
-    if (!user?.username) return;
-    let cancelled = false;
-    fetchMyStats(user.username).then((s) => {
-      if (!cancelled && s && !('private' in s && (s as { private?: boolean }).private)) {
-        setPredictionStats({
-          rank: (s as { rank?: string }).rank ?? 'BEGINNER',
-          totalPredictions: (s as { totalPredictions?: number }).totalPredictions ?? 0,
-          accuracyRate: (s as { accuracyRate?: number }).accuracyRate,
-          totalPoints: (s as { totalPoints?: number }).totalPoints,
-          bestStreak: (s as { bestStreak?: number }).bestStreak,
-        });
-      }
-    });
-    return () => { cancelled = true; };
-  }, [user?.username, fetchMyStats]);
+    if (!profileUser?.username) return;
 
-  const updateProfile = async (data: Record<string, unknown>, _messages?: { success?: string; error?: string }) => {
+    let cancelled = false;
+    void fetchMyStats(profileUser.username).then((stats) => {
+      if (cancelled || !stats || ('private' in stats && (stats as { private?: boolean }).private)) return;
+      setPredictionStats({
+        rank: (stats as { rank?: string }).rank ?? 'BEGINNER',
+        totalPredictions: (stats as { totalPredictions?: number }).totalPredictions ?? 0,
+        accuracyRate: (stats as { accuracyRate?: number }).accuracyRate,
+        totalPoints: (stats as { totalPoints?: number }).totalPoints,
+        bestStreak: (stats as { bestStreak?: number }).bestStreak,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profileUser?.username, fetchMyStats]);
+
+  const updateProfile = async (data: Record<string, unknown>) => {
     if (!accessToken) return;
     const res = await fetch('/api/user/profile', {
       method: 'PUT',
@@ -123,39 +151,42 @@ export default function ProfilePage() {
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((body?.error as string) || 'Failed');
+
     const payload = (body as { data?: ProfileUser }).data ?? (body as Partial<ProfileUser>);
     updateUser(payload as Partial<ProfileUser>);
-    if (payload && typeof payload === 'object') setUser((prev) => (prev ? { ...prev, ...payload } : (payload as ProfileUser)));
+    if (payload && typeof payload === 'object') {
+      setProfileUser((prev) => (prev ? { ...prev, ...payload } : (payload as ProfileUser)));
+    }
   };
 
   const tabProps = {
-    user,
+    user: profileUser,
     onUpdateProfile: updateProfile,
     onLogout: logout,
     setRequestStatus,
   };
 
-  if (loading || !user) return (
-    <div className="p-6 text-center text-[var(--text-secondary)]">{t(loading ? 'profile.loading' : 'profile.loadError')}</div>
-  );
+  if (loading || !profileUser) {
+    return <div className="p-6 text-center text-[var(--text-secondary)]">{t(loading ? 'profile.loading' : 'profile.loadError')}</div>;
+  }
 
   return (
     <div className="p-6 space-y-6 bg-[var(--bg-primary)] text-[var(--text-primary)] min-h-screen" dir={i18n.language.startsWith('ar') ? 'rtl' : 'ltr'}>
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center shrink-0">
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" width={80} height={80} className="w-full h-full rounded-full object-cover" loading="lazy" />
+            {profileUser.avatarUrl ? (
+              <img src={profileUser.avatarUrl} alt="" width={80} height={80} className="w-full h-full rounded-full object-cover" loading="lazy" />
             ) : (
               <UserIcon className="w-6 h-6 text-[var(--text-muted)]" />
             )}
           </div>
           <div>
-            <span className="font-bold text-base text-[var(--text-primary)]">@{user?.username ?? ''}</span>
+            <span className="font-bold text-base text-[var(--text-primary)]">@{profileUser.username ?? ''}</span>
           </div>
         </div>
         <ProfileCounterRow
-          profileUsername={user?.username ?? ''}
+          profileUsername={profileUser.username ?? ''}
           followersCount={followersCount}
           followingCount={followingCount}
           canOpenModals={true}

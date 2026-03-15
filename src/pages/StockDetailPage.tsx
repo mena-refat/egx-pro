@@ -17,24 +17,23 @@ export default function StockDetailPage() {
       return;
     }
     const controller = new AbortController();
-    setLoading(true);
-    api
-      .get<Stock[] | { data: Stock[] }>('/stocks/prices', { signal: controller.signal })
-      .then((res) => {
+    void (async () => {
+      setLoading(true);
+      try {
+        const res = await api.get<Stock[] | { data: Stock[] }>('/stocks/prices', { signal: controller.signal });
         if (controller.signal.aborted) return;
         const raw = (res.data as { data?: Stock[] })?.data ?? res.data;
         const list = Array.isArray(raw) ? raw : [];
         const found = list.find((s: Stock) => s.ticker.toUpperCase() === ticker.toUpperCase());
         if (found) setStock(found);
         else navigate('/stocks');
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
         navigate('/stocks');
-      })
-      .finally(() => {
+      } finally {
         if (!controller.signal.aborted) setLoading(false);
-      });
+      }
+    })();
     return () => controller.abort();
   }, [ticker, navigate]);
 

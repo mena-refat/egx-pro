@@ -15,6 +15,13 @@ type Props = {
 
 type SortKey = 'name' | 'shares' | 'unitPrice' | 'lastPrice' | 'marketValue' | 'unrealized';
 type SortDir = 'asc' | 'desc';
+type SortHeaderProps = {
+  active: boolean;
+  columnKey: SortKey;
+  label: string;
+  sortDir: SortDir;
+  onSort: (key: SortKey) => void;
+};
 
 function formatEgp(n: number): string {
   return n.toLocaleString(undefined, { maximumFractionDigits: 0, minimumFractionDigits: 0 });
@@ -22,6 +29,29 @@ function formatEgp(n: number): string {
 
 function formatPrice(p: number): string {
   return p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function SortHeader({ active, columnKey, label, sortDir, onSort }: SortHeaderProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(columnKey)}
+      className="inline-flex items-center justify-center gap-1.5 tabular-nums text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand)] rounded px-1 py-0.5"
+      aria-label={label}
+    >
+      <span>{label}</span>
+      <span className="inline-flex flex-col gap-0 items-center">
+        <ChevronUp
+          className={`w-4 h-4 shrink-0 stroke-[2.5] ${active && sortDir === 'asc' ? 'text-[var(--brand)] opacity-100' : 'opacity-40'}`}
+          aria-hidden
+        />
+        <ChevronDown
+          className={`w-4 h-4 shrink-0 stroke-[2.5] -mt-2 ${active && sortDir === 'desc' ? 'text-[var(--brand)] opacity-100' : 'opacity-40'}`}
+          aria-hidden
+        />
+      </span>
+    </button>
+  );
 }
 
 export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings, livePrices, loading }: Props) {
@@ -78,30 +108,6 @@ export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings,
     }
   };
 
-  const SortHeader = ({ labelKey, columnKey }: { labelKey: string; columnKey: SortKey }) => {
-    const active = sortKey === columnKey;
-    return (
-      <button
-        type="button"
-        onClick={() => handleSort(columnKey)}
-        className="inline-flex items-center justify-center gap-1.5 tabular-nums text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand)] rounded px-1 py-0.5"
-        aria-label={t(labelKey)}
-      >
-        <span>{t(labelKey)}</span>
-        <span className="inline-flex flex-col gap-0 items-center">
-          <ChevronUp
-            className={`w-4 h-4 shrink-0 stroke-[2.5] ${active && sortDir === 'asc' ? 'text-[var(--brand)] opacity-100' : 'opacity-40'}`}
-            aria-hidden
-          />
-          <ChevronDown
-            className={`w-4 h-4 shrink-0 stroke-[2.5] -mt-2 ${active && sortDir === 'desc' ? 'text-[var(--brand)] opacity-100' : 'opacity-40'}`}
-            aria-hidden
-          />
-        </span>
-      </button>
-    );
-  };
-
   if (loading) {
     return (
       <div className="card-base card-elevated p-8 rounded-2xl">
@@ -133,22 +139,22 @@ export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings,
           <div className="grid grid-cols-6 gap-4 items-center text-label font-semibold text-[var(--text-muted)] px-4 py-2 min-w-0">
             <div className="flex items-center gap-3 min-w-0">
               <span className="w-10 shrink-0" aria-hidden />
-              <SortHeader labelKey="dashboard.stockName" columnKey="name" />
+              <SortHeader active={sortKey === 'name'} columnKey="name" label={t('dashboard.stockName')} sortDir={sortDir} onSort={handleSort} />
             </div>
             <div className="flex justify-center">
-              <SortHeader labelKey="dashboard.sharesOwned" columnKey="shares" />
+              <SortHeader active={sortKey === 'shares'} columnKey="shares" label={t('dashboard.sharesOwned')} sortDir={sortDir} onSort={handleSort} />
             </div>
             <div className="flex justify-center">
-              <SortHeader labelKey="dashboard.unitPrice" columnKey="unitPrice" />
+              <SortHeader active={sortKey === 'unitPrice'} columnKey="unitPrice" label={t('dashboard.unitPrice')} sortDir={sortDir} onSort={handleSort} />
             </div>
             <div className="flex justify-center">
-              <SortHeader labelKey="dashboard.lastPrice" columnKey="lastPrice" />
+              <SortHeader active={sortKey === 'lastPrice'} columnKey="lastPrice" label={t('dashboard.lastPrice')} sortDir={sortDir} onSort={handleSort} />
             </div>
             <div className="flex justify-center">
-              <SortHeader labelKey="dashboard.marketValue" columnKey="marketValue" />
+              <SortHeader active={sortKey === 'marketValue'} columnKey="marketValue" label={t('dashboard.marketValue')} sortDir={sortDir} onSort={handleSort} />
             </div>
             <div className="flex justify-center">
-              <SortHeader labelKey="dashboard.unrealizedReturn" columnKey="unrealized" />
+              <SortHeader active={sortKey === 'unrealized'} columnKey="unrealized" label={t('dashboard.unrealizedReturn')} sortDir={sortDir} onSort={handleSort} />
             </div>
           </div>
           {sortedHoldings.map(({ holding, currentPrice, totalValue, gainEgp, gainPercent }) => {

@@ -119,7 +119,7 @@ export default function PortfolioTracker() {
     if (!confirm(t('portfolio.deleteConfirm'))) return;
     try {
       await removeHolding(id);
-    } catch (err: unknown) {
+    } catch {
       toast.error(t('errors.internal', { defaultValue: 'An unknown error occurred' }));
     }
   };

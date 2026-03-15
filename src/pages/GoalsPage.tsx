@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Target } from 'lucide-react';
 import { Skeleton } from '../components/ui/Skeleton';
 import EmptyState from '../components/shared/EmptyState';
-import { GoalCard } from '../components/goals/GoalCard';
 import { GoalFormModal } from '../components/goals/GoalFormModal';
 import { GoalAmountModal } from '../components/goals/GoalAmountModal';
 import {

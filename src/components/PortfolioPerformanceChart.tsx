@@ -10,16 +10,6 @@ type Props = {
   totalValue: number;
 };
 
-/** تنسيق كامل (للـ Tooltip) */
-function formatDateLabel(date: Date, range: string, locale: string): string {
-  if (range === '1D') return date.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true });
-  if (range === '1W' || range === '1M') return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-  if (range === '6M' || range === '1Y') return date.toLocaleDateString(locale, { month: 'short' });
-  if (range === '3Y') return date.toLocaleDateString(locale, { month: 'short', year: '2-digit' });
-  if (range === '5Y') return date.toLocaleDateString(locale, { year: 'numeric' });
-  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-}
-
 /** تنسيق مختصر للمحور X فقط */
 function formatDateLabelShort(date: Date, range: string, locale: string): string {
   const isAr = locale.startsWith('ar');
@@ -237,9 +227,6 @@ const PortfolioPerformanceChart = memo(function PortfolioPerformanceChart({
   const padding = maxVal > minVal ? (maxVal - minVal) * 0.1 : minVal * 0.05 || 1;
   const minDomain = Math.max(0, minVal - padding);
   const maxDomain = maxVal + padding;
-  const firstX = data[0]?.x ?? 0;
-  const lastX = data[data.length - 1]?.x ?? 0;
-
   return (
     <div className="space-y-4">
       {!hasData ? (

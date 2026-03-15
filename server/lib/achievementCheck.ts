@@ -102,13 +102,11 @@ export async function getAchievementContext(userId: string): Promise<Achievement
   };
 }
 
-type Level = 'beginner' | 'growth' | 'pro' | 'legend';
-
 function buildOne(
   ctx: AchievementContext,
   def: (typeof ACHIEVEMENT_DEFS)[0]
 ): { completed: boolean } {
-  const { user, firstAnalysis, analysesCount, watchlistCount, firstWatchlist, portfolioCount, firstPortfolio, goalsCount, firstGoal, achievedGoalsCount, completedReferrals, distinctTickersCount, profileComplete, accountAgeDays } = ctx;
+  const { user, analysesCount, watchlistCount, portfolioCount, goalsCount, achievedGoalsCount, completedReferrals, distinctTickersCount, profileComplete, accountAgeDays } = ctx;
   let completed = false;
 
   switch (def.id) {

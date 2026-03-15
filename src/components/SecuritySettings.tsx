@@ -52,7 +52,7 @@ export default function SecuritySettings() {
         setIsSettingUp(false);
         if (user) setUser({ ...user, twoFactorEnabled: true });
       } else {
-        const data = await res.json();
+        await res.json().catch(() => null);
         setError(t('common.error'));
       }
     } catch (err) {

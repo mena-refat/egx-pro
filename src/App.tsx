@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useNotifications } from './hooks/useNotifications';
 import { useTheme } from './hooks/useTheme';
@@ -18,7 +18,6 @@ import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { ToastContainer } from './components/shared/ToastContainer';
 import PageLoader from './components/shared/PageLoader';
 import {
-  DashboardSkeleton,
   PortfolioSkeleton,
   MarketSkeleton,
   StocksSkeleton,
@@ -56,7 +55,6 @@ export default function App() {
   const [theme, setTheme] = useTheme(user);
   const { profileCompletion } = useProfileCompletion(isAuthenticated);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => (typeof window !== 'undefined' && localStorage.getItem('sidebarCollapsed') === 'true'));
-  const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
   const { notifications, unreadCount: notificationsUnread, notificationsLoading, fetchNotifications, markAllRead: markNotificationsRead, markOneRead: markOneNotificationRead, clearAll: clearAllNotifications } = useNotifications(isAuthenticated);

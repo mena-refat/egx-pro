@@ -31,6 +31,9 @@ import marketDataRoutes from './routes/market-data.ts';
 import socialRoutes from './routes/social.ts';
 import predictionsRoutes from './routes/predictions.ts';
 import { userApiLimiter } from './middleware/userRateLimit.middleware.ts';
+import { prisma } from './lib/prisma.ts';
+import { redis } from './lib/redis.ts';
+import { marketDataService } from './services/market-data/market-data.service.ts';
 
 /**
  * Build and return the Express app (no listen, no Vite).
@@ -48,7 +51,9 @@ export async function createApp(): Promise<express.Express> {
   app.use(cookieParser());
   app.use('/api', sanitizeInput);
 
-  const frontendOrigin = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
+  const frontendOriginRaw = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
+  const frontendOrigins = frontendOriginRaw.split(',').map((origin) => origin.trim()).filter(Boolean);
+  const frontendOrigin = frontendOrigins.length === 1 ? frontendOrigins[0] : frontendOrigins;
   const isDev = process.env.NODE_ENV !== 'production';
   app.use(
     helmet({
@@ -59,17 +64,18 @@ export async function createApp(): Promise<express.Express> {
               defaultSrc: ["'self'"],
               scriptSrc: ["'self'"],
               styleSrc: ["'self'", "'unsafe-inline'"],
-              imgSrc: ["'self'", 'data:', 'blob:', frontendOrigin],
+              imgSrc: ["'self'", 'data:', 'blob:', ...(Array.isArray(frontendOrigin) ? frontendOrigin : [frontendOrigin])],
               connectSrc: [
                 "'self'",
                 'https://api.anthropic.com',
                 'https://api.gemini.com',
                 'https://*.run.app',
+                'https://*.vercel.app',
                 'wss://*.run.app',
                 'ws://localhost:3000',
                 'ws://localhost:8080',
               ],
-              frameAncestors: ["'self'", 'https://*.google.com', 'https://*.aistudio.google', 'https://*.run.app'],
+              frameAncestors: ["'self'", 'https://*.google.com', 'https://*.aistudio.google', 'https://*.run.app', 'https://*.vercel.app'],
             },
           },
       crossOriginEmbedderPolicy: false,
@@ -160,6 +166,7 @@ export async function createApp(): Promise<express.Express> {
   app.use('/api/auth/register', registerLimiter);
   app.use('/api/auth/refresh', refreshLimiter);
   app.use('/api/', apiLimiter);
+  app.use('/api/', userApiLimiter);
 
   app.use('/api/auth', authRoutes);
   app.use('/api/portfolio', portfolioRoutes);
@@ -177,14 +184,37 @@ export async function createApp(): Promise<express.Express> {
   app.use('/api/social', socialRoutes);
   app.use('/api/predictions', predictionsRoutes);
 
-  app.use('/api/', userApiLimiter);
-
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  app.get('/api/health/ready', (_req, res) => {
-    res.status(200).json({ status: 'ok' });
+  app.get('/api/health/ready', async (_req, res) => {
+    const checks: Record<string, string> = {};
+
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      checks.db = 'ok';
+    } catch {
+      checks.db = 'error';
+    }
+
+    try {
+      if (redis) {
+        await redis.ping();
+        checks.redis = 'ok';
+      } else {
+        checks.redis = 'disabled';
+      }
+    } catch {
+      checks.redis = 'error';
+    }
+
+    checks.marketData = marketDataService.isMarketOpen() ? 'open' : 'closed';
+    const allOk = checks.db === 'ok';
+    res.status(allOk ? 200 : 503).json({
+      status: allOk ? 'ok' : 'degraded',
+      checks,
+    });
   });
 
   app.use('/api', (_req, res) => {
@@ -193,6 +223,7 @@ export async function createApp(): Promise<express.Express> {
 
   app.use(
     (err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      void _next;
       const reqId = (req as express.Request & { id?: string }).id;
 
       if (err instanceof AppError) {

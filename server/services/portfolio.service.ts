@@ -1,7 +1,7 @@
 import { marketDataService } from './market-data/market-data.service.ts';
 import { addHoldingSchema } from '../../src/lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
-import { isPro, getLimit } from '../lib/plan.ts';
+import { getLimit } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';
 import { PortfolioRepository } from '../repositories/portfolio.repository.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
@@ -10,7 +10,7 @@ import type { AuthUser } from '../routes/types.ts';
 export const PortfolioService = {
   async getPortfolio(userId: string, page?: number, limit?: number) {
     const user = await UserRepository.getPlanUser(userId);
-    const delayed = user ? !isPro(user) : false;
+    void user;
     const pageNum = page != null ? Math.max(1, page) : 1;
     const limitNum = limit != null ? Math.min(50, Math.max(1, limit)) : 1000;
     const usePagination = page != null && limit != null;

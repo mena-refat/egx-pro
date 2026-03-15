@@ -49,23 +49,19 @@ export function AnalysisLoadingState({ loading, variant }: AnalysisLoadingStateP
 
   useEffect(() => {
     if (!loading) {
-      if (progressRef.current) {
-        clearInterval(progressRef.current);
-        progressRef.current = null;
-      }
-      if (messageRef.current) {
-        clearInterval(messageRef.current);
-        messageRef.current = null;
-      }
+      if (progressRef.current) clearInterval(progressRef.current);
+      progressRef.current = null;
+      if (messageRef.current) clearInterval(messageRef.current);
+      messageRef.current = null;
       startRef.current = null;
-      setProgress(0);
-      setMessageIndex(0);
       return;
     }
 
     startRef.current = Date.now();
-    setProgress(0);
-    setMessageIndex(0);
+    queueMicrotask(() => {
+      setProgress(0);
+      setMessageIndex(0);
+    });
 
     progressRef.current = setInterval(() => {
       const start = startRef.current ?? Date.now();
@@ -81,7 +77,9 @@ export function AnalysisLoadingState({ loading, variant }: AnalysisLoadingStateP
 
     return () => {
       if (progressRef.current) clearInterval(progressRef.current);
+      progressRef.current = null;
       if (messageRef.current) clearInterval(messageRef.current);
+      messageRef.current = null;
     };
   }, [loading, variant]);
 

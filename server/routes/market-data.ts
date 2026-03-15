@@ -11,7 +11,7 @@ router.get(
   authenticate,
   validate(marketDataQuotesQuerySchema, 'query'),
   (req, res, next) => {
-    void MarketDataController.quotes(req, res, next).catch(next);
+    void MarketDataController.quotes(req, res).catch(next);
   }
 );
 router.get('/health', authenticate, MarketDataController.health);

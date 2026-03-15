@@ -32,7 +32,9 @@ export const PredictionCard = memo(function PredictionCard({
   likeLoading = false,
   variant = 'feed',
 }: PredictionCardProps) {
+  void variant;
   const { t } = useTranslation('common');
+  const [now] = React.useState(() => Date.now());
   const isUp = prediction.direction === 'UP';
   const priceAtCreation = prediction.priceAtCreation ?? 0;
   const targetPrice = prediction.targetPrice ?? 0;
@@ -42,7 +44,7 @@ export const PredictionCard = memo(function PredictionCard({
       : '0';
   const daysLeft = Math.max(
     0,
-    Math.ceil((new Date(prediction.expiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+    Math.ceil((new Date(prediction.expiresAt).getTime() - now) / (24 * 60 * 60 * 1000))
   );
   const rankLabel = t(rankKey(prediction.userRank ?? 'BEGINNER'));
   const borderColor =
@@ -53,19 +55,6 @@ export const PredictionCard = memo(function PredictionCard({
         : isUp
           ? 'border-green-500/40'
           : 'border-red-500/40';
-
-  const timeframeKey =
-    prediction.timeframe === 'WEEK'
-      ? 'predictions.timeframeWeek'
-      : prediction.timeframe === 'MONTH'
-        ? 'predictions.timeframeMonth'
-        : prediction.timeframe === 'THREE_MONTHS'
-          ? 'predictions.timeframeThreeMonths'
-          : prediction.timeframe === 'SIX_MONTHS'
-            ? 'predictions.timeframeSixMonths'
-            : prediction.timeframe === 'NINE_MONTHS'
-              ? 'predictions.timeframeNineMonths'
-              : 'predictions.timeframeYear';
 
   return (
     <motion.div

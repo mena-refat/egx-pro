@@ -1,11 +1,11 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { marketDataService } from '../services/market-data/market-data.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { logger } from '../lib/logger.ts';
 import { sendError } from '../lib/apiResponse.ts';
 
 export const MarketDataController = {
-  async quotes(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async quotes(req: Request, res: Response): Promise<void> {
     try {
       const symbolsParam = (req as AuthRequest).query.symbols as string;
       const symbols = symbolsParam.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);

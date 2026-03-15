@@ -33,6 +33,7 @@ export const ReferralRepository = {
     });
   },
   markRewarded(_id: string) {
+    void _id;
     return Promise.resolve(undefined as unknown as { id: string });
   },
   findByReferrer(referrerId: string, options?: { take?: number; orderBy?: object; include?: object; select?: object }) {
@@ -46,6 +47,7 @@ export const ReferralRepository = {
   },
 
   async applyReferralCodeTransaction(referrerId: string, referredUserId: string, _referralCode: string) {
+    void _referralCode;
     await prisma.$transaction([
       prisma.user.update({
         where: { id: referredUserId },

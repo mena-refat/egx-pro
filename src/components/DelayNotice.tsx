@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,11 +18,6 @@ export default function DelayNotice({
     if (typeof window === 'undefined') return true;
     return localStorage.getItem(STORAGE_KEY) === 'true';
   });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    setDismissed(localStorage.getItem(STORAGE_KEY) === 'true');
-  }, [showWhenStockPage]);
 
   const visible = showWhenStockPage && !isPro && !dismissed;
 

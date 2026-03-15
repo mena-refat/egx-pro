@@ -42,7 +42,7 @@ export function sanitizeInput(
     if (req.params && typeof req.params === 'object') {
       req.params = sanitizeValue(req.params) as typeof req.params;
     }
-  } catch (_e) {
+  } catch {
     // لو فشل التعقيم لا نكسر الطلب
   }
   next();

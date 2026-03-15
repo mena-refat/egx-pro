@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { RefreshTokenRepository } from '../repositories/refreshToken.repository.ts';
 import { ReferralRepository } from '../repositories/referral.repository.ts';
-import { generateUniqueReferralCode, checkAndRewardReferrer } from '../lib/referral.ts';
+import { checkAndRewardReferrer } from '../lib/referral.ts';
 import {
   hashPassword,
   verifyPassword,

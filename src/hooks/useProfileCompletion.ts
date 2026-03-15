@@ -24,8 +24,17 @@ export function useProfileCompletion(isAuthenticated: boolean) {
     }
   }, [isAuthenticated, accessToken]);
 
-  useEffect(() => { fetchProfileCompletion(); }, [fetchProfileCompletion]);
-  useEffect(() => { if (location.pathname === '/settings') fetchProfileCompletion(); }, [location.pathname, fetchProfileCompletion]);
+  useEffect(() => {
+    queueMicrotask(() => {
+      void fetchProfileCompletion();
+    });
+  }, [fetchProfileCompletion]);
+  useEffect(() => {
+    if (location.pathname !== '/settings') return;
+    queueMicrotask(() => {
+      void fetchProfileCompletion();
+    });
+  }, [location.pathname, fetchProfileCompletion]);
   useEffect(() => {
     const handler = () => fetchProfileCompletion();
     window.addEventListener('profile-completion-changed', handler);

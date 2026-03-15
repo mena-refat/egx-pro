@@ -22,8 +22,8 @@ router.post('/register', validate(registerBodySchema, 'body'), AuthController.re
 router.post('/login', validate(loginBodySchema, 'body'), AuthController.login);
 router.post('/2fa/authenticate', validate(twoFaAuthenticateBodySchema, 'body'), AuthController.twoFaAuthenticate);
 router.post('/2fa/setup', authenticate, validate(twoFaSetupBodySchema, 'body'), AuthController.twoFaSetup);
-router.post('/2fa/verify', validate(twoFaVerifyBodySchema, 'body'), AuthController.twoFaVerify);
-router.post('/2fa/disable', AuthController.twoFaDisable);
+router.post('/2fa/verify', authenticate, validate(twoFaVerifyBodySchema, 'body'), AuthController.twoFaVerify);
+router.post('/2fa/disable', authenticate, AuthController.twoFaDisable);
 router.post('/refresh', AuthController.refresh);
 router.post('/logout', AuthController.logout);
 router.post('/logout-all', AuthController.logoutAll);

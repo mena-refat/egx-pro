@@ -1,6 +1,5 @@
 import { rateLimit } from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
-import { RATE_LIMITS } from '../lib/constants.ts';
 
 const ipKey = (req: { ip?: string }) => (req.ip ?? 'unknown').replace(/^::ffff:/, '');
 

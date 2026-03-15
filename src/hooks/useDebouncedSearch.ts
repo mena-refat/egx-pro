@@ -16,7 +16,10 @@ export function useDebouncedSearch<T>(
   const abortRef = useRef<AbortController | null>(null);
 
   const searchFnRef = useRef(searchFn);
-  searchFnRef.current = searchFn;
+
+  useEffect(() => {
+    searchFnRef.current = searchFn;
+  }, [searchFn]);
 
   useEffect(() => {
     const run = query.trim();

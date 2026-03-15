@@ -1,5 +1,4 @@
 import { Response, NextFunction } from 'express';
-import { isPro } from '../lib/plan.ts';
 import type { AuthRequest } from '../routes/types.ts';
 
 export function requirePro(

@@ -5,8 +5,7 @@ import { promisify } from 'util';
 const scrypt = promisify(crypto.scrypt);
 const rawPepper = process.env.AUTH_PEPPER?.trim();
 if (!rawPepper) {
-  const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined;
-  if (isDev) {
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined) {
     throw new Error(
       'AUTH_PEPPER must be set in .env even in development. Generate one with: openssl rand -hex 32'
     );
@@ -38,7 +37,6 @@ export async function verifyPassword(password: string, hash: string, salt: strin
 export function generateAccessToken(user: { id: string; email: string }) {
   const rawKey = process.env.JWT_PRIVATE_KEY;
   const isRealKey = rawKey && rawKey.includes('BEGIN RSA PRIVATE KEY') && !rawKey.includes('...');
-  const isDev = process.env.NODE_ENV === 'development';
 
   const secret = isRealKey
     ? rawKey.replace(/\\n/g, '\n')
@@ -65,8 +63,6 @@ export function verifyAccessToken(token: string) {
   const rawPrivateKey = process.env.JWT_PRIVATE_KEY;
   const rawPublicKey = process.env.JWT_PUBLIC_KEY;
   const isRealKey = rawPrivateKey && rawPrivateKey.includes('BEGIN RSA PRIVATE KEY') && !rawPrivateKey.includes('...');
-
-  const isDev = process.env.NODE_ENV === 'development';
 
   const secret = isRealKey
     ? (rawPublicKey || '').replace(/\\n/g, '\n')

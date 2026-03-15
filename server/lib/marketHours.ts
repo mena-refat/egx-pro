@@ -138,8 +138,8 @@ export function getMarketStatusForStocks(): { isOpen: boolean; nextOpen: string;
   const dayIndex = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(weekday);
   const totalMinutes = hour * 60 + minute;
   const closeMinutes = 14 * 60 + 15;
-  let nextOpen = new Date(Date.UTC(year, month - 1, day, 8, 0, 0, 0));
-  let nextClose = new Date(Date.UTC(year, month - 1, day, 12, 15, 0, 0));
+  const nextOpen = new Date(Date.UTC(year, month - 1, day, 8, 0, 0, 0));
+  const nextClose = new Date(Date.UTC(year, month - 1, day, 12, 15, 0, 0));
   if (dayIndex === 5 || dayIndex === 6) {
     const daysToAdd = dayIndex === 5 ? 2 : 1;
     nextOpen.setUTCDate(nextOpen.getUTCDate() + daysToAdd);

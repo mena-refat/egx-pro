@@ -20,7 +20,6 @@ import { Skeleton } from './ui/Skeleton';
 const TradingViewChart = lazy(() => import('./features/stocks/TradingViewChart').then((m) => ({ default: m.TradingViewChart })));
 import { getStockName, getStockInfo } from '../lib/egxStocks';
 import { getSector } from '../lib/egxIndicesSectors';
-import { Button } from './ui/Button';
 import { Stock } from '../types';
 import { useStockAnalysis } from '../hooks/useStockAnalysis';
 import { AnalysisForm } from './analysis/AnalysisForm';

@@ -66,7 +66,7 @@ function chartData(
   return points;
 }
 
-function formatAxis(value: number, locale: string): string {
+function formatAxis(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
   return String(value);

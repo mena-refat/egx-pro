@@ -47,7 +47,9 @@ export function useDashboardStats(isAuthenticated: boolean, pathname: string) {
   useEffect(() => {
     if (!isAuthenticated || (pathname !== '/' && pathname !== '/dashboard' && pathname !== '/goals') || !accessToken) return;
     const controller = new AbortController();
-    fetchDashboardData(controller.signal);
+    queueMicrotask(() => {
+      void fetchDashboardData(controller.signal);
+    });
     return () => controller.abort();
   }, [isAuthenticated, pathname, fetchDashboardData, accessToken]);
 

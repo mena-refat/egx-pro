@@ -1,11 +1,11 @@
-import { Response, NextFunction } from 'express';
+import { Response } from 'express';
 import { ProfileService } from '../services/profile.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 import { logger } from '../lib/logger.ts';
 
 export const ProfileController = {
-  async completion(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async completion(req: AuthRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.id ?? req.userId;
       if (!userId) {

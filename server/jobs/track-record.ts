@@ -25,7 +25,7 @@ function calculateAccuracy(
 
   const score = Math.round((directionCorrect ? 60 : 20) + targetAchievement * 0.4);
 
-  let note = '';
+  let note: string;
   if (directionCorrect && targetAchievement >= 80) {
     note = `✅ التوقع تحقق — السهم ${actualPct > 0 ? 'طلع' : 'نزل'} ${Math.abs(actualPct).toFixed(1)}% (الهدف كان ${targetPct > 0 ? '+' : ''}${targetPct.toFixed(1)}%)`;
   } else if (directionCorrect) {

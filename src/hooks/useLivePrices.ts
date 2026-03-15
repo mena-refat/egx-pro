@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Stock } from '../types';
 import { getAccessToken } from '../lib/auth/tokens';
-import { TIMEOUTS } from '../lib/constants';
 
 /** Optional list of tickers to subscribe to; server sends only these. Omit or empty = receive all. */
 export function useLivePrices(subscribedTickers?: string[]) {
@@ -12,7 +11,6 @@ export function useLivePrices(subscribedTickers?: string[]) {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectDelayRef = useRef(1000);
   const tickersRef = useRef<string[]>([]);
-  tickersRef.current = subscribedTickers ?? [];
   const subscribeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sendSubscribe = (ws: WebSocket) => {
@@ -25,6 +23,10 @@ export function useLivePrices(subscribedTickers?: string[]) {
       subscribeTimeoutRef.current = null;
     }, 500);
   };
+
+  useEffect(() => {
+    tickersRef.current = subscribedTickers ?? [];
+  }, [subscribedTickers]);
 
   useEffect(() => {
     const connect = () => {

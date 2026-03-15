@@ -22,12 +22,10 @@ export default function AIAnalyzePage() {
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResultType | null>(null);
   const [quickData, setQuickData] = useState<Record<string, unknown> | null>(null);
-  const [quickLoading, setQuickLoading] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const { guardedAction, profileModalProps } = useProfileGuard();
 
   const fetchQuick = useCallback(async (resolvedTicker: string) => {
-    setQuickLoading(true);
     try {
       const res = await api.get<{ data?: { analysis?: Record<string, unknown> }; analysis?: Record<string, unknown> }>(
         `/analysis/quick/${resolvedTicker}`
@@ -36,8 +34,6 @@ export default function AIAnalyzePage() {
       if (data) setQuickData(data);
     } catch {
       // non-critical — just don't show quick
-    } finally {
-      setQuickLoading(false);
     }
   }, []);
 

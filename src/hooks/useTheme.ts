@@ -4,19 +4,19 @@ type Theme = 'dark' | 'light' | 'system';
 
 type User = { theme?: string } | null;
 
+function isTheme(value: string | undefined | null): value is Theme {
+  return value === 'light' || value === 'dark' || value === 'system';
+}
+
 export function useTheme(user: User) {
-  const [theme, setTheme] = useState<Theme>(() => {
+  const [localTheme, setLocalTheme] = useState<Theme>(() => {
     if (typeof window === 'undefined') return 'system';
-    if (user?.theme === 'light' || user?.theme === 'dark' || user?.theme === 'system') return user.theme as Theme;
+    if (isTheme(user?.theme)) return user.theme;
     const stored = localStorage.getItem('theme');
-    if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
+    if (isTheme(stored)) return stored;
     return 'system';
   });
-
-  useEffect(() => {
-    if (!user?.theme) return;
-    if (user.theme === 'light' || user.theme === 'dark' || user.theme === 'system') setTheme(user.theme as Theme);
-  }, [user?.theme]);
+  const theme = isTheme(user?.theme) ? user.theme : localTheme;
 
   useEffect(() => {
     const applyTheme = (nextTheme: Theme) => {
@@ -34,5 +34,5 @@ export function useTheme(user: User) {
     return () => mql.removeEventListener('change', listener);
   }, [theme]);
 
-  return [theme, setTheme] as const;
+  return [theme, setLocalTheme] as const;
 }

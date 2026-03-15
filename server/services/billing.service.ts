@@ -1,6 +1,6 @@
 import { UserRepository } from '../repositories/user.repository.ts';
 import { DiscountRepository } from '../repositories/discount.repository.ts';
-import { isPro, isUltra, getLimit } from '../lib/plan.ts';
+import { isPro, getLimit } from '../lib/plan.ts';
 import { PLAN_PRICES } from '../lib/constants.ts';
 import { AppError } from '../lib/errors.ts';
 
@@ -158,6 +158,7 @@ export const BillingService = {
 
     const basePrice = getBasePrice(planValue);
     const finalPrice = Math.round(basePrice * (1 - discountPercent / 100));
+    void finalPrice;
     // TODO: verify payment with Paymob using options.paymentToken and finalPrice
 
     await DiscountRepository.applyUpgrade(userId, planValue, planExpiresAt, discount ? { id: discount.id, usedCount: discount.usedCount, maxUses: discount.maxUses } : undefined);

@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import userEvent from '@testing-library/user-event';
 import { AuthFormBlock } from '../components/features/auth/AuthFormBlock';
 import { useForm } from 'react-hook-form';
 import type { AuthFormData } from '../hooks/useAuthPage';
@@ -10,7 +9,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 function LoginFormWrapper() {
-  const { register, handleSubmit, formState: { errors } } = useForm<AuthFormData>({
+  const { register, formState: { errors } } = useForm<AuthFormData>({
     defaultValues: { emailOrPhone: '', password: '' },
   });
   return (

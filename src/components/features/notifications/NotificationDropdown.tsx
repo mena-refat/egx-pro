@@ -25,6 +25,7 @@ function NotificationRow({
   onItemClick: (id: string, type: string, isRead: boolean, route?: string | null) => void;
   t: (key: string, opts?: Record<string, number | string>) => string;
 }) {
+  const [now] = React.useState(() => Date.now());
   const Icon =
     n.type === 'achievement' ? Trophy
     : n.type === 'stock_target' ? TrendingUp
@@ -35,7 +36,7 @@ function NotificationRow({
     : Briefcase;
   const timeAgo = (() => {
     const d = new Date(n.createdAt);
-    const diff = (Date.now() - d.getTime()) / 1000;
+    const diff = (now - d.getTime()) / 1000;
     if (diff < 60) return t('settings.lastActivityMoments');
     if (diff < 3600) return t('settings.lastActivityMinutes', { m: Math.floor(diff / 60) });
     if (diff < 86400) return t('settings.lastActivityHours', { h: Math.floor(diff / 3600) });

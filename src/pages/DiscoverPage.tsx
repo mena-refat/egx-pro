@@ -144,17 +144,18 @@ export default function DiscoverPage() {
   // Load discover content
   useEffect(() => {
     if (!accessToken) {
-      setDiscoverLoading(false);
+      queueMicrotask(() => setDiscoverLoading(false));
       return;
     }
-    setDiscoverLoading(true);
-    Promise.allSettled([
-      api.get('/predictions/leaderboard?period=month&limit=5'),
-      api.get('/predictions/feed?filter=all&limit=5'),
-      api.get('/social/followers'),
-      api.get('/social/following'),
-      api.get('/social/requests'),
-    ]).then(([lb, feed, fwrs, fwng, reqs]) => {
+    void (async () => {
+      setDiscoverLoading(true);
+      const [lb, feed, fwrs, fwng, reqs] = await Promise.allSettled([
+        api.get('/predictions/leaderboard?period=month&limit=5'),
+        api.get('/predictions/feed?filter=all&limit=5'),
+        api.get('/social/followers'),
+        api.get('/social/following'),
+        api.get('/social/requests'),
+      ]);
       if (lb.status === 'fulfilled') {
         const d = lb.value.data?.data ?? lb.value.data;
         setLeaderboard(
@@ -190,11 +191,14 @@ export default function DiscoverPage() {
         setRequestsCount(list.length);
       }
       setDiscoverLoading(false);
-    });
+    })();
   }, [accessToken]);
 
   useEffect(() => {
-    if (activeTab !== 'discover') loadList(activeTab);
+    if (activeTab === 'discover') return;
+    queueMicrotask(() => {
+      void loadList(activeTab);
+    });
   }, [activeTab, loadList]);
 
   const handleAcceptRequest = async (followerId: string) => {
