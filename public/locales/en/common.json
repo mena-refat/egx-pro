@@ -112,7 +112,10 @@
     "analysisTimeout": "Analysis took too long. Please try again in a moment.",
     "profileRequiredTitle": "Complete your profile first",
     "profileRequiredBody": "To use AI features, you must complete your profile (full name, phone, username, at least one goal, and at least one stock in your watchlist).",
-    "goToProfile": "Go to profile"
+    "goToProfile": "Go to profile",
+    "analysisReady": "Analysis result",
+    "recommendationsReady": "Recommendations result",
+    "compareReady": "Comparison result"
   },
   "predictions": {
     "title": "Predictions",

@@ -371,9 +371,12 @@ export function AnalysisResult({ analysis: raw, t }: AnalysisResultProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
       className={styles.wrap}
+      role="article"
+      aria-label="نتيجة التحليل"
     >
       <div className={styles.summaryCard}>
         <ScoreGauge score={confidence} />

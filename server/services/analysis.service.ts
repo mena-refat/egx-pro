@@ -523,11 +523,11 @@ ${marketLine}
       ? RECOMMENDATIONS_SYSTEM.replace('ردك JSON فقط:', 'المستخدم يريد استثمارات متوافقة مع الشريعة فقط — لا بنوك تقليدية ولا شركات خمور ولا تبغ.\n\nردك JSON فقط:')
       : RECOMMENDATIONS_SYSTEM;
 
-    const shariaNote = shariaMode ? ' استثمارات متوافقة مع الشريعة فقط (لا بنوك تقليدية ولا خمور ولا تبغ).' : '';
-    const prompt = `ملف: مخاطر ${risk === 'conservative' ? 'محافظ' : risk === 'aggressive' ? 'مغامر' : 'متوازن'} | أفق ${horizon}س | ميزانية ${budget > 0 ? budget.toLocaleString() + ' ج' : '—'} | شريعة ${shariaMode ? 'نعم' : 'لا'} | قطاعات ${sectors.length ? sectors.slice(0, 3).join(',') : '—'}
+    const shariaNote = shariaMode ? ' شريعة فقط.' : '';
+    const prompt = `ملف: مخاطر ${risk === 'conservative' ? 'محافظ' : risk === 'aggressive' ? 'مغامر' : 'متوازن'} | أفق ${horizon}س | ميزانية ${budget > 0 ? budget.toLocaleString() + ' ج' : '—'}${shariaNote} | قطاعات ${sectors.length ? sectors.slice(0, 3).join(',') : '—'}
 محفظة: ${portfolioData || 'فارغة'}
-سوق: ${marketCtx.marketStatus} EGX30: ${marketCtx.egx30?.price ?? '—'} USD/EGP: ${marketCtx.usdEgp ?? '—'}${shariaNote}
-قدم توصيات EGX (سعر مستهدف، وقف خسارة، سبب قصير). JSON فقط.`;
+سوق: ${marketCtx.marketStatus} EGX30: ${marketCtx.egx30?.price ?? '—'} USD/EGP: ${marketCtx.usdEgp ?? '—'}
+توصيات EGX: سعر مستهدف، وقف خسارة، سبب جملة واحدة. JSON فقط.`;
 
     const raw = await runAnalysisEngine(systemWithSharia, prompt, ANALYSIS_MAX_TOKENS_RECOMMENDATIONS);
     const recommendations = parseAnalysisJson(raw);

@@ -81,6 +81,24 @@
   margin-top: 2rem;
 }
 
+.resultTitle {
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &::before {
+    content: '';
+    width: 0.25rem;
+    height: 1.25rem;
+    background: var(--brand);
+    border-radius: 2px;
+  }
+}
+
 .overlay {
   position: fixed;
   inset: 0;

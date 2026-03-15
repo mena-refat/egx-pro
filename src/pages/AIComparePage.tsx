@@ -173,7 +173,10 @@ export default function AIComparePage() {
         };
 
         return (
-        <div className={styles.result}>
+        <section className={styles.result} aria-labelledby="compare-result-heading">
+          <h2 id="compare-result-heading" className={styles.resultTitle}>
+            {t('ai.compareReady', 'نتيجة المقارنة')}
+          </h2>
           <p className={styles.summary}>{result.summary}</p>
 
           {result.recommendation && (
@@ -289,7 +292,7 @@ export default function AIComparePage() {
           {result.learnCards && result.learnCards.length > 0 && (
             <LearnSection cards={result.learnCards} />
           )}
-        </div>
+        </section>
         );
       })() }
 

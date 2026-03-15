@@ -81,9 +81,18 @@
 .result {
   margin-top: 2rem;
   padding: 1.5rem;
+  padding-inline-start: 1.5rem;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 1rem;
+  border-inline-start: 3px solid var(--brand);
+  border-radius: 0 1rem 1rem 0;
+}
+
+.resultTitle {
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
 }
 
 .summary {

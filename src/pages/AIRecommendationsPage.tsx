@@ -98,7 +98,10 @@ export default function AIRecommendationsPage() {
       {error && <p className={styles.error} role="alert">{error}</p>}
 
       {result && (
-        <div className={styles.result}>
+        <section className={styles.result} aria-labelledby="recommendations-result-heading">
+          <h2 id="recommendations-result-heading" className={styles.resultTitle}>
+            {t('ai.recommendationsReady', 'نتيجة التوصيات')}
+          </h2>
           <p className={styles.summary}>{result.summary}</p>
           {result.portfolioHealth && (
             <div className={styles.portfolioHealth}>
