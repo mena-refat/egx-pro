@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Fragment } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, TrendingUp, TrendingDown, Briefcase, PieChart as PieChartIcon } from 'lucide-react';
@@ -145,6 +145,25 @@ export default function PortfolioTracker() {
   }, [holdings, livePrices, allStocks, isRTL]);
 
   const COLORS = ['#7c3aed', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
+
+  const chartTotal = useMemo(() => chartData.reduce((s, d) => s + d.value, 0), [chartData]);
+
+  const renderChartTooltip = useCallback(
+    ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { name: string; value: number } }> }) => {
+      if (!active || !payload?.length) return null;
+      const { name, value } = payload[0].payload;
+      const percent = chartTotal > 0 ? ((value / chartTotal) * 100).toFixed(1) : '0';
+      const amountStr = value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+      return (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-lg px-4 py-3 min-w-[10rem]">
+          <p className="font-semibold text-[var(--text-primary)] mb-1">{name}</p>
+          <p className="text-lg font-bold text-[var(--brand)]">{amountStr} EGP</p>
+          <p className="text-xs text-[var(--text-muted)]">{percent}%</p>
+        </div>
+      );
+    },
+    [chartTotal]
+  );
 
   if (isLoading) {
     return (
@@ -297,11 +316,7 @@ export default function PortfolioTracker() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px', color: '#fff' }}
-                    itemStyle={{ color: '#fff' }}
-                    formatter={(value: number) => `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} EGP`}
-                  />
+                  <Tooltip content={renderChartTooltip} />
                   <Legend verticalAlign="bottom" height={36}/>
                 </PieChart>
               </ResponsiveContainer>
