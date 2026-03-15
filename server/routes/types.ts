@@ -15,4 +15,6 @@ export interface AuthRequest extends Request {
   user?: AuthUser;
   /** Set by authenticate for backward compatibility; same as user?.id */
   userId?: string;
+  idempotencyKey?: string;
+  idempotencyRecordId?: string;
 }

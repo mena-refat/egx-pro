@@ -6,6 +6,7 @@ import type { AuthRequest } from './types.ts';
 import { ONE_MINUTE_MS } from '../lib/constants.ts';
 import { PREDICTION_LIMITS } from '../lib/constants.ts';
 import { validate } from '../middleware/validate.middleware.ts';
+import { idempotencyMiddleware } from '../middleware/idempotency.middleware.ts';
 import { createPredictionBodySchema, predictionsFeedQuerySchema, predictionsMyQuerySchema, leaderboardQuerySchema } from '../schemas/predictions.schema.ts';
 import { idParamSchema, usernameParamSchema, tickerParamSchema } from '../schemas/params.ts';
 
@@ -27,8 +28,8 @@ const createLimiter = rateLimit({
   },
 });
 
-router.post('/', authenticate, createLimiter, validate(createPredictionBodySchema, 'body'), PredictionsController.create);
-router.delete('/:id', authenticate, validate(idParamSchema, 'params'), PredictionsController.delete);
+router.post('/', authenticate, createLimiter, idempotencyMiddleware, validate(createPredictionBodySchema, 'body'), PredictionsController.create);
+router.delete('/:id', authenticate, idempotencyMiddleware, validate(idParamSchema, 'params'), PredictionsController.delete);
 
 router.get('/feed', authenticate, validate(predictionsFeedQuerySchema, 'query'), PredictionsController.getFeed);
 router.get('/my', authenticate, validate(predictionsMyQuerySchema, 'query'), PredictionsController.getMy);
@@ -37,6 +38,6 @@ router.get('/limits', authenticate, PredictionsController.getLimits);
 router.get('/stats/:username', authenticate, validate(usernameParamSchema, 'params'), PredictionsController.getStats);
 router.get('/stock/:ticker', authenticate, validate(tickerParamSchema, 'params'), PredictionsController.getByTicker);
 
-router.post('/:id/like', authenticate, validate(idParamSchema, 'params'), PredictionsController.like);
+router.post('/:id/like', authenticate, idempotencyMiddleware, validate(idParamSchema, 'params'), PredictionsController.like);
 
 export default router;
