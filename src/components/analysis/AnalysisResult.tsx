@@ -14,6 +14,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import type { AnalysisResult as AnalysisResultType } from '../../types';
+import { getSearchableTextFromAnalysis, getMatchedGlossaryCards } from '../../lib/glossary';
 import { LearnSection } from './LearnSection';
 import styles from './AnalysisResult.module.scss';
 
@@ -562,9 +563,11 @@ export function AnalysisResult({ analysis: raw, t }: AnalysisResultProps) {
         <p className={styles.suitability}> {analysis.suitability}</p>
       )}
 
-      {analysis.learnCards && analysis.learnCards.length > 0 && (
-        <LearnSection cards={analysis.learnCards} />
-      )}
+      {(() => {
+        const searchable = getSearchableTextFromAnalysis(analysis);
+        const glossaryCards = getMatchedGlossaryCards(searchable);
+        return glossaryCards.length > 0 ? <LearnSection cards={glossaryCards} /> : null;
+      })()}
 
       <div className={styles.disclaimerCard}>
         <div className={styles.disclaimerTitle}>

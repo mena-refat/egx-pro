@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GraduationCap, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
 import type { LearnCard } from '../../types';
@@ -61,6 +62,7 @@ function LearnCardItem({ card, index }: { card: LearnCard; index: number; key?: 
 }
 
 export function LearnSection({ cards }: { cards: LearnCard[] }) {
+  const { t } = useTranslation('common');
   const [showAll, setShowAll] = useState(false);
 
   if (!cards || cards.length === 0) return null;
@@ -70,17 +72,22 @@ export function LearnSection({ cards }: { cards: LearnCard[] }) {
   return (
     <div className={styles.wrap}>
       <div className={styles.header}>
-        <h4 className={styles.title}>
-          <GraduationCap className={styles.titleIcon} aria-hidden />
-          اتعلّم — إيه المصطلحات دي؟
-        </h4>
+        <div>
+          <h4 className={styles.title}>
+            <GraduationCap className={styles.titleIcon} aria-hidden />
+            {t('learn.title', 'اتعلّم — إيه المصطلحات دي؟')}
+          </h4>
+          <p className={styles.subtitle}>
+            {t('learn.subtitle', 'مصطلحات وردت في التقرير — شرحها بلغة بسيطة من عندنا، بدون أي تكلفة إضافية.')}
+          </p>
+        </div>
         {cards.length > 2 && (
           <button
             type="button"
             onClick={() => setShowAll(!showAll)}
             className={styles.toggleBtn}
           >
-            {showAll ? 'أقل' : `عرض الكل (${cards.length})`}
+            {showAll ? t('learn.showLess', 'أقل') : t('learn.showAllCount', { count: cards.length })}
           </button>
         )}
       </div>

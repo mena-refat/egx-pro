@@ -9,6 +9,7 @@ import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
 import type { RecommendationsResult } from '../types';
 import { LearnSection } from '../components/analysis/LearnSection';
 import { AnalysisLoadingState } from '../components/analysis/AnalysisLoadingState';
+import { getSearchableTextFromRecommendations, getMatchedGlossaryCards } from '../lib/glossary';
 import styles from './AIRecommendationsPage.module.scss';
 
 export default function AIRecommendationsPage() {
@@ -160,13 +161,15 @@ export default function AIRecommendationsPage() {
               ))}
             </ul>
           )}
-          {result.learnCards && result.learnCards.length > 0 && (
-            <LearnSection cards={result.learnCards} />
-          )}
+          {(() => {
+            const searchable = getSearchableTextFromRecommendations(result);
+            const glossaryCards = getMatchedGlossaryCards(searchable);
+            return glossaryCards.length > 0 ? <LearnSection cards={glossaryCards} /> : null;
+          })()}
           {result.disclaimer && (
             <p className={styles.disclaimer}>{result.disclaimer}</p>
           )}
-        </div>
+        </section>
       )}
 
       <ProfileGuardModal {...profileModalProps} />

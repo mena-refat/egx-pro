@@ -1025,6 +1025,12 @@
       "prioritySupport": "Priority support"
     }
   },
+  "learn": {
+    "title": "Learn — What are these terms?",
+    "subtitle": "Terms that appeared in the report — we explain them in simple language, at no extra cost.",
+    "showLess": "Less",
+    "showAllCount": "Show all ({{count}})"
+  },
   "referral": {
     "title": "Invite your friends",
     "subtitle": "Share your code — 15 successful referrals = 1 free Pro month",

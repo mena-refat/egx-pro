@@ -11,6 +11,7 @@ import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
 import type { CompareResult } from '../types';
 import { LearnSection } from '../components/analysis/LearnSection';
 import { AnalysisLoadingState } from '../components/analysis/AnalysisLoadingState';
+import { getSearchableTextFromCompare, getMatchedGlossaryCards } from '../lib/glossary';
 import styles from './AIComparePage.module.scss';
 
 export default function AIComparePage() {
@@ -289,9 +290,11 @@ export default function AIComparePage() {
             <p className={styles.disclaimer}>⚖️ {result.disclaimer}</p>
           )}
 
-          {result.learnCards && result.learnCards.length > 0 && (
-            <LearnSection cards={result.learnCards} />
-          )}
+          {(() => {
+            const searchable = getSearchableTextFromCompare(result);
+            const glossaryCards = getMatchedGlossaryCards(searchable);
+            return glossaryCards.length > 0 ? <LearnSection cards={glossaryCards} /> : null;
+          })()}
         </section>
         );
       })() }
