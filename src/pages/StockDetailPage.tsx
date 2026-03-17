@@ -1,41 +1,54 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import StockAnalysis from '../components/StockAnalysis';
 import { Skeleton } from '../components/ui/Skeleton';
 import api from '../lib/api';
 import { Stock } from '../types';
 
-export default function StockDetailPage() {
-  const { ticker } = useParams<{ ticker: string }>();
-  const navigate = useNavigate();
+function useStockDetail(ticker: string | undefined) {
   const [stock, setStock] = useState<Stock | null>(null);
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
+
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    []
+  );
 
   useEffect(() => {
     if (!ticker) {
-      navigate('/stocks');
       return;
     }
     const controller = new AbortController();
     void (async () => {
+      if (!mountedRef.current) return;
       setLoading(true);
       try {
         const res = await api.get<Stock[] | { data: Stock[] }>('/stocks/prices', { signal: controller.signal });
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || !mountedRef.current) return;
         const raw = (res.data as { data?: Stock[] })?.data ?? res.data;
         const list = Array.isArray(raw) ? raw : [];
         const found = list.find((s: Stock) => s.ticker.toUpperCase() === ticker.toUpperCase());
-        if (found) setStock(found);
-        else navigate('/stocks');
+        if (!mountedRef.current) return;
+        setStock(found ?? null);
       } catch (err: unknown) {
         if (err instanceof Error && (err.name === 'AbortError' || (err as { code?: string }).code === 'ERR_CANCELED')) return;
-        navigate('/stocks');
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted && mountedRef.current) setLoading(false);
       }
     })();
     return () => controller.abort();
-  }, [ticker, navigate]);
+  }, [ticker]);
+
+  return { stock, loading };
+}
+
+export default function StockDetailPage() {
+  const { ticker } = useParams<{ ticker: string }>();
+  const navigate = useNavigate();
+  const { stock, loading } = useStockDetail(ticker);
 
   if (!ticker) return null;
 

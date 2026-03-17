@@ -23,7 +23,7 @@ export function useGoalsPage() {
   const onSavedAdd = useCallback(() => {
     setAddModalOpen(false);
     goalsData.fetchGoals();
-  }, [goalsData.fetchGoals]);
+  }, [goalsData]);
 
   const closeEditModal = useCallback(() => {
     setEditModalOpen(false);
@@ -33,7 +33,7 @@ export function useGoalsPage() {
     setEditModalOpen(false);
     setEditGoalId(null);
     goalsData.fetchGoals();
-  }, [goalsData.fetchGoals]);
+  }, [goalsData]);
 
   const closeAmountModal = useCallback(() => {
     setAmountModalOpen(false);
@@ -43,7 +43,7 @@ export function useGoalsPage() {
     setAmountModalOpen(false);
     setAmountGoal(null);
     goalsData.fetchGoals();
-  }, [goalsData.fetchGoals]);
+  }, [goalsData]);
 
   const toggleCompletedOpen = useCallback(() => setCompletedOpen((c) => !c), []);
   const setMenuOpenIdFor = useCallback((id: string) => setMenuOpenId((prev) => (prev === id ? null : id)), []);
@@ -84,7 +84,7 @@ export function useGoalsPage() {
       }
       setMenuOpenId(null);
     },
-    [accessToken, goalsData.fetchGoals]
+    [accessToken, goalsData, t]
   );
 
   return {

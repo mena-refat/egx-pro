@@ -74,10 +74,11 @@ function isMarketOpen(): boolean {
   }
   if (weekday === 'Fri' || weekday === 'Sat') return false;
   const minutesSinceMidnight = hour * 60 + minute;
-  return (
-    minutesSinceMidnight >= MARKET_DATA.MARKET_OPEN_HOUR * 60 &&
-    minutesSinceMidnight < MARKET_DATA.MARKET_CLOSE_HOUR * 60
-  );
+  const openMinute = MARKET_DATA.MARKET_OPEN_HOUR * 60;
+  const closeMinute =
+    MARKET_DATA.MARKET_CLOSE_HOUR * 60 +
+    (MARKET_DATA as { MARKET_CLOSE_MINUTE?: number }).MARKET_CLOSE_MINUTE ?? 0;
+  return minutesSinceMidnight >= openMinute && minutesSinceMidnight < closeMinute;
 }
 
 type ChartQuote = {

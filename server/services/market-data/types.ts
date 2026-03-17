@@ -9,7 +9,7 @@ export interface StockQuote {
   volume:        number;
   previousClose: number;
   timestamp:     Date;
-  source:        'YAHOO' | 'STOOQ' | 'CACHE';
+  source:        'TWELVE' | 'YAHOO' | 'STOOQ' | 'CACHE';
 }
 
 export interface DataSourceResult {

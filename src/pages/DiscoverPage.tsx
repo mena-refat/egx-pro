@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -59,10 +59,18 @@ interface FeedPrediction {
 }
 
 export default function DiscoverPage() {
-  const { i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
   const accessToken = useAuthStore((s) => s.accessToken);
   const isRtl = i18n.language.startsWith('ar');
+  const mountedRef = useRef(true);
+
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    []
+  );
 
   const [activeTab, setActiveTab] = useState<Tab>('discover');
 
@@ -104,12 +112,12 @@ export default function DiscoverPage() {
 
   // Load followers/following on tab switch
   const loadList = useCallback(
-    async (tab: Tab) => {
+    async (tab: Tab, signal?: AbortSignal) => {
       if (!accessToken) return;
       setListLoading(true);
       try {
         if (tab === 'followers') {
-          const res = await api.get('/social/followers');
+          const res = await api.get('/social/followers', { signal });
           const data = res.data?.data ?? res.data;
           const list = Array.isArray(data)
             ? data
@@ -117,7 +125,7 @@ export default function DiscoverPage() {
           setFollowers(list);
           setFollowersCount(list.length);
         } else if (tab === 'following') {
-          const res = await api.get('/social/following');
+          const res = await api.get('/social/following', { signal });
           const data = res.data?.data ?? res.data;
           const list = Array.isArray(data)
             ? data
@@ -125,7 +133,7 @@ export default function DiscoverPage() {
           setFollowing(list);
           setFollowingCount(list.length);
         } else if (tab === 'requests') {
-          const res = await api.get('/social/requests');
+          const res = await api.get('/social/requests', { signal });
           const data = res.data?.data ?? res.data;
           const list = Array.isArray(data)
             ? data
@@ -133,9 +141,10 @@ export default function DiscoverPage() {
           setRequests(list);
           setRequestsCount(list.length);
         }
-      } catch {
-        /* ignore */
+      } catch (err) {
+        if ((err as { code?: string }).code === 'ERR_CANCELED') return;
       }
+      if (!mountedRef.current) return;
       setListLoading(false);
     },
     [accessToken]
@@ -144,61 +153,86 @@ export default function DiscoverPage() {
   // Load discover content
   useEffect(() => {
     if (!accessToken) {
-      queueMicrotask(() => setDiscoverLoading(false));
+      queueMicrotask(() => {
+        if (!mountedRef.current) return;
+        setDiscoverLoading(false);
+      });
       return;
     }
+    const controller = new AbortController();
+
     void (async () => {
+      if (!mountedRef.current) return;
       setDiscoverLoading(true);
-      const [lb, feed, fwrs, fwng, reqs] = await Promise.allSettled([
-        api.get('/predictions/leaderboard?period=month&limit=5'),
-        api.get('/predictions/feed?filter=all&limit=5'),
-        api.get('/social/followers'),
-        api.get('/social/following'),
-        api.get('/social/requests'),
-      ]);
-      if (lb.status === 'fulfilled') {
-        const d = lb.value.data?.data ?? lb.value.data;
-        setLeaderboard(
-          Array.isArray(d) ? d : (d as { items?: LeaderboardEntry[] })?.items ?? []
-        );
+      try {
+        const [lb, feed, fwrs, fwng, reqs] = await Promise.allSettled([
+          api.get('/predictions/leaderboard?period=month&limit=5', {
+            signal: controller.signal,
+          }),
+          api.get('/predictions/feed?filter=all&limit=5', {
+            signal: controller.signal,
+          }),
+          api.get('/social/followers', { signal: controller.signal }),
+          api.get('/social/following', { signal: controller.signal }),
+          api.get('/social/requests', { signal: controller.signal }),
+        ]);
+
+        if (!mountedRef.current) return;
+
+        if (lb.status === 'fulfilled') {
+          const d = lb.value.data?.data ?? lb.value.data;
+          setLeaderboard(
+            Array.isArray(d) ? d : (d as { items?: LeaderboardEntry[] })?.items ?? []
+          );
+        }
+        if (feed.status === 'fulfilled') {
+          const d = feed.value.data?.data ?? feed.value.data;
+          const items =
+            (d as { items?: FeedPrediction[] })?.items ??
+            (Array.isArray(d) ? d : []);
+          setCommunityFeed(items);
+        }
+        if (fwrs.status === 'fulfilled') {
+          const d = fwrs.value.data?.data ?? fwrs.value.data;
+          const list = Array.isArray(d)
+            ? d
+            : (d as { followers?: FollowUser[] })?.followers ?? [];
+          setFollowersCount(list.length);
+        }
+        if (fwng.status === 'fulfilled') {
+          const d = fwng.value.data?.data ?? fwng.value.data;
+          const list = Array.isArray(d)
+            ? d
+            : (d as { following?: FollowUser[] })?.following ?? [];
+          setFollowingCount(list.length);
+        }
+        if (reqs.status === 'fulfilled') {
+          const d = reqs.value.data?.data ?? reqs.value.data;
+          const list = Array.isArray(d)
+            ? d
+            : (d as { requests?: PendingRequest[] })?.requests ?? [];
+          setRequestsCount(list.length);
+        }
+      } catch (err) {
+        if ((err as { code?: string }).code === 'ERR_CANCELED') return;
+      } finally {
+        if (!mountedRef.current) return;
+        setDiscoverLoading(false);
       }
-      if (feed.status === 'fulfilled') {
-        const d = feed.value.data?.data ?? feed.value.data;
-        const items =
-          (d as { items?: FeedPrediction[] })?.items ??
-          (Array.isArray(d) ? d : []);
-        setCommunityFeed(items);
-      }
-      if (fwrs.status === 'fulfilled') {
-        const d = fwrs.value.data?.data ?? fwrs.value.data;
-        const list = Array.isArray(d)
-          ? d
-          : (d as { followers?: FollowUser[] })?.followers ?? [];
-        setFollowersCount(list.length);
-      }
-      if (fwng.status === 'fulfilled') {
-        const d = fwng.value.data?.data ?? fwng.value.data;
-        const list = Array.isArray(d)
-          ? d
-          : (d as { following?: FollowUser[] })?.following ?? [];
-        setFollowingCount(list.length);
-      }
-      if (reqs.status === 'fulfilled') {
-        const d = reqs.value.data?.data ?? reqs.value.data;
-        const list = Array.isArray(d)
-          ? d
-          : (d as { requests?: PendingRequest[] })?.requests ?? [];
-        setRequestsCount(list.length);
-      }
-      setDiscoverLoading(false);
     })();
+
+    return () => {
+      controller.abort();
+    };
   }, [accessToken]);
 
   useEffect(() => {
     if (activeTab === 'discover') return;
+    const controller = new AbortController();
     queueMicrotask(() => {
-      void loadList(activeTab);
+      void loadList(activeTab, controller.signal);
     });
+    return () => controller.abort();
   }, [activeTab, loadList]);
 
   const handleAcceptRequest = async (followerId: string) => {
@@ -228,11 +262,32 @@ export default function DiscoverPage() {
     icon: React.ElementType;
     count?: number;
   }[] = [
-    { id: 'discover', label: 'اكتشف', icon: Search },
-    { id: 'followers', label: 'متابعيني', icon: Users, count: followersCount },
-    { id: 'following', label: 'بتابعهم', icon: UserCheck, count: followingCount },
+    {
+      id: 'discover',
+      label: t('social.discoverPage.tabDiscover'),
+      icon: Search,
+    },
+    {
+      id: 'followers',
+      label: t('social.discoverPage.tabFollowers'),
+      icon: Users,
+      count: followersCount,
+    },
+    {
+      id: 'following',
+      label: t('social.discoverPage.tabFollowing'),
+      icon: UserCheck,
+      count: followingCount,
+    },
     ...(requestsCount > 0
-      ? [{ id: 'requests' as Tab, label: 'طلبات', icon: Bell, count: requestsCount }]
+      ? [
+          {
+            id: 'requests' as Tab,
+            label: t('social.discoverPage.tabRequests'),
+            icon: Bell,
+            count: requestsCount,
+          },
+        ]
       : []),
   ];
 
@@ -241,8 +296,8 @@ export default function DiscoverPage() {
   return (
     <div className={styles.page} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* ══ Header ══ */}
-      <h1 className={styles.title}>اكتشف</h1>
-      <p className={styles.subtitle}>تابع مستثمرين وشوف توقعاتهم</p>
+      <h1 className={styles.title}>{t('social.discoverPage.title')}</h1>
+      <p className={styles.subtitle}>{t('social.discoverPage.subtitle')}</p>
 
       {/* ══ Search ══ */}
       <div className={styles.searchWrap}>
@@ -259,8 +314,8 @@ export default function DiscoverPage() {
             )
               setDropOpen(true);
           }}
-          placeholder="ابحث عن مستثمرين..."
-          aria-label="بحث عن مستثمرين"
+          placeholder={t('social.discoverPage.searchPlaceholder')}
+          aria-label={t('social.discoverPage.searchAria')}
           icon={
             autoLoading || searchLoading ? (
               <Loader2 className={styles.spinner} aria-hidden />
@@ -300,8 +355,8 @@ export default function DiscoverPage() {
           ) : (
             <EmptyState
               icon={Users}
-              title="مفيش نتائج"
-              description="جرّب اسم مستخدم تاني"
+              title={t('social.discoverPage.noSearchResultsTitle')}
+              description={t('social.discoverPage.noSearchResultsDescription')}
             />
           )}
         </div>
@@ -339,7 +394,7 @@ export default function DiscoverPage() {
                     <section className={styles.section}>
                       <h2 className={styles.sectionTitle}>
                         <Trophy className={styles.sectionIcon} aria-hidden />
-                        أدق المتوقعين هذا الشهر
+                        {t('social.discoverPage.leaderboardTitle')}
                       </h2>
                       <div className={styles.leaderboard}>
                         {leaderboard.map((user, i) => (
@@ -390,7 +445,7 @@ export default function DiscoverPage() {
                     <section className={styles.section}>
                       <h2 className={styles.sectionTitle}>
                         <TrendingUp className={styles.sectionIcon} aria-hidden />
-                        آخر توقعات المجتمع
+                        {t('social.discoverPage.communityFeedTitle')}
                       </h2>
                       <div className={styles.feedList}>
                         {communityFeed.map((p) => (
@@ -409,13 +464,17 @@ export default function DiscoverPage() {
                               <span
                                 className={`${styles.feedDirection} ${p.direction === 'UP' ? styles.feedUp : styles.feedDown}`}
                               >
-                                {p.direction === 'UP' ? '↑ صعود' : '↓ هبوط'}
+                                {p.direction === 'UP'
+                                  ? t('social.discoverPage.feedDirectionUp')
+                                  : t('social.discoverPage.feedDirectionDown')}
                               </span>
                             </div>
                             <div className={styles.feedBody}>
                               <span className={styles.feedTicker}>{p.ticker}</span>
                               <span className={styles.feedTarget}>
-                                هدف: {p.targetPrice}
+                                {t('social.discoverPage.feedTarget', {
+                                  price: p.targetPrice,
+                                })}
                               </span>
                             </div>
                             {p.reason && (
@@ -431,9 +490,9 @@ export default function DiscoverPage() {
                   {leaderboard.length === 0 && communityFeed.length === 0 && (
                     <EmptyState
                       icon={Users}
-                      title="المجتمع لسه بيكبر"
-                      description="كن أول من يضيف توقع ويظهر في الليدربورد!"
-                      actionLabel="أضف توقع"
+                      title={t('social.discoverPage.communityGrowingTitle')}
+                      description={t('social.discoverPage.communityGrowingDescription')}
+                      actionLabel={t('social.discoverPage.communityGrowingAction')}
                       onAction={() => navigate('/predictions')}
                     />
                   )}
@@ -496,8 +555,8 @@ export default function DiscoverPage() {
               ) : (
                 <EmptyState
                   icon={Users}
-                  title="مفيش متابعين لسه"
-                  description="شارك بروفايلك عشان الناس تتابعك"
+                  title={t('social.discoverPage.followersEmptyTitle')}
+                  description={t('social.discoverPage.followersEmptyDescription')}
                 />
               )}
             </div>
@@ -557,8 +616,8 @@ export default function DiscoverPage() {
               ) : (
                 <EmptyState
                   icon={UserPlus}
-                  title="مش بتتابع حد لسه"
-                  description="ابحث عن مستثمرين وتابعهم"
+                  title={t('social.discoverPage.followingEmptyTitle')}
+                  description={t('social.discoverPage.followingEmptyDescription')}
                 />
               )}
             </div>
@@ -616,7 +675,7 @@ export default function DiscoverPage() {
                             size="sm"
                             onClick={() => handleAcceptRequest(r.followerId)}
                           >
-                            قبول
+                            {t('social.discoverPage.accept')}
                           </Button>
                           <Button
                             type="button"
@@ -624,7 +683,7 @@ export default function DiscoverPage() {
                             size="sm"
                             onClick={() => handleDeclineRequest(r.followerId)}
                           >
-                            رفض
+                            {t('social.discoverPage.decline')}
                           </Button>
                         </div>
                       </div>
@@ -634,8 +693,8 @@ export default function DiscoverPage() {
               ) : (
                 <EmptyState
                   icon={Bell}
-                  title="مفيش طلبات"
-                  description="لما حد يطلب يتابعك هتلاقيه هنا"
+                  title={t('social.discoverPage.requestsEmptyTitle')}
+                  description={t('social.discoverPage.requestsEmptyDescription')}
                 />
               )}
             </div>

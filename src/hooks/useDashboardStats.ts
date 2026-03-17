@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import type { Stock, PortfolioHolding } from '../types';
 
@@ -10,17 +11,13 @@ export function useDashboardStats(isAuthenticated: boolean, pathname: string) {
     if (!accessToken) return;
     try {
       const [holdingsRes, stocksRes, watchlistRes] = await Promise.all([
-        fetch('/api/portfolio', { headers: { Authorization: `Bearer ${accessToken}` }, signal }),
-        fetch('/api/stocks/prices', { signal }),
-        fetch('/api/watchlist', { headers: { Authorization: `Bearer ${accessToken}` }, signal }),
+        api.get('/portfolio', { signal }),
+        api.get('/stocks/prices', { signal }),
+        api.get('/watchlist', { signal }),
       ]);
-      if (signal?.aborted) return;
-      if (!holdingsRes.ok || !stocksRes.ok || !watchlistRes.ok) return;
-      const [holdingsData, stocksPayload, watchlistData] = await Promise.all([
-        holdingsRes.json(),
-        stocksRes.json(),
-        watchlistRes.json(),
-      ]);
+      const holdingsData = holdingsRes.data;
+      const stocksPayload = stocksRes.data;
+      const watchlistData = watchlistRes.data;
       if (signal?.aborted) return;
       const holdingsInner = (holdingsData as { data?: { holdings?: unknown[] } })?.data ?? holdingsData;
       const holdings = Array.isArray(holdingsInner) ? holdingsInner : (holdingsInner?.holdings || (holdingsData as { holdings?: unknown[] }).holdings || (holdingsData as { items?: unknown[] }).items || []);

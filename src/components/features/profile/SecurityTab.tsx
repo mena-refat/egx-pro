@@ -22,6 +22,7 @@ import { OTPInput } from '../../ui/OTPInput';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { useAuthStore } from '../../../store/authStore';
+import api from '../../../lib/api';
 import type { ProfileTabProps } from './types';
 
 function formatLastActivity(
@@ -99,14 +100,12 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
     if (!accessToken) return;
     const run = async () => {
       try {
-        const res = await fetch('/api/user/security', { headers: { Authorization: `Bearer ${accessToken}` } });
-        const data = await res.json();
-        if (res.ok) {
-          const payload = (data as { data?: { lastPasswordChangeAt?: string; twoFactorEnabled?: boolean; twoFactorEnabledAt?: string } }).data ?? data;
-          setLastPasswordChangeAt(payload?.lastPasswordChangeAt ?? null);
-          setTwoFactorEnabled(Boolean(payload?.twoFactorEnabled));
-          setTwoFactorEnabledAt(payload?.twoFactorEnabledAt ?? null);
-        }
+        const res = await api.get('/user/security');
+        const data = res.data;
+        const payload = (data as { data?: { lastPasswordChangeAt?: string; twoFactorEnabled?: boolean; twoFactorEnabledAt?: string } }).data ?? data;
+        setLastPasswordChangeAt(payload?.lastPasswordChangeAt ?? null);
+        setTwoFactorEnabled(Boolean(payload?.twoFactorEnabled));
+        setTwoFactorEnabledAt(payload?.twoFactorEnabledAt ?? null);
       } catch {
         // ignore
       }
@@ -119,16 +118,16 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
     setSessionsLoading(true);
     try {
       let list: Array<{ id: string; deviceType?: string; browser?: string; os?: string; deviceInfo?: string; city?: string; country?: string; createdAt: string; isCurrentSession?: boolean }> = [];
-      const authRes = await fetch('/api/auth/sessions', { credentials: 'include' });
-      if (authRes.ok) {
-        const data = await authRes.json();
+      const authRes = await api.get('/auth/sessions');
+      if (authRes.status === 200) {
+        const data = authRes.data;
         const arr = (data as { data?: unknown[] })?.data ?? data;
         if (Array.isArray(arr)) list = arr;
       }
       if (list.length === 0) {
-        const userRes = await fetch('/api/user/sessions', { headers: { Authorization: `Bearer ${accessToken}` } });
-        if (userRes.ok) {
-          const data = await userRes.json();
+        const userRes = await api.get('/user/sessions');
+        if (userRes.status === 200) {
+          const data = userRes.data;
           const arr = (data as { data?: unknown[] }).data ?? data;
           if (Array.isArray(arr)) list = arr;
         }
@@ -159,16 +158,8 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
     if (!accessToken) return;
     setPrivacySaving(true);
     try {
-      const res = await fetch('/api/social/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ isPrivate, showPortfolio }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setRequestStatus({ type: 'error', message: t('common.error') });
-        return;
-      }
+      const res = await api.patch('/social/settings', { isPrivate, showPortfolio });
+      const data = res.data ?? {};
       const payload = (data as { data?: { isPrivate?: boolean; showPortfolio?: boolean } }).data ?? data;
       setIsPrivate(Boolean(payload.isPrivate));
       setShowPortfolio(payload.showPortfolio ?? true);
@@ -198,13 +189,9 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
     setChangingPassword(true);
     setPasswordMessage(null);
     try {
-      const res = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Failed');
+      const res = await api.post('/auth/change-password', { currentPassword, newPassword });
+      const data = res.data;
+      if ((data as { error?: string })?.error) throw new Error((data as { error?: string }).error || 'Failed');
       setPasswordMessage(t('settings.update'));
       setCurrentPassword('');
       setNewPassword('');
@@ -231,11 +218,10 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
     setEnable2FALoading(true);
     setEnable2FAError(null);
     try {
-      const res = await fetch('/api/auth/2fa/setup', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data?.error === '2fa_already_enabled') setEnable2FAError(t('settings.twoFaAlreadyEnabled'));
-        else setEnable2FAError(t('settings.twoFaSetupFailed'));
+      const res = await api.post('/auth/2fa/setup');
+      const data = res.data;
+      if ((data as { error?: string })?.error === '2fa_already_enabled') {
+        setEnable2FAError(t('settings.twoFaAlreadyEnabled'));
         return;
       }
       const payload = (data as { data?: { qrCodeUrl?: string; manualCode?: string } })?.data ?? data;
@@ -262,27 +248,22 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
     setEnable2FALoading(true);
     setEnable2FAError(null);
     try {
-      const res = await fetch('/api/auth/2fa/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ code: cleanCode }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data?.error === 'invalid_code') setEnable2FAError(t('settings.invalidCodeLong'));
-        else if (data?.error === 'no_secret') setEnable2FAError(t('settings.noSecret'));
-        else if (data?.error === '2fa_already_enabled') setEnable2FAError(t('settings.twoFaAlreadyEnabled'));
+      const res = await api.post('/auth/2fa/verify', { code: cleanCode });
+      const data = res.data;
+      if ((data as { error?: string })?.error) {
+        const err = (data as { error?: string }).error;
+        if (err === 'invalid_code') setEnable2FAError(t('settings.invalidCodeLong'));
+        else if (err === 'no_secret') setEnable2FAError(t('settings.noSecret'));
+        else if (err === '2fa_already_enabled') setEnable2FAError(t('settings.twoFaAlreadyEnabled'));
         else setEnable2FAError(t('settings.twoFaInvalidCodeTryAgain'));
         return;
       }
       setTwoFactorEnabled(true);
       setEnable2FAStep('success');
-      const secRes = await fetch('/api/user/security', { headers: { Authorization: `Bearer ${accessToken}` } });
-      if (secRes.ok) {
-        const sec = await secRes.json();
-        const payload = (sec as { data?: { twoFactorEnabledAt?: string } }).data ?? sec;
-        setTwoFactorEnabledAt(payload?.twoFactorEnabledAt ?? null);
-      }
+      const secRes = await api.get('/user/security');
+      const sec = secRes.data;
+      const payload = (sec as { data?: { twoFactorEnabledAt?: string } }).data ?? sec;
+      setTwoFactorEnabledAt(payload?.twoFactorEnabledAt ?? null);
     } catch {
       setEnable2FAError(t('settings.twoFaSetupFailed'));
     } finally {
@@ -295,16 +276,13 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
     setDisable2FALoading(true);
     setDisable2FAError(null);
     try {
-      const res = await fetch('/api/auth/2fa/disable', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ code: disable2FAOtp, password: disable2FAPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data?.error === 'wrong_password') setDisable2FAError(t('settings.wrongPassword'));
-        else if (data?.error === 'invalid_code') setDisable2FAError(t('settings.invalidCode'));
-        else setDisable2FAError(data?.error || 'Failed');
+      const res = await api.post('/auth/2fa/disable', { code: disable2FAOtp, password: disable2FAPassword });
+      const data = res.data;
+      if ((data as { error?: string })?.error) {
+        const err = (data as { error?: string }).error;
+        if (err === 'wrong_password') setDisable2FAError(t('settings.wrongPassword'));
+        else if (err === 'invalid_code') setDisable2FAError(t('settings.invalidCode'));
+        else setDisable2FAError(err || 'Failed');
         return;
       }
       setTwoFactorEnabled(false);
@@ -323,7 +301,7 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
     if (!accessToken) return;
     setRevokingId(id);
     try {
-      await fetch(`/api/user/sessions/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } });
+      await api.delete(`/user/sessions/${id}`);
       await fetchSessions();
     } finally {
       setRevokingId(null);
@@ -334,7 +312,7 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
     if (!accessToken) return;
     setRevokeAllOtherLoading(true);
     try {
-      await fetch('/api/user/sessions/revoke-all-other', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
+      await api.post('/user/sessions/revoke-all-other');
       await fetchSessions();
       setRequestStatus({ type: 'success', message: t('settings.sessionsEnded') });
     } catch {

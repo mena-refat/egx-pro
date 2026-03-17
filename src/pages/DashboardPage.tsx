@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
+import React, { useMemo, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import api from '../lib/api';
 import { Skeleton } from '../components/ui/Skeleton';
 const PortfolioPerformanceChart = lazy(() => import('../components/PortfolioPerformanceChart'));
 import {
@@ -14,6 +13,7 @@ import {
 import { useLivePrices } from '../hooks/useLivePrices';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { useDashboardMarketWatchlist } from '../hooks/useDashboardMarketWatchlist';
+import { useWatchlistTargets } from '../hooks/useWatchlistTargets';
 
 export default function DashboardPage() {
   const { t, i18n } = useTranslation('common');
@@ -22,20 +22,7 @@ export default function DashboardPage() {
   const { holdings, stats, isLoading: portfolioLoading, error: portfolioError } = usePortfolio(livePrices);
   const { marketOverview, watchlist, watchlistLoading } = useDashboardMarketWatchlist();
 
-  useEffect(() => {
-    const items = watchlist
-      .filter((w: { ticker: string; targetPrice?: number | null }) => w.targetPrice != null && typeof w.targetPrice === 'number')
-      .map((w: { ticker: string; targetPrice: number }) => ({
-        ticker: w.ticker,
-        targetPrice: w.targetPrice,
-        currentPrice: livePrices[w.ticker]?.price ?? 0,
-      }))
-      .filter((item: { currentPrice: number; targetPrice: number }) => item.currentPrice >= item.targetPrice);
-    if (items.length === 0) return;
-    api.post('/watchlist/check-targets', { items }).catch((err) => {
-        if (import.meta.env.DEV) console.error('check-targets failed:', err);
-      });
-  }, [watchlist, livePrices]);
+  useWatchlistTargets(watchlist, livePrices);
 
   const { topGainer, topLoser } = useMemo(() => {
     type SessionStock = { ticker: string; changePercent: number } | null;

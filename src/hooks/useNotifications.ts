@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import api from '../lib/api';
 import { getAccessToken } from '../lib/auth/tokens';
 
 export type NotificationItem = {
@@ -21,15 +22,13 @@ export function useNotifications(isAuthenticated: boolean) {
     if (!token) return;
     setNotificationsLoading(true);
     try {
-      const res = await fetch('/api/notifications', {
-        headers: { Authorization: `Bearer ${token}` },
-        signal,
-      });
+      const res = await api.get('/notifications', { signal });
       if (signal?.aborted) return;
-      const data = await res.json();
-      if (res.ok && data?.notifications) {
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount ?? 0);
+      const data = res.data;
+      const payload = (data as { data?: { notifications?: NotificationItem[]; unreadCount?: number } }).data ?? data;
+      if (payload?.notifications) {
+        setNotifications(payload.notifications);
+        setUnreadCount(payload.unreadCount ?? 0);
       }
     } catch (err: unknown) {
       if ((err as { name?: string }).name === 'AbortError') return;
@@ -49,10 +48,7 @@ export function useNotifications(isAuthenticated: boolean) {
     const token = getAccessToken();
     if (!token) return;
     try {
-      await fetch('/api/notifications/read-all', {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.patch('/notifications/read-all');
       setUnreadCount(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch {
@@ -64,10 +60,7 @@ export function useNotifications(isAuthenticated: boolean) {
     const token = getAccessToken();
     if (!token) return;
     try {
-      await fetch(`/api/notifications/${id}/read`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.patch(`/notifications/${id}/read`);
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
@@ -81,10 +74,7 @@ export function useNotifications(isAuthenticated: boolean) {
     const token = getAccessToken();
     if (!token) return;
     try {
-      await fetch('/api/notifications/clear-all', {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete('/notifications/clear-all');
       setNotifications([]);
       setUnreadCount(0);
     } catch {

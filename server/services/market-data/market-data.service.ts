@@ -1,4 +1,5 @@
 import type { IMarketDataSource, StockQuote } from './types.ts';
+import { TwelveDataSource } from './sources/twelve-data-source.ts';
 import { YahooFinanceSource } from './sources/yahoo-finance-source.ts';
 import { StooqSource } from './sources/stooq-source.ts';
 import { logger } from '../../lib/logger.ts';
@@ -60,7 +61,9 @@ function msUntilMarketOpen(): number {
 
   const minutesSinceMidnight = hour * 60 + minute;
   const openMinute  = MARKET_DATA.MARKET_OPEN_HOUR  * 60;
-  const closeMinute = MARKET_DATA.MARKET_CLOSE_HOUR * 60;
+  const closeMinute =
+    MARKET_DATA.MARKET_CLOSE_HOUR * 60 +
+    (MARKET_DATA as { MARKET_CLOSE_MINUTE?: number }).MARKET_CLOSE_MINUTE ?? 0;
 
   // Market is open right now
   if (weekday !== 'Fri' && weekday !== 'Sat' &&
@@ -163,6 +166,7 @@ export class MarketDataService {
 
   constructor() {
     this.sources = [
+      new TwelveDataSource(),
       new YahooFinanceSource(),
       new StooqSource(),
     ].sort((a, b) => a.priority - b.priority);
@@ -325,7 +329,6 @@ export class MarketDataService {
 
     /** Consecutive poll failures — used for auto-backoff to avoid Yahoo IP bans */
     let consecutiveFailures = 0;
-
     const poll = async () => {
       if (!this.pollingActive) return;
 
@@ -339,13 +342,33 @@ export class MarketDataService {
         : (msToOpen > 0 && msToOpen < MARKET_DATA.OFF_HOURS_INTERVAL_MS)
             ? msToOpen
             : MARKET_DATA.OFF_HOURS_INTERVAL_MS;
-
       // Auto-backoff: double the interval for each consecutive failure, cap at 5 min
       const interval = consecutiveFailures === 0
         ? baseInterval
         : Math.min(baseInterval * Math.pow(2, consecutiveFailures), 5 * 60_000);
 
       try {
+        // خارج ساعات التداول: لا نضرب أي مصدر خارجي إطلاقاً.
+        // نستخدم الـ cache فقط (Redis + in-memory)، ونحدد توقيت الاستيقاظ القادم حسب msToOpen.
+        if (!marketOpen) {
+          const quotes = await this.getCachedQuotes(symbols);
+
+          if (this.broadcastFn && quotes.size > 0) {
+            this.broadcastFn(quotes);
+          }
+
+          logger.info('Poll skipped (market closed), served from cache only', {
+            symbols: symbols.length,
+            servedFromCache: quotes.size,
+            nextPollMs: interval,
+          });
+
+          if (this.pollingActive) {
+            setTimeout(poll, interval);
+          }
+          return;
+        }
+
         const quotes = await this.getQuotes(symbols);
 
         if (this.broadcastFn && quotes.size > 0) {
