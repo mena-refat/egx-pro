@@ -369,25 +369,28 @@ async function startServer() {
       };
       for (const u of toArchive) {
         try {
-          await prismaWithArchive.archivedUser.create({
-            data: {
-              originalId: u.id,
-              email: u.email ?? undefined,
-              phone: u.phone ?? undefined,
-              username: u.username ?? undefined,
-              name: u.fullName ?? undefined,
-              userData: {
-                id: u.id,
-                email: u.email,
-                phone: u.phone,
-                username: u.username,
-                fullName: u.fullName,
-                createdAt: u.createdAt,
-                updatedAt: u.updatedAt,
+          await prisma.$transaction(async (tx) => {
+            const txWithArchive = tx as typeof prismaWithArchive;
+            await txWithArchive.archivedUser.create({
+              data: {
+                originalId: u.id,
+                email: u.email ?? undefined,
+                phone: u.phone ?? undefined,
+                username: u.username ?? undefined,
+                name: u.fullName ?? undefined,
+                userData: {
+                  id: u.id,
+                  email: u.email,
+                  phone: u.phone,
+                  username: u.username,
+                  fullName: u.fullName,
+                  createdAt: u.createdAt,
+                  updatedAt: u.updatedAt,
+                },
               },
-            },
+            });
+            await tx.user.delete({ where: { id: u.id } });
           });
-          await prisma.user.delete({ where: { id: u.id } });
         } catch (e) {
           logger.error('Archive user error', { userId: u.id, error: e });
         }

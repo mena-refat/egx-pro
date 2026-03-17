@@ -18,6 +18,7 @@ if (!redis) {
 // In-memory fallback
 const localCache = new Map<string, { value: unknown; expiry: number }>();
 let redisWriteDisabled = false;
+const LOCAL_CACHE_MAX_SIZE = 2000;
 
 /** Get value from Redis or in-memory fallback. Returns null if missing or expired. */
 export const getCache = async <T>(key: string): Promise<T | null> => {
@@ -46,6 +47,12 @@ export const getCache = async <T>(key: string): Promise<T | null> => {
 
 /** Set value in Redis and in-memory cache with TTL in seconds. */
 export const setCache = async (key: string, value: unknown, expireSeconds: number): Promise<void> => {
+  // Evict oldest entry if we are at capacity and inserting a new key
+  if (!localCache.has(key) && localCache.size >= LOCAL_CACHE_MAX_SIZE) {
+    const firstKey = localCache.keys().next().value;
+    if (firstKey !== undefined) localCache.delete(firstKey);
+  }
+
   // Always set local cache as backup
   localCache.set(key, {
     value,
@@ -64,6 +71,16 @@ export const setCache = async (key: string, value: unknown, expireSeconds: numbe
     } else {
       logger.warn('Redis Set Error', { key, err });
     }
+  }
+};
+
+export const deleteCache = async (key: string): Promise<void> => {
+  localCache.delete(key);
+  if (!redis) return;
+  try {
+    await redis.del(key);
+  } catch (err) {
+    logger.warn('Redis Del Error', { key, err });
   }
 };
 

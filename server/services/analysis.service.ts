@@ -6,7 +6,7 @@ import { PortfolioRepository } from '../repositories/portfolio.repository.ts';
 import { AnalysisRepository } from '../repositories/analysis.repository.ts';
 import { logger } from '../lib/logger.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
-import { getLimit } from '../lib/plan.ts';
+import { getLimit, type UserForPlan } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';
 import {
   SINGLE_ANALYSIS_SYSTEM,
@@ -30,6 +30,7 @@ import {
   ANALYSIS_MAX_TOKENS_COMPARE,
   ANALYSIS_MAX_TOKENS_RECOMMENDATIONS,
 } from '../lib/constants.ts';
+import { prisma } from '../lib/prisma.ts';
 
 const nullFinancials = {
   pe: null as number | null,
@@ -67,47 +68,57 @@ function getFirstDayOfNextMonth(): Date {
   return d;
 }
 
-/** يتحقق من الحصة فقط (بدون خصم). استخدم consumeQuota بعد نجاح العملية. */
-async function ensureQuota(userId: string, pointsRequired: number): Promise<void> {
-  const user = await UserRepository.getForBillingPlan(userId);
-  if (!user) throw new AppError('UNAUTHORIZED', 401);
-  const quota = getLimit(user, 'aiAnalysisPerMonth') as number;
-  const now = new Date();
-  let usedThisMonth = user.aiAnalysisUsedThisMonth ?? 0;
-  const resetDate = user.aiAnalysisResetDate;
-  if (resetDate == null || now >= resetDate) {
-    usedThisMonth = 0;
-    await UserRepository.update({
+/** يتحقق من الحصة ويخصمها في عملية واحدة ذرّية باستخدام Prisma transaction. */
+async function atomicConsumeQuota(userId: string, points: number): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const user = await tx.user.findUnique({
       where: { id: userId },
-      data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: getFirstDayOfNextMonth() },
+      select: {
+        id: true,
+        plan: true,
+        planExpiresAt: true,
+        referralProExpiresAt: true,
+        aiAnalysisUsedThisMonth: true,
+        aiAnalysisResetDate: true,
+      },
     });
-  }
-  if (usedThisMonth + pointsRequired > quota) {
-    throw new AppError('ANALYSIS_LIMIT_REACHED', 402, 'تم استنفاد حصة التحليلات لهذا الشهر', {
-      code: 'ANALYSIS_LIMIT_REACHED',
-      used: usedThisMonth,
-      quota,
-    });
-  }
-}
 
-/** يخصم نقاط التحليل بعد نجاح العملية. */
-async function consumeQuota(userId: string, points: number): Promise<void> {
-  const user = await UserRepository.getForBillingPlan(userId);
-  if (!user) return;
-  const now = new Date();
-  let used = user.aiAnalysisUsedThisMonth ?? 0;
-  const resetDate = user.aiAnalysisResetDate;
-  if (resetDate == null || now >= resetDate) {
-    used = 0;
-    await UserRepository.update({
+    if (!user) {
+      throw new AppError('UNAUTHORIZED', 401);
+    }
+
+    const now = new Date();
+    let usedThisMonth = user.aiAnalysisUsedThisMonth ?? 0;
+    let resetDate = user.aiAnalysisResetDate;
+
+    if (resetDate == null || now >= resetDate) {
+      usedThisMonth = 0;
+      resetDate = getFirstDayOfNextMonth();
+    }
+
+    const planUser: UserForPlan = {
+      plan: user.plan,
+      planExpiresAt: user.planExpiresAt,
+      referralProExpiresAt: user.referralProExpiresAt,
+    };
+
+    const quota = getLimit(planUser, 'aiAnalysisPerMonth') as number;
+
+    if (usedThisMonth + points > quota) {
+      throw new AppError('ANALYSIS_LIMIT_REACHED', 402, 'تم استنفاد حصة التحليلات لهذا الشهر', {
+        code: 'ANALYSIS_LIMIT_REACHED',
+        used: usedThisMonth,
+        quota,
+      });
+    }
+
+    await tx.user.update({
       where: { id: userId },
-      data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: getFirstDayOfNextMonth() },
+      data: {
+        aiAnalysisUsedThisMonth: usedThisMonth + points,
+        aiAnalysisResetDate: resetDate,
+      },
     });
-  }
-  await UserRepository.update({
-    where: { id: userId },
-    data: { aiAnalysisUsedThisMonth: used + points },
   });
 }
 
@@ -257,7 +268,7 @@ export const AnalysisService = {
     ticker: string
   ): Promise<{ analysis: unknown; id: string; newUnseenAchievements: string[] }> {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
-    await ensureQuota(userId, 1);
+    await atomicConsumeQuota(userId, 1);
 
     // ══ الطبقة 1: Cache — لو حد حلل نفس السهم النهارده، ارجع النتيجة المحفوظة ══
     const cacheKey = singleKey(ticker);
@@ -413,10 +424,8 @@ ${marketLine}
 
     await setCachedAnalysis(cacheKey, analysisJson, 'claude');
 
-    const analysisObj = analysisJson as Record<string, unknown>;
-    const pt = analysisObj.priceTarget as
-      | { current?: number; base?: number; targetBase?: number; low?: number; high?: number; stopLoss?: number }
-      | undefined;
+    const analysisObj = analysisJson as { priceTarget?: { current?: number; base?: number; targetBase?: number; low?: number; high?: number; stopLoss?: number }; verdictBadge?: string };
+    const pt = analysisObj.priceTarget;
     const trackData = {
       priceAtAnalysis: priceData?.price ?? (pt?.current != null ? Number(pt.current) : undefined),
       targetPrice:
@@ -430,8 +439,6 @@ ${marketLine}
       stopLoss: pt?.stopLoss != null ? Number(pt.stopLoss) : undefined,
       verdict: (analysisObj.verdictBadge ?? verdictBadge ?? '') as string,
     };
-
-    await consumeQuota(userId, 1);
     const saved = await AnalysisRepository.create({
       userId,
       ticker,
@@ -453,7 +460,7 @@ ${marketLine}
     const t1 = ticker1.trim().toUpperCase();
     const t2 = ticker2.trim().toUpperCase();
     if (t1 === t2) throw new AppError('SAME_STOCK_COMPARE', 400);
-    await ensureQuota(userId, 2);
+    await atomicConsumeQuota(userId, 2);
 
     const compareCacheKey = compareKey(t1, t2);
     const cachedCompare = await getCachedAnalysis<unknown>(compareCacheKey);
@@ -526,8 +533,29 @@ ${marketLine}
     const raw = await runAnalysisEngine(EXPLAIN_COMPARE_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_COMPARE);
     const aiCompare = parseAnalysisJson(raw) as Record<string, unknown>;
 
+    const baseComparison: Record<string, unknown> = typeof aiCompare === 'object' && aiCompare !== null ? aiCompare : {};
+    const stock1Base = typeof aiCompare.stock1 === 'object' && aiCompare.stock1 !== null ? (aiCompare.stock1 as Record<string, unknown>) : {};
+    const stock2Base = typeof aiCompare.stock2 === 'object' && aiCompare.stock2 !== null ? (aiCompare.stock2 as Record<string, unknown>) : {};
+
+    const stock1FundamentalBase =
+      typeof (stock1Base.fundamental as Record<string, unknown> | undefined) === 'object' && stock1Base.fundamental !== null
+        ? (stock1Base.fundamental as Record<string, unknown>)
+        : {};
+    const stock1TechnicalBase =
+      typeof (stock1Base.technical as Record<string, unknown> | undefined) === 'object' && stock1Base.technical !== null
+        ? (stock1Base.technical as Record<string, unknown>)
+        : {};
+    const stock2FundamentalBase =
+      typeof (stock2Base.fundamental as Record<string, unknown> | undefined) === 'object' && stock2Base.fundamental !== null
+        ? (stock2Base.fundamental as Record<string, unknown>)
+        : {};
+    const stock2TechnicalBase =
+      typeof (stock2Base.technical as Record<string, unknown> | undefined) === 'object' && stock2Base.technical !== null
+        ? (stock2Base.technical as Record<string, unknown>)
+        : {};
+
     const comparison = {
-      ...aiCompare,
+      ...baseComparison,
       winner,
       winnerReason:
         aiCompare.winnerReason ||
@@ -535,7 +563,7 @@ ${marketLine}
           ? `درجة ${t1} (${score1.score}) أعلى من درجة ${t2} (${score2.score}).`
           : `درجة ${t2} (${score2.score}) أعلى من درجة ${t1} (${score1.score}).`),
       stock1: {
-        ...(typeof aiCompare.stock1 === 'object' && aiCompare.stock1 !== null ? aiCompare.stock1 : {}),
+        ...stock1Base,
         ticker: t1,
         name: info1?.nameAr ?? t1,
         score: score1.score,
@@ -547,20 +575,16 @@ ${marketLine}
         macro_score: score1.macro_score,
         risk_score: score1.risk_score,
         fundamental: {
-          ...(typeof (aiCompare.stock1 as Record<string, unknown>)?.fundamental === 'object'
-            ? (aiCompare.stock1 as Record<string, unknown>).fundamental
-            : {}),
+          ...stock1FundamentalBase,
           score: score1.fundamental_score,
         },
         technical: {
-          ...(typeof (aiCompare.stock1 as Record<string, unknown>)?.technical === 'object'
-            ? (aiCompare.stock1 as Record<string, unknown>).technical
-            : {}),
+          ...stock1TechnicalBase,
           score: score1.technical_score,
         },
       },
       stock2: {
-        ...(typeof aiCompare.stock2 === 'object' && aiCompare.stock2 !== null ? aiCompare.stock2 : {}),
+        ...stock2Base,
         ticker: t2,
         name: info2?.nameAr ?? t2,
         score: score2.score,
@@ -572,21 +596,16 @@ ${marketLine}
         macro_score: score2.macro_score,
         risk_score: score2.risk_score,
         fundamental: {
-          ...(typeof (aiCompare.stock2 as Record<string, unknown>)?.fundamental === 'object'
-            ? (aiCompare.stock2 as Record<string, unknown>).fundamental
-            : {}),
+          ...stock2FundamentalBase,
           score: score2.fundamental_score,
         },
         technical: {
-          ...(typeof (aiCompare.stock2 as Record<string, unknown>)?.technical === 'object'
-            ? (aiCompare.stock2 as Record<string, unknown>).technical
-            : {}),
+          ...stock2TechnicalBase,
           score: score2.technical_score,
         },
       },
     };
     await setCachedAnalysis(compareCacheKey, comparison, 'claude');
-    await consumeQuota(userId, 2);
     const saved = await AnalysisRepository.create({
       userId,
       ticker: `${t1}|${t2}`,
@@ -616,7 +635,7 @@ ${marketLine}
     _body?: { riskTolerance?: string; investmentHorizon?: number; interestedSectors?: string[] }
   ): Promise<{ recommendations: unknown; id: string }> {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
-    await ensureQuota(userId, 1);
+    await atomicConsumeQuota(userId, 1);
 
     const dataMs = ANALYSIS_DATA_GATHER_TIMEOUT_MS;
     const portfolioFallback: [Array<{ ticker: string; shares: number; avgPrice: number }>, number] = [[], 0];
@@ -711,7 +730,6 @@ ${portfolioScoresBlock ? portfolioScoresBlock + '\n' : ''}سوق: ${marketCtx.ma
 
     const raw = await runAnalysisEngine(systemWithSharia, prompt, ANALYSIS_MAX_TOKENS_RECOMMENDATIONS);
     const recommendations = parseAnalysisJson(raw);
-    await consumeQuota(userId, 1);
     const saved = await AnalysisRepository.create({
       userId,
       ticker: '_recommendations',

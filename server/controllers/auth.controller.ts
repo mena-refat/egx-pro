@@ -262,20 +262,21 @@ export async function getMe(req: Request, res: Response): Promise<void> {
   }
 }
 
-export function getGoogleUrl(_req: Request, res: Response): void {
-  const { url } = AuthService.getGoogleUrl();
-  sendSuccess(res, { url });
+export async function getGoogleUrl(_req: Request, res: Response): Promise<void> {
+  const { url, state } = await AuthService.getGoogleUrl();
+  sendSuccess(res, { url, state });
 }
 
 export async function googleCallback(req: Request, res: Response): Promise<void> {
-  const code = req.query.code as string;
+  const code = req.query.code as string | undefined;
+  const state = req.query.state as string | undefined;
   if (!code) {
     res.status(400).send('No code provided');
     return;
   }
   try {
     const ctx = authContext(req);
-    const result = await AuthService.googleCallback(code, ctx);
+    const result = await AuthService.googleCallback(code, state ?? '', ctx);
     setRefreshCookie(res, result.refreshToken);
     res.send(result.redirectHtml);
   } catch (e) {

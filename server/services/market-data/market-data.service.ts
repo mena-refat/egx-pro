@@ -335,9 +335,24 @@ export class MarketDataService {
       const marketOpen = this.isMarketOpen();
       const msToOpen   = msUntilMarketOpen();
 
+      // Grace window بعد الإغلاق مباشرة لجلب سعر الإغلاق الرسمي من Twelve/Yahoo
+      const { minutesSinceMidnight, weekday } = getCairoNow();
+      const closeMinute =
+        MARKET_DATA.MARKET_CLOSE_HOUR * 60 +
+        (MARKET_DATA as { MARKET_CLOSE_MINUTE?: number }).MARKET_CLOSE_MINUTE ?? 0;
+      const POST_CLOSE_GRACE_MINUTES = 30;
+      const inPostCloseGrace =
+        weekday !== 'Fri' &&
+        weekday !== 'Sat' &&
+        !marketOpen &&
+        minutesSinceMidnight >= closeMinute &&
+        minutesSinceMidnight < closeMinute + POST_CLOSE_GRACE_MINUTES;
+
       // Outside hours: wake up exactly when market opens (if sooner than OFF_HOURS_INTERVAL)
       // so the first poll of the day fires at 10:00 Cairo, not up to 2h late.
-      const baseInterval = marketOpen
+      // خلال فترة السماح بعد الإغلاق مباشرة (post-close grace) نستمر في الـ polling القصير
+      // لجلب سعر الإغلاق الرسمي ثم نتوقف عن ضرب المصادر الخارجية لاحقاً.
+      const baseInterval = marketOpen || inPostCloseGrace
         ? MARKET_DATA.POLL_INTERVAL_MS
         : (msToOpen > 0 && msToOpen < MARKET_DATA.OFF_HOURS_INTERVAL_MS)
             ? msToOpen
@@ -348,9 +363,10 @@ export class MarketDataService {
         : Math.min(baseInterval * Math.pow(2, consecutiveFailures), 5 * 60_000);
 
       try {
-        // خارج ساعات التداول: لا نضرب أي مصدر خارجي إطلاقاً.
+        // خارج ساعات التداول بالكامل (وبعد انتهاء فترة السماح بعد الإغلاق):
+        // لا نضرب أي مصدر خارجي إطلاقاً.
         // نستخدم الـ cache فقط (Redis + in-memory)، ونحدد توقيت الاستيقاظ القادم حسب msToOpen.
-        if (!marketOpen) {
+        if (!marketOpen && !inPostCloseGrace) {
           const quotes = await this.getCachedQuotes(symbols);
 
           if (this.broadcastFn && quotes.size > 0) {
