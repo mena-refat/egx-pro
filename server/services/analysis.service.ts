@@ -21,7 +21,7 @@ import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
 import { withRetry } from '../lib/retry.ts';
 import { calculateIndicators } from '../lib/technicalIndicators.ts';
 import { getMarketContext } from '../lib/marketContext.ts';
-import { getCachedAnalysis, setCachedAnalysis, singleKey, compareKey } from '../lib/analysisCache.ts';
+import { getCachedAnalysis, setCachedAnalysis, singleKey, compareKey, personalKey, personalCompareKey } from '../lib/analysisCache.ts';
 import { generateQuickAnalysis } from '../lib/quickAnalysis.ts';
 import { getAnalysisNewsCutoff, getAnalysisSessionDateString } from '../lib/cairo-date.ts';
 import {
@@ -268,22 +268,38 @@ export const AnalysisService = {
     ticker: string
   ): Promise<{ analysis: unknown; id: string; newUnseenAchievements: string[] }> {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
-    await atomicConsumeQuota(userId, 1);
 
-    // ══ الطبقة 1: Cache — لو حد حلل نفس السهم النهارده، ارجع النتيجة المحفوظة ══
-    const cacheKey = singleKey(ticker);
-    const cached = await getCachedAnalysis<unknown>(cacheKey);
-    if (cached) {
+    // ══ Personal cache first — same user, same ticker, same day: no quota consumed ══
+    const userCacheKey = personalKey(userId, ticker);
+    const userCached = await getCachedAnalysis<unknown>(userCacheKey);
+    if (userCached) {
       const saved = await AnalysisRepository.create({
         userId,
         ticker,
-        content: JSON.stringify(cached),
+        content: JSON.stringify(userCached),
       });
       const completedBefore = await getCompletedAchievementIds(userId);
       const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
-      return { analysis: cached, id: saved.id, newUnseenAchievements: newAchievements };
+      return { analysis: userCached, id: saved.id, newUnseenAchievements: newAchievements };
     }
 
+    // ══ Global cache — another user analyzed today; we still charge quota ══
+    const cacheKey = singleKey(ticker);
+    const globalCached = await getCachedAnalysis<unknown>(cacheKey);
+    if (globalCached) {
+      await atomicConsumeQuota(userId, 1);
+      await setCachedAnalysis(userCacheKey, globalCached, 'cache');
+      const saved = await AnalysisRepository.create({
+        userId,
+        ticker,
+        content: JSON.stringify(globalCached),
+      });
+      const completedBefore = await getCompletedAchievementIds(userId);
+      const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
+      return { analysis: globalCached, id: saved.id, newUnseenAchievements: newAchievements };
+    }
+
+    await atomicConsumeQuota(userId, 1);
     const completedBefore = await getCompletedAchievementIds(userId);
 
     const stockInfo = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker.toUpperCase());
@@ -423,6 +439,7 @@ ${marketLine}
     };
 
     await setCachedAnalysis(cacheKey, analysisJson, 'claude');
+    await setCachedAnalysis(userCacheKey, analysisJson, 'claude');
 
     const analysisObj = analysisJson as { priceTarget?: { current?: number; base?: number; targetBase?: number; low?: number; high?: number; stopLoss?: number }; verdictBadge?: string };
     const pt = analysisObj.priceTarget;
@@ -460,18 +477,32 @@ ${marketLine}
     const t1 = ticker1.trim().toUpperCase();
     const t2 = ticker2.trim().toUpperCase();
     if (t1 === t2) throw new AppError('SAME_STOCK_COMPARE', 400);
-    await atomicConsumeQuota(userId, 2);
 
-    const compareCacheKey = compareKey(t1, t2);
-    const cachedCompare = await getCachedAnalysis<unknown>(compareCacheKey);
-    if (cachedCompare) {
+    const userCompareKey = personalCompareKey(userId, t1, t2);
+    const userCachedCompare = await getCachedAnalysis<unknown>(userCompareKey);
+    if (userCachedCompare) {
       const saved = await AnalysisRepository.create({
         userId,
         ticker: `${t1}|${t2}`,
-        content: JSON.stringify(cachedCompare),
+        content: JSON.stringify(userCachedCompare),
       });
-      return { comparison: cachedCompare, id: saved.id };
+      return { comparison: userCachedCompare, id: saved.id };
     }
+
+    const compareCacheKey = compareKey(t1, t2);
+    const globalCachedCompare = await getCachedAnalysis<unknown>(compareCacheKey);
+    if (globalCachedCompare) {
+      await atomicConsumeQuota(userId, 2);
+      await setCachedAnalysis(userCompareKey, globalCachedCompare, 'cache');
+      const saved = await AnalysisRepository.create({
+        userId,
+        ticker: `${t1}|${t2}`,
+        content: JSON.stringify(globalCachedCompare),
+      });
+      return { comparison: globalCachedCompare, id: saved.id };
+    }
+
+    await atomicConsumeQuota(userId, 2);
 
     const info1 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t1);
     const info2 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t2);
@@ -606,6 +637,7 @@ ${marketLine}
       },
     };
     await setCachedAnalysis(compareCacheKey, comparison, 'claude');
+    await setCachedAnalysis(userCompareKey, comparison, 'claude');
     const saved = await AnalysisRepository.create({
       userId,
       ticker: `${t1}|${t2}`,

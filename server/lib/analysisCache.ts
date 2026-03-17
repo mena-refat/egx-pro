@@ -17,6 +17,17 @@ function compareKey(t1: string, t2: string): string {
   return `ai:compare:${sorted}:${sessionDate}`;
 }
 
+function personalKey(userId: string, ticker: string): string {
+  const sessionDate = getAnalysisSessionDateString();
+  return `ai:personal:${userId}:${ticker.toUpperCase()}:${sessionDate}`;
+}
+
+function personalCompareKey(userId: string, t1: string, t2: string): string {
+  const sessionDate = getAnalysisSessionDateString();
+  const sorted = [t1, t2].sort().join('_');
+  return `ai:personal:${userId}:compare:${sorted}:${sessionDate}`;
+}
+
 export async function getCachedAnalysis<T>(key: string): Promise<T | null> {
   try {
     const cached = await getCache<{ data: T; cachedAt: string; provider: string }>(key);
@@ -39,4 +50,4 @@ export async function setCachedAnalysis<T>(key: string, data: T, provider: strin
   }
 }
 
-export { singleKey, compareKey };
+export { singleKey, compareKey, personalKey, personalCompareKey };

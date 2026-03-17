@@ -1,5 +1,5 @@
 import { rateLimit } from 'express-rate-limit';
-import jwt from 'jsonwebtoken';
+import { verifyAccessToken } from '../../src/lib/auth.ts';
 
 const ipKey = (req: { ip?: string }) => (req.ip ?? 'unknown').replace(/^::ffff:/, '');
 
@@ -13,10 +13,10 @@ export const userApiLimiter = rateLimit({
     const auth = req.headers.authorization;
     if (auth?.startsWith('Bearer ')) {
       try {
-        const decoded = jwt.decode(auth.slice(7)) as { sub?: string } | null;
-        if (decoded?.sub) return `user:${decoded.sub}`;
+        const payload = verifyAccessToken(auth.slice(7)) as { sub?: string } | null;
+        if (payload?.sub) return `user:${payload.sub}`;
       } catch {
-        // ignore
+        // invalid token — fall through to IP
       }
     }
     return ipKey(req);

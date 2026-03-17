@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 
 import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import api from './lib/api';
 import { useNotifications } from './hooks/useNotifications';
 import { useTheme } from './hooks/useTheme';
 import { useProfileCompletion } from './hooks/useProfileCompletion';
@@ -51,7 +52,7 @@ const AIRecommendationsPage = lazy(() => import('./pages/AIRecommendationsPage')
 
 export default function App() {
   const { i18n } = useTranslation('common');
-  const { isAuthenticated, user, logout, updateUser, accessToken } = useAuthStore();
+  const { isAuthenticated, user, logout, updateUser } = useAuthStore();
   const [theme, setTheme] = useTheme(user);
   const { profileCompletion } = useProfileCompletion(isAuthenticated);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => (typeof window !== 'undefined' && localStorage.getItem('sidebarCollapsed') === 'true'));
@@ -66,12 +67,13 @@ export default function App() {
   const onCompleteOnboarding = useCallback(() => updateUser({ isFirstLogin: false, onboardingCompleted: true }), [updateUser]);
   const handleThemeChange = async (nextTheme: 'dark' | 'light' | 'system') => {
     setTheme(nextTheme);
-    if (accessToken) {
-      try {
-        const res = await fetch('/api/user/profile', { method: 'PUT', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ theme: nextTheme }) });
-        const body = await res.json().catch(() => null);
-        if (res.ok && body) updateUser((body as { data?: Record<string, unknown> }).data ?? body);
-      } catch (err) { if (import.meta.env.DEV) console.error('Failed to update theme from header', err); }
+    if (!isAuthenticated) return;
+    try {
+      const res = await api.put('/user/profile', { theme: nextTheme });
+      const body = res.data;
+      if (body) updateUser((body as { data?: Record<string, unknown> }).data ?? body);
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('Failed to update theme from header', err);
     }
   };
 

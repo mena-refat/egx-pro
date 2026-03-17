@@ -409,10 +409,10 @@ async function startServer() {
     try {
       const resetDate = new Date();
       const nextReset = new Date(resetDate.getFullYear(), resetDate.getMonth() + 1, 1, 0, 0, 0, 0);
-      await prisma.user.updateMany({
+      const result = await prisma.user.updateMany({
         data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: nextReset },
       });
-      logger.info('AI usage counters reset for free users');
+      logger.info('Monthly AI usage counters reset', { usersUpdated: result.count });
     } catch (err) {
       logger.error('AI usage reset job error', { error: err });
     }
