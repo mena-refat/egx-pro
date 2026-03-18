@@ -9,6 +9,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';
 import { useAuthStore } from '../store/authStore';
 import { registerPushToken } from '../lib/notifications';
+import { useColorScheme, I18nManager } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -22,12 +23,24 @@ Notifications.setNotificationHandler({
 
 export default function RootLayout() {
   const { checkAuth, isLoading, isAuthenticated } = useAuthStore();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme !== 'light';
 
   useEffect(() => {
     checkAuth().finally(() => {
       SplashScreen.hideAsync();
     });
   }, [checkAuth]);
+
+  // Sync RTL with current language
+  useEffect(() => {
+    const isRTL = i18n.language?.startsWith('ar');
+    if (I18nManager.isRTL !== isRTL) {
+      I18nManager.allowRTL(isRTL);
+      I18nManager.forceRTL(isRTL);
+      // ملاحظة: لتطبيق التغيير بالكامل قد تحتاج لإعادة تشغيل التطبيق يدوياً
+    }
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -39,7 +52,9 @@ export default function RootLayout() {
 
   return (
     <I18nextProvider i18n={i18n}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView
+        style={{ flex: 1, backgroundColor: isDark ? '#0a0a0f' : '#f8fafc' }}
+      >
         <SafeAreaProvider>
           <StatusBar style="light" />
           <Stack

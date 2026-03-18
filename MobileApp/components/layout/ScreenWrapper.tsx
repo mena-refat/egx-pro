@@ -1,5 +1,12 @@
 import { ReactNode } from 'react';
-import { View, ScrollView, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
+import {
+  View,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
+  useColorScheme,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Props {
@@ -7,8 +14,8 @@ interface Props {
   scrollable?: boolean;
   refreshing?: boolean;
   onRefresh?: () => void;
-  className?: string;
   padded?: boolean;
+  withKeyboard?: boolean;
 }
 
 export function ScreenWrapper({
@@ -17,7 +24,11 @@ export function ScreenWrapper({
   refreshing = false,
   onRefresh,
   padded = true,
+  withKeyboard = false,
 }: Props) {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme !== 'light';
+
   const content = scrollable ? (
     <ScrollView
       className="flex-1"
@@ -40,14 +51,25 @@ export function ScreenWrapper({
     <View className={`flex-1 ${padded ? 'px-4' : ''}`}>{children}</View>
   );
 
+  const inner = withKeyboard ? (
+    <KeyboardAvoidingView
+      className="flex-1"
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      {content}
+    </KeyboardAvoidingView>
+  ) : (
+    content
+  );
+
   return (
-    <SafeAreaView className="flex-1 bg-[#0a0a0f]">
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {content}
-      </KeyboardAvoidingView>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: isDark ? '#0a0a0f' : '#f8fafc',
+      }}
+    >
+      {inner}
     </SafeAreaView>
   );
 }

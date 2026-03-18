@@ -1,13 +1,13 @@
 import { Tabs, Redirect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
-import { LayoutDashboard, TrendingUp, Briefcase, Bot, User, Target } from 'lucide-react-native';
+import { LayoutDashboard, TrendingUp, Briefcase, Bot, User } from 'lucide-react-native';
 
 const TAB_ICONS = {
   index: LayoutDashboard,
   market: TrendingUp,
   portfolio: Briefcase,
   ai: Bot,
-  predictions: Target,
   profile: User,
 };
 
@@ -16,12 +16,13 @@ const TAB_LABELS = {
   market: { ar: 'السوق', en: 'Market' },
   portfolio: { ar: 'محفظتي', en: 'Portfolio' },
   ai: { ar: 'AI', en: 'AI' },
-  predictions: { ar: 'التوقعات', en: 'Predictions' },
   profile: { ar: 'حسابي', en: 'Profile' },
 };
 
 export default function TabsLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { i18n } = useTranslation();
+  const lang = i18n.language?.startsWith('ar') ? 'ar' : 'en';
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   return (
@@ -41,7 +42,8 @@ export default function TabsLayout() {
           const Icon = TAB_ICONS[route.name as keyof typeof TAB_ICONS];
           return Icon ? <Icon size={size} color={color} /> : null;
         },
-        tabBarLabel: TAB_LABELS[route.name as keyof typeof TAB_LABELS]?.ar ?? route.name,
+        tabBarLabel:
+          TAB_LABELS[route.name as keyof typeof TAB_LABELS]?.[lang] ?? route.name,
       })}
     />
   );

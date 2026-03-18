@@ -211,7 +211,7 @@ export default function DashboardPage() {
               قائمة المراقبة
             </Text>
             <Pressable onPress={() => router.push('/market')}>
-              <Text className="text-xs text-brand">عرض السوق ←</Text>
+              <Text className="text-xs text-brand">عرض السوق</Text>
             </Pressable>
           </View>
 
