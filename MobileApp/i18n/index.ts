@@ -11,6 +11,7 @@ void i18n.use(initReactI18next).init({
   lng: 'ar',
   fallbackLng: 'ar',
   defaultNS: 'common',
+  compatibilityJSON: 'v3',
   interpolation: { escapeValue: false },
 });
 

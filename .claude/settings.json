@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx|json\\)$\")",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(node -e \"const p = require\\(''./node_modules/react-native-worklets/plugin/index.js''\\); console.log\\(JSON.stringify\\(Object.keys\\(p\\), null, 2\\)\\);\")",
+      "Bash(node -e \"const p = require\\(''./node_modules/react-native-worklets/plugin/index.js''\\); console.log\\(typeof p\\); console.log\\(typeof p.default\\); console.log\\(JSON.stringify\\(Object.keys\\(p.default || {}\\), null, 2\\)\\);\")",
+      "Bash(node -e \":*)",
+      "Bash(npx expo:*)"
     ]
   }
 }

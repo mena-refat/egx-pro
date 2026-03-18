@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
-import { CartesianChart, Line } from 'victory-native';
+import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import apiClient from '../../../lib/api/client';
 
 interface DataPoint {
@@ -23,10 +23,48 @@ interface Props {
   lineColor?: string;
 }
 
+const CHART_HEIGHT = 176;
+
+function buildPaths(
+  data: DataPoint[],
+  width: number,
+  height: number,
+): { linePath: string; areaPath: string } {
+  if (data.length < 2) return { linePath: '', areaPath: '' };
+
+  const padding = { top: 10, bottom: 10 };
+  const prices = data.map((d) => d.price);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const priceRange = maxPrice - minPrice || 1;
+
+  const toX = (i: number) => (i / (data.length - 1)) * width;
+  const toY = (price: number) =>
+    padding.top +
+    ((maxPrice - price) / priceRange) * (height - padding.top - padding.bottom);
+
+  const points = data.map((d, i) => ({ x: toX(i), y: toY(d.price) }));
+
+  // Smooth cubic bezier line
+  const linePath = points.reduce((acc, p, i) => {
+    if (i === 0) return `M ${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+    const prev = points[i - 1];
+    const cpX = ((prev.x + p.x) / 2).toFixed(2);
+    return `${acc} C ${cpX} ${prev.y.toFixed(2)} ${cpX} ${p.y.toFixed(2)} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+  }, '');
+
+  const last = points[points.length - 1];
+  const first = points[0];
+  const areaPath = `${linePath} L ${last.x.toFixed(2)} ${height} L ${first.x.toFixed(2)} ${height} Z`;
+
+  return { linePath, areaPath };
+}
+
 export function StockChart({ ticker, lineColor }: Props) {
   const [range, setRange] = useState<Range>('1mo');
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chartWidth, setChartWidth] = useState(0);
   const mountedRef = useRef(true);
 
   useEffect(
@@ -46,7 +84,10 @@ export function StockChart({ ticker, lineColor }: Props) {
       .then((res) => {
         if (!ctrl.signal.aborted && mountedRef.current) {
           const raw = (res.data as { data?: DataPoint[] })?.data ?? res.data;
-          setData(Array.isArray(raw) ? raw : []);
+          const list = Array.isArray(raw)
+            ? raw.filter((d) => isFinite(d.price) && d.price > 0)
+            : [];
+          setData(list);
         }
       })
       .catch(() => {
@@ -58,16 +99,16 @@ export function StockChart({ ticker, lineColor }: Props) {
     return () => ctrl.abort();
   }, [ticker, range]);
 
-  const chartData = data.map((d, i) => ({
-    x: i,
-    y: d.price,
-    date: d.date,
-  }));
-
   const firstPrice = data[0]?.price ?? 0;
   const lastPrice = data[data.length - 1]?.price ?? 0;
   const isPositive = lastPrice >= firstPrice;
-  const color = isPositive ? '#10b981' : '#ef4444';
+  const color = lineColor ?? (isPositive ? '#10b981' : '#ef4444');
+  const gradientId = `chart_grad_${ticker}`;
+
+  const { linePath, areaPath } =
+    chartWidth > 0 && data.length >= 2
+      ? buildPaths(data, chartWidth, CHART_HEIGHT)
+      : { linePath: '', areaPath: '' };
 
   return (
     <View className="bg-[#111118] border border-white/[0.07] rounded-2xl p-4">
@@ -92,28 +133,36 @@ export function StockChart({ ticker, lineColor }: Props) {
       </View>
 
       {loading ? (
-        <View className="h-44 items-center justify-center">
+        <View style={{ height: CHART_HEIGHT }} className="items-center justify-center">
           <ActivityIndicator color="#10b981" />
         </View>
       ) : data.length === 0 ? (
-        <View className="h-44 items-center justify-center">
+        <View style={{ height: CHART_HEIGHT }} className="items-center justify-center">
           <Text className="text-slate-500 text-sm">لا توجد بيانات</Text>
         </View>
       ) : (
-        <View style={{ height: 176 }}>
-          <CartesianChart data={chartData} xKey="x" yKeys={['y']}>
-            {({ points }) => (
-              <Line
-                points={points.y}
-                color={lineColor ?? color}
-                strokeWidth={2}
-                animate={{ type: 'timing', duration: 400 }}
-              />
-            )}
-          </CartesianChart>
+        <View
+          style={{ height: CHART_HEIGHT }}
+          onLayout={(e) => setChartWidth(e.nativeEvent.layout.width)}
+        >
+          {chartWidth > 0 && (
+            <Svg width={chartWidth} height={CHART_HEIGHT}>
+              <Defs>
+                <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={color} stopOpacity="0.25" />
+                  <Stop offset="1" stopColor={color} stopOpacity="0" />
+                </LinearGradient>
+              </Defs>
+              {areaPath ? (
+                <Path d={areaPath} fill={`url(#${gradientId})`} />
+              ) : null}
+              {linePath ? (
+                <Path d={linePath} stroke={color} strokeWidth={2} fill="none" />
+              ) : null}
+            </Svg>
+          )}
         </View>
       )}
     </View>
   );
 }
-
