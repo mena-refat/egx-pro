@@ -94,6 +94,8 @@ model User {
   refreshTokens                          RefreshToken[]
   watchlists                             Watchlist[]
   supportTickets                         SupportTicket[]
+  pushToken                              String?
+  pushPlatform                           String?
 
   @@index([isDeleted, deletionScheduledFor])
   @@index([plan, planExpiresAt])

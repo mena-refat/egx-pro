@@ -22,7 +22,11 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx server/scripts/seed-sectors.ts",
     "admin:seed-super": "tsx server/scripts/create-super-admin.ts",
-    "optimize:svg": "npx svgo public/borsa-logo.svg -o public/borsa-logo.svg"
+    "optimize:svg": "npx svgo public/borsa-logo.svg -o public/borsa-logo.svg",
+    "mobile": "cd MobileApp && expo start",
+    "mobile:android": "cd MobileApp && expo start --android",
+    "mobile:ios": "cd MobileApp && expo start --ios",
+    "mobile:install": "cd MobileApp && npm install"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

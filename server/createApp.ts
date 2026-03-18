@@ -29,6 +29,7 @@ import newsRoutes from './routes/news.ts';
 import referralRoutes from './routes/referral.ts';
 import marketDataRoutes from './routes/market-data.ts';
 import socialRoutes from './routes/social.ts';
+import mobileRoutes from './routes/mobile.ts';
 import predictionsRoutes from './routes/predictions.ts';
 import adminRoutes from './routes/admin.ts';
 import supportRoutes from './routes/support.ts';
@@ -186,6 +187,7 @@ export async function createApp(): Promise<express.Express> {
   app.use('/api/predictions', predictionsRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/support', supportRoutes);
+  app.use('/api/mobile', mobileRoutes);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
