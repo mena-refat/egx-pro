@@ -1,10 +1,10 @@
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Brain, GitCompare, Sparkles, Zap } from 'lucide-react-native';
+import { Brain, GitCompare, Sparkles, Zap, Calculator } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
 
-const CARDS = [
+const AI_CARDS = [
   {
     id: 'analyze',
     icon: Brain,
@@ -70,9 +70,9 @@ export default function AIHubPage() {
           </View>
         )}
 
-        {/* 3 Cards */}
+        {/* AI Cards */}
         <View className="gap-4">
-          {CARDS.map((card) => (
+          {AI_CARDS.map((card) => (
             <Pressable
               key={card.id}
               onPress={() => router.push(card.href)}
@@ -98,6 +98,31 @@ export default function AIHubPage() {
               </View>
             </Pressable>
           ))}
+        </View>
+
+        {/* Calculator Tool */}
+        <View>
+          <Text className="text-xs text-[#656d76] font-medium uppercase tracking-wider mb-3">أدوات</Text>
+          <Pressable
+            onPress={() => router.push('/calculator')}
+            className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 active:opacity-80"
+          >
+            <View className="flex-row items-start gap-4">
+              <View className="w-12 h-12 rounded-xl items-center justify-center bg-emerald-500/20">
+                <Calculator size={22} color="#10b981" />
+              </View>
+              <View className="flex-1 gap-1">
+                <Text className="text-base font-bold text-[#e6edf3]">حاسبة الاستثمار</Text>
+                <Text className="text-sm text-[#8b949e] leading-5">
+                  احسب كيف ينمو استثمارك مع الوقت — مقارنة البنك والذهب والبورصة
+                </Text>
+                <View className="mt-2 flex-row items-center gap-1.5">
+                  <Calculator size={11} color="#10b981" />
+                  <Text className="text-xs font-medium text-emerald-400">مجاني دائماً</Text>
+                </View>
+              </View>
+            </View>
+          </Pressable>
         </View>
 
         {/* Disclaimer */}

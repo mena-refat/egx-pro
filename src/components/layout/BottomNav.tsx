@@ -5,19 +5,17 @@ import {
   LayoutDashboard,
   BriefcaseBusiness,
   TrendingUp,
-  Target,
   BarChart2,
-  Crosshair,
+  Brain,
 } from 'lucide-react';
 
-// نفس ترتيب القائمة الجانبية: الرئيسية → السوق → الأسهم → المحفظة → التوقعات → الأهداف
+// أهم 5 عناصر للموبايل: الرئيسية → محفظتي → السوق → الأسهم → الذكاء الاصطناعي
 const NAV_ITEMS = [
-  { path: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
-  { path: '/market', labelKey: 'nav.market', icon: TrendingUp },
-  { path: '/stocks', labelKey: 'nav.stocks', icon: BarChart2 },
-  { path: '/portfolio', labelKey: 'nav.portfolio', icon: BriefcaseBusiness },
-  { path: '/predictions', labelKey: 'nav.predictions', icon: Crosshair },
-  { path: '/goals', labelKey: 'nav.goals', icon: Target },
+  { path: '/',          labelKey: 'nav.dashboard',  icon: LayoutDashboard  },
+  { path: '/portfolio', labelKey: 'nav.portfolio',  icon: BriefcaseBusiness },
+  { path: '/market',    labelKey: 'nav.market',     icon: TrendingUp        },
+  { path: '/stocks',    labelKey: 'nav.stocks',     icon: BarChart2         },
+  { path: '/ai',        labelKey: 'nav.ai',         icon: Brain             },
 ];
 
 const BottomNav = memo(function BottomNav() {
@@ -41,6 +39,8 @@ const BottomNav = memo(function BottomNav() {
         const isActive =
           path === '/'
             ? pathname === '/' || pathname === '/dashboard'
+            : path === '/ai'
+            ? pathname === '/ai' || pathname.startsWith('/ai/')
             : pathname === path || pathname.startsWith(path + '/');
 
         return (

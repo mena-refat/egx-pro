@@ -129,6 +129,10 @@ export default function RootLayout() {
               name="ai/recommendations"
               options={{ animation: 'slide_from_right' }}
             />
+            <Stack.Screen
+              name="calculator/index"
+              options={{ animation: 'slide_from_right' }}
+            />
           </Stack>
         </SafeAreaProvider>
       </GestureHandlerRootView>

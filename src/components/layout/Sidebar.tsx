@@ -9,21 +9,32 @@ export type SidebarProps = {
   onToggle: () => void;
 };
 
-// الترتيب: الرئيسية → السوق → الأسهم → المحفظة → التحليل الذكي → التوقعات → الأهداف → اكتشف → الحاسبة → الملف الشخصي → الإعدادات
-const NAV_ITEMS = [
-  { id: 'dashboard', path: '/', icon: LayoutDashboard },
-  { id: 'market', path: '/market', icon: BarChart3 },
-  { id: 'stocks', path: '/stocks', icon: Search },
-  { id: 'portfolio', path: '/portfolio', icon: PieChart },
-  { id: 'ai', path: '/ai', icon: Brain },
-  { id: 'predictions', path: '/predictions', icon: Crosshair },
-  { id: 'goals', path: '/goals', icon: Target },
-  { id: 'discover', path: '/discover', icon: Users },
-  { id: 'calculator', path: '/calculator', icon: Calculator },
-  { id: 'profile', path: '/profile', icon: UserIcon },
-  { id: 'settings', path: '/settings/account', icon: Settings },
-  { id: 'support', path: '/support', icon: LifeBuoy },
-] as const;
+type NavItem =
+  | { divider: true; key: string }
+  | { divider?: false; id: string; path: string; icon: React.ElementType };
+
+// UX order: daily use → research & analysis → planning → social & utility
+const NAV_ITEMS: NavItem[] = [
+  // --- الاستخدام اليومي ---
+  { id: 'dashboard',  path: '/',                 icon: LayoutDashboard },
+  { id: 'portfolio',  path: '/portfolio',         icon: PieChart        },
+  { id: 'market',     path: '/market',            icon: BarChart3       },
+  { divider: true, key: 'sep1' },
+  // --- بحث وتحليل ---
+  { id: 'stocks',      path: '/stocks',           icon: Search          },
+  { id: 'ai',          path: '/ai',               icon: Brain           },
+  { id: 'predictions', path: '/predictions',      icon: Crosshair       },
+  { divider: true, key: 'sep2' },
+  // --- تخطيط ---
+  { id: 'goals',      path: '/goals',             icon: Target          },
+  { id: 'calculator', path: '/calculator',        icon: Calculator      },
+  { divider: true, key: 'sep3' },
+  // --- اجتماعي وثانوي ---
+  { id: 'discover',   path: '/discover',          icon: Users           },
+  { id: 'profile',    path: '/profile',           icon: UserIcon        },
+  { id: 'settings',   path: '/settings/account',  icon: Settings        },
+  { id: 'support',    path: '/support',           icon: LifeBuoy        },
+];
 
 export function Sidebar({ activeRoute, collapsed, onToggle }: SidebarProps) {
   const { t } = useTranslation('common');
@@ -55,6 +66,16 @@ export function Sidebar({ activeRoute, collapsed, onToggle }: SidebarProps) {
 
       <nav className="flex-1 px-3 space-y-1">
         {NAV_ITEMS.map((item) => {
+          if (item.divider) {
+            return (
+              <div
+                key={item.key}
+                className={`my-2 transition-opacity duration-300 ${collapsed ? 'opacity-0' : 'opacity-100'}`}
+              >
+                <div className="h-px bg-[var(--border)] mx-1" />
+              </div>
+            );
+          }
           const isActive = item.path === '/' ? (activeRoute === '/' || activeRoute === '/dashboard') : (item.path === '/settings/account' ? activeRoute.startsWith('/settings') : (item.path === '/ai' ? activeRoute === '/ai' || activeRoute.startsWith('/ai/') : (item.path === '/predictions' ? activeRoute === '/predictions' : (activeRoute === item.path || activeRoute.startsWith(item.path + '/')))));
           const label = t(`nav.${item.id}`);
           return (
