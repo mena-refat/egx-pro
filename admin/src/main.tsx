@@ -20,7 +20,7 @@ function App() {
 
   if (!admin) {
     return (
-      <BrowserRouter>
+      <BrowserRouter basename="/admin">
         <Suspense fallback={<div />}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -32,7 +32,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/admin">
       <ErrorBoundary>
         <Suspense fallback={<div />}>
           <Routes>

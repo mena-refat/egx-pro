@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../lib/adminApi';
 import { useAdminStore } from '../store/adminAuthStore';
 
-export function LoginPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
