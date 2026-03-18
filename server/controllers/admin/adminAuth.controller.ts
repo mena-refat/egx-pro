@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import speakeasy from 'speakeasy';
 import { prisma } from '../../lib/prisma.ts';
 import { generateAdminToken } from '../../lib/adminAuth.ts';
 import { hashPassword, verifyPassword } from '../../../src/lib/auth.ts';
@@ -7,7 +8,11 @@ import { sendSuccess, sendError } from '../../lib/apiResponse.ts';
 
 export const AdminAuthController = {
   async login(req: Request, res: Response): Promise<void> {
-    const { email, password } = req.body as { email?: string; password?: string };
+    const { email, password, code } = req.body as {
+      email?: string;
+      password?: string;
+      code?: string;
+    };
     if (!email?.trim() || !password) {
       sendError(res, 'VALIDATION_ERROR', 400);
       return;
@@ -25,6 +30,23 @@ export const AdminAuthController = {
     if (!valid) {
       sendError(res, 'INVALID_CREDENTIALS', 401);
       return;
+    }
+
+    if (admin.twoFactorEnabled) {
+      if (!code) {
+        sendError(res, 'ADMIN_2FA_REQUIRED', 401);
+        return;
+      }
+      const ok = speakeasy.totp.verify({
+        secret: admin.twoFactorSecret ?? '',
+        encoding: 'base32',
+        token: code,
+        window: 1,
+      });
+      if (!ok) {
+        sendError(res, 'INVALID_CREDENTIALS', 401);
+        return;
+      }
     }
 
     await prisma.admin.update({
@@ -65,11 +87,174 @@ export const AdminAuthController = {
         fullName: true,
         role: true,
         permissions: true,
+        twoFactorEnabled: true,
         lastLoginAt: true,
         createdAt: true,
       },
     });
     sendSuccess(res, admin);
+  },
+
+  async changePassword(req: AdminRequest, res: Response): Promise<void> {
+    if (!req.admin) {
+      sendError(res, 'ADMIN_UNAUTHORIZED', 401);
+      return;
+    }
+    const { currentPassword, newPassword } = req.body as {
+      currentPassword?: string;
+      newPassword?: string;
+    };
+    if (!currentPassword || !newPassword || newPassword.length < 12) {
+      sendError(res, 'VALIDATION_ERROR', 400);
+      return;
+    }
+
+    const existing = await prisma.admin.findUnique({
+      where: { id: req.admin.id },
+    });
+    if (!existing) {
+      sendError(res, 'ADMIN_UNAUTHORIZED', 401);
+      return;
+    }
+    const valid = await verifyPassword(
+      currentPassword,
+      existing.passwordHash,
+      existing.salt,
+    );
+    if (!valid) {
+      sendError(res, 'INVALID_CREDENTIALS', 401);
+      return;
+    }
+
+    const { hash, salt } = await hashPassword(newPassword);
+    await prisma.admin.update({
+      where: { id: existing.id },
+      data: { passwordHash: hash, salt },
+    });
+
+    await adminAudit(existing.id, 'ADMIN_PASSWORD_CHANGED', existing.id, undefined, req);
+    sendSuccess(res, { success: true });
+  },
+
+  async updateProfile(req: AdminRequest, res: Response): Promise<void> {
+    if (!req.admin) {
+      sendError(res, 'ADMIN_UNAUTHORIZED', 401);
+      return;
+    }
+    const { fullName, email } = req.body as {
+      fullName?: string;
+      email?: string;
+    };
+    if (!fullName?.trim() && !email?.trim()) {
+      sendError(res, 'VALIDATION_ERROR', 400);
+      return;
+    }
+    const data: Record<string, unknown> = {};
+    const canEditName = req.admin.role === 'SUPER_ADMIN';
+    if (fullName?.trim() && canEditName) {
+      data.fullName = fullName.trim();
+    }
+    if (email?.trim()) data.email = email.toLowerCase().trim();
+
+    if (Object.keys(data).length === 0) {
+      sendError(res, 'VALIDATION_ERROR', 400);
+      return;
+    }
+
+    const updated = await prisma.admin.update({
+      where: { id: req.admin.id },
+      data,
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        permissions: true,
+        twoFactorEnabled: true,
+      },
+    });
+
+    await adminAudit(
+      req.admin.id,
+      'ADMIN_PROFILE_UPDATED',
+      req.admin.id,
+      JSON.stringify(data),
+      req,
+    );
+    sendSuccess(res, updated);
+  },
+
+  async twoFaSetup(req: AdminRequest, res: Response): Promise<void> {
+    if (!req.admin) {
+      sendError(res, 'ADMIN_UNAUTHORIZED', 401);
+      return;
+    }
+    const secret = speakeasy.generateSecret({
+      length: 20,
+      name: `Borsa Admin (${req.admin.email})`,
+    });
+    sendSuccess(res, {
+      secret: secret.base32,
+      otpauthUrl: secret.otpauth_url,
+    });
+  },
+
+  async twoFaEnable(req: AdminRequest, res: Response): Promise<void> {
+    if (!req.admin) {
+      sendError(res, 'ADMIN_UNAUTHORIZED', 401);
+      return;
+    }
+    const { secret, code } = req.body as { secret?: string; code?: string };
+    if (!secret || !code) {
+      sendError(res, 'VALIDATION_ERROR', 400);
+      return;
+    }
+    const ok = speakeasy.totp.verify({
+      secret,
+      encoding: 'base32',
+      token: code,
+      window: 1,
+    });
+    if (!ok) {
+      sendError(res, 'INVALID_CREDENTIALS', 400);
+      return;
+    }
+    await prisma.admin.update({
+      where: { id: req.admin.id },
+      data: { twoFactorEnabled: true, twoFactorSecret: secret },
+    });
+    await adminAudit(req.admin.id, 'ADMIN_2FA_ENABLED', req.admin.id, undefined, req);
+    sendSuccess(res, { success: true });
+  },
+
+  async twoFaDisable(req: AdminRequest, res: Response): Promise<void> {
+    if (!req.admin) {
+      sendError(res, 'ADMIN_UNAUTHORIZED', 401);
+      return;
+    }
+    const { password } = req.body as { password?: string };
+    if (!password) {
+      sendError(res, 'VALIDATION_ERROR', 400);
+      return;
+    }
+    const existing = await prisma.admin.findUnique({
+      where: { id: req.admin.id },
+    });
+    if (!existing) {
+      sendError(res, 'ADMIN_UNAUTHORIZED', 401);
+      return;
+    }
+    const valid = await verifyPassword(password, existing.passwordHash, existing.salt);
+    if (!valid) {
+      sendError(res, 'INVALID_CREDENTIALS', 401);
+      return;
+    }
+    await prisma.admin.update({
+      where: { id: existing.id },
+      data: { twoFactorEnabled: false, twoFactorSecret: null },
+    });
+    await adminAudit(req.admin.id, 'ADMIN_2FA_DISABLED', req.admin.id, undefined, req);
+    sendSuccess(res, { success: true });
   },
 };
 

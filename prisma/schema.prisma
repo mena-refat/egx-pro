@@ -115,6 +115,8 @@ model Admin {
   role         AdminRole @default(ADMIN)
   isActive     Boolean   @default(true)
   permissions  String[]  @default([])
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
   lastLoginAt  DateTime?
   lastLoginIp  String?
   createdAt    DateTime  @default(now())

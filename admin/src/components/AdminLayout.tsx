@@ -24,6 +24,7 @@ const NAV = [
   { to: '/support', label: 'Support', icon: Headphones, permission: 'support.view' },
   { to: '/notifications', label: 'Broadcast', icon: Bell, permission: 'notifications.send' },
   { to: '/audit', label: 'Audit Log', icon: ScrollText, permission: 'audit.view' },
+  { to: '/account', label: 'Account & Security', icon: ShieldCheck, permission: null },
 ];
 
 export function AdminLayout() {
@@ -130,8 +131,18 @@ export function AdminLayout() {
               {admin?.fullName?.[0]?.toUpperCase() ?? 'A'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-slate-200 truncate">{admin?.fullName}</p>
-              <p className="text-[10px] text-slate-500 truncate">{admin?.email}</p>
+              <button
+                type="button"
+                onClick={() => nav('/account')}
+                className="text-start"
+              >
+                <p className="text-xs font-medium text-slate-200 truncate">
+                  {admin?.fullName}
+                </p>
+                <p className="text-[10px] text-slate-500 truncate">
+                  {admin?.email}
+                </p>
+              </button>
             </div>
             <button
               onClick={handleLogout}

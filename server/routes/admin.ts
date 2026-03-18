@@ -18,6 +18,26 @@ router.get('/auth/me', adminAuthenticate, (req, res, next) => {
   void AdminAuthController.me(req as any, res).catch(next);
 });
 
+router.post('/auth/change-password', adminAuthenticate, (req, res, next) => {
+  void AdminAuthController.changePassword(req as any, res).catch(next);
+});
+
+router.patch('/auth/profile', adminAuthenticate, (req, res, next) => {
+  void AdminAuthController.updateProfile(req as any, res).catch(next);
+});
+
+router.post('/auth/2fa/setup', adminAuthenticate, (req, res, next) => {
+  void AdminAuthController.twoFaSetup(req as any, res).catch(next);
+});
+
+router.post('/auth/2fa/enable', adminAuthenticate, (req, res, next) => {
+  void AdminAuthController.twoFaEnable(req as any, res).catch(next);
+});
+
+router.post('/auth/2fa/disable', adminAuthenticate, (req, res, next) => {
+  void AdminAuthController.twoFaDisable(req as any, res).catch(next);
+});
+
 router.get(
   '/users',
   adminAuthenticate,
