@@ -46,6 +46,13 @@ export function PortfolioHero({
     ? 'text-red-400'
     : 'text-slate-400';
 
+  // keep icon colors aligned with the same semantic palette as gainColor
+  const gainColorHex = isProfit
+    ? '#34d399' // emerald-400
+    : isLoss
+    ? '#f87171' // red-400
+    : '#94a3b8'; // slate-400
+
   return (
     <View className="bg-[#111118] border border-white/[0.07] rounded-2xl p-5 gap-4">
       <Text className="text-xs text-slate-500 uppercase tracking-wider">
@@ -61,9 +68,9 @@ export function PortfolioHero({
 
       <View className="flex-row items-center gap-2">
         {isProfit ? (
-          <TrendingUp size={14} color="#10b981" />
+          <TrendingUp size={14} color={gainColorHex} />
         ) : isLoss ? (
-          <TrendingDown size={14} color="#ef4444" />
+          <TrendingDown size={14} color={gainColorHex} />
         ) : null}
         <Text className={`text-sm font-semibold ${gainColor}`}>
           {isProfit ? '+' : ''}
