@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { useAdminStore } from './store/adminAuthStore';
 import { AdminLayout } from './components/AdminLayout';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import './index.css';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));

@@ -1,13 +1,35 @@
-interface StatsCardProps {
+import type { LucideIcon } from 'lucide-react';
+
+interface Props {
   label: string;
   value: string | number;
+  sub?: string;
+  icon?: LucideIcon;
+  accent?: 'emerald' | 'blue' | 'amber' | 'rose';
 }
 
-export function StatsCard({ label, value }: StatsCardProps) {
+const accents = {
+  emerald: 'text-emerald-400 bg-emerald-400/10',
+  blue: 'text-blue-400 bg-blue-400/10',
+  amber: 'text-amber-400 bg-amber-400/10',
+  rose: 'text-rose-400 bg-rose-400/10',
+};
+
+export function StatsCard({ label, value, sub, icon: Icon, accent = 'emerald' }: Props) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <div className="text-xs text-slate-400">{label}</div>
-      <div className="text-2xl font-semibold">{value}</div>
+    <div className="rounded-xl border border-white/10/70 bg-[#111118] p-5 flex flex-col gap-3 hover:border-white/10/90 transition-colors">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">{label}</p>
+        {Icon && (
+          <span className={`p-1.5 rounded-md text-xs ${accents[accent]}`}>
+            <Icon size={14} />
+          </span>
+        )}
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-white tabular-nums">{Number(value).toLocaleString()}</p>
+        {sub && <p className="text-xs text-slate-500 mt-1">{sub}</p>}
+      </div>
     </div>
   );
 }
