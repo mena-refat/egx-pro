@@ -3,9 +3,9 @@ import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
-import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import { I18nextProvider } from 'react-i18next';
+import Constants from 'expo-constants';
 import i18n from '../i18n';
 import { useAuthStore } from '../store/authStore';
 import { registerPushToken } from '../lib/notifications';
@@ -13,13 +13,19 @@ import { useColorScheme, I18nManager } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Push notifications are not supported in Expo Go SDK 53+
+const isExpoGo = Constants.appOwnership === 'expo';
+
+if (!isExpoGo) {
+  const Notifications = require('expo-notifications');
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 export default function RootLayout() {
   const { checkAuth, isLoading, isAuthenticated } = useAuthStore();
@@ -43,7 +49,7 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isExpoGo) {
       void registerPushToken();
     }
   }, [isAuthenticated]);

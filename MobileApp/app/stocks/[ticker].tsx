@@ -5,10 +5,13 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
+  I18nManager,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft,
+  ArrowRight,
+  ChevronLeft,
   Eye,
   EyeOff,
   Brain,
@@ -105,7 +108,9 @@ export default function StockDetailPage() {
           onPress={() => router.back()}
           className="w-9 h-9 rounded-xl bg-white/[0.06] items-center justify-center"
         >
-          <ArrowLeft size={16} color="#94a3b8" />
+          {I18nManager.isRTL
+            ? <ArrowRight size={16} color="#94a3b8" />
+            : <ArrowLeft size={16} color="#94a3b8" />}
         </Pressable>
 
         <View className="flex-1 items-center">
@@ -205,7 +210,7 @@ export default function StockDetailPage() {
               احصل على تحليل شامل بالذكاء الاصطناعي
             </Text>
           </View>
-          <Text className="text-brand text-lg">←</Text>
+          <ChevronLeft size={18} color="#10b981" />
         </Pressable>
       </ScrollView>
     </ScreenWrapper>

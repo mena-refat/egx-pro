@@ -1,5 +1,6 @@
 import { Tabs, Redirect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 import { LayoutDashboard, TrendingUp, Briefcase, Bot, User } from 'lucide-react-native';
 
@@ -22,6 +23,7 @@ const TAB_LABELS = {
 export default function TabsLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { i18n } = useTranslation();
+  const insets = useSafeAreaInsets();
   const lang = i18n.language?.startsWith('ar') ? 'ar' : 'en';
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
 
@@ -35,8 +37,8 @@ export default function TabsLayout() {
           backgroundColor: '#0d0d14',
           borderTopColor: 'rgba(255,255,255,0.06)',
           borderTopWidth: 0.5,
-          height: 60,
-          paddingBottom: 8,
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom || 8,
         },
         tabBarIcon: ({ color, size }) => {
           const Icon = TAB_ICONS[route.name as keyof typeof TAB_ICONS];

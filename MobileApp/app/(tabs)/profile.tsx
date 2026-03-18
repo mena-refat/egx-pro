@@ -1,4 +1,5 @@
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, Pressable, ScrollView, I18nManager } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   User,
@@ -6,6 +7,7 @@ import {
   CreditCard,
   LogOut,
   ChevronRight,
+  ChevronLeft,
   Shield,
   Bell,
   Target,
@@ -45,7 +47,9 @@ function MenuItem({
       >
         {label}
       </Text>
-      {!danger && <ChevronRight size={14} color="#475569" />}
+      {!danger && (I18nManager.isRTL
+        ? <ChevronLeft size={14} color="#475569" />
+        : <ChevronRight size={14} color="#475569" />)}
     </Pressable>
   );
 }
@@ -115,12 +119,12 @@ export default function ProfilePage() {
           <MenuItem
             icon={Target}
             label="التوقعات"
-            onPress={() => router.push('/predictions/index')}
+            onPress={() => router.push('/predictions')}
           />
           <MenuItem
             icon={Compass}
             label="الأهداف المالية"
-            onPress={() => router.push('/goals/index')}
+            onPress={() => router.push('/goals')}
           />
         </View>
 
