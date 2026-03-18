@@ -4,7 +4,7 @@ import { adminApi } from '../lib/adminApi';
 import { useAdminStore } from '../store/adminAuthStore';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 
 const PERMS = [
   'users.view',
@@ -145,6 +145,15 @@ export default function AdminsPage() {
     }));
   };
 
+  const handleToggleActive = async (id: string, currentlyActive: boolean) => {
+    try {
+      await adminApi.patch(`/admins/${id}/permissions`, { isActive: !currentlyActive });
+      setAdmins((prev) => prev.map((a) => a.id === id ? { ...a, isActive: !currentlyActive } : a));
+    } catch {
+      // silently ignore
+    }
+  };
+
   const handleDelete = async () => {
     if (!delId) return;
     if (!delPassword) { setDelPasswordError(t('admins.confirmPasswordRequired')); return; }
@@ -194,17 +203,36 @@ export default function AdminsPage() {
                 <td className="px-3 py-2 text-slate-200">{a.email}</td>
                 <td className="px-3 py-2 text-slate-300">{a.fullName}</td>
                 <td className="px-3 py-2"><Badge label={a.role ?? 'ADMIN'} /></td>
-                <td className="px-3 py-2 text-slate-300">
-                  {a.isActive ? t('common.yes') : t('common.no')}
+                <td className="px-3 py-2">
+                  <span className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded ${
+                    a.isActive
+                      ? 'bg-emerald-500/10 text-emerald-400'
+                      : 'bg-slate-500/10 text-slate-500'
+                  }`}>
+                    {a.isActive ? t('common.yes') : t('common.no')}
+                  </span>
                 </td>
                 <td className="px-3 py-2">
                   {a.id !== currentAdmin?.id && (
-                    <button
-                      onClick={() => setDelId(a.id)}
-                      className="text-slate-600 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => void handleToggleActive(a.id, a.isActive)}
+                        title={a.isActive ? t('admins.deactivate') : t('admins.activate')}
+                        className={`transition-colors ${
+                          a.isActive
+                            ? 'text-emerald-500/60 hover:text-amber-400'
+                            : 'text-slate-600 hover:text-emerald-400'
+                        }`}
+                      >
+                        {a.isActive ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                      </button>
+                      <button
+                        onClick={() => setDelId(a.id)}
+                        className="text-slate-600 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>

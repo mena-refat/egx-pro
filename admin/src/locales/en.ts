@@ -289,6 +289,8 @@ export const en = {
     confirmYourPasswordHint: 'Enter your current password to continue.',
     confirmPasswordRequired: 'Password is required.',
     confirmPasswordWrong: 'Incorrect password.',
+    activate: 'Activate account',
+    deactivate: 'Deactivate account',
   },
 
   audit: {

@@ -289,6 +289,8 @@ export const ar = {
     confirmYourPasswordHint: 'أدخل كلمة مرورك الحالية للمتابعة.',
     confirmPasswordRequired: 'كلمة المرور مطلوبة.',
     confirmPasswordWrong: 'كلمة المرور غير صحيحة.',
+    activate: 'تفعيل الحساب',
+    deactivate: 'تعطيل الحساب',
   },
 
   audit: {
