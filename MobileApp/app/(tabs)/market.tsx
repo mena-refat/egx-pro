@@ -27,8 +27,10 @@ export default function MarketPage() {
   const [search, setSearch] = useState('');
   const { overview, stocks, loadingStocks, loadingOverview, refreshing, refresh } =
     useMarketData();
-  const allTickers = useMemo(() => stocks.map((s) => s.ticker), [stocks]);
-  const { prices } = useLivePrices(allTickers);
+
+  // سنحدد الـ tickers المرئية بعد الفلترة، ثم نمرر subset فقط لـ useLivePrices
+  const [visibleTickers, setVisibleTickers] = useState<string[]>([]);
+  const { prices } = useLivePrices(visibleTickers);
 
   const enriched = useMemo(
     () =>
@@ -64,7 +66,10 @@ export default function MarketPage() {
         .filter((s) => s.changePercent < 0)
         .sort((a, b) => a.changePercent - b.changePercent);
     }
-    return list.sort((a, b) => b.changePercent - a.changePercent);
+    list = list.sort((a, b) => b.changePercent - a.changePercent);
+    // حدّث قائمة الـ tickers المرئية (مثلاً أول 30 فقط) لتقليل اشتراكات WebSocket
+    setVisibleTickers(list.slice(0, 30).map((s) => s.ticker));
+    return list;
   }, [enriched, tab, search]);
 
   const renderStock = useCallback(

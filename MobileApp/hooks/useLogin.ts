@@ -55,16 +55,28 @@ export function useLogin() {
     const credsRaw = await SecureStore.getItemAsync(BIOMETRIC_CREDS_KEY);
     if (!credsRaw) return;
 
-    const creds = JSON.parse(credsRaw) as { emailOrPhone: string; password: string };
+    const creds = JSON.parse(credsRaw) as { emailOrPhone: string; refreshToken?: string };
     form.setValue('emailOrPhone', creds.emailOrPhone);
-    form.setValue('password', creds.password);
-    await handleLogin(creds);
+    // نعتمد على refreshToken لتجديد الجلسة عبر backend
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiClient.post(ENDPOINTS.auth.refresh, {});
+      const body = res.data as { user: MobileUser; accessToken: string; refreshToken?: string };
+      await setAuth(body.user, body.accessToken, body.refreshToken);
+      router.replace('/');
+    } catch {
+      setError('فشل تسجيل الدخول بالبصمة، حاول إدخال كلمة المرور');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const saveBiometricCreds = async (emailOrPhone: string, password: string) => {
+  const saveBiometricCreds = async (emailOrPhone: string, refreshToken?: string) => {
+    if (!refreshToken) return;
     await SecureStore.setItemAsync(
       BIOMETRIC_CREDS_KEY,
-      JSON.stringify({ emailOrPhone, password }),
+      JSON.stringify({ emailOrPhone, refreshToken }),
       { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY },
     );
   };
@@ -106,7 +118,7 @@ export function useLogin() {
 
       if (body.user && body.accessToken) {
         await setAuth(body.user, body.accessToken, body.refreshToken);
-        await saveBiometricCreds(identifier, data.password);
+        await saveBiometricCreds(identifier, body.refreshToken);
         router.replace('/');
       }
     } catch (err: unknown) {

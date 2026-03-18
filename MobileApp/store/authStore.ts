@@ -80,7 +80,24 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'borsa-mobile-auth',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({
+        isAuthenticated: state.isAuthenticated,
+        user: state.user
+          ? {
+              id: state.user.id,
+              fullName: state.user.fullName,
+              username: state.user.username,
+              avatarUrl: state.user.avatarUrl,
+              plan: state.user.plan,
+              planExpiresAt: state.user.planExpiresAt,
+              language: state.user.language,
+              theme: state.user.theme,
+              shariaMode: state.user.shariaMode,
+              onboardingCompleted: state.user.onboardingCompleted,
+              isFirstLogin: state.user.isFirstLogin,
+            }
+          : null,
+      }),
     },
   ),
 );

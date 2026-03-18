@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { CartesianChart, Line } from 'victory-native';
 import apiClient from '../../../lib/api/client';
@@ -27,17 +27,35 @@ export function StockChart({ ticker, lineColor = '#10b981' }: Props) {
   const [range, setRange] = useState<Range>('1mo');
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
+
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    [],
+  );
 
   useEffect(() => {
+    const ctrl = new AbortController();
     setLoading(true);
     apiClient
-      .get<DataPoint[]>(`/api/stocks/${ticker}/history?range=${range}`)
-      .then((res) => {
-        const raw = (res.data as { data?: DataPoint[] })?.data ?? res.data;
-        setData(Array.isArray(raw) ? raw : []);
+      .get<DataPoint[]>(`/api/stocks/${ticker}/history?range=${range}`, {
+        signal: ctrl.signal,
       })
-      .catch(() => setData([]))
-      .finally(() => setLoading(false));
+      .then((res) => {
+        if (!ctrl.signal.aborted && mountedRef.current) {
+          const raw = (res.data as { data?: DataPoint[] })?.data ?? res.data;
+          setData(Array.isArray(raw) ? raw : []);
+        }
+      })
+      .catch(() => {
+        if (!ctrl.signal.aborted && mountedRef.current) setData([]);
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted && mountedRef.current) setLoading(false);
+      });
+    return () => ctrl.abort();
   }, [ticker, range]);
 
   const chartData = data.map((d, i) => ({

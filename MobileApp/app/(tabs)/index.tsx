@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -22,24 +22,45 @@ import type { Stock } from '../../types/stock';
 function useWatchlist() {
   const [items, setItems] = useState<Stock[]>([]);
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
 
-  const fetch = useCallback(async () => {
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    [],
+  );
+
+  const fetch = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await apiClient.get('/api/watchlist');
+      const res = await apiClient.get('/api/watchlist', { signal });
       const raw = (res.data as { items?: Stock[] })?.items ?? res.data;
-      setItems(Array.isArray(raw) ? raw : []);
+      if (!signal?.aborted && mountedRef.current) {
+        setItems(Array.isArray(raw) ? raw : []);
+      }
     } catch {
-      setItems([]);
+      if (!signal?.aborted && mountedRef.current) {
+        setItems([]);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted && mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    void fetch();
+    const ctrl = new AbortController();
+    void fetch(ctrl.signal);
+    return () => ctrl.abort();
   }, [fetch]);
 
-  return { items, loading, refetch: fetch };
+  const refetch = useCallback(() => {
+    const ctrl = new AbortController();
+    void fetch(ctrl.signal);
+  }, [fetch]);
+
+  return { items, loading, refetch };
 }
 
 export default function DashboardPage() {
