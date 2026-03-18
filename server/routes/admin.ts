@@ -153,6 +153,42 @@ router.get(
   }
 );
 
+router.get(
+  '/analytics/revenue',
+  adminAuthenticate,
+  requirePermission('analytics.view'),
+  (req, res, next) => {
+    void AdminAnalyticsController.revenueOverview(req as any, res).catch(next);
+  }
+);
+
+router.get(
+  '/analytics/revenue/chart',
+  adminAuthenticate,
+  requirePermission('analytics.view'),
+  (req, res, next) => {
+    void AdminAnalyticsController.revenueChart(req as any, res).catch(next);
+  }
+);
+
+router.get(
+  '/analytics/revenue/subscribers',
+  adminAuthenticate,
+  requirePermission('analytics.view'),
+  (req, res, next) => {
+    void AdminAnalyticsController.paidUsersList(req as any, res).catch(next);
+  }
+);
+
+router.get(
+  '/analytics/health',
+  adminAuthenticate,
+  requirePermission('analytics.view'),
+  (req, res, next) => {
+    void AdminAnalyticsController.platformHealth(req as any, res).catch(next);
+  }
+);
+
 router.get('/admins', adminAuthenticate, (req, res, next) => {
   void AdminAdminsController.list(req as any, res).catch(next);
 });

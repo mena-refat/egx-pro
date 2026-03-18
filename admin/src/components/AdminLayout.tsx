@@ -1,18 +1,29 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAdminStore } from '../store/adminAuthStore';
 import { PermissionGuard } from './PermissionGuard';
+import { adminApi } from '../lib/adminApi';
 import {
-  LayoutDashboard, Users, Tag, Headphones,
-  Bell, ScrollText, ShieldCheck, LogOut, ChevronRight
+  LayoutDashboard,
+  Users,
+  Tag,
+  Headphones,
+  Bell,
+  ScrollText,
+  ShieldCheck,
+  LogOut,
+  ChevronRight,
+  DollarSign,
 } from 'lucide-react';
 
 const NAV = [
-  { to: '/',             label: 'Dashboard',    icon: LayoutDashboard, permission: null,                end: true  },
-  { to: '/users',        label: 'Users',        icon: Users,           permission: 'users.view'               },
-  { to: '/discounts',    label: 'Discounts',    icon: Tag,             permission: 'discounts.view'           },
-  { to: '/support',      label: 'Support',      icon: Headphones,      permission: 'support.view'             },
-  { to: '/notifications',label: 'Broadcast',    icon: Bell,            permission: 'notifications.send'       },
-  { to: '/audit',        label: 'Audit Log',    icon: ScrollText,      permission: 'audit.view'               },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, permission: null, end: true },
+  { to: '/users', label: 'Users', icon: Users, permission: 'users.view' },
+  { to: '/revenue', label: 'Revenue', icon: DollarSign, permission: 'analytics.view' },
+  { to: '/discounts', label: 'Discounts', icon: Tag, permission: 'discounts.view' },
+  { to: '/support', label: 'Support', icon: Headphones, permission: 'support.view' },
+  { to: '/notifications', label: 'Broadcast', icon: Bell, permission: 'notifications.send' },
+  { to: '/audit', label: 'Audit Log', icon: ScrollText, permission: 'audit.view' },
 ];
 
 export function AdminLayout() {
@@ -20,6 +31,14 @@ export function AdminLayout() {
   const logout  = useAdminStore((s) => s.logout);
   const hasP    = useAdminStore((s) => s.hasPermission);
   const nav     = useNavigate();
+  const [openTickets, setOpenTickets] = useState(0);
+
+  useEffect(() => {
+    adminApi
+      .get('/support/stats')
+      .then((r) => setOpenTickets(r.data.data?.open ?? 0))
+      .catch(() => setOpenTickets(0));
+  }, []);
 
   const handleLogout = () => { logout(); nav('/login'); };
 
@@ -59,9 +78,23 @@ export function AdminLayout() {
               >
                 {({ isActive }) => (
                   <>
-                    <item.icon size={15} className={isActive ? 'text-emerald-400' : 'text-slate-500 group-hover:text-slate-300'} />
+                    <item.icon
+                      size={15}
+                      className={
+                        isActive
+                          ? 'text-emerald-400'
+                          : 'text-slate-500 group-hover:text-slate-300'
+                      }
+                    />
                     <span className="flex-1">{item.label}</span>
-                    {isActive && <ChevronRight size={12} className="text-emerald-500/60" />}
+                    {item.to === '/support' && openTickets > 0 && (
+                      <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full">
+                        {openTickets}
+                      </span>
+                    )}
+                    {isActive && (
+                      <ChevronRight size={12} className="text-emerald-500/60" />
+                    )}
                   </>
                 )}
               </NavLink>

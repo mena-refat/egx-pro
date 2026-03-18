@@ -12,6 +12,7 @@ export default function AdminsPage() {
     fullName: '',
     password: '',
     permissions: [] as string[],
+    isSuperAdmin: false,
   });
 
   useEffect(() => {
@@ -34,9 +35,21 @@ export default function AdminsPage() {
     if (!form.email || !form.password) return;
     setSaving(true);
     try {
-      await adminApi.post('/admins', form);
+      await adminApi.post('/admins', {
+        email: form.email,
+        fullName: form.fullName,
+        password: form.password,
+        permissions: form.permissions,
+        role: form.isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN',
+      });
       setOpen(false);
-      setForm({ email: '', fullName: '', password: '', permissions: [] });
+      setForm({
+        email: '',
+        fullName: '',
+        password: '',
+        permissions: [],
+        isSuperAdmin: false,
+      });
       const res = await adminApi.get('/admins');
       setAdmins(res.data.data);
     } finally {
@@ -135,6 +148,22 @@ export default function AdminsPage() {
                 </label>
               ))}
             </div>
+          </div>
+          <div className="pt-1">
+            <label className="flex items-center gap-2 text-xs text-slate-300">
+              <input
+                type="checkbox"
+                checked={form.isSuperAdmin}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, isSuperAdmin: e.target.checked }))
+                }
+                className="w-3 h-3 rounded border border-white/[0.2] bg-transparent"
+              />
+              <span>Super Admin</span>
+            </label>
+            <p className="mt-1 text-[11px] text-slate-500">
+              Gives full access, same as your current account.
+            </p>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button

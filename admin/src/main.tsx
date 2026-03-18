@@ -15,6 +15,7 @@ const SupportPage = lazy(() => import('./pages/SupportPage'));
 const AdminsPage = lazy(() => import('./pages/AdminsPage'));
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const RevenuePage = lazy(() => import('./pages/RevenuePage'));
 
 function App() {
   const admin = useAdminStore((s) => s.admin);
@@ -41,6 +42,7 @@ function App() {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/users/:id" element={<UserDetailPage />} />
+              <Route path="/revenue" element={<RevenuePage />} />
               <Route path="/discounts" element={<DiscountsPage />} />
               <Route path="/support" element={<SupportPage />} />
               {admin.role === 'SUPER_ADMIN' && (

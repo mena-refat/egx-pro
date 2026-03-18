@@ -31,11 +31,12 @@ export const AdminAdminsController = {
       sendError(res, 'ADMIN_FORBIDDEN', 403);
       return;
     }
-    const { email, password, fullName, permissions = [] } = req.body as {
+    const { email, password, fullName, permissions = [], role } = req.body as {
       email?: string;
       password?: string;
       fullName?: string;
       permissions?: string[];
+      role?: 'SUPER_ADMIN' | 'ADMIN';
     };
     if (!email?.trim() || !password || !fullName?.trim()) {
       sendError(res, 'VALIDATION_ERROR', 400);
@@ -63,6 +64,7 @@ export const AdminAdminsController = {
         fullName,
         permissions,
         createdBy: req.admin?.id ?? null,
+        role: role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'ADMIN',
       },
     });
 

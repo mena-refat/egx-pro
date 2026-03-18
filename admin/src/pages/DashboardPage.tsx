@@ -1,5 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Users, TrendingUp, Brain, Target, UserPlus, Activity } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import {
+  Users,
+  TrendingUp,
+  Brain,
+  Target,
+  UserPlus,
+  Activity,
+  Tag,
+  Bell,
+  DollarSign,
+  Headphones,
+} from 'lucide-react';
 import { StatsCard } from '../components/StatsCard';
 import { adminApi } from '../lib/adminApi';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -9,6 +21,16 @@ type Overview = {
   users: { total: number; newToday: number; newThisMonth: number; activePaid: number; byPlan: { plan: string; _count: { plan: number } }[] };
   analyses: { total: number; thisMonth: number };
   predictions: { total: number };
+};
+
+type Health = {
+  activeUsersToday: number;
+  activeUsers7d: number;
+  analysesToday: number;
+  predictionsToday: number;
+  openTickets: number;
+  expiringSoon: number;
+  churnRisk: number;
 };
 
 // Custom tooltip for chart
@@ -24,11 +46,22 @@ const ChartTooltip = ({ active, payload, label }: any) => {
 
 export default function DashboardPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
-  const [growth, setGrowth]     = useState<{ date: string; count: number }[]>([]);
+  const [growth, setGrowth] = useState<{ date: string; count: number }[]>([]);
+  const [health, setHealth] = useState<Health | null>(null);
 
   useEffect(() => {
-    adminApi.get('/analytics/overview').then((r) => setOverview(r.data.data)).catch(() => null);
-    adminApi.get('/analytics/growth').then((r) => setGrowth(r.data.data)).catch(() => null);
+    adminApi
+      .get('/analytics/overview')
+      .then((r) => setOverview(r.data.data))
+      .catch(() => null);
+    adminApi
+      .get('/analytics/growth')
+      .then((r) => setGrowth(r.data.data))
+      .catch(() => null);
+    adminApi
+      .get('/analytics/health')
+      .then((r) => setHealth(r.data.data))
+      .catch(() => null);
   }, []);
 
   return (
@@ -78,25 +111,130 @@ export default function DashboardPage() {
         </div>
 
         {/* Plan breakdown */}
-        <div className="rounded-xl border border-white/[0.07] bg-[#111118] p-5">
-          <div className="flex items-center gap-2 mb-5">
-            <Target size={14} className="text-emerald-400" />
-            <h2 className="text-sm font-semibold text-white">By Plan</h2>
+        <div className="space-y-4">
+          <div className="rounded-xl border border-white/[0.07] bg-[#111118] p-5">
+            <div className="flex items-center gap-2 mb-5">
+              <Target size={14} className="text-emerald-400" />
+              <h2 className="text-sm font-semibold text-white">By Plan</h2>
+            </div>
+            <div className="space-y-2.5">
+              {(overview?.users.byPlan ?? []).map((p) => (
+                <div key={p.plan} className="flex items-center justify-between">
+                  <Badge label={p.plan} />
+                  <span className="text-sm font-semibold text-white tabular-nums">
+                    {p._count.plan.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+              {!overview && (
+                <div className="text-slate-600 text-sm text-center py-4">
+                  Loading...
+                </div>
+              )}
+            </div>
           </div>
-          <div className="space-y-2.5">
-            {(overview?.users.byPlan ?? []).map((p) => (
-              <div key={p.plan} className="flex items-center justify-between">
-                <Badge label={p.plan} />
-                <span className="text-sm font-semibold text-white tabular-nums">
-                  {p._count.plan.toLocaleString()}
-                </span>
+
+          {health && (
+            <div className="rounded-xl border border-white/[0.07] bg-[#111118] p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Activity size={14} className="text-emerald-400" />
+                <h2 className="text-sm font-semibold text-white">Platform Health</h2>
               </div>
-            ))}
-            {!overview && (
-              <div className="text-slate-600 text-sm text-center py-4">Loading...</div>
-            )}
-          </div>
+              <div className="space-y-2.5 text-sm">
+                {[
+                  {
+                    label: 'Active today',
+                    value: health.activeUsersToday,
+                    color: 'text-emerald-400',
+                  },
+                  {
+                    label: 'Active (7 days)',
+                    value: health.activeUsers7d,
+                    color: 'text-blue-400',
+                  },
+                  {
+                    label: 'AI analyses today',
+                    value: health.analysesToday,
+                    color: 'text-purple-400',
+                  },
+                  {
+                    label: 'Predictions today',
+                    value: health.predictionsToday,
+                    color: 'text-amber-400',
+                  },
+                  {
+                    label: 'Open tickets ⚠',
+                    value: health.openTickets,
+                    color:
+                      health.openTickets > 5 ? 'text-red-400' : 'text-slate-300',
+                  },
+                  {
+                    label: 'Expiring (7 days) ⚠',
+                    value: health.expiringSoon,
+                    color:
+                      health.expiringSoon > 0 ? 'text-amber-400' : 'text-slate-300',
+                  },
+                  {
+                    label: 'Churn risk',
+                    value: health.churnRisk,
+                    color:
+                      health.churnRisk > 10 ? 'text-red-400' : 'text-slate-400',
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="text-xs text-slate-500">{item.label}</span>
+                    <span
+                      className={`font-semibold tabular-nums ${item.color}`}
+                    >
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          {
+            label: 'New Discount',
+            icon: Tag,
+            to: '/discounts',
+            color: 'hover:border-emerald-500/40',
+          },
+          {
+            label: 'Broadcast Message',
+            icon: Bell,
+            to: '/notifications',
+            color: 'hover:border-blue-500/40',
+          },
+          {
+            label: 'View Subscribers',
+            icon: DollarSign,
+            to: '/revenue',
+            color: 'hover:border-amber-500/40',
+          },
+          {
+            label: 'Open Tickets',
+            icon: Headphones,
+            to: '/support',
+            color: 'hover:border-rose-500/40',
+          },
+        ].map((a) => (
+          <Link
+            key={a.to}
+            to={a.to}
+            className={`flex flex-col items-center gap-2 p-4 rounded-xl border border-white/[0.07] bg-[#111118] ${a.color} transition-all hover:bg-white/[0.03] text-center`}
+          >
+            <a.icon size={18} className="text-slate-400" />
+            <span className="text-xs text-slate-400 font-medium">{a.label}</span>
+          </Link>
+        ))}
       </div>
     </div>
   );

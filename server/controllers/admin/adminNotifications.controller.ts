@@ -6,10 +6,11 @@ import { createNotification } from '../../lib/createNotification.ts';
 
 export const AdminNotificationsController = {
   async broadcast(req: AdminRequest, res: Response): Promise<void> {
-    const { title, body, plan } = req.body as {
+    const { title, body, plan, plans } = req.body as {
       title?: string;
       body?: string;
       plan?: string;
+      plans?: string[];
     };
     if (!title?.trim() || !body?.trim()) {
       sendError(res, 'VALIDATION_ERROR', 400);
@@ -17,8 +18,16 @@ export const AdminNotificationsController = {
     }
 
     const where: Record<string, unknown> = { isDeleted: false };
-    if (plan) {
-      where.plan = plan;
+
+    const selectedPlans =
+      Array.isArray(plans) && plans.length > 0
+        ? plans
+        : plan
+        ? [plan]
+        : [];
+
+    if (selectedPlans.length > 0) {
+      where.plan = { in: selectedPlans };
     }
 
     const users = await prisma.user.findMany({
@@ -39,8 +48,13 @@ export const AdminNotificationsController = {
         req.admin.id,
         'NOTIFICATIONS_BROADCAST',
         undefined,
-        JSON.stringify({ title, plan, count: users.length }),
-        req
+        JSON.stringify({
+          title,
+          plan,
+          plans: selectedPlans,
+          count: users.length,
+        }),
+        req,
       );
     }
 

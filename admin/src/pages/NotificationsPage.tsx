@@ -1,19 +1,35 @@
 import { FormEvent, useState } from 'react';
 import { adminApi } from '../lib/adminApi';
 
+const PLAN_OPTIONS = [
+  { id: 'free', label: 'Free' },
+  { id: 'pro', label: 'Pro (Monthly)' },
+  { id: 'ultra', label: 'Ultra (Monthly)' },
+];
+
 export default function NotificationsPage() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [plan, setPlan] = useState('');
+  const [plans, setPlans] = useState<string[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const togglePlan = (id: string) => {
+    setPlans((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
+    );
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setStatus(null);
     setLoading(true);
     try {
-      await adminApi.post('/notifications/broadcast', { title, body, plan: plan || undefined });
+      await adminApi.post('/notifications/broadcast', {
+        title,
+        body,
+        plans: plans.length ? plans : undefined,
+      });
       setStatus('sent');
     } catch (err: any) {
       setStatus(err?.response?.data?.error ?? 'ERROR');
@@ -30,7 +46,10 @@ export default function NotificationsPage() {
           {status === 'sent' ? 'Notification sent' : status}
         </div>
       )}
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-lg rounded-xl border border-white/[0.07] bg-[#111118] p-5">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4 max-w-lg rounded-xl border border-white/[0.07] bg-[#111118] p-5"
+      >
         <div className="space-y-1.5 text-sm">
           <label className="block text-slate-300">Title</label>
           <input
@@ -49,12 +68,25 @@ export default function NotificationsPage() {
         </div>
         <div className="space-y-1.5 text-sm">
           <label className="block text-slate-300">Plan filter (optional)</label>
-          <input
-            value={plan}
-            onChange={(e) => setPlan(e.target.value)}
-            placeholder="free, pro, ultra..."
-            className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20"
-          />
+          <div className="flex flex-col gap-2 rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2">
+            {PLAN_OPTIONS.map((p) => (
+              <label
+                key={p.id}
+                className="flex items-center gap-2 text-xs text-slate-300"
+              >
+                <input
+                  type="checkbox"
+                  checked={plans.includes(p.id)}
+                  onChange={() => togglePlan(p.id)}
+                  className="w-3 h-3 rounded border border-white/30 bg-transparent"
+                />
+                <span>{p.label}</span>
+              </label>
+            ))}
+            <p className="text-[11px] text-slate-500 mt-1">
+              Leave all unchecked to broadcast to all users.
+            </p>
+          </div>
         </div>
         <button
           type="submit"
