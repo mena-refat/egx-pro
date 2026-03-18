@@ -40,9 +40,11 @@ export function AdminLayout() {
               Broadcast
             </Link>
           </PermissionGuard>
-          <Link to="/admins" className="hover:text-emerald-300">
-            Admins
-          </Link>
+          {admin?.role === 'SUPER_ADMIN' && (
+            <Link to="/admins" className="hover:text-emerald-300">
+              Admins
+            </Link>
+          )}
           <PermissionGuard permission="audit.view">
             <Link to="/audit" className="hover:text-emerald-300">
               Audit Log

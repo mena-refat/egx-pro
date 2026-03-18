@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '../lib/adminApi';
+import { StatsCard } from '../components/StatsCard';
 
 type Overview = {
   users: { total: number; newToday: number; newThisMonth: number; activePaid: number };
@@ -22,18 +23,9 @@ export function DashboardPage() {
       <h1 className="text-xl font-semibold">Dashboard</h1>
       {data && (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <div className="text-xs text-slate-400">Total Users</div>
-            <div className="text-2xl font-semibold">{data.users.total}</div>
-          </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <div className="text-xs text-slate-400">New This Month</div>
-            <div className="text-2xl font-semibold">{data.users.newThisMonth}</div>
-          </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <div className="text-xs text-slate-400">Paid Active</div>
-            <div className="text-2xl font-semibold">{data.users.activePaid}</div>
-          </div>
+          <StatsCard label="Total Users" value={data.users.total} />
+          <StatsCard label="New This Month" value={data.users.newThisMonth} />
+          <StatsCard label="Paid Active" value={data.users.activePaid} />
         </div>
       )}
     </div>

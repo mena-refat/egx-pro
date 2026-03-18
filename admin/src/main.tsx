@@ -36,7 +36,9 @@ function App() {
           <Route path="/users/:id" element={<UserDetailPage />} />
           <Route path="/discounts" element={<DiscountsPage />} />
           <Route path="/support" element={<SupportPage />} />
-          <Route path="/admins" element={<AdminsPage />} />
+          {admin.role === 'SUPER_ADMIN' && (
+            <Route path="/admins" element={<AdminsPage />} />
+          )}
           <Route path="/audit" element={<AuditLogPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
         </Route>
