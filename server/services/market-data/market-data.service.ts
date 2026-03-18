@@ -40,7 +40,7 @@ function cachedToQuote(c: CachedQuote): StockQuote {
  * Returns 0 if market is currently open.
  * Accounts for weekends: if today is Thu after close, next open is Sunday.
  */
-function msUntilMarketOpen(): number {
+export function msUntilMarketOpen(): number {
   const now = new Date();
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: MARKET_DATA.CAIRO_TZ,
@@ -92,7 +92,7 @@ function msUntilMarketOpen(): number {
 }
 
 /** Cairo time: weekday and minutes since midnight using Intl (handles EET/EEST). */
-function getCairoNow(): { minutesSinceMidnight: number; weekday: string } {
+export function getCairoNow(): { minutesSinceMidnight: number; weekday: string } {
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: MARKET_DATA.CAIRO_TZ,
     hour: 'numeric',

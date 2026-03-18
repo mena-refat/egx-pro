@@ -56,30 +56,8 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
-/** Check if Cairo market is currently open (Sun–Thu, 10:00–15:00 EET/EEST). */
-function isMarketOpen(): boolean {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: MARKET_DATA.CAIRO_TZ,
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false,
-    weekday: 'short',
-  });
-  const parts = formatter.formatToParts(new Date());
-  let hour = 0, minute = 0, weekday = '';
-  for (const p of parts) {
-    if (p.type === 'hour') hour = parseInt(p.value, 10);
-    if (p.type === 'minute') minute = parseInt(p.value, 10);
-    if (p.type === 'weekday') weekday = p.value;
-  }
-  if (weekday === 'Fri' || weekday === 'Sat') return false;
-  const minutesSinceMidnight = hour * 60 + minute;
-  const openMinute = MARKET_DATA.MARKET_OPEN_HOUR * 60;
-  const closeMinute =
-    MARKET_DATA.MARKET_CLOSE_HOUR * 60 +
-    (MARKET_DATA as { MARKET_CLOSE_MINUTE?: number }).MARKET_CLOSE_MINUTE ?? 0;
-  return minutesSinceMidnight >= openMinute && minutesSinceMidnight < closeMinute;
-}
+// استخدم منطق market hours الموحد من MarketDataService
+import { marketDataService } from '../market-data.service.ts';
 
 type ChartQuote = {
   date?: Date;
@@ -119,7 +97,7 @@ export class YahooFinanceSource implements IMarketDataSource {
     const quotes = new Map<string, StockQuote>();
     const failed: string[] = [];
 
-    const marketOpen = isMarketOpen();
+    const marketOpen = marketDataService.isMarketOpen();
 
     // During market hours: 15m candles over 2 days (captures yesterday's close + today's intraday)
     // Outside market hours: daily candles over 5 days (ensures ≥2 trading days after weekends)

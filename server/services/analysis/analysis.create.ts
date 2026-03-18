@@ -46,7 +46,6 @@ export async function createAnalysis(
   const cacheKey = singleKey(ticker);
   const globalCached = await getCachedAnalysis<unknown>(cacheKey);
   if (globalCached) {
-    await atomicConsumeQuota(userId, 1);
     await setCachedAnalysis(userCacheKey, globalCached, 'cache');
     const saved = await AnalysisRepository.create({
       userId,
@@ -58,7 +57,6 @@ export async function createAnalysis(
     return { analysis: globalCached, id: saved.id, newUnseenAchievements: newAchievements };
   }
 
-  await atomicConsumeQuota(userId, 1);
   const completedBefore = await getCompletedAchievementIds(userId);
 
   const stockInfo = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker.toUpperCase());
@@ -153,6 +151,8 @@ ${marketLine}
 اشرح لماذا هذا التقييم (${scoringResult.score}) وهذا القرار منطقيان بناءً على البيانات أعلاه. اخرج JSON بالشكل المحدد. لا تغيّر القرار ولا الأرقام.`;
 
   const rawText = await runAnalysisEngine(EXPLAIN_SINGLE_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_SINGLE);
+  // لو وصلنا هنا يبقى استدعاء الـ AI نجح، دلوقتي نخصم من الكوتا
+  await atomicConsumeQuota(userId, 1);
   const aiJson = parseAnalysisJson(rawText) as Record<string, unknown>;
 
   const verdictBadge = DECISION_LABELS_AR[scoringResult.decision];

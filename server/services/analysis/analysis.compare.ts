@@ -48,7 +48,6 @@ export async function compareAnalysis(
   const compareCacheKey = compareKey(t1, t2);
   const globalCachedCompare = await getCachedAnalysis<unknown>(compareCacheKey);
   if (globalCachedCompare) {
-    await atomicConsumeQuota(userId, 2);
     await setCachedAnalysis(userCompareKey, globalCachedCompare, 'cache');
     const saved = await AnalysisRepository.create({
       userId,
@@ -57,8 +56,6 @@ export async function compareAnalysis(
     });
     return { comparison: globalCachedCompare, id: saved.id };
   }
-
-  await atomicConsumeQuota(userId, 2);
 
   const info1 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t1);
   const info2 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t2);
@@ -118,6 +115,8 @@ export async function compareAnalysis(
   const prompt = `${line(t1, info1, p1, f1, ind1, news1, score1)}\n${line(t2, info2, p2, f2, ind2, news2, score2)}\nسوق: ${marketCtx.marketStatus} EGX30: ${marketCtx.egx30?.price ?? '—'} USD/EGP: ${marketCtx.usdEgp ?? '—'}\nالفائز محسوب آلياً: ${winner} (درجته أعلى). اشرح لماذا بناءً على الأرقام فقط. لا تغيّر winner ولا الـ scores. JSON فقط.`;
 
   const raw = await runAnalysisEngine(EXPLAIN_COMPARE_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_COMPARE);
+  // بعد نجاح استدعاء الـ AI فقط نخصم من الكوتا
+  await atomicConsumeQuota(userId, 2);
   const aiCompare = parseAnalysisJson(raw) as Record<string, unknown>;
 
   const baseComparison: Record<string, unknown> = typeof aiCompare === 'object' && aiCompare !== null ? aiCompare : {};

@@ -26,7 +26,6 @@ export async function recommendationsAnalysis(
   _body?: { riskTolerance?: string; investmentHorizon?: number; interestedSectors?: string[] }
 ): Promise<{ recommendations: unknown; id: string }> {
   if (!userId) throw new AppError('UNAUTHORIZED', 401);
-  await atomicConsumeQuota(userId, 1);
 
   const dataMs = ANALYSIS_DATA_GATHER_TIMEOUT_MS;
   const portfolioFallback: [Array<{ ticker: string; shares: number; avgPrice: number }>, number] = [[], 0];
@@ -119,6 +118,8 @@ ${portfolioScoresBlock ? portfolioScoresBlock + '\n' : ''}سوق: ${marketCtx.ma
 توصيات EGX: سعر مستهدف، وقف خسارة، سبب جملة واحدة. عند التوصية على أسهم المحفظة استند إلى التقييم المحسوب أعلاه. JSON فقط.`;
 
   const raw = await runAnalysisEngine(systemWithSharia, prompt, ANALYSIS_MAX_TOKENS_RECOMMENDATIONS);
+  // نخصم الكوتا فقط بعد نجاح استدعاء الـ AI
+  await atomicConsumeQuota(userId, 1);
   const recommendations = parseAnalysisJson(raw);
   const saved = await AnalysisRepository.create({
     userId,

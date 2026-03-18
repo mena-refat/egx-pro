@@ -213,7 +213,8 @@ async function startServer() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  let wsHandlersRef: ReturnType<typeof setupWebSocket> | null = null;
+  let wsHandlers: ReturnType<typeof setupWebSocket> | null = null;
+
   app.get('/api/health/ready', async (_req, res) => {
     const checks: Record<string, string> = {};
     try {
@@ -233,7 +234,7 @@ async function startServer() {
       checks.redis = 'error';
     }
     checks.marketData = marketDataService.isMarketOpen() ? 'open' : 'closed';
-    checks.wsClients = String(wsHandlersRef?.getClientCount?.() ?? 0);
+    checks.wsClients = String(wsHandlers?.getClientCount?.() ?? 0);
     const allOk = checks.db === 'ok';
     res.status(allOk ? 200 : 503).json({
       status: allOk ? 'ok' : 'degraded',
@@ -321,14 +322,11 @@ async function startServer() {
     });
   }
 
-  let wsHandlers: ReturnType<typeof setupWebSocket> | null = null;
-
   const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     void (async () => {
       logger.info(`🚀 Borsa Server running on http://localhost:${PORT}`);
       wsHandlers = setupWebSocket(server);
-      wsHandlersRef = wsHandlers;
       marketDataService.setBroadcastFn(wsHandlers.broadcastPrices);
 
       try {
