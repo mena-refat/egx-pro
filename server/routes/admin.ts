@@ -238,6 +238,10 @@ router.patch('/admins/:id/permissions', adminAuthenticate, (req, res, next) => {
   void AdminAdminsController.updatePermissions(req as any, res).catch(next);
 });
 
+router.delete('/admins/:id', adminAuthenticate, (req, res, next) => {
+  void AdminAdminsController.deleteAdmin(req as any, res).catch(next);
+});
+
 router.post(
   '/notifications/broadcast',
   adminAuthenticate,

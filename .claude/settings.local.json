@@ -18,7 +18,12 @@
       "WebFetch(domain:old.reddit.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:news.ycombinator.com)",
-      "WebFetch(domain:www.npmjs.com)"
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(find c:/Users/menar/Desktop/egx-pro -name *.db -o -name *.sqlite)",
+      "Bash(/dev/null grep:*)",
+      "Bash(curl -s -X POST http://192.168.1.48:3000/api/auth/register -H 'Content-Type: application/json' -d '{\"\"\"\"emailOrPhone\"\"\"\":\"\"\"\"testanalysis@test.com\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"Test1234!\"\"\"\",\"\"\"\"fullName\"\"\"\":\"\"\"\"Test User\"\"\"\"}')",
+      "Bash(TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MzhiMDRkNy1kMWJiLTQ3MzgtYTQyZC1jZTQzMWViNGExODQiLCJlbWFpbCI6InRlc3RhbmFseXNpc0B0ZXN0LmNvbSIsImlhdCI6MTc3MzgyMjExOSwiZXhwIjoxNzczODIzMDE5fQ.oSjspPWWgwlh8u4G7DZWDHoOfP79JX2maRjUPdS9h7o __NEW_LINE_41a1576565e06129__ curl -s -X POST http://192.168.1.48:3000/api/analysis/COMI -H 'Content-Type: application/json' -H 'Authorization: Bearer $TOKEN' --max-time 180)",
+      "Bash(grep -rn \"setAuth\\\\|refreshToken\\\\|login\" c:/Users/menar/Desktop/egx-pro/MobileApp/ --include=*.ts --include=*.tsx)"
     ]
   }
 }

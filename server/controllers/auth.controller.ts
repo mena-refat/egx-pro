@@ -69,7 +69,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     const ctx = authContext(req);
     const result = await AuthService.register(body, ctx);
     setRefreshCookie(res, result.refreshToken);
-    sendSuccess(res, { accessToken: result.accessToken, user: result.user }, 201);
+    sendSuccess(res, { accessToken: result.accessToken, refreshToken: result.refreshToken, user: result.user }, 201);
   } catch (e) {
     if (e instanceof AppError) {
       sendError(res, e.code, e.status, e.message);
@@ -113,7 +113,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     }
     const success = result as { refreshToken: string; accessToken: string; user: unknown; restored?: boolean };
     setRefreshCookie(res, success.refreshToken);
-    sendSuccess(res, { accessToken: success.accessToken, ...(success.restored && { restored: true }), user: success.user });
+    sendSuccess(res, { accessToken: success.accessToken, refreshToken: success.refreshToken, ...(success.restored && { restored: true }), user: success.user });
   } catch (e) {
     handleError(e, res, 'Login failed');
   }
@@ -179,7 +179,10 @@ export async function twoFaDisable(req: Request, res: Response): Promise<void> {
 
 export async function refresh(req: Request, res: Response): Promise<void> {
   try {
-    const token = req.cookies?.refreshToken;
+    // Accept refresh token from cookie (web) or Authorization header (mobile)
+    const authHeader = req.headers.authorization;
+    const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
+    const token = req.cookies?.refreshToken ?? headerToken;
     const result = await AuthService.refresh(token);
     sendSuccess(res, { accessToken: result.accessToken });
   } catch (e) {

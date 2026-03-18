@@ -118,6 +118,7 @@ enum AdminRole {
 model Admin {
   id           String    @id @default(uuid())
   email        String    @unique
+  phone        String?   @unique
   passwordHash String
   salt         String
   fullName     String

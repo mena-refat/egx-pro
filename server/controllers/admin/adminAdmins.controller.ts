@@ -2,7 +2,17 @@ import type { Response } from 'express';
 import { prisma } from '../../lib/prisma.ts';
 import { sendSuccess, sendError } from '../../lib/apiResponse.ts';
 import { adminAudit, type AdminRequest } from '../../middleware/adminAuth.middleware.ts';
-import { hashPassword } from '../../../src/lib/auth.ts';
+import { hashPassword, verifyPassword } from '../../../src/lib/auth.ts';
+
+async function verifySuperAdminPassword(req: AdminRequest, confirmPassword?: string): Promise<boolean> {
+  if (!confirmPassword || !req.admin) return false;
+  const me = await prisma.admin.findUnique({
+    where: { id: req.admin.id },
+    select: { passwordHash: true, salt: true },
+  });
+  if (!me) return false;
+  return verifyPassword(confirmPassword, me.passwordHash, me.salt);
+}
 
 export const AdminAdminsController = {
   async list(req: AdminRequest, res: Response): Promise<void> {
@@ -14,6 +24,7 @@ export const AdminAdminsController = {
       select: {
         id: true,
         email: true,
+        phone: true,
         fullName: true,
         role: true,
         permissions: true,
@@ -31,12 +42,14 @@ export const AdminAdminsController = {
       sendError(res, 'ADMIN_FORBIDDEN', 403);
       return;
     }
-    const { email, password, fullName, permissions = [], role, options = {} } = req.body as {
+    const { email, phone, password, fullName, permissions = [], role, options = {}, confirmPassword } = req.body as {
       email?: string;
+      phone?: string;
       password?: string;
       fullName?: string;
       permissions?: string[];
       role?: 'SUPER_ADMIN' | 'ADMIN';
+      confirmPassword?: string;
       options?: {
         mustChangePassword?: boolean;
         mustSetup2FA?: boolean;
@@ -54,6 +67,10 @@ export const AdminAdminsController = {
       sendError(res, 'PASSWORD_TOO_WEAK', 400);
       return;
     }
+    if (!await verifySuperAdminPassword(req, confirmPassword)) {
+      sendError(res, 'INVALID_CREDENTIALS', 401);
+      return;
+    }
 
     const mustChangePassword = options.mustChangePassword ?? true;
     const mustSetup2FA       = options.mustSetup2FA       ?? true;
@@ -62,18 +79,22 @@ export const AdminAdminsController = {
     const pwdLowercase       = options.pwdLowercase       ?? true;
     const pwdSymbols         = options.pwdSymbols         ?? true;
 
-    const existing = await prisma.admin.findUnique({
-      where: { email: email.toLowerCase().trim() },
-    });
-    if (existing) {
-      sendError(res, 'EMAIL_ALREADY_EXISTS', 409);
-      return;
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedPhone = phone?.trim() || undefined;
+
+    const existingEmail = await prisma.admin.findUnique({ where: { email: normalizedEmail } });
+    if (existingEmail) { sendError(res, 'EMAIL_ALREADY_EXISTS', 409); return; }
+
+    if (normalizedPhone) {
+      const existingPhone = await prisma.admin.findUnique({ where: { phone: normalizedPhone } });
+      if (existingPhone) { sendError(res, 'PHONE_ALREADY_EXISTS', 409); return; }
     }
 
     const { hash, salt } = await hashPassword(password);
     const admin = await prisma.admin.create({
       data: {
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
+        phone: normalizedPhone,
         passwordHash: hash,
         salt,
         fullName,
@@ -105,6 +126,40 @@ export const AdminAdminsController = {
       fullName: admin.fullName,
       role: admin.role,
     });
+  },
+
+  async deleteAdmin(req: AdminRequest, res: Response): Promise<void> {
+    if (req.admin?.role !== 'SUPER_ADMIN') {
+      sendError(res, 'ADMIN_FORBIDDEN', 403);
+      return;
+    }
+    const { id } = req.params as { id: string };
+    const { confirmPassword } = req.body as { confirmPassword?: string };
+
+    if (!await verifySuperAdminPassword(req, confirmPassword)) {
+      sendError(res, 'INVALID_CREDENTIALS', 401);
+      return;
+    }
+    if (id === req.admin.id) {
+      sendError(res, 'CANNOT_DELETE_SELF', 400);
+      return;
+    }
+    const target = await prisma.admin.findUnique({
+      where: { id },
+      select: { role: true },
+    });
+    if (!target) {
+      sendError(res, 'NOT_FOUND', 404);
+      return;
+    }
+    await prisma.$transaction([
+      prisma.adminAuditLog.deleteMany({ where: { adminId: id } }),
+      prisma.admin.delete({ where: { id } }),
+    ]);
+    if (req.admin) {
+      await adminAudit(req.admin.id, 'ADMIN_DELETED', id, undefined, req);
+    }
+    sendSuccess(res, { ok: true });
   },
 
   async updatePermissions(req: AdminRequest, res: Response): Promise<void> {
