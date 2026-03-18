@@ -65,6 +65,8 @@ export const AdminAdminsController = {
         permissions,
         createdBy: req.admin?.id ?? null,
         role: role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'ADMIN',
+        // require first login password change for all created admins
+        lastLoginAt: null,
       },
     });
 

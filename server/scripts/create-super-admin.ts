@@ -21,6 +21,7 @@ async function main(): Promise<void> {
       salt,
       role: 'SUPER_ADMIN',
       isActive: true,
+      lastLoginAt: new Date(),
     },
     create: {
       email,
@@ -29,6 +30,7 @@ async function main(): Promise<void> {
       fullName: 'Super Admin',
       role: 'SUPER_ADMIN',
       isActive: true,
+      lastLoginAt: new Date(),
     },
   });
 
