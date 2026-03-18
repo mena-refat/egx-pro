@@ -14,16 +14,26 @@ type TwelveDataQuote = {
   previous_close?: string;
   volume?: string;
   datetime?: string;
+  status?: string;
+  code?: number;
 };
 
+/**
+ * Twelve Data API returns different shapes depending on how many symbols are requested:
+ * - Multiple symbols: { data: [ { symbol, price, ... }, ... ] }
+ * - Single symbol:   { symbol, price, ... }   (the object directly, no "data" wrapper)
+ * - Error:           { code: 400, message: "...", status: "error" }
+ */
 type TwelveDataResponse =
-  | { data: TwelveDataQuote[]; status?: string }
-  | { code?: string; message?: string; status?: string };
+  | { data: TwelveDataQuote[] }
+  | TwelveDataQuote
+  | { code?: number; message?: string; status?: string };
 
 /**
  * Twelve Data source:
- * - Primary live price source
+ * - Primary live price source (priority = 0)
  * - Batch symbols in a single comma-separated request
+ * - Handles both single-symbol and multi-symbol response shapes
  * - Fallback handled by MarketDataService (next sources)
  */
 export class TwelveDataSource implements IMarketDataSource {
@@ -37,7 +47,7 @@ export class TwelveDataSource implements IMarketDataSource {
   constructor() {
     this.http = axios.create({
       baseURL: 'https://api.twelvedata.com',
-      timeout: 10_000,
+      timeout: 15_000,
     });
   }
 
@@ -45,37 +55,17 @@ export class TwelveDataSource implements IMarketDataSource {
     return Boolean(process.env.TWELVE_DATA_API_KEY);
   }
 
+  /**
+   * Simply checks for API key presence — no probe request needed.
+   * If the key is configured, we consider TwelveData available and let
+   * the actual fetch handle any runtime errors gracefully.
+   */
   async isAvailable(): Promise<boolean> {
     if (!this.hasApiKey()) {
       logger.warn('TwelveDataSource: TWELVE_DATA_API_KEY not configured, marking unavailable');
       return false;
     }
-
-    // Lightweight availability probe on a single symbol
-    const probeSymbol = 'COMI.CA';
-    try {
-      const mapped = this.toTwelveSymbol(probeSymbol);
-      const res = await this.http.get<TwelveDataResponse>('/quote', {
-        params: {
-          symbol: mapped,
-          apikey: process.env.TWELVE_DATA_API_KEY,
-        },
-      });
-
-      if ('data' in res.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
-        return true;
-      }
-
-      logger.warn('TwelveDataSource: availability probe returned unexpected shape', {
-        body: res.data,
-      });
-      return false;
-    } catch (err) {
-      logger.error('TwelveDataSource: availability probe failed', {
-        error: (err as Error).message,
-      });
-      return false;
-    }
+    return true;
   }
 
   async fetchQuotes(symbols: string[]): Promise<DataSourceResult> {
@@ -85,18 +75,13 @@ export class TwelveDataSource implements IMarketDataSource {
 
     if (!this.hasApiKey()) {
       logger.warn('TwelveDataSource: no API key, skipping fetch');
-      return {
-        quotes,
-        failed: [...symbols],
-        source: this.name,
-        latency: 0,
-      };
+      return { quotes, failed: [...symbols], source: this.name, latency: 0 };
     }
 
     // Twelve Data expects e.g. "COMI:XCAI" not "COMI.CA"
     const mappedSymbols = symbols.map((s) => ({ egx: s, twelve: this.toTwelveSymbol(s) }));
 
-    // Minimize API calls: one batch of up to BATCH_SIZE symbols per request
+    // Break into batches of BATCH_SIZE
     const batches: { egx: string; twelve: string }[][] = [];
     for (let i = 0; i < mappedSymbols.length; i += this.BATCH_SIZE) {
       batches.push(mappedSymbols.slice(i, i + this.BATCH_SIZE));
@@ -119,7 +104,17 @@ export class TwelveDataSource implements IMarketDataSource {
 
         const body = res.data;
 
-        if (!('data' in body) || !Array.isArray(body.data)) {
+        // Normalize to array — handle both response shapes
+        let items: TwelveDataQuote[] = [];
+
+        if ('data' in body && Array.isArray((body as { data: TwelveDataQuote[] }).data)) {
+          // Multi-symbol response: { data: [...] }
+          items = (body as { data: TwelveDataQuote[] }).data;
+        } else if ('symbol' in body && 'price' in body) {
+          // Single-symbol response: the object directly
+          items = [body as TwelveDataQuote];
+        } else {
+          // Error response
           logger.warn('TwelveDataSource: unexpected response shape', { body });
           batch.forEach((s) => failed.push(s.egx));
           continue;
@@ -127,8 +122,15 @@ export class TwelveDataSource implements IMarketDataSource {
 
         const now = new Date();
 
-        for (const item of body.data) {
+        for (const item of items) {
           if (!item || !item.symbol || !item.price) continue;
+
+          // Skip if TwelveData returned an error for this symbol
+          if (item.status === 'error' || item.code != null) {
+            const egxEntry = batch.find((b) => b.twelve === item.symbol);
+            if (egxEntry) failed.push(egxEntry.egx);
+            continue;
+          }
 
           const egxEntry = batch.find((b) => b.twelve === item.symbol);
           const egxSymbol = egxEntry?.egx ?? item.symbol;
@@ -167,9 +169,17 @@ export class TwelveDataSource implements IMarketDataSource {
 
           quotes.set(egxSymbol, quote);
         }
+
+        // Any symbol from this batch not found in the response → mark as failed
+        for (const entry of batch) {
+          if (!quotes.has(entry.egx) && !failed.includes(entry.egx)) {
+            failed.push(entry.egx);
+          }
+        }
+
       } catch (err) {
         logger.error('TwelveDataSource: batch fetch failed', {
-          symbols: batch.map((s) => s.egx),
+          batchSize: batch.length,
           error: (err as Error).message,
         });
         batch.forEach((s) => failed.push(s.egx));
@@ -184,23 +194,14 @@ export class TwelveDataSource implements IMarketDataSource {
       latency,
     });
 
-    return {
-      quotes,
-      failed,
-      source: this.name,
-      latency,
-    };
+    return { quotes, failed, source: this.name, latency };
   }
 
   /**
-   * Map internal EGX symbol (e.g. "COMI.CA") to Twelve Data symbol (e.g. "COMI:XCAI").
+   * Map internal EGX symbol (e.g. "COMI.CA" or "COMI") to Twelve Data format ("COMI:XCAI").
    */
   private toTwelveSymbol(symbol: string): string {
-    if (symbol.endsWith('.CA')) {
-      const base = symbol.slice(0, -3);
-      return `${base}:XCAI`;
-    }
-    return `${symbol}:XCAI`;
+    const base = symbol.endsWith('.CA') ? symbol.slice(0, -3) : symbol;
+    return `${base}:XCAI`;
   }
 }
-
