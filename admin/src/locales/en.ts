@@ -152,6 +152,11 @@ export const en = {
     free: 'FREE',
     users: 'users',
     off: 'off',
+    adminGrant: 'Admin Grant',
+    allTypes: 'All Types',
+    allSources: 'All Sources',
+    adminGrants: 'Admin Grants',
+    paidOnly: 'Paid Only',
   },
 
   discounts: {

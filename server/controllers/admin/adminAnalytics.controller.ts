@@ -109,13 +109,41 @@ export const AdminAnalyticsController = {
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
-    const paidUsers = await prisma.user.findMany({
+    const allActivePlanUsers = await prisma.user.findMany({
       where: {
         isDeleted: false,
         plan: { in: ['pro', 'yearly', 'ultra', 'ultra_yearly'] },
         OR: [{ planExpiresAt: null }, { planExpiresAt: { gt: now } }],
       },
-      select: { id: true, plan: true, planExpiresAt: true, createdAt: true },
+      select: {
+        id: true,
+        plan: true,
+        planExpiresAt: true,
+        createdAt: true,
+        planSetByAdmin: true,
+        discountUsages: {
+          include: { discountCode: { select: { type: true, value: true } } },
+        },
+      },
+    });
+
+    // Only include users who actually paid money:
+    // - Not manually upgraded by admin
+    // - paidAmount > 0 (no full/100% discount)
+    const paidUsers = allActivePlanUsers.filter((user) => {
+      if (user.planSetByAdmin) return false;
+      const discount = user.discountUsages[0]?.discountCode ?? null;
+      if (!discount) return true;
+      const basePrice = PLAN_PRICES[user.plan] ?? 0;
+      const paidAmount =
+        discount.type === 'full'
+          ? 0
+          : discount.type === 'percentage'
+          ? Math.round(basePrice * (1 - discount.value / 100))
+          : discount.type === 'fixed'
+          ? Math.max(0, basePrice - discount.value)
+          : basePrice;
+      return paidAmount > 0;
     });
 
     const [newPaidThisMonth, newPaidLastMonth, discountUsageStats] = await Promise.all([
@@ -232,7 +260,7 @@ export const AdminAnalyticsController = {
   },
 
   async paidUsersList(req: AdminRequest, res: Response): Promise<void> {
-    const { page = '1', plan = '', withDiscount = '' } = req.query as Record<string, string>;
+    const { page = '1', plan = '', withDiscount = '', adminGrant = '' } = req.query as Record<string, string>;
     const pageNum = Math.max(1, Number.parseInt(page, 10) || 1);
 
     const now = new Date();
@@ -241,6 +269,10 @@ export const AdminAnalyticsController = {
       plan: plan ? plan : { in: ['pro', 'yearly', 'ultra', 'ultra_yearly'] },
       OR: [{ planExpiresAt: null }, { planExpiresAt: { gt: now } }],
     };
+
+    // Filter by admin grant status
+    if (adminGrant === 'true') where.planSetByAdmin = true;
+    else if (adminGrant === 'false') where.planSetByAdmin = false;
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -253,6 +285,7 @@ export const AdminAnalyticsController = {
           username: true,
           plan: true,
           planExpiresAt: true,
+          planSetByAdmin: true,
           createdAt: true,
           updatedAt: true,
           discountUsages: {
@@ -271,14 +304,15 @@ export const AdminAnalyticsController = {
       const discount = u.discountUsages[0]?.discountCode ?? null;
       const basePrice = PLAN_PRICES[u.plan] ?? 0;
 
-      const paidAmount =
-        usedDiscount && discount?.type === 'percentage'
-          ? Math.round(basePrice * (1 - discount.value / 100))
-          : usedDiscount && discount?.type === 'fixed'
-          ? Math.max(0, basePrice - discount.value)
-          : usedDiscount && discount?.type === 'full'
-          ? 0
-          : basePrice;
+      const paidAmount = u.planSetByAdmin
+        ? 0
+        : usedDiscount && discount?.type === 'percentage'
+        ? Math.round(basePrice * (1 - discount.value / 100))
+        : usedDiscount && discount?.type === 'fixed'
+        ? Math.max(0, basePrice - discount.value)
+        : usedDiscount && discount?.type === 'full'
+        ? 0
+        : basePrice;
 
       return {
         id: u.id,
@@ -293,7 +327,8 @@ export const AdminAnalyticsController = {
         paidAmount,
         usedDiscount,
         discountCode: discount?.code ?? null,
-        isFreeUpgrade: paidAmount === 0,
+        isAdminGrant: u.planSetByAdmin,
+        isFreeUpgrade: !u.planSetByAdmin && paidAmount === 0,
       };
     });
 

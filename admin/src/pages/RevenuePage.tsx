@@ -52,6 +52,7 @@ type Subscriber = {
   usedDiscount: boolean;
   discountCode: string | null;
   isFreeUpgrade: boolean;
+  isAdminGrant: boolean;
 };
 
 const PLAN_LABELS: Record<string, string> = {
@@ -70,6 +71,7 @@ export default function RevenuePage() {
   const [page, setPage] = useState(1);
   const [planFilter, setPlanFilter] = useState('');
   const [discountFilter, setDiscountFilter] = useState('');
+  const [adminGrantFilter, setAdminGrantFilter] = useState('');
   const [loadingSubs, setLoadingSubs] = useState(false);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -102,13 +104,14 @@ export default function RevenuePage() {
       const params: Record<string, string> = { page: String(page) };
       if (planFilter) params.plan = planFilter;
       if (discountFilter) params.withDiscount = discountFilter;
+      if (adminGrantFilter) params.adminGrant = adminGrantFilter;
       const r = await adminApi.get('/analytics/revenue/subscribers', { params });
       setSubs(r.data.data.users ?? []);
       setTotal(r.data.data.total ?? 0);
     } finally {
       setLoadingSubs(false);
     }
-  }, [page, planFilter, discountFilter]);
+  }, [page, planFilter, discountFilter, adminGrantFilter]);
 
   useEffect(() => { void loadSubs(); }, [loadSubs]);
 
@@ -214,9 +217,18 @@ export default function RevenuePage() {
               onChange={(e) => { setDiscountFilter(e.target.value); setPage(1); }}
               className="px-3 py-1.5 text-xs bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
             >
-              <option value="">{t('common.of')}</option>
+              <option value="">{t('revenue.allTypes')}</option>
               <option value="true">{t('revenue.withDiscount')}</option>
               <option value="false">{t('revenue.paidFull')}</option>
+            </select>
+            <select
+              value={adminGrantFilter}
+              onChange={(e) => { setAdminGrantFilter(e.target.value); setPage(1); }}
+              className="px-3 py-1.5 text-xs bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
+            >
+              <option value="">{t('revenue.allSources')}</option>
+              <option value="true">{t('revenue.adminGrants')}</option>
+              <option value="false">{t('revenue.paidOnly')}</option>
             </select>
             <a
               href={`/api/admin/users/export.csv${planFilter ? `?plan=${planFilter}` : ''}`}
@@ -243,7 +255,9 @@ export default function RevenuePage() {
               <td className="px-4 py-3"><Badge label={PLAN_LABELS[s.plan] ?? s.plan} /></td>
               <td className="px-4 py-3 text-sm text-slate-400 tabular-nums">{s.basePrice} EGP</td>
               <td className="px-4 py-3">
-                {s.isFreeUpgrade ? (
+                {s.isAdminGrant ? (
+                  <span className="text-xs font-semibold text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded">{t('revenue.adminGrant')}</span>
+                ) : s.isFreeUpgrade ? (
                   <span className="text-xs font-semibold text-rose-400">{t('revenue.free')}</span>
                 ) : (
                   <span className={`text-sm font-semibold tabular-nums ${s.usedDiscount ? 'text-amber-400' : 'text-emerald-400'}`}>

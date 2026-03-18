@@ -152,6 +152,11 @@ export const ar = {
     free: 'مجاني',
     users: 'مستخدم',
     off: 'خصم',
+    adminGrant: 'منحة إدارية',
+    allTypes: 'كل الأنواع',
+    allSources: 'كل المصادر',
+    adminGrants: 'المنح الإدارية',
+    paidOnly: 'المدفوعون فقط',
   },
 
   discounts: {

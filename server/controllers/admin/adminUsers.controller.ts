@@ -113,7 +113,12 @@ export const AdminUsersController = {
 
     await prisma.user.update({
       where: { id },
-      data: { plan, planExpiresAt: planExpiresAt ? new Date(planExpiresAt) : null },
+      data: {
+        plan,
+        planExpiresAt: planExpiresAt ? new Date(planExpiresAt) : null,
+        // Mark as admin-granted so it's excluded from revenue calculations
+        planSetByAdmin: plan !== 'free',
+      },
     });
     await deleteCache(`auth:user:${id}`).catch(() => null);
     if (req.admin) {

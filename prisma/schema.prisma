@@ -45,6 +45,7 @@ model User {
   planExpiresAt                          DateTime?
   aiAnalysisUsedThisMonth                Int            @default(0)
   aiAnalysisResetDate                    DateTime?
+  planSetByAdmin                         Boolean        @default(false)
   referralCode                           String?        @unique
   referredBy                             String?
   referralUsed                           String?
