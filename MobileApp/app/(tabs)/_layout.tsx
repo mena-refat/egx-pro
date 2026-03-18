@@ -1,12 +1,13 @@
 import { Tabs, Redirect } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
-import { LayoutDashboard, TrendingUp, Briefcase, Bot, User } from 'lucide-react-native';
+import { LayoutDashboard, TrendingUp, Briefcase, Bot, User, Target } from 'lucide-react-native';
 
 const TAB_ICONS = {
   index: LayoutDashboard,
   market: TrendingUp,
   portfolio: Briefcase,
   ai: Bot,
+  predictions: Target,
   profile: User,
 };
 
@@ -15,6 +16,7 @@ const TAB_LABELS = {
   market: { ar: 'السوق', en: 'Market' },
   portfolio: { ar: 'محفظتي', en: 'Portfolio' },
   ai: { ar: 'AI', en: 'AI' },
+  predictions: { ar: 'التوقعات', en: 'Predictions' },
   profile: { ar: 'حسابي', en: 'Profile' },
 };
 
