@@ -14,8 +14,9 @@ interface AdminMe {
 
 export default function AdminAccountPage() {
   const { t } = useTranslation();
-  const setAuth   = useAdminStore((s) => s.setAuth);
-  const storeAuth = useAdminStore((s) => ({ token: s.token, admin: s.admin }));
+  const setAuth    = useAdminStore((s) => s.setAuth);
+  const storeToken = useAdminStore((s) => s.token);
+  const storeAdmin = useAdminStore((s) => s.admin);
   const [me, setMe] = useState<AdminMe | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
@@ -49,7 +50,7 @@ export default function AdminAccountPage() {
       setMe(res.data.data as AdminMe);
       setMessage(t('account.profileUpdated'));
     } catch (err: any) {
-      setMessage(err?.response?.data?.error ?? t('account.profileUpdated'));
+      setMessage(err?.response?.data?.error ?? 'Failed to update profile');
     } finally {
       setProfileSaving(false);
     }
@@ -71,8 +72,8 @@ export default function AdminAccountPage() {
       setPwdForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setMessage(t('account.passwordChanged'));
       // Clear mustChangePassword flag from store
-      if (storeAuth.token && storeAuth.admin) {
-        setAuth(storeAuth.token, { ...storeAuth.admin, mustChangePassword: false });
+      if (storeToken && storeAdmin) {
+        setAuth(storeToken, { ...storeAdmin, mustChangePassword: false });
       }
     } catch (err: any) {
       const code = err?.response?.data?.error;

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Fingerprint } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Fingerprint } from 'lucide-react-native';
+import { I18nManager } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
@@ -59,30 +60,32 @@ export default function BiometricPage() {
 
   return (
     <ScreenWrapper padded={false}>
-      <View className="flex-row items-center gap-3 px-4 pt-5 pb-4 border-b border-white/[0.06]">
+      <View className="flex-row items-center gap-3 px-4 pt-5 pb-4 border-b border-[#30363d]">
         <Pressable
           onPress={() => router.back()}
-          className="w-9 h-9 rounded-xl bg-white/[0.05] items-center justify-center"
+          className="w-9 h-9 rounded-xl bg-white/[0.04] border border-[#30363d] items-center justify-center"
         >
-          <ArrowLeft size={16} color="#94a3b8" />
+          {I18nManager.isRTL ? <ArrowRight size={16} color="#8b949e" /> : <ArrowLeft size={16} color="#8b949e" />}
         </Pressable>
-        <Text className="text-base font-bold text-white">البصمة / Face ID</Text>
+        <View className="w-8 h-8 rounded-xl bg-brand/15 items-center justify-center">
+          <Fingerprint size={15} color="#8b5cf6" />
+        </View>
+        <Text className="text-base font-bold text-[#e6edf3]">البصمة / Face ID</Text>
       </View>
 
       <View className="flex-1 px-4 pt-8 gap-6">
-        <View className="bg-[#111118] border border-white/[0.07] rounded-2xl p-6 items-center gap-4">
+        <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 items-center gap-4">
           <View
-            className={`w-20 h-20 rounded-full items-center justify-center ${
-              enabled ? 'bg-emerald-500/15' : 'bg-white/[0.05]'
-            }`}
+            className="w-20 h-20 rounded-full items-center justify-center"
+            style={{ backgroundColor: enabled ? '#4ade8018' : '#ffffff08' }}
           >
-            <Fingerprint size={36} color={enabled ? '#10b981' : '#64748b'} />
+            <Fingerprint size={36} color={enabled ? '#4ade80' : '#8b949e'} />
           </View>
           <View className="items-center gap-1">
-            <Text className="text-base font-bold text-white">
+            <Text className="text-base font-bold text-[#e6edf3]">
               {enabled ? 'الدخول بالبصمة مفعّل' : 'الدخول بالبصمة معطّل'}
             </Text>
-            <Text className="text-sm text-slate-400 text-center leading-5">
+            <Text className="text-sm text-[#8b949e] text-center leading-5">
               {!supported
                 ? 'جهازك لا يدعم المصادقة البيومترية'
                 : !enrolled
@@ -113,9 +116,9 @@ export default function BiometricPage() {
           )
         )}
 
-        <View className="bg-blue-500/10 border border-blue-500/20 rounded-2xl px-4 py-3">
-          <Text className="text-xs text-blue-400 leading-5 text-center">
-            بياناتك محفوظة في Keychain (iOS) أو Keystore (Android) — أمن تخزين على جهازك
+        <View className="bg-[#161b22] border border-[#30363d] rounded-2xl px-4 py-3">
+          <Text className="text-xs text-[#8b949e] leading-5 text-center">
+            بياناتك محفوظة في Keychain (iOS) أو Keystore (Android) — أمان تخزين على جهازك
           </Text>
         </View>
       </View>

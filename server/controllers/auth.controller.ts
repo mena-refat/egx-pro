@@ -124,7 +124,7 @@ export async function twoFaAuthenticate(req: Request, res: Response): Promise<vo
     const ctx = authContext(req);
     const result = await AuthService.twoFaAuthenticate(req.body as { tempToken?: string; code?: string }, ctx);
     setRefreshCookie(res, result.refreshToken);
-    sendSuccess(res, { accessToken: result.accessToken, user: result.user });
+    sendSuccess(res, { accessToken: result.accessToken, refreshToken: result.refreshToken, user: result.user });
   } catch (e) {
     if (e instanceof AppError) {
       sendError(res, e.code, e.status, e.message);
