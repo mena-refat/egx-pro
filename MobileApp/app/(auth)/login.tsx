@@ -38,11 +38,11 @@ export default function LoginPage() {
       <ScreenWrapper>
         <View className="flex-1 justify-center items-center gap-6 px-6">
           <View className="w-16 h-16 rounded-full bg-brand/10 items-center justify-center">
-            <Fingerprint size={32} color="#10b981" />
+            <Fingerprint size={32} color="#8b5cf6" />
           </View>
           <View className="items-center gap-2">
-            <Text className="text-xl font-bold text-white">التحقق بخطوتين</Text>
-            <Text className="text-sm text-slate-400 text-center">
+            <Text className="text-xl font-bold text-[#e6edf3]">التحقق بخطوتين</Text>
+            <Text className="text-sm text-[#8b949e] text-center">
               أدخل الكود من تطبيق المصادقة
             </Text>
           </View>
@@ -58,7 +58,12 @@ export default function LoginPage() {
               {error}
             </Text>
           )}
-          <Button label={loading ? 'جارٍ التحقق...' : 'تأكيد'} loading={loading} onPress={handle2FA} fullWidth />
+          <Button
+            label={loading ? 'جارٍ التحقق...' : 'تأكيد'}
+            loading={loading}
+            onPress={handle2FA}
+            fullWidth
+          />
         </View>
       </ScreenWrapper>
     );
@@ -75,15 +80,17 @@ export default function LoginPage() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Logo */}
           <View className="items-center mb-10">
             <View className="w-14 h-14 rounded-2xl bg-brand items-center justify-center mb-4">
               <Text className="text-2xl font-bold text-white">B</Text>
             </View>
-            <Text className="text-2xl font-bold text-white">Borsa</Text>
-            <Text className="text-sm text-slate-400 mt-1">بورصة مصر في يدك</Text>
+            <Text className="text-2xl font-bold text-[#e6edf3]">Borsa</Text>
+            <Text className="text-sm text-[#8b949e] mt-1">بورصة مصر في يدك</Text>
           </View>
 
-          <View className="bg-[#111118] border border-white/[0.07] rounded-2xl p-6 gap-5">
+          {/* Form */}
+          <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 gap-5">
             {error && (
               <View className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                 <Text className="text-sm text-red-400 text-center">{error}</Text>
@@ -132,15 +139,18 @@ export default function LoginPage() {
             />
 
             {biometricAvail && (
-              <Pressable onPress={loginWithBiometric} className="flex-row items-center justify-center gap-2 py-3">
-                <Fingerprint size={20} color="#10b981" />
+              <Pressable
+                onPress={loginWithBiometric}
+                className="flex-row items-center justify-center gap-2 py-3"
+              >
+                <Fingerprint size={20} color="#8b5cf6" />
                 <Text className="text-sm text-brand font-medium">الدخول بالبصمة / Face ID</Text>
               </Pressable>
             )}
           </View>
 
           <View className="flex-row justify-center gap-1 mt-6">
-            <Text className="text-sm text-slate-400">مش عندك حساب؟</Text>
+            <Text className="text-sm text-[#8b949e]">مش عندك حساب؟</Text>
             <Link href="/(auth)/register" asChild>
               <Pressable>
                 <Text className="text-sm text-brand font-semibold">سجّل الآن</Text>
@@ -152,4 +162,3 @@ export default function LoginPage() {
     </ScreenWrapper>
   );
 }
-
