@@ -201,6 +201,15 @@ router.get(
 );
 
 router.get(
+  '/analytics/growth',
+  adminAuthenticate,
+  requirePermission('analytics.view'),
+  (req, res, next) => {
+    void AdminAnalyticsController.userGrowth(req as any, res).catch(next);
+  }
+);
+
+router.get(
   '/analytics/health',
   adminAuthenticate,
   requirePermission('analytics.view'),

@@ -19,7 +19,7 @@ import { Badge } from '../components/Badge';
 
 type Overview = {
   users: { total: number; newToday: number; newThisMonth: number; activePaid: number; byPlan: { plan: string; _count: { plan: number } }[] };
-  analyses: { total: number; thisMonth: number };
+  analyses: { total: number; thisMonth: number; bySingle: number; byCompare: number; byRecommendations: number };
   predictions: { total: number };
 };
 
@@ -78,6 +78,27 @@ export default function DashboardPage() {
         <StatsCard label="New This Month"  value={overview?.users.newThisMonth ?? 0} icon={UserPlus}  accent="blue"    />
         <StatsCard label="Paid Active"     value={overview?.users.activePaid ?? 0}   icon={TrendingUp} accent="amber"  />
         <StatsCard label="AI Analyses"     value={overview?.analyses.total ?? 0}     icon={Brain}     accent="rose"    sub={`${overview?.analyses.thisMonth ?? 0} this month`} />
+      </div>
+
+      {/* AI Analysis Breakdown */}
+      <div className="rounded-xl border border-white/[0.07] bg-[#111118] p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Brain size={14} className="text-rose-400" />
+          <h2 className="text-sm font-semibold text-white">AI Analyses Breakdown</h2>
+          <span className="ml-auto text-[11px] text-slate-500">Total: {overview?.analyses.total ?? 0}</span>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Single Stock', value: overview?.analyses.bySingle ?? 0, color: 'text-blue-400' },
+            { label: 'Compare',      value: overview?.analyses.byCompare ?? 0, color: 'text-amber-400' },
+            { label: 'Recommendations', value: overview?.analyses.byRecommendations ?? 0, color: 'text-emerald-400' },
+          ].map((item) => (
+            <div key={item.label} className="flex flex-col items-center gap-1 rounded-lg bg-white/[0.03] py-3 px-2">
+              <span className={`text-xl font-bold tabular-nums ${item.color}`}>{item.value.toLocaleString()}</span>
+              <span className="text-[11px] text-slate-500 text-center">{item.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Chart + Plan breakdown */}

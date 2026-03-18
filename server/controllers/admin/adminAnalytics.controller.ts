@@ -25,6 +25,9 @@ export const AdminAnalyticsController = {
       totalPredictions,
       byPlan,
       activePaid,
+      singleAnalyses,
+      compareAnalyses,
+      recommendationAnalyses,
     ] = await Promise.all([
       prisma.user.count({ where: { isDeleted: false } }),
       prisma.user.count({
@@ -48,6 +51,16 @@ export const AdminAnalyticsController = {
           planExpiresAt: { gt: now },
         },
       }),
+      // Single stock analysis: ticker has no '|' and is not '_recommendations'
+      prisma.analysis.count({
+        where: {
+          NOT: [{ ticker: { contains: '|' } }, { ticker: '_recommendations' }],
+        },
+      }),
+      // Compare analysis: ticker contains '|'
+      prisma.analysis.count({ where: { ticker: { contains: '|' } } }),
+      // Recommendations analysis: ticker is '_recommendations'
+      prisma.analysis.count({ where: { ticker: '_recommendations' } }),
     ]);
 
     sendSuccess(res, {
@@ -58,7 +71,13 @@ export const AdminAnalyticsController = {
         byPlan,
         activePaid,
       },
-      analyses: { total: totalAnalyses, thisMonth: analysesMonth },
+      analyses: {
+        total: totalAnalyses,
+        thisMonth: analysesMonth,
+        bySingle: singleAnalyses,
+        byCompare: compareAnalyses,
+        byRecommendations: recommendationAnalyses,
+      },
       predictions: { total: totalPredictions },
     });
   },
@@ -291,6 +310,20 @@ export const AdminAnalyticsController = {
       page: pageNum,
       totalPages: Math.ceil(total / 20),
     });
+  },
+
+  async userGrowth(_req: AdminRequest, res: Response): Promise<void> {
+    const results: { date: string; count: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - i);
+      const end = new Date(d.getFullYear(), d.getMonth(), d.getDate() - i + 1);
+      const count = await prisma.user.count({
+        where: { isDeleted: false, createdAt: { gte: start, lt: end } },
+      });
+      results.push({ date: start.toISOString().slice(0, 10), count });
+    }
+    sendSuccess(res, results);
   },
 
   async platformHealth(_req: AdminRequest, res: Response): Promise<void> {

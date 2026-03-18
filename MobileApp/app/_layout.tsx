@@ -1,3 +1,4 @@
+import '../global.css';
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -8,7 +9,6 @@ import { I18nextProvider } from 'react-i18next';
 import Constants from 'expo-constants';
 import i18n from '../i18n';
 import { useAuthStore } from '../store/authStore';
-import { registerPushToken } from '../lib/notifications';
 import { useColorScheme, I18nManager } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
@@ -49,8 +49,10 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated && !isExpoGo) {
-      void registerPushToken();
+    if (isAuthenticated) {
+      import('../lib/notifications')
+        .then(({ registerPushToken }) => registerPushToken())
+        .catch(() => null);
     }
   }, [isAuthenticated]);
 
