@@ -39,12 +39,14 @@ import { marketDataService } from './server/services/market-data/market-data.ser
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './server/lib/swagger.ts';
 import { prisma } from './server/lib/prisma.ts';
-import { redis, setCache } from './server/lib/redis.ts';
+import { redis } from './server/lib/redis.ts';
 import { EGX_TICKERS } from './server/lib/egxTickers.ts';
-import { createNotification } from './server/lib/createNotification.ts';
 import { runResolvePredictions } from './server/jobs/resolve-predictions.ts';
 import { runTrackRecordCheck } from './server/jobs/track-record.ts';
 import { runNewsSyncJob } from './server/jobs/sync-news.ts';
+import { runArchiveUsersJob } from './server/jobs/archive-users.ts';
+import { runResetAiUsageJob } from './server/jobs/reset-ai-usage.ts';
+import { runDelayedPricesJob, DELAYED_PRICES_INTERVAL_MS } from './server/jobs/delayed-prices.ts';
 
 async function startServer() {
   if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
@@ -353,156 +355,20 @@ async function startServer() {
     })();
   });
 
-  // أرشفة الحسابات المحذوفة بعد 30 يوم + انتهاء الـ refresh tokens — يومياً 3:00 صباحاً القاهرة
-  async function archiveDeletedUsers() {
-    try {
-      const now = new Date();
-      const toArchive = await prisma.user.findMany({
-        where: {
-          isDeleted: true,
-          deletionScheduledFor: { lt: now },
-        },
-      });
-      const prismaWithArchive = prisma as typeof prisma & {
-        archivedUser: { create: (args: { data: Record<string, unknown> }) => Promise<unknown> };
-        refreshToken: { deleteMany: (args: { where: { expiresAt: { lt: Date } } }) => Promise<unknown> };
-      };
-      for (const u of toArchive) {
-        try {
-          await prisma.$transaction(async (tx) => {
-            const txWithArchive = tx as typeof prismaWithArchive;
-            await txWithArchive.archivedUser.create({
-              data: {
-                originalId: u.id,
-                email: u.email ?? undefined,
-                phone: u.phone ?? undefined,
-                username: u.username ?? undefined,
-                name: u.fullName ?? undefined,
-                userData: {
-                  id: u.id,
-                  email: u.email,
-                  phone: u.phone,
-                  username: u.username,
-                  fullName: u.fullName,
-                  createdAt: u.createdAt,
-                  updatedAt: u.updatedAt,
-                },
-              },
-            });
-            await tx.user.delete({ where: { id: u.id } });
-          });
-        } catch (e) {
-          logger.error('Archive user error', { userId: u.id, error: e });
-        }
-      }
-      await prismaWithArchive.refreshToken.deleteMany({
-        where: { expiresAt: { lt: now } },
-      });
-    } catch (err) {
-      logger.error('Cleanup job error', { error: err });
-    }
-  }
-  const archiveCron = cron.schedule('0 3 * * *', archiveDeletedUsers, { timezone: 'Africa/Cairo' });
+  const archiveCron = cron.schedule('0 3 * * *', () => runArchiveUsersJob().catch((err) => logger.error('Archive job error', { error: err })), { timezone: 'Africa/Cairo' });
 
-  // كل أول الشهر 00:01: إعادة تعيين عداد تحليلات الذكاء الاصطناعي للمجانيين
-  async function resetAiUsage() {
-    try {
-      const resetDate = new Date();
-      const nextReset = new Date(resetDate.getFullYear(), resetDate.getMonth() + 1, 1, 0, 0, 0, 0);
-      const result = await prisma.user.updateMany({
-        data: { aiAnalysisUsedThisMonth: 0, aiAnalysisResetDate: nextReset },
-      });
-      logger.info('Monthly AI usage counters reset', { usersUpdated: result.count });
-    } catch (err) {
-      logger.error('AI usage reset job error', { error: err });
-    }
-  }
-  const aiResetCron = cron.schedule('1 0 1 * *', resetAiUsage, { timezone: 'Africa/Cairo' });
+  const aiResetCron = cron.schedule('1 0 1 * *', () => runResetAiUsageJob().catch((err) => logger.error('AI reset job error', { error: err })), { timezone: 'Africa/Cairo' });
 
-  // كل 10 دقائق: تحديث كاش الأسعار المتأخرة للمجانيين (batch بدل N+1)
-  const TEN_MIN_MS = 10 * 60 * 1000;
-  const pricesInterval = setInterval(async () => {
-    try {
-      const now = Date.now();
-      const quotes = await marketDataService.getQuotes(EGX_TICKERS);
-      await Promise.all(
-        Array.from(quotes.entries()).map(([ticker, data]) =>
-          setCache(`stock:price:delayed:${ticker}`, {
-            ticker: data.symbol,
-            price: data.price,
-            change: data.change,
-            changePercent: data.changePercent,
-            volume: data.volume,
-            high: data.high,
-            low: data.low,
-            open: data.open,
-            previousClose: data.previousClose,
-            name: data.symbol,
-            delayedAt: now,
-          }, 15 * 60)
-        )
-      );
-      const watchlistAlerts = await prisma.watchlist.findMany({
-        where: { targetPrice: { not: null } },
-        include: { user: { select: { id: true, notifySignals: true } } },
-      });
-      const alertTickers = [...new Set(watchlistAlerts.map((a) => a.ticker))];
-      const alertQuotes = alertTickers.length > 0 ? await marketDataService.getQuotes(alertTickers) : new Map();
-      for (const item of watchlistAlerts) {
-        const priceData = alertQuotes.get(item.ticker);
-        if (!priceData || item.targetPrice == null) continue;
-        const hit = priceData.price >= item.targetPrice;
-        const alreadyNotified = item.targetReachedNotifiedAt != null;
-        if (hit && !alreadyNotified && item.user.notifySignals) {
-          await createNotification(
-            item.user.id,
-            'stock_target',
-            `${item.ticker} وصل للسعر المستهدف`,
-            `السعر الحالي ${priceData.price} ج.م — وصل للهدف ${item.targetPrice} ج.م`,
-            { route: `/stocks/${item.ticker}` }
-          );
-          await prisma.watchlist.update({
-            where: { id: item.id },
-            data: { targetReachedNotifiedAt: new Date() },
-          });
-        }
-        if (!hit && alreadyNotified) {
-          await prisma.watchlist.update({
-            where: { id: item.id },
-            data: { targetReachedNotifiedAt: null },
-          });
-        }
-      }
-    } catch (err) {
-      logger.error('Delayed prices refresh error', { error: err });
-    }
-  }, TEN_MIN_MS);
+  const pricesInterval = setInterval(
+    () => runDelayedPricesJob().catch((err) => logger.error('Delayed prices job error', { error: err })),
+    DELAYED_PRICES_INTERVAL_MS
+  );
 
-  // بعد إغلاق السوق 15:30 القاهرة — تسوية التوقعات (أحد–خميس)
-  async function runResolvePredictionsJob() {
-    try {
-      await runResolvePredictions();
-    } catch (err) {
-      logger.error('Resolve predictions job error', { error: err });
-    }
-  }
-  const resolveCron = cron.schedule('30 15 * * 0-4', runResolvePredictionsJob, { timezone: 'Africa/Cairo' });
+  const resolveCron = cron.schedule('30 15 * * 0-4', () => runResolvePredictions().catch((err) => logger.error('Resolve predictions job error', { error: err })), { timezone: 'Africa/Cairo' });
 
-  const trackRecordCron = cron.schedule('0 16 * * 0-4', async () => {
-    try {
-      await runTrackRecordCheck();
-    } catch (err) {
-      logger.error('Track record job error', { error: err });
-    }
-  }, { timezone: 'Africa/Cairo' });
+  const trackRecordCron = cron.schedule('0 16 * * 0-4', () => runTrackRecordCheck().catch((err) => logger.error('Track record job error', { error: err })), { timezone: 'Africa/Cairo' });
 
-  const newsSyncCron = cron.schedule('*/30 * * * *', async () => {
-    try {
-      await runNewsSyncJob();
-    } catch (err) {
-      logger.error('News sync job error', { error: err });
-    }
-  }, { timezone: 'Africa/Cairo' });
+  const newsSyncCron = cron.schedule('*/30 * * * *', () => runNewsSyncJob().catch((err) => logger.error('News sync job error', { error: err })), { timezone: 'Africa/Cairo' });
 
   void runNewsSyncJob().catch((err) => {
     logger.error('Initial news sync job error', { error: err });

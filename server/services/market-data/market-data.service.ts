@@ -61,9 +61,7 @@ function msUntilMarketOpen(): number {
 
   const minutesSinceMidnight = hour * 60 + minute;
   const openMinute  = MARKET_DATA.MARKET_OPEN_HOUR  * 60;
-  const closeMinute =
-    MARKET_DATA.MARKET_CLOSE_HOUR * 60 +
-    (MARKET_DATA as { MARKET_CLOSE_MINUTE?: number }).MARKET_CLOSE_MINUTE ?? 0;
+  const closeMinute = MARKET_DATA.MARKET_CLOSE_HOUR * 60 + MARKET_DATA.MARKET_CLOSE_MINUTE;
 
   // Market is open right now
   if (weekday !== 'Fri' && weekday !== 'Sat' &&
@@ -201,7 +199,9 @@ export class MarketDataService {
   isMarketOpen(): boolean {
     const { minutesSinceMidnight, weekday } = getCairoNow();
     if (weekday === 'Fri' || weekday === 'Sat') return false;
-    return minutesSinceMidnight >= MARKET_DATA.MARKET_OPEN_HOUR * 60 && minutesSinceMidnight < MARKET_DATA.MARKET_CLOSE_HOUR * 60;
+    const openMinute = MARKET_DATA.MARKET_OPEN_HOUR * 60;
+    const closeMinute = MARKET_DATA.MARKET_CLOSE_HOUR * 60 + MARKET_DATA.MARKET_CLOSE_MINUTE;
+    return minutesSinceMidnight >= openMinute && minutesSinceMidnight < closeMinute;
   }
 
   async getQuote(symbol: string): Promise<StockQuote | null> {
@@ -337,9 +337,7 @@ export class MarketDataService {
 
       // Grace window بعد الإغلاق مباشرة لجلب سعر الإغلاق الرسمي من Twelve/Yahoo
       const { minutesSinceMidnight, weekday } = getCairoNow();
-      const closeMinute =
-        MARKET_DATA.MARKET_CLOSE_HOUR * 60 +
-        (MARKET_DATA as { MARKET_CLOSE_MINUTE?: number }).MARKET_CLOSE_MINUTE ?? 0;
+      const closeMinute = MARKET_DATA.MARKET_CLOSE_HOUR * 60 + MARKET_DATA.MARKET_CLOSE_MINUTE;
       const POST_CLOSE_GRACE_MINUTES = 30;
       const inPostCloseGrace =
         weekday !== 'Fri' &&

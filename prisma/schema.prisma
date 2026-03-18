@@ -132,12 +132,12 @@ model AuditLog {
   result    String?
   metadata  String?
   createdAt DateTime @default(now())
-  timestamp DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([userId, createdAt])
   @@index([action])
+  @@index([createdAt])
 }
 
 model Portfolio {

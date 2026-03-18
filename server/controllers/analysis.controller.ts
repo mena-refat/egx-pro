@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AnalysisService } from '../services/analysis.service.ts';
+import { AnalysisService } from '../services/analysis/index.ts';
 import { AnalysisRepository } from '../repositories/analysis.repository.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { sendSuccess, sendError } from '../lib/apiResponse.ts';
