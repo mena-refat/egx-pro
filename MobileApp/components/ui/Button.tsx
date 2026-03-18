@@ -10,10 +10,10 @@ interface Props extends PressableProps {
 }
 
 const variants = {
-  primary: 'bg-brand',
-  secondary: 'bg-white/10 border border-white/10',
-  ghost: 'bg-transparent',
-  danger: 'bg-red-500/90',
+  primary:   'bg-brand',
+  secondary: 'bg-white/[0.06] border border-[#30363d]',
+  ghost:     'bg-transparent',
+  danger:    'bg-red-500/90',
 } as const;
 
 const sizes = {
@@ -40,7 +40,7 @@ export function Button({
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {
-      // Haptics not supported on this device/simulator — ignore
+      // not supported
     }
     onPress?.(e);
   };
@@ -64,4 +64,3 @@ export function Button({
     </Pressable>
   );
 }
-

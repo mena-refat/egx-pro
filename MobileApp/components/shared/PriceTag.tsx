@@ -13,8 +13,8 @@ export function PriceTag({ change, changePercent, size = 'md', showIcon = true }
   const safePct = isFinite(changePercent) ? changePercent : 0;
   const isUp = safeChange > 0;
   const isDown = safeChange < 0;
-  const color = isUp ? '#10b981' : isDown ? '#ef4444' : '#94a3b8';
-  const bgColor = isUp ? 'bg-emerald-500/10' : isDown ? 'bg-red-500/10' : 'bg-white/5';
+  const color = isUp ? '#4ade80' : isDown ? '#f87171' : '#8b949e';
+  const bgColor = isUp ? 'bg-emerald-500/10' : isDown ? 'bg-red-500/10' : 'bg-white/[0.04]';
   const sizes = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' } as const;
   const iconSz = { sm: 12, md: 14, lg: 16 }[size];
   const prefix = isUp ? '+' : '';
@@ -30,8 +30,7 @@ export function PriceTag({ change, changePercent, size = 'md', showIcon = true }
           <Minus size={iconSz} color={color} />
         ))}
       <Text className={`${sizes[size]} font-semibold`} style={{ color }}>
-        {prefix}
-        {safePct.toFixed(2)}%
+        {prefix}{safePct.toFixed(2)}%
       </Text>
     </View>
   );
@@ -41,9 +40,8 @@ export function StockPrice({ price, size = 'md' }: { price: number; size?: 'sm' 
   const sizes = { sm: 'text-sm', md: 'text-base', lg: 'text-xl' } as const;
   const safePrice = isFinite(price) ? price : 0;
   return (
-    <Text className={`${sizes[size]} font-bold text-white tabular-nums`}>
+    <Text className={`${sizes[size]} font-bold text-[#e6edf3] tabular-nums`}>
       {safePrice.toFixed(2)}
     </Text>
   );
 }
-

@@ -13,17 +13,17 @@ export function MarketStatusBadge() {
   return (
     <View
       className={`flex-row items-center gap-1.5 px-2.5 py-1 rounded-full ${
-        isOpen ? 'bg-emerald-500/15' : 'bg-slate-700/50'
+        isOpen ? 'bg-emerald-500/10' : 'bg-white/[0.04]'
       }`}
     >
       <View
         className={`w-1.5 h-1.5 rounded-full ${
-          isOpen ? 'bg-emerald-400' : 'bg-slate-400'
+          isOpen ? 'bg-emerald-400' : 'bg-[#656d76]'
         }`}
       />
       <Text
         className={`text-xs font-medium ${
-          isOpen ? 'text-emerald-400' : 'text-slate-400'
+          isOpen ? 'text-emerald-400' : 'text-[#8b949e]'
         }`}
       >
         {isOpen ? 'السوق مفتوح' : 'السوق مغلق'}
@@ -31,4 +31,3 @@ export function MarketStatusBadge() {
     </View>
   );
 }
-

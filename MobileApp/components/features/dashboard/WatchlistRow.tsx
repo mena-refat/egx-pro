@@ -18,11 +18,11 @@ export function WatchlistRow({ stock, livePrice }: Props) {
   return (
     <Pressable
       onPress={() => router.push(`/stocks/${stock.ticker}`)}
-      className="flex-row items-center justify-between py-3.5 border-b border-white/[0.04] active:opacity-70"
+      className="flex-row items-center justify-between py-3.5 border-b border-[#21262d] active:bg-[#1c2128]"
     >
       <View className="flex-1">
-        <Text className="text-sm font-semibold text-white">{stock.ticker}</Text>
-        <Text className="text-xs text-slate-500 mt-0.5" numberOfLines={1}>
+        <Text className="text-sm font-semibold text-[#e6edf3]">{stock.ticker}</Text>
+        <Text className="text-xs text-[#8b949e] mt-0.5" numberOfLines={1}>
           {getStockName(stock.ticker, 'ar')}
         </Text>
       </View>
@@ -33,4 +33,3 @@ export function WatchlistRow({ stock, livePrice }: Props) {
     </Pressable>
   );
 }
-

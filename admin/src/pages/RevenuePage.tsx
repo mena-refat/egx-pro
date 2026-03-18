@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { StatsCard } from '../components/StatsCard';
 import { DataTable } from '../components/DataTable';
@@ -60,26 +61,8 @@ const PLAN_LABELS: Record<string, string> = {
   ultra_yearly: 'Ultra Yearly',
 };
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-[#1a1a24] border border-white/10 rounded-lg px-3 py-2.5 text-xs space-y-1">
-      <p className="text-slate-400 font-medium">{label}</p>
-      {payload.map((p: any) => (
-        <p key={p.name} style={{ color: p.color }}>
-          {p.name}:{' '}
-          <span className="font-bold">
-            {p.name.includes('Revenue')
-              ? `${p.value.toLocaleString()} EGP`
-              : p.value}
-          </span>
-        </p>
-      ))}
-    </div>
-  );
-};
-
 export default function RevenuePage() {
+  const { t } = useTranslation();
   const [data, setData] = useState<RevenueData | null>(null);
   const [chart, setChart] = useState<ChartPoint[]>([]);
   const [subs, setSubs] = useState<Subscriber[]>([]);
@@ -89,15 +72,28 @@ export default function RevenuePage() {
   const [discountFilter, setDiscountFilter] = useState('');
   const [loadingSubs, setLoadingSubs] = useState(false);
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-[#1a1a24] border border-white/10 rounded-lg px-3 py-2.5 text-xs space-y-1">
+        <p className="text-slate-400 font-medium">{label}</p>
+        {payload.map((p: any) => (
+          <p key={p.name} style={{ color: p.color }}>
+            {p.name}:{' '}
+            <span className="font-bold">
+              {p.name.includes('Revenue')
+                ? `${p.value.toLocaleString()} EGP`
+                : p.value}
+            </span>
+          </p>
+        ))}
+      </div>
+    );
+  };
+
   useEffect(() => {
-    adminApi
-      .get('/analytics/revenue')
-      .then((r) => setData(r.data.data))
-      .catch(() => null);
-    adminApi
-      .get('/analytics/revenue/chart')
-      .then((r) => setChart(r.data.data))
-      .catch(() => null);
+    adminApi.get('/analytics/revenue').then((r) => setData(r.data.data)).catch(() => null);
+    adminApi.get('/analytics/revenue/chart').then((r) => setChart(r.data.data)).catch(() => null);
   }, []);
 
   const loadSubs = useCallback(async () => {
@@ -114,9 +110,7 @@ export default function RevenuePage() {
     }
   }, [page, planFilter, discountFilter]);
 
-  useEffect(() => {
-    void loadSubs();
-  }, [loadSubs]);
+  useEffect(() => { void loadSubs(); }, [loadSubs]);
 
   const newThis = data?.newPaidThisMonth ?? 0;
   const prev = data?.newPaidLastMonth ?? 0;
@@ -126,88 +120,36 @@ export default function RevenuePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">Revenue & Subscriptions</h1>
-        <p className="text-sm text-slate-500">
-          Financial overview and subscriber details
-        </p>
+        <h1 className="text-xl font-bold text-white">{t('revenue.title')}</h1>
+        <p className="text-sm text-slate-500">{t('revenue.subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatsCard
-          label="MRR"
-          value={data ? `${data.mrr.toLocaleString()} EGP` : 0}
-          icon={DollarSign}
-          accent="emerald"
-          sub="Monthly Recurring Revenue"
-        />
-        <StatsCard
-          label="ARR"
-          value={data ? `${data.arr.toLocaleString()} EGP` : 0}
-          icon={TrendingUp}
-          accent="blue"
-          sub="Annual Run Rate"
-        />
-        <StatsCard
-          label="Paid Users"
-          value={data?.totalPaidUsers ?? 0}
-          icon={Users}
-          accent="amber"
-          sub={`+${newThis} this month (${mrrGrowth}%)`}
-        />
-        <StatsCard
-          label="Free Upgrades"
-          value={data?.freeUpgrades ?? 0}
-          icon={Gift}
-          accent="rose"
-          sub="Users upgraded via discount code"
-        />
+        <StatsCard label={t('revenue.mrr')}          value={data ? `${data.mrr.toLocaleString()} EGP` : 0}  icon={DollarSign} accent="emerald" sub={t('revenue.mrrSub')} />
+        <StatsCard label={t('revenue.arr')}          value={data ? `${data.arr.toLocaleString()} EGP` : 0}  icon={TrendingUp}  accent="blue"    sub={t('revenue.arrSub')} />
+        <StatsCard label={t('revenue.paidUsers')}    value={data?.totalPaidUsers ?? 0}                       icon={Users}       accent="amber"   sub={`+${newThis} ${t('common.thisMonth')} (${mrrGrowth}%)`} />
+        <StatsCard label={t('revenue.freeUpgrades')} value={data?.freeUpgrades ?? 0}                         icon={Gift}        accent="rose"    sub={t('revenue.freeUpgradesSub')} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 rounded-xl border border-white/[0.07] bg-[#111118] p-5">
-          <h2 className="text-sm font-semibold text-white mb-5">
-            Revenue & New Subscribers (12 months)
-          </h2>
+          <h2 className="text-sm font-semibold text-white mb-5">{t('revenue.revenueChart')}</h2>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={chart} margin={{ top: 0, right: 0, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis
-                dataKey="month"
-                tick={{ fontSize: 10, fill: '#64748b' }}
-                tickFormatter={(v) => String(v).slice(5)}
-              />
-              <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#64748b' }} />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                tick={{ fontSize: 10, fill: '#64748b' }}
-              />
+              <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(v) => String(v).slice(5)} />
+              <YAxis yAxisId="left"  tick={{ fontSize: 10, fill: '#64748b' }} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#64748b' }} />
               <Tooltip content={<CustomTooltip />} />
-              <Legend
-                wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }}
-              />
-              <Bar
-                yAxisId="left"
-                dataKey="estimatedRevenue"
-                name="Revenue (EGP)"
-                fill="#10b981"
-                radius={[3, 3, 0, 0]}
-                opacity={0.85}
-              />
-              <Bar
-                yAxisId="right"
-                dataKey="newSubs"
-                name="New Subs"
-                fill="#3b82f6"
-                radius={[3, 3, 0, 0]}
-                opacity={0.9}
-              />
+              <Legend wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
+              <Bar yAxisId="left"  dataKey="estimatedRevenue" name="Revenue (EGP)" fill="#10b981" radius={[3,3,0,0]} opacity={0.85} />
+              <Bar yAxisId="right" dataKey="newSubs"          name="New Subs"      fill="#3b82f6" radius={[3,3,0,0]} opacity={0.9} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="rounded-xl border border-white/[0.07] bg-[#111118] p-5">
-          <h2 className="text-sm font-semibold text-white mb-4">Revenue by Plan</h2>
+          <h2 className="text-sm font-semibold text-white mb-4">{t('revenue.revenueByPlan')}</h2>
           <div className="space-y-3">
             {Object.entries(data?.byPlan ?? {}).map(([plan, stats]) => {
               const pct = data?.mrr ? Math.round((stats.mrr / data.mrr) * 100) : 0;
@@ -216,28 +158,17 @@ export default function RevenuePage() {
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <Badge label={PLAN_LABELS[plan] ?? plan} />
-                      <span className="text-xs text-slate-500">
-                        {stats.count} users
-                      </span>
+                      <span className="text-xs text-slate-500">{stats.count} {t('revenue.users')}</span>
                     </div>
-                    <span className="text-xs font-semibold text-white">
-                      {Math.round(stats.mrr).toLocaleString()} EGP
-                    </span>
+                    <span className="text-xs font-semibold text-white">{Math.round(stats.mrr).toLocaleString()} EGP</span>
                   </div>
                   <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 rounded-full transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
+                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
             })}
-            {!data && (
-              <div className="text-slate-600 text-sm text-center py-4">
-                Loading...
-              </div>
-            )}
+            {!data && <div className="text-slate-600 text-sm text-center py-4">{t('common.loading')}</div>}
           </div>
         </div>
       </div>
@@ -246,25 +177,14 @@ export default function RevenuePage() {
         <div className="rounded-xl border border-white/[0.07] bg-[#111118] p-5">
           <div className="flex items-center gap-2 mb-4">
             <Tag size={14} className="text-emerald-400" />
-            <h2 className="text-sm font-semibold text-white">
-              Most Used Discount Codes
-            </h2>
+            <h2 className="text-sm font-semibold text-white">{t('revenue.mostUsedDiscounts')}</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {data.topDiscountCodes.slice(0, 5).map((c) => (
-              <div
-                key={c.code}
-                className="bg-[#0d0d14] rounded-lg p-3 border border-white/[0.06]"
-              >
-                <p className="font-mono text-xs font-bold text-emerald-400">
-                  {c.code}
-                </p>
+              <div key={c.code} className="bg-[#0d0d14] rounded-lg p-3 border border-white/[0.06]">
+                <p className="font-mono text-xs font-bold text-emerald-400">{c.code}</p>
                 <p className="text-xs text-slate-500 mt-1">
-                  {c.type === 'percentage'
-                    ? `${c.value}% off`
-                    : c.type === 'fixed'
-                    ? `${c.value} EGP off`
-                    : 'Free'}
+                  {c.type === 'percentage' ? `${c.value}% ${t('revenue.off')}` : c.type === 'fixed' ? `${c.value} EGP ${t('revenue.off')}` : t('revenue.free')}
                 </p>
                 <p className="text-lg font-bold text-white mt-1">{c.uses}x</p>
               </div>
@@ -275,18 +195,15 @@ export default function RevenuePage() {
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-white">All Subscribers</h2>
+          <h2 className="text-sm font-semibold text-white">{t('revenue.allSubscribers')}</h2>
           <div className="flex items-center gap-2">
             <Filter size={13} className="text-slate-500" />
             <select
               value={planFilter}
-              onChange={(e) => {
-                setPlanFilter(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => { setPlanFilter(e.target.value); setPage(1); }}
               className="px-3 py-1.5 text-xs bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
             >
-              <option value="">All Plans</option>
+              <option value="">{t('revenue.allPlans')}</option>
               <option value="pro">Pro</option>
               <option value="yearly">Pro Yearly</option>
               <option value="ultra">Ultra</option>
@@ -294,20 +211,15 @@ export default function RevenuePage() {
             </select>
             <select
               value={discountFilter}
-              onChange={(e) => {
-                setDiscountFilter(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => { setDiscountFilter(e.target.value); setPage(1); }}
               className="px-3 py-1.5 text-xs bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
             >
-              <option value="">All</option>
-              <option value="true">With Discount</option>
-              <option value="false">Paid Full Price</option>
+              <option value="">{t('common.of')}</option>
+              <option value="true">{t('revenue.withDiscount')}</option>
+              <option value="false">{t('revenue.paidFull')}</option>
             </select>
             <a
-              href={`/api/admin/users/export.csv${
-                planFilter ? `?plan=${planFilter}` : ''
-              }`}
+              href={`/api/admin/users/export.csv${planFilter ? `?plan=${planFilter}` : ''}`}
               download
               className="flex items-center gap-1 px-3 py-1.5 text-xs bg-white/[0.06] border border-white/[0.08] rounded-lg text-slate-300 hover:bg-white/[0.1] transition-all"
             >
@@ -317,68 +229,39 @@ export default function RevenuePage() {
         </div>
 
         <DataTable
-          headers={[
-            'User',
-            'Plan',
-            'Base Price',
-            'Paid',
-            'Discount',
-            'Subscribed',
-            'Expires',
-          ]}
+          headers={[t('revenue.user'), t('revenue.plan'), t('revenue.basePrice'), t('revenue.paid'), t('revenue.discount'), t('revenue.subscribed'), t('revenue.expires')]}
           loading={loadingSubs}
           rowCount={subs.length}
-          empty="No subscribers found"
+          empty={t('revenue.noSubscribers')}
         >
           {subs.map((s) => (
             <tr key={s.id} className="hover:bg-white/[0.02] transition-colors">
               <td className="px-4 py-3">
-                <p className="text-sm text-white font-medium">
-                  {s.fullName ?? s.username ?? '—'}
-                </p>
+                <p className="text-sm text-white font-medium">{s.fullName ?? s.username ?? '—'}</p>
                 <p className="text-xs text-slate-500">{s.email ?? '—'}</p>
               </td>
-              <td className="px-4 py-3">
-                <Badge label={PLAN_LABELS[s.plan] ?? s.plan} />
-              </td>
-              <td className="px-4 py-3 text-sm text-slate-400 tabular-nums">
-                {s.basePrice} EGP
-              </td>
+              <td className="px-4 py-3"><Badge label={PLAN_LABELS[s.plan] ?? s.plan} /></td>
+              <td className="px-4 py-3 text-sm text-slate-400 tabular-nums">{s.basePrice} EGP</td>
               <td className="px-4 py-3">
                 {s.isFreeUpgrade ? (
-                  <span className="text-xs font-semibold text-rose-400">FREE</span>
+                  <span className="text-xs font-semibold text-rose-400">{t('revenue.free')}</span>
                 ) : (
-                  <span
-                    className={`text-sm font-semibold tabular-nums ${
-                      s.usedDiscount ? 'text-amber-400' : 'text-emerald-400'
-                    }`}
-                  >
+                  <span className={`text-sm font-semibold tabular-nums ${s.usedDiscount ? 'text-amber-400' : 'text-emerald-400'}`}>
                     {s.paidAmount} EGP
                   </span>
                 )}
               </td>
               <td className="px-4 py-3">
                 {s.discountCode ? (
-                  <span className="font-mono text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                    {s.discountCode}
-                  </span>
+                  <span className="font-mono text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">{s.discountCode}</span>
                 ) : (
                   <span className="text-xs text-slate-600">—</span>
                 )}
               </td>
-              <td className="px-4 py-3 text-xs text-slate-500">
-                {new Date(s.subscribedAt).toLocaleDateString()}
-              </td>
+              <td className="px-4 py-3 text-xs text-slate-500">{new Date(s.subscribedAt).toLocaleDateString()}</td>
               <td className="px-4 py-3 text-xs">
                 {s.planExpiresAt ? (
-                  <span
-                    className={
-                      new Date(s.planExpiresAt).getTime() <
-                      Date.now() + 7 * 24 * 60 * 60 * 1000
-                        ? 'text-amber-400'
-                        : 'text-slate-500'
-                    }
-                  >
+                  <span className={new Date(s.planExpiresAt).getTime() < Date.now() + 7 * 24 * 60 * 60 * 1000 ? 'text-amber-400' : 'text-slate-500'}>
                     {new Date(s.planExpiresAt).toLocaleDateString()}
                   </span>
                 ) : (
@@ -389,30 +272,17 @@ export default function RevenuePage() {
           ))}
         </DataTable>
 
-        <Pagination
-          page={page}
-          totalPages={Math.ceil(total / 20)}
-          total={total}
-          limit={20}
-          onChange={setPage}
-        />
+        <Pagination page={page} totalPages={Math.ceil(total / 20)} total={total} limit={20} onChange={setPage} />
       </div>
 
       {data?.totalPaidUsers && data.totalPaidUsers > 0 ? (
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 flex items-start gap-3">
           <span className="text-amber-400 mt-0.5">⚠</span>
           <div>
-            <p className="text-sm font-semibold text-amber-400">
-              Subscriptions expiring soon
-            </p>
-            <p className="text-xs text-slate-400 mt-1">
-              Send renewal reminders to subscribers whose plans expire within 7 days.
-            </p>
-            <Link
-              to="/notifications"
-              className="text-xs text-emerald-400 hover:underline mt-2 inline-block"
-            >
-              Send Reminder →
+            <p className="text-sm font-semibold text-amber-400">{t('revenue.expiringNote')}</p>
+            <p className="text-xs text-slate-400 mt-1">{t('revenue.expiringDesc')}</p>
+            <Link to="/notifications" className="text-xs text-emerald-400 hover:underline mt-2 inline-block">
+              {t('revenue.sendReminder')}
             </Link>
           </div>
         </div>
@@ -420,4 +290,3 @@ export default function RevenuePage() {
     </div>
   );
 }
-

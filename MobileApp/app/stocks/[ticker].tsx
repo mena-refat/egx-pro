@@ -27,11 +27,9 @@ import type { Stock } from '../../types/stock';
 
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
-    <View className="flex-row justify-between py-2.5 border-b border-white/[0.04]">
-      <Text className="text-sm text-slate-400">{label}</Text>
-      <Text className="text-sm font-semibold text-white tabular-nums">
-        {value}
-      </Text>
+    <View className="flex-row justify-between py-2.5 border-b border-[#21262d]">
+      <Text className="text-sm text-[#8b949e]">{label}</Text>
+      <Text className="text-sm font-semibold text-[#e6edf3] tabular-nums">{value}</Text>
     </View>
   );
 }
@@ -57,9 +55,7 @@ export default function StockDetailPage() {
       .then((res) => {
         const raw = (res.data as { data?: Stock[] })?.data ?? res.data;
         const list = Array.isArray(raw) ? raw : [];
-        const found = list.find(
-          (s: Stock) => s.ticker.toUpperCase() === ticker.toUpperCase(),
-        );
+        const found = list.find((s: Stock) => s.ticker.toUpperCase() === ticker.toUpperCase());
         setStock(found ?? null);
       })
       .catch(() => null)
@@ -103,19 +99,20 @@ export default function StockDetailPage() {
 
   return (
     <ScreenWrapper padded={false}>
-      <View className="flex-row items-center justify-between px-4 pt-5 pb-3 border-b border-white/[0.06]">
+      {/* Navbar */}
+      <View className="flex-row items-center justify-between px-4 pt-5 pb-3 border-b border-[#30363d]">
         <Pressable
           onPress={() => router.back()}
-          className="w-9 h-9 rounded-xl bg-white/[0.06] items-center justify-center"
+          className="w-9 h-9 rounded-xl bg-white/[0.04] border border-[#30363d] items-center justify-center"
         >
           {I18nManager.isRTL
-            ? <ArrowRight size={16} color="#94a3b8" />
-            : <ArrowLeft size={16} color="#94a3b8" />}
+            ? <ArrowRight size={16} color="#8b949e" />
+            : <ArrowLeft size={16} color="#8b949e" />}
         </Pressable>
 
         <View className="flex-1 items-center">
-          <Text className="text-base font-bold text-white">{ticker}</Text>
-          <Text className="text-xs text-slate-400" numberOfLines={1}>
+          <Text className="text-base font-bold text-[#e6edf3]">{ticker}</Text>
+          <Text className="text-xs text-[#8b949e]" numberOfLines={1}>
             {stockInfo?.nameAr ?? getStockName(ticker, 'ar')}
           </Text>
         </View>
@@ -123,14 +120,14 @@ export default function StockDetailPage() {
         <Pressable
           onPress={toggleWatchlist}
           disabled={wlLoading}
-          className="w-9 h-9 rounded-xl bg-white/[0.06] items-center justify-center"
+          className="w-9 h-9 rounded-xl bg-white/[0.04] border border-[#30363d] items-center justify-center"
         >
           {wlLoading ? (
-            <ActivityIndicator size="small" color="#10b981" />
+            <ActivityIndicator size="small" color="#8b5cf6" />
           ) : inWatchlist ? (
-            <Eye size={16} color="#10b981" />
+            <Eye size={16} color="#8b5cf6" />
           ) : (
-            <EyeOff size={16} color="#64748b" />
+            <EyeOff size={16} color="#656d76" />
           )}
         </Pressable>
       </View>
@@ -139,6 +136,7 @@ export default function StockDetailPage() {
         contentContainerClassName="px-4 pt-4 pb-10 gap-5"
         showsVerticalScrollIndicator={false}
       >
+        {/* Price */}
         {loading ? (
           <View className="gap-2">
             <Skeleton height={40} className="w-40" />
@@ -146,74 +144,51 @@ export default function StockDetailPage() {
           </View>
         ) : (
           <View className="gap-2">
-            <Text className="text-4xl font-bold text-white tabular-nums">
+            <Text className="text-4xl font-bold text-[#e6edf3] tabular-nums">
               {currentPrice.toFixed(2)}{' '}
-              <Text className="text-xl text-slate-400">EGP</Text>
+              <Text className="text-xl text-[#8b949e]">EGP</Text>
             </Text>
-            <PriceTag
-              change={currentChange}
-              changePercent={currentChangePct}
-              size="md"
-            />
+            <PriceTag change={currentChange} changePercent={currentChangePct} size="md" />
           </View>
         )}
 
+        {/* Chart */}
         <StockChart ticker={ticker} />
 
+        {/* Stats */}
         {stock && (
-          <View className="bg-[#111118] border border-white/[0.07] rounded-2xl px-4 py-2">
-            <Text className="text-sm font-semibold text-white py-3 border-b border-white/[0.06]">
+          <View className="bg-[#161b22] border border-[#30363d] rounded-2xl px-4 py-2">
+            <Text className="text-sm font-semibold text-[#e6edf3] py-3 border-b border-[#30363d]">
               تفاصيل السهم
             </Text>
-            <StatRow
-              label="الافتتاح"
-              value={`${stock.open?.toFixed(2) ?? '—'} EGP`}
-            />
-            <StatRow
-              label="أعلى سعر اليوم"
-              value={`${stock.high?.toFixed(2) ?? '—'} EGP`}
-            />
-            <StatRow
-              label="أقل سعر اليوم"
-              value={`${stock.low?.toFixed(2) ?? '—'} EGP`}
-            />
-            <StatRow
-              label="الإغلاق السابق"
-              value={`${stock.previousClose?.toFixed(2) ?? '—'} EGP`}
-            />
-            <StatRow
-              label="حجم التداول"
-              value={stock.volume?.toLocaleString('ar-EG') ?? '—'}
-            />
+            <StatRow label="الافتتاح"        value={`${stock.open?.toFixed(2) ?? '—'} EGP`} />
+            <StatRow label="أعلى سعر اليوم"  value={`${stock.high?.toFixed(2) ?? '—'} EGP`} />
+            <StatRow label="أقل سعر اليوم"   value={`${stock.low?.toFixed(2) ?? '—'} EGP`} />
+            <StatRow label="الإغلاق السابق"  value={`${stock.previousClose?.toFixed(2) ?? '—'} EGP`} />
+            <StatRow label="حجم التداول"      value={stock.volume?.toLocaleString('ar-EG') ?? '—'} />
             {stock.isDelayed && (
               <View className="py-2">
-                <Text className="text-xs text-amber-400 text-center">
-                  ⚠ السعر متأخر 10 دقائق
-                </Text>
+                <Text className="text-xs text-amber-400 text-center">⚠ السعر متأخر 10 دقائق</Text>
               </View>
             )}
           </View>
         )}
 
+        {/* AI Button */}
         <Pressable
           onPress={() => router.push(`/ai?ticker=${ticker}`)}
           className="bg-brand/10 border border-brand/30 rounded-2xl p-4 flex-row items-center gap-3"
         >
           <View className="w-10 h-10 rounded-xl bg-brand/20 items-center justify-center">
-            <Brain size={18} color="#10b981" />
+            <Brain size={18} color="#8b5cf6" />
           </View>
           <View className="flex-1">
-            <Text className="text-sm font-bold text-white">
-              تحليل AI للسهم
-            </Text>
-            <Text className="text-xs text-slate-400 mt-0.5">
-              احصل على تحليل شامل بالذكاء الاصطناعي
-            </Text>
+            <Text className="text-sm font-bold text-[#e6edf3]">تحليل AI للسهم</Text>
+            <Text className="text-xs text-[#8b949e] mt-0.5">احصل على تحليل شامل بالذكاء الاصطناعي</Text>
           </View>
-          <ChevronLeft size={18} color="#10b981" />
+          <ChevronLeft size={18} color="#8b5cf6" />
         </Pressable>
       </ScrollView>
     </ScreenWrapper>
   );
 }
-

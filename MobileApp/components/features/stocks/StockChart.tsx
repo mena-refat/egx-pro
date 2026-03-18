@@ -9,11 +9,11 @@ interface DataPoint {
 }
 
 const RANGES = [
-  { id: '1w', label: '1أ' },
+  { id: '1w',  label: '1أ' },
   { id: '1mo', label: '1ش' },
   { id: '3mo', label: '3ش' },
   { id: '6mo', label: '6ش' },
-  { id: '1y', label: '1س' },
+  { id: '1y',  label: '1س' },
 ] as const;
 
 type Range = (typeof RANGES)[number]['id'];
@@ -45,7 +45,6 @@ function buildPaths(
 
   const points = data.map((d, i) => ({ x: toX(i), y: toY(d.price) }));
 
-  // Smooth cubic bezier line
   const linePath = points.reduce((acc, p, i) => {
     if (i === 0) return `M ${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
     const prev = points[i - 1];
@@ -102,7 +101,7 @@ export function StockChart({ ticker, lineColor }: Props) {
   const firstPrice = data[0]?.price ?? 0;
   const lastPrice = data[data.length - 1]?.price ?? 0;
   const isPositive = lastPrice >= firstPrice;
-  const color = lineColor ?? (isPositive ? '#10b981' : '#ef4444');
+  const color = lineColor ?? (isPositive ? '#4ade80' : '#f87171');
   const gradientId = `chart_grad_${ticker}`;
 
   const { linePath, areaPath } =
@@ -111,7 +110,8 @@ export function StockChart({ ticker, lineColor }: Props) {
       : { linePath: '', areaPath: '' };
 
   return (
-    <View className="bg-[#111118] border border-white/[0.07] rounded-2xl p-4">
+    <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4">
+      {/* Range selector */}
       <View className="flex-row gap-1 mb-4">
         {RANGES.map((r) => (
           <Pressable
@@ -123,7 +123,7 @@ export function StockChart({ ticker, lineColor }: Props) {
           >
             <Text
               className={`text-xs font-semibold ${
-                range === r.id ? 'text-white' : 'text-slate-400'
+                range === r.id ? 'text-white' : 'text-[#8b949e]'
               }`}
             >
               {r.label}
@@ -134,11 +134,11 @@ export function StockChart({ ticker, lineColor }: Props) {
 
       {loading ? (
         <View style={{ height: CHART_HEIGHT }} className="items-center justify-center">
-          <ActivityIndicator color="#10b981" />
+          <ActivityIndicator color="#8b5cf6" />
         </View>
       ) : data.length === 0 ? (
         <View style={{ height: CHART_HEIGHT }} className="items-center justify-center">
-          <Text className="text-slate-500 text-sm">لا توجد بيانات</Text>
+          <Text className="text-[#656d76] text-sm">لا توجد بيانات</Text>
         </View>
       ) : (
         <View
@@ -149,16 +149,12 @@ export function StockChart({ ticker, lineColor }: Props) {
             <Svg width={chartWidth} height={CHART_HEIGHT}>
               <Defs>
                 <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={color} stopOpacity="0.25" />
+                  <Stop offset="0" stopColor={color} stopOpacity="0.2" />
                   <Stop offset="1" stopColor={color} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
-              {areaPath ? (
-                <Path d={areaPath} fill={`url(#${gradientId})`} />
-              ) : null}
-              {linePath ? (
-                <Path d={linePath} stroke={color} strokeWidth={2} fill="none" />
-              ) : null}
+              {areaPath ? <Path d={areaPath} fill={`url(#${gradientId})`} /> : null}
+              {linePath ? <Path d={linePath} stroke={color} strokeWidth={2} fill="none" /> : null}
             </Svg>
           )}
         </View>

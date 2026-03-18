@@ -23,16 +23,14 @@ export function PortfolioHero({
 }: Props) {
   if (loading) {
     return (
-      <View className="bg-[#111118] border border-white/[0.07] rounded-2xl p-5 gap-4">
-        <Skeleton height={14} className="w-32" />
-        <Skeleton height={36} className="w-48" />
-        <View className="flex-row gap-3">
-          <View className="flex-1">
-            <Skeleton height={40} />
-          </View>
-          <View className="flex-1">
-            <Skeleton height={40} />
-          </View>
+      <View className="bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden">
+        <View className="flex-row divide-x divide-[#30363d]">
+          {[1, 2, 3].map((i) => (
+            <View key={i} className="flex-1 p-4 gap-2">
+              <Skeleton height={10} className="w-16" />
+              <Skeleton height={24} />
+            </View>
+          ))}
         </View>
       </View>
     );
@@ -40,62 +38,45 @@ export function PortfolioHero({
 
   const isProfit = totalGainLoss > 0;
   const isLoss = totalGainLoss < 0;
-  const gainColor = isProfit
-    ? 'text-emerald-400'
-    : isLoss
-    ? 'text-red-400'
-    : 'text-slate-400';
-
-  // keep icon colors aligned with the same semantic palette as gainColor
-  const gainColorHex = isProfit
-    ? '#34d399' // emerald-400
-    : isLoss
-    ? '#f87171' // red-400
-    : '#94a3b8'; // slate-400
+  const gainColor = isProfit ? 'text-emerald-400' : isLoss ? 'text-red-400' : 'text-[#8b949e]';
+  const gainColorHex = isProfit ? '#4ade80' : isLoss ? '#f87171' : '#8b949e';
 
   return (
-    <View className="bg-[#111118] border border-white/[0.07] rounded-2xl p-5 gap-4">
-      <Text className="text-xs text-slate-500 uppercase tracking-wider">
-        القيمة الإجمالية للمحفظة
-      </Text>
-
-      <View className="flex-row items-baseline gap-2">
-        <Text className="text-3xl font-bold text-white tabular-nums">
-          {fmt(totalValue)}
+    <View className="bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden">
+      {/* Top: Total Value */}
+      <View className="px-5 pt-5 pb-4 border-b border-[#21262d]">
+        <Text className="text-xs text-[#656d76] uppercase tracking-wider mb-1">
+          القيمة الإجمالية للمحفظة
         </Text>
-        <Text className="text-base text-slate-400">EGP</Text>
-      </View>
-
-      <View className="flex-row items-center gap-2">
-        {isProfit ? (
-          <TrendingUp size={14} color={gainColorHex} />
-        ) : isLoss ? (
-          <TrendingDown size={14} color={gainColorHex} />
-        ) : null}
-        <Text className={`text-sm font-semibold ${gainColor}`}>
-          {isProfit ? '+' : ''}
-          {fmt(totalGainLoss)} EGP (
-          {isProfit ? '+' : ''}
-          {totalGainLossPercent.toFixed(2)}%)
-        </Text>
-      </View>
-
-      <View className="flex-row gap-3 pt-2 border-t border-white/[0.06]">
-        <View className="flex-1">
-          <Text className="text-xs text-slate-500 mb-1">سعر الشراء</Text>
-          <Text className="text-sm font-semibold text-white tabular-nums">
-            {fmt(totalCost)} EGP
+        <View className="flex-row items-baseline gap-2">
+          <Text className="text-3xl font-bold text-[#e6edf3] tabular-nums">{fmt(totalValue)}</Text>
+          <Text className="text-base text-[#8b949e]">EGP</Text>
+        </View>
+        <View className="flex-row items-center gap-2 mt-2">
+          {isProfit ? (
+            <TrendingUp size={13} color={gainColorHex} />
+          ) : isLoss ? (
+            <TrendingDown size={13} color={gainColorHex} />
+          ) : null}
+          <Text className={`text-sm font-semibold ${gainColor}`}>
+            {isProfit ? '+' : ''}{fmt(totalGainLoss)} EGP ({isProfit ? '+' : ''}{totalGainLossPercent.toFixed(2)}%)
           </Text>
         </View>
-        <View className="flex-1">
-          <Text className="text-xs text-slate-500 mb-1">الربح / الخسارة</Text>
+      </View>
+
+      {/* Bottom: Cost / Gain row */}
+      <View className="flex-row">
+        <View className="flex-1 px-5 py-3.5 border-r border-[#21262d]">
+          <Text className="text-xs text-[#656d76] mb-1">سعر الشراء</Text>
+          <Text className="text-sm font-semibold text-[#e6edf3] tabular-nums">{fmt(totalCost)} EGP</Text>
+        </View>
+        <View className="flex-1 px-5 py-3.5">
+          <Text className="text-xs text-[#656d76] mb-1">الربح / الخسارة</Text>
           <Text className={`text-sm font-semibold tabular-nums ${gainColor}`}>
-            {isProfit ? '+' : ''}
-            {fmt(totalGainLoss)} EGP
+            {isProfit ? '+' : ''}{fmt(totalGainLoss)} EGP
           </Text>
         </View>
       </View>
     </View>
   );
 }
-

@@ -44,12 +44,13 @@ export default function AIPage() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <View className="px-4 pt-5 pb-3 border-b border-white/[0.06]">
+        {/* Header */}
+        <View className="px-4 pt-5 pb-3 border-b border-[#30363d]">
           <View className="flex-row items-center gap-2">
             <View className="w-8 h-8 rounded-xl bg-brand/20 items-center justify-center">
-              <Bot size={16} color="#10b981" />
+              <Bot size={16} color="#8b5cf6" />
             </View>
-            <Text className="text-base font-bold text-white">مساعد AI</Text>
+            <Text className="text-base font-bold text-[#e6edf3]">مساعد AI</Text>
           </View>
         </View>
 
@@ -60,10 +61,10 @@ export default function AIPage() {
           {!response && !loading && !error && (
             <View className="items-center py-12 gap-3">
               <View className="w-16 h-16 rounded-2xl bg-brand/10 items-center justify-center">
-                <Bot size={30} color="#10b981" />
+                <Bot size={30} color="#8b5cf6" />
               </View>
-              <Text className="text-base font-bold text-white">تحليل ذكي للأسهم</Text>
-              <Text className="text-sm text-slate-400 text-center">
+              <Text className="text-base font-bold text-[#e6edf3]">تحليل ذكي للأسهم</Text>
+              <Text className="text-sm text-[#8b949e] text-center">
                 اسأل عن أي سهم في البورصة المصرية واحصل على تحليل مدعوم بالذكاء الاصطناعي
               </Text>
             </View>
@@ -71,8 +72,8 @@ export default function AIPage() {
 
           {loading && (
             <View className="items-center py-12 gap-3">
-              <ActivityIndicator color="#10b981" size="large" />
-              <Text className="text-sm text-slate-400">جارٍ التحليل...</Text>
+              <ActivityIndicator color="#8b5cf6" size="large" />
+              <Text className="text-sm text-[#8b949e]">جارٍ التحليل...</Text>
             </View>
           )}
 
@@ -83,26 +84,27 @@ export default function AIPage() {
           )}
 
           {response && !loading && (
-            <View className="bg-[#111118] border border-white/[0.07] rounded-2xl p-4">
-              <Text className="text-sm text-slate-300 leading-6">{response}</Text>
+            <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4">
+              <Text className="text-sm text-[#e6edf3] leading-6">{response}</Text>
             </View>
           )}
         </ScrollView>
 
-        <View className="px-4 pb-4 pt-2 border-t border-white/[0.06]">
-          <View className="flex-row items-center gap-2 bg-[#111118] border border-white/[0.07] rounded-xl px-4 py-2">
+        {/* Input */}
+        <View className="px-4 pb-4 pt-2 border-t border-[#30363d]">
+          <View className="flex-row items-center gap-2 bg-[#161b22] border border-[#30363d] rounded-xl px-4 py-2">
             <TextInput
               value={query}
               onChangeText={setQuery}
               placeholder="اسأل عن سهم أو السوق..."
-              placeholderTextColor="#64748b"
-              className="flex-1 text-sm text-white py-2"
+              placeholderTextColor="#656d76"
+              className="flex-1 text-sm text-[#e6edf3] py-2"
               multiline
             />
             <Pressable
               onPress={handleSend}
               disabled={!query.trim() || loading}
-              className="w-8 h-8 rounded-lg bg-brand items-center justify-center opacity-100"
+              className="w-8 h-8 rounded-lg bg-brand items-center justify-center"
               style={{ opacity: !query.trim() || loading ? 0.4 : 1 }}
             >
               <Send size={14} color="#fff" />

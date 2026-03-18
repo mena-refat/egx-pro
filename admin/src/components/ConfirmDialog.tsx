@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 
 interface Props {
@@ -11,13 +12,16 @@ interface Props {
   onCancel: () => void;
 }
 
-export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', danger, loading, onConfirm, onCancel }: Props) {
+export function ConfirmDialog({ open, title, message, confirmLabel, danger, loading, onConfirm, onCancel }: Props) {
+  const { t } = useTranslation();
+  const label = confirmLabel ?? t('common.confirm');
+
   return (
     <Modal open={open} onClose={onCancel} title={title} width="max-w-sm">
       <p className="text-sm text-slate-400 mb-6">{message}</p>
       <div className="flex gap-3 justify-end">
         <button onClick={onCancel} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] rounded-lg transition-all">
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           onClick={onConfirm}
@@ -28,10 +32,9 @@ export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', 
               : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
           }`}
         >
-          {loading ? 'Loading...' : confirmLabel}
+          {loading ? t('common.loading') : label}
         </button>
       </div>
     </Modal>
   );
 }
-
