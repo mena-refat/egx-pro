@@ -1,0 +1,22 @@
+{
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "email": "Email",
+    "phone": "Phone",
+    "password": "Password",
+    "fullName": "Full Name",
+    "biometric": "Biometric Login"
+  },
+  "dashboard": { "portfolio": "My Portfolio", "watchlist": "Watchlist" },
+  "market": { "open": "Market Open", "closed": "Market Closed" },
+  "ai": { "analyze": "Analyze", "loading": "Analyzing..." },
+  "common": {
+    "error": "An error occurred",
+    "retry": "Try again",
+    "save": "Save",
+    "cancel": "Cancel"
+  }
+}
+

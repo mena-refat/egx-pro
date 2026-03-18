@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';
 import { useAuthStore } from '../store/authStore';
+import { registerPushToken } from '../lib/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -20,13 +21,19 @@ Notifications.setNotificationHandler({
 });
 
 export default function RootLayout() {
-  const { checkAuth, isLoading } = useAuthStore();
+  const { checkAuth, isLoading, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     checkAuth().finally(() => {
       SplashScreen.hideAsync();
     });
   }, [checkAuth]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      void registerPushToken();
+    }
+  }, [isAuthenticated]);
 
   if (isLoading) return null;
 
@@ -35,13 +42,60 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: 'fade',
+              contentStyle: { backgroundColor: '#0a0a0f' },
+            }}
+          >
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="stocks/[ticker]" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="predictions/index" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="goals/index" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="index" />
+            <Stack.Screen
+              name="onboarding/index"
+              options={{ animation: 'fade', gestureEnabled: false }}
+            />
+            <Stack.Screen
+              name="setup-username"
+              options={{ animation: 'fade', gestureEnabled: false }}
+            />
+            <Stack.Screen
+              name="stocks/[ticker]"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="predictions/index"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="goals/index"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="settings/index"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="settings/account"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="settings/security"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="settings/notifications"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="settings/biometric"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="settings/subscription"
+              options={{ animation: 'slide_from_right' }}
+            />
           </Stack>
         </SafeAreaProvider>
       </GestureHandlerRootView>

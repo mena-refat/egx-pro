@@ -8,6 +8,8 @@ import {
   ChevronRight,
   Shield,
   Bell,
+  Target,
+  Compass,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
@@ -109,6 +111,16 @@ export default function ProfilePage() {
             icon={Settings}
             label="الإعدادات"
             onPress={() => router.push('/settings')}
+          />
+          <MenuItem
+            icon={Target}
+            label="التوقعات"
+            onPress={() => router.push('/predictions/index')}
+          />
+          <MenuItem
+            icon={Compass}
+            label="الأهداف المالية"
+            onPress={() => router.push('/goals/index')}
           />
         </View>
 

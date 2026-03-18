@@ -52,3 +52,20 @@ export function validateRegisterPassword(
   return { ok: true };
 }
 
+export function validateChangePassword(
+  password: string,
+  ctx: { email?: string | null; username?: string },
+): { ok: true } | { ok: false; message: string } {
+  const parsed = passwordSchema.safeParse(password);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? 'كلمة المرور غير صالحة' };
+  }
+  if (ctx.email && password.trim().toLowerCase() === ctx.email.trim().toLowerCase()) {
+    return { ok: false, message: 'كلمة المرور لا يجوز أن تكون مثل البريد الإلكتروني' };
+  }
+  if (ctx.username && password.trim().toLowerCase() === ctx.username.trim().toLowerCase()) {
+    return { ok: false, message: 'كلمة المرور لا يجوز أن تكون مثل اسم المستخدم' };
+  }
+  return { ok: true };
+}
+
