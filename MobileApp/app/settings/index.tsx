@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   User,
@@ -127,7 +127,13 @@ export default function SettingsPage() {
           <MenuItem
             icon={Trash2}
             label="حذف الحساب"
-            onPress={() => router.push('/settings/delete-account')}
+            onPress={() =>
+              Alert.alert(
+                'حذف الحساب',
+                'لحذف حسابك بشكل نهائي، تواصل معنا عبر الدعم الفني.',
+                [{ text: 'حسناً', style: 'cancel' }],
+              )
+            }
             danger
           />
         </Section>

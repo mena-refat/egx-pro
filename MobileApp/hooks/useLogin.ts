@@ -132,13 +132,14 @@ export function useLogin() {
     }
   };
 
-  const handle2FA = async () => {
-    if (twoFACode.length !== 6) return;
+  const handle2FA = async (codeOverride?: string) => {
+    const code = codeOverride ?? twoFACode;
+    if (code.length !== 6) return;
     setLoading(true);
     setError(null);
     try {
       const res = await apiClient.post(ENDPOINTS.auth.twoFA.authenticate, {
-        code: twoFACode,
+        code,
         tempToken: twoFAToken,
       });
       const body = res.data as { user: MobileUser; accessToken: string; refreshToken?: string };

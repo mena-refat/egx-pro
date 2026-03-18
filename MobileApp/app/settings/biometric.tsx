@@ -115,7 +115,7 @@ export default function BiometricPage() {
 
         <View className="bg-blue-500/10 border border-blue-500/20 rounded-2xl px-4 py-3">
           <Text className="text-xs text-blue-400 leading-5 text-center">
-            بياناتك محفوظة في Keychain (iOS) أو Keystore (Android) — أأمن تخزين على جهازك
+            بياناتك محفوظة في Keychain (iOS) أو Keystore (Android) — أمن تخزين على جهازك
           </Text>
         </View>
       </View>

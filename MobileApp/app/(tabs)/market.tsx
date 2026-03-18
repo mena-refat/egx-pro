@@ -88,7 +88,7 @@ export default function MarketPage() {
         </View>
         <View className="items-end gap-1">
           <Text className="text-sm font-bold text-white tabular-nums">
-            {s.price.toFixed(2)}
+            {(s.price ?? 0).toFixed(2)}
           </Text>
           <PriceTag
             change={s.change}

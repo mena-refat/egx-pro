@@ -37,7 +37,11 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const handlePress: NonNullable<PressableProps['onPress']> = async (e) => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {
+      // Haptics not supported on this device/simulator — ignore
+    }
     onPress?.(e);
   };
 

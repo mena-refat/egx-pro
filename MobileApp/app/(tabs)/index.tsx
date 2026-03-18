@@ -87,28 +87,30 @@ export default function DashboardPage() {
     await Promise.all([refresh(), refetchWatchlist()]);
   }, [refresh, refetchWatchlist]);
 
-  const topGainer = holdings.reduce<(typeof holdings)[number] | null>(
-    (best, h) => {
-      const pct = prices[h.ticker]?.changePercent ?? h.gainLossPercent ?? 0;
-      const bestPct =
-        best != null
-          ? prices[best.ticker]?.changePercent ?? best.gainLossPercent ?? 0
-          : -Infinity;
-      return pct > 0 && pct > bestPct ? h : best;
-    },
-    null,
+  const topGainer = useMemo(
+    () =>
+      holdings.reduce<(typeof holdings)[number] | null>((best, h) => {
+        const pct = prices[h.ticker]?.changePercent ?? h.gainLossPercent ?? 0;
+        const bestPct =
+          best != null
+            ? prices[best.ticker]?.changePercent ?? best.gainLossPercent ?? 0
+            : -Infinity;
+        return pct > 0 && pct > bestPct ? h : best;
+      }, null),
+    [holdings, prices],
   );
 
-  const topLoser = holdings.reduce<(typeof holdings)[number] | null>(
-    (worst, h) => {
-      const pct = prices[h.ticker]?.changePercent ?? h.gainLossPercent ?? 0;
-      const worstPct =
-        worst != null
-          ? prices[worst.ticker]?.changePercent ?? worst.gainLossPercent ?? Infinity
-          : Infinity;
-      return pct < 0 && pct < worstPct ? h : worst;
-    },
-    null,
+  const topLoser = useMemo(
+    () =>
+      holdings.reduce<(typeof holdings)[number] | null>((worst, h) => {
+        const pct = prices[h.ticker]?.changePercent ?? h.gainLossPercent ?? 0;
+        const worstPct =
+          worst != null
+            ? prices[worst.ticker]?.changePercent ?? worst.gainLossPercent ?? Infinity
+            : Infinity;
+        return pct < 0 && pct < worstPct ? h : worst;
+      }, null),
+    [holdings, prices],
   );
 
   return (

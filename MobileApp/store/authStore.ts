@@ -70,8 +70,12 @@ export const useAuthStore = create<AuthState>()(
           } else {
             set({ user: null, isAuthenticated: false });
           }
-        } catch {
-          set({ user: null, isAuthenticated: false });
+        } catch (err: unknown) {
+          // Keep user logged in on network errors — only clear auth on 401
+          const isNetworkError = (err as { error?: string })?.error === 'NETWORK_ERROR';
+          if (!isNetworkError) {
+            set({ user: null, isAuthenticated: false });
+          }
         } finally {
           set({ isLoading: false });
         }
@@ -85,6 +89,8 @@ export const useAuthStore = create<AuthState>()(
         user: state.user
           ? {
               id: state.user.id,
+              email: state.user.email,
+              phone: state.user.phone,
               fullName: state.user.fullName,
               username: state.user.username,
               avatarUrl: state.user.avatarUrl,
@@ -95,6 +101,7 @@ export const useAuthStore = create<AuthState>()(
               shariaMode: state.user.shariaMode,
               onboardingCompleted: state.user.onboardingCompleted,
               isFirstLogin: state.user.isFirstLogin,
+              aiAnalysisUsedThisMonth: state.user.aiAnalysisUsedThisMonth,
             }
           : null,
       }),

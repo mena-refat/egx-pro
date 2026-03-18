@@ -9,8 +9,10 @@ interface Props {
 }
 
 export function PriceTag({ change, changePercent, size = 'md', showIcon = true }: Props) {
-  const isUp = change > 0;
-  const isDown = change < 0;
+  const safeChange = change ?? 0;
+  const safePct = isFinite(changePercent) ? changePercent : 0;
+  const isUp = safeChange > 0;
+  const isDown = safeChange < 0;
   const color = isUp ? '#10b981' : isDown ? '#ef4444' : '#94a3b8';
   const bgColor = isUp ? 'bg-emerald-500/10' : isDown ? 'bg-red-500/10' : 'bg-white/5';
   const sizes = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' } as const;
@@ -29,7 +31,7 @@ export function PriceTag({ change, changePercent, size = 'md', showIcon = true }
         ))}
       <Text className={`${sizes[size]} font-semibold`} style={{ color }}>
         {prefix}
-        {changePercent.toFixed(2)}%
+        {safePct.toFixed(2)}%
       </Text>
     </View>
   );
@@ -37,9 +39,10 @@ export function PriceTag({ change, changePercent, size = 'md', showIcon = true }
 
 export function StockPrice({ price, size = 'md' }: { price: number; size?: 'sm' | 'md' | 'lg' }) {
   const sizes = { sm: 'text-sm', md: 'text-base', lg: 'text-xl' } as const;
+  const safePrice = isFinite(price) ? price : 0;
   return (
     <Text className={`${sizes[size]} font-bold text-white tabular-nums`}>
-      {price.toFixed(2)}
+      {safePrice.toFixed(2)}
     </Text>
   );
 }

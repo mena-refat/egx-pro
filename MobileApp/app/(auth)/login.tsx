@@ -49,7 +49,7 @@ export default function LoginPage() {
           <OTPInput
             onComplete={(code) => {
               setTwoFACode(code);
-              void handle2FA();
+              void handle2FA(code);
             }}
             error={!!error}
           />
