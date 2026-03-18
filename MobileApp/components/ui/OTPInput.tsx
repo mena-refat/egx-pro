@@ -26,11 +26,17 @@ export function OTPInput({ length = 6, onComplete, error }: Props) {
   };
 
   const handleKeyPress = (key: string, index: number) => {
-    if (key === 'Backspace' && !values[index] && index > 0) {
-      inputsRef.current[index - 1]?.focus();
-      const next = [...values];
-      next[index - 1] = '';
-      setValues(next);
+    if (key === 'Backspace') {
+      if (!values[index] && index > 0) {
+        inputsRef.current[index - 1]?.focus();
+        const next = [...values];
+        next[index - 1] = '';
+        setValues(next);
+      } else if (values[index]) {
+        const next = [...values];
+        next[index] = '';
+        setValues(next);
+      }
     }
   };
 

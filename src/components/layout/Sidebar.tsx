@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight, Settings, Users, Crosshair, Brain } from 'lucide-react';
+import { LayoutDashboard, PieChart, Calculator, Search, Target, User as UserIcon, BarChart3, ChevronLeft, ChevronRight, Settings, Users, Crosshair, Brain, LifeBuoy } from 'lucide-react';
 
 export type SidebarProps = {
   activeRoute: string;
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { id: 'calculator', path: '/calculator', icon: Calculator },
   { id: 'profile', path: '/profile', icon: UserIcon },
   { id: 'settings', path: '/settings/account', icon: Settings },
+  { id: 'support', path: '/support', icon: LifeBuoy },
 ] as const;
 
 export function Sidebar({ activeRoute, collapsed, onToggle }: SidebarProps) {

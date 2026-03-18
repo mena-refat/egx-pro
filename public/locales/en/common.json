@@ -75,7 +75,8 @@
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar",
     "predictions": "Predictions",
-    "ai": "AI"
+    "ai": "AI",
+    "support": "Support"
   },
   "ai": {
     "title": "AI",
@@ -286,6 +287,30 @@
       "alreadyRegistered": "Email or phone already registered",
       "invalidCode": "Invalid code, check your authenticator app",
       "connectionFailed": "Could not reach the server. Make sure the app is running and try again."
+    }
+  },
+  "support": {
+    "title": "Support",
+    "subtitle": "Send us a message and we'll get back to you as soon as possible",
+    "newTicket": "New Ticket",
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "What do you need help with?",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Describe your issue in detail...",
+    "send": "Send",
+    "sending": "Sending...",
+    "submitSuccess": "Your ticket was submitted successfully. We'll get back to you soon.",
+    "submitError": "Failed to submit ticket. Please try again.",
+    "noTickets": "No support tickets yet",
+    "noTicketsHint": "Create a new ticket if you need help with anything.",
+    "yourMessage": "Your message",
+    "adminReply": "Support reply",
+    "hasReply": "Reply received",
+    "status": {
+      "open": "Open",
+      "in_progress": "In Progress",
+      "resolved": "Resolved",
+      "closed": "Closed"
     }
   },
   "goals": {

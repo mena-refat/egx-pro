@@ -49,6 +49,7 @@ const AIPage = lazy(() => import('./pages/AIPage'));
 const AIAnalyzePage = lazy(() => import('./pages/AIAnalyzePage'));
 const AIComparePage = lazy(() => import('./pages/AIComparePage'));
 const AIRecommendationsPage = lazy(() => import('./pages/AIRecommendationsPage'));
+const SupportPage = lazy(() => import('./pages/SupportPage'));
 
 export default function App() {
   const { i18n } = useTranslation('common');
@@ -172,6 +173,7 @@ export default function App() {
                 <Route path="/ai/analyze" element={<ErrorBoundary><Suspense fallback={<AIPageSkeleton />}><AIAnalyzePage /></Suspense></ErrorBoundary>} />
                 <Route path="/ai/compare" element={<ErrorBoundary><Suspense fallback={<AIPageSkeleton />}><AIComparePage /></Suspense></ErrorBoundary>} />
                 <Route path="/ai/recommendations" element={<ErrorBoundary><Suspense fallback={<AIPageSkeleton />}><AIRecommendationsPage /></Suspense></ErrorBoundary>} />
+                <Route path="/support" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><SupportPage /></Suspense></ErrorBoundary>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </motion.div>
