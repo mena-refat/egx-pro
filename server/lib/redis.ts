@@ -18,16 +18,23 @@ if (!redis) {
 // In-memory fallback
 const localCache = new Map<string, { value: unknown; expiry: number }>();
 let redisWriteDisabled = false;
+let redisReadDisabled = false;
 const LOCAL_CACHE_MAX_SIZE = 2000;
 
 /** Get value from Redis or in-memory fallback. Returns null if missing or expired. */
 export const getCache = async <T>(key: string): Promise<T | null> => {
   // Try Redis first
-  if (redis) {
+  if (redis && !redisReadDisabled) {
     try {
       return await redis.get<T>(key);
     } catch (err) {
-      logger.warn('Redis Get Error', { key, err });
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn('Redis Get Error', { key, err: message });
+      // If Upstash is unavailable, disable further reads for this process to avoid log spam
+      if (err && (err as { name?: string }).name === 'UpstashError') {
+        redisReadDisabled = true;
+        logger.warn('⚠️ Redis read failures detected. Disabling Redis reads for this session; using in-memory cache only.');
+      }
       // Fallback to local cache on error
     }
   }
