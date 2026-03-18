@@ -9,19 +9,15 @@ interface Props {
 export function Pagination({ page, totalPages, total, limit, onChange }: Props) {
   if (totalPages <= 1) return null;
   const from = (page - 1) * limit + 1;
-  const to = Math.min(page * limit, total);
+  const to   = Math.min(page * limit, total);
 
   return (
     <div className="flex items-center justify-between text-sm text-slate-400 mt-4">
-      <p>
-        {from}–{to} of {total.toLocaleString()}
-      </p>
+      <p>{from}–{to} of {total.toLocaleString()}</p>
       <div className="flex gap-2">
         <button
-          type="button"
-          onClick={() => onChange(page - 1)}
-          disabled={page === 1}
-          className="px-3 py-1.5 rounded-lg border border-white/10/80 hover:bg-white/5/50 disabled:opacity-30 transition-all text-xs"
+          onClick={() => onChange(page - 1)} disabled={page === 1}
+          className="px-3 py-1.5 rounded-lg border border-white/[0.08] hover:bg-white/[0.05] disabled:opacity-30 transition-all text-xs"
         >
           ← Prev
         </button>
@@ -29,10 +25,8 @@ export function Pagination({ page, totalPages, total, limit, onChange }: Props) 
           {page} / {totalPages}
         </span>
         <button
-          type="button"
-          onClick={() => onChange(page + 1)}
-          disabled={page === totalPages}
-          className="px-3 py-1.5 rounded-lg border border-white/10/80 hover:bg-white/5/50 disabled:opacity-30 transition-all text-xs"
+          onClick={() => onChange(page + 1)} disabled={page === totalPages}
+          className="px-3 py-1.5 rounded-lg border border-white/[0.08] hover:bg-white/[0.05] disabled:opacity-30 transition-all text-xs"
         >
           Next →
         </button>
