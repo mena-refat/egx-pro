@@ -88,6 +88,7 @@ export default function DiscountsPage() {
         headers={[t('discounts.code'), t('discounts.type'), t('discounts.value'), t('discounts.used'), t('discounts.expires'), t('discounts.active'), '']}
         loading={loading}
         rowCount={rows.length}
+        empty={t('discounts.noCodes')}
         children={(
           <>
             {rows.map((d) => (

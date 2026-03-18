@@ -292,6 +292,12 @@ export const en = {
     confirmPasswordWrong: 'Incorrect password.',
     activate: 'Activate account',
     deactivate: 'Deactivate account',
+    editProfile: 'Edit Profile',
+    resetPassword: 'Reset Password',
+    reset2FA: 'Reset 2FA',
+    newPasswordLabel: 'New password for this admin',
+    reset2FAMsg: 'This will disable 2FA for this admin. They will need to set it up again on next login.',
+    emailExists: 'This email is already in use.',
   },
 
   audit: {

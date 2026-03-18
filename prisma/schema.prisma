@@ -157,6 +157,18 @@ model AdminAuditLog {
   @@index([createdAt])
 }
 
+model BlockedIdentifier {
+  id        String   @id @default(cuid())
+  type      String   // EMAIL | PHONE | EMAIL_DOMAIN
+  value     String
+  reason    String?
+  blockedBy String?
+  createdAt DateTime @default(now())
+
+  @@unique([type, value])
+  @@index([type])
+}
+
 model SupportTicket {
   id          String              @id @default(cuid())
   userId      String

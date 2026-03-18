@@ -146,46 +146,55 @@ export default function AdminAccountPage() {
         </div>
       )}
 
-      <form onSubmit={handleProfileSubmit} className="space-y-3 rounded-xl border border-white/[0.07] bg-[#111118] p-5">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-semibold text-white">{t('account.profile')}</h2>
-          {me && (
+      {me?.role === 'SUPER_ADMIN' ? (
+        <form onSubmit={handleProfileSubmit} className="space-y-3 rounded-xl border border-white/[0.07] bg-[#111118] p-5">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-sm font-semibold text-white">{t('account.profile')}</h2>
             <span className="text-[11px] text-slate-500">
               {t('account.role')}:{' '}
-              <span className="font-semibold text-slate-200">{me.role}</span>
+              <span className="font-semibold text-amber-400">{me.role}</span>
             </span>
-          )}
+          </div>
+          <div className="space-y-1.5 text-sm">
+            <label className="block text-slate-300">{t('account.fullName')}</label>
+            <input
+              value={profileForm.fullName}
+              onChange={(e) => setProfileForm((f) => ({ ...f, fullName: e.target.value }))}
+              className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-emerald-500/50"
+            />
+          </div>
+          <div className="space-y-1.5 text-sm">
+            <label className="block text-slate-300">{t('account.email')}</label>
+            <input
+              value={profileForm.email}
+              onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))}
+              className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-emerald-500/50"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={profileSaving}
+            className="mt-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold px-4 py-2 disabled:opacity-60"
+          >
+            {profileSaving ? t('common.saving') : t('account.saveChanges')}
+          </button>
+        </form>
+      ) : (
+        <div className="rounded-xl border border-white/[0.07] bg-[#111118] p-5">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-sm font-semibold text-white">{t('account.profile')}</h2>
+            <span className="text-[11px] text-slate-500">
+              {t('account.role')}:{' '}
+              <span className="font-semibold text-slate-200">{me?.role ?? '—'}</span>
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 mt-2">{t('account.superAdminOnly')}</p>
+          <div className="mt-3 space-y-1.5">
+            <p className="text-xs text-slate-500">{t('account.fullName')}: <span className="text-slate-300">{me?.fullName}</span></p>
+            <p className="text-xs text-slate-500">{t('account.email')}: <span className="text-slate-300">{me?.email}</span></p>
+          </div>
         </div>
-        <div className="space-y-1.5 text-sm">
-          <label className="block text-slate-300">{t('account.fullName')}</label>
-          <input
-            value={profileForm.fullName}
-            onChange={(e) => setProfileForm((f) => ({ ...f, fullName: e.target.value }))}
-            disabled={me?.role !== 'SUPER_ADMIN'}
-            className={`w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-emerald-500/50 ${
-              me?.role !== 'SUPER_ADMIN' ? 'opacity-60 cursor-not-allowed' : ''
-            }`}
-          />
-          {me?.role !== 'SUPER_ADMIN' && (
-            <p className="text-[11px] text-slate-500">{t('account.superAdminOnly')}</p>
-          )}
-        </div>
-        <div className="space-y-1.5 text-sm">
-          <label className="block text-slate-300">{t('account.email')}</label>
-          <input
-            value={profileForm.email}
-            onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))}
-            className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-emerald-500/50"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={profileSaving}
-          className="mt-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold px-4 py-2 disabled:opacity-60"
-        >
-          {profileSaving ? t('common.saving') : t('account.saveChanges')}
-        </button>
-      </form>
+      )}
 
       <form onSubmit={handlePasswordSubmit} className="space-y-3 rounded-xl border border-white/[0.07] bg-[#111118] p-5">
         <h2 className="text-sm font-semibold text-white mb-1">{t('account.changePassword')}</h2>
@@ -274,25 +283,31 @@ export default function AdminAccountPage() {
         )}
 
         {me?.twoFactorEnabled && (
-          <form onSubmit={handleDisableTwoFa} className="space-y-2 text-xs mt-2">
-            <p className="text-slate-300">{t('account.disable2faDesc')}</p>
-            <div className="space-y-1.5">
-              <label className="block text-slate-300">{t('account.passwordLabel')}</label>
-              <input
-                type="password"
-                value={twoFaPassword}
-                onChange={(e) => setTwoFaPassword(e.target.value)}
-                className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white outline-none focus:border-emerald-500/50"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={twoFaSaving}
-              className="mt-1 rounded-lg bg-red-500 hover:bg-red-400 text-white text-xs font-semibold px-3 py-1.5 disabled:opacity-60"
-            >
-              {twoFaSaving ? t('common.disabling') : t('account.disable2fa')}
-            </button>
-          </form>
+          me?.mustSetup2FA ? (
+            <p className="text-xs text-amber-400/80 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mt-2">
+              {t('account.twoFaEnforced')}
+            </p>
+          ) : (
+            <form onSubmit={handleDisableTwoFa} className="space-y-2 text-xs mt-2">
+              <p className="text-slate-300">{t('account.disable2faDesc')}</p>
+              <div className="space-y-1.5">
+                <label className="block text-slate-300">{t('account.passwordLabel')}</label>
+                <input
+                  type="password"
+                  value={twoFaPassword}
+                  onChange={(e) => setTwoFaPassword(e.target.value)}
+                  className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white outline-none focus:border-emerald-500/50"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={twoFaSaving}
+                className="mt-1 rounded-lg bg-red-500 hover:bg-red-400 text-white text-xs font-semibold px-3 py-1.5 disabled:opacity-60"
+              >
+                {twoFaSaving ? t('common.disabling') : t('account.disable2fa')}
+              </button>
+            </form>
+          )
         )}
       </div>
     </div>

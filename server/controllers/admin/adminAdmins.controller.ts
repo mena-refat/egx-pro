@@ -162,6 +162,59 @@ export const AdminAdminsController = {
     sendSuccess(res, { ok: true });
   },
 
+  async updateAdminProfile(req: AdminRequest, res: Response): Promise<void> {
+    if (req.admin?.role !== 'SUPER_ADMIN') { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
+    const { id } = req.params as { id: string };
+    if (id === req.admin.id) { sendError(res, 'USE_ACCOUNT_PAGE', 400); return; }
+    const { fullName, email } = req.body as { fullName?: string; email?: string };
+    if (!fullName?.trim() && !email?.trim()) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+
+    const data: Record<string, unknown> = {};
+    if (fullName?.trim()) data.fullName = fullName.trim();
+    if (email?.trim()) {
+      const norm = email.toLowerCase().trim();
+      const dup = await prisma.admin.findFirst({ where: { email: norm, NOT: { id } } });
+      if (dup) { sendError(res, 'EMAIL_ALREADY_EXISTS', 409); return; }
+      data.email = norm;
+    }
+
+    const updated = await prisma.admin.update({ where: { id }, data, select: { id: true, email: true, fullName: true } });
+    if (req.admin) await adminAudit(req.admin.id, 'ADMIN_PROFILE_UPDATED', id, JSON.stringify(data), req);
+    sendSuccess(res, updated);
+  },
+
+  async resetAdminPassword(req: AdminRequest, res: Response): Promise<void> {
+    if (req.admin?.role !== 'SUPER_ADMIN') { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
+    const { id } = req.params as { id: string };
+    if (id === req.admin.id) { sendError(res, 'USE_ACCOUNT_PAGE', 400); return; }
+    const { newPassword, confirmPassword } = req.body as { newPassword?: string; confirmPassword?: string };
+    if (!newPassword || newPassword.length < 12) { sendError(res, 'PASSWORD_TOO_WEAK', 400); return; }
+    if (!await verifySuperAdminPassword(req, confirmPassword)) { sendError(res, 'INVALID_CREDENTIALS', 401); return; }
+
+    const { hash, salt } = await hashPassword(newPassword);
+    await prisma.admin.update({
+      where: { id },
+      data: { passwordHash: hash, salt, mustChangePassword: true },
+    });
+    if (req.admin) await adminAudit(req.admin.id, 'ADMIN_RESET_PASSWORD', id, undefined, req);
+    sendSuccess(res, { ok: true });
+  },
+
+  async resetAdmin2FA(req: AdminRequest, res: Response): Promise<void> {
+    if (req.admin?.role !== 'SUPER_ADMIN') { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
+    const { id } = req.params as { id: string };
+    if (id === req.admin.id) { sendError(res, 'USE_ACCOUNT_PAGE', 400); return; }
+    const { confirmPassword } = req.body as { confirmPassword?: string };
+    if (!await verifySuperAdminPassword(req, confirmPassword)) { sendError(res, 'INVALID_CREDENTIALS', 401); return; }
+
+    await prisma.admin.update({
+      where: { id },
+      data: { twoFactorEnabled: false, twoFactorSecret: null },
+    });
+    if (req.admin) await adminAudit(req.admin.id, 'ADMIN_RESET_2FA', id, undefined, req);
+    sendSuccess(res, { ok: true });
+  },
+
   async updatePermissions(req: AdminRequest, res: Response): Promise<void> {
     if (req.admin?.role !== 'SUPER_ADMIN') {
       sendError(res, 'ADMIN_FORBIDDEN', 403);

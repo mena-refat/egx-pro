@@ -7,6 +7,7 @@ import { AdminSupportController } from '../controllers/admin/adminSupport.contro
 import { AdminAnalyticsController } from '../controllers/admin/adminAnalytics.controller.ts';
 import { AdminAdminsController } from '../controllers/admin/adminAdmins.controller.ts';
 import { AdminNotificationsController } from '../controllers/admin/adminNotifications.controller.ts';
+import { AdminBlocklistController } from '../controllers/admin/adminBlocklist.controller.ts';
 
 const router = Router();
 
@@ -236,6 +237,29 @@ router.post('/admins', adminAuthenticate, (req, res, next) => {
 
 router.patch('/admins/:id/permissions', adminAuthenticate, (req, res, next) => {
   void AdminAdminsController.updatePermissions(req as any, res).catch(next);
+});
+
+router.patch('/admins/:id/profile', adminAuthenticate, (req, res, next) => {
+  void AdminAdminsController.updateAdminProfile(req as any, res).catch(next);
+});
+
+router.post('/admins/:id/reset-password', adminAuthenticate, (req, res, next) => {
+  void AdminAdminsController.resetAdminPassword(req as any, res).catch(next);
+});
+
+router.post('/admins/:id/reset-2fa', adminAuthenticate, (req, res, next) => {
+  void AdminAdminsController.resetAdmin2FA(req as any, res).catch(next);
+});
+
+// Blocklist
+router.get('/blocklist', adminAuthenticate, (req, res, next) => {
+  void AdminBlocklistController.list(req as any, res).catch(next);
+});
+router.post('/blocklist', adminAuthenticate, (req, res, next) => {
+  void AdminBlocklistController.add(req as any, res).catch(next);
+});
+router.delete('/blocklist/:id', adminAuthenticate, (req, res, next) => {
+  void AdminBlocklistController.remove(req as any, res).catch(next);
 });
 
 router.delete('/admins/:id', adminAuthenticate, (req, res, next) => {

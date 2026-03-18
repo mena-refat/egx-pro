@@ -28,6 +28,7 @@ import { logger } from '../lib/logger.ts';
 import { sanitizeUser } from '../lib/userSanitize.ts';
 import { buildRefreshTokenData } from '../lib/refreshTokenData.ts';
 import { AppError } from '../lib/errors.ts';
+import { prisma } from '../lib/prisma.ts';
 import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
 
@@ -99,6 +100,25 @@ export async function register(
         : null;
   if (existingUser) {
     throw new AppError(isEmail ? 'Email already registered' : 'Phone number already registered', 400);
+  }
+
+  // Check blocklist
+  if (email) {
+    const emailBlocked = await prisma.blockedIdentifier.findFirst({
+      where: {
+        OR: [
+          { type: 'EMAIL', value: email },
+          { type: 'EMAIL_DOMAIN', value: email.split('@')[1] ?? '' },
+        ],
+      },
+    });
+    if (emailBlocked) throw new AppError('ACCOUNT_BLOCKED', 403);
+  }
+  if (phone) {
+    const phoneBlocked = await prisma.blockedIdentifier.findFirst({
+      where: { type: 'PHONE', value: phone },
+    });
+    if (phoneBlocked) throw new AppError('ACCOUNT_BLOCKED', 403);
   }
   if ((email == null || email === '') && (phone == null || phone === '')) {
     throw new AppError('invalid_input', 400, 'يجب إدخال بريد إلكتروني أو رقم موبايل صحيح');

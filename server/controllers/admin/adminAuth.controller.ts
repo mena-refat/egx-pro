@@ -164,6 +164,10 @@ export const AdminAuthController = {
       sendError(res, 'ADMIN_UNAUTHORIZED', 401);
       return;
     }
+    if (req.admin.role !== 'SUPER_ADMIN') {
+      sendError(res, 'ADMIN_FORBIDDEN', 403);
+      return;
+    }
     const { fullName, email } = req.body as {
       fullName?: string;
       email?: string;
@@ -173,10 +177,7 @@ export const AdminAuthController = {
       return;
     }
     const data: Record<string, unknown> = {};
-    const canEditName = req.admin.role === 'SUPER_ADMIN';
-    if (fullName?.trim() && canEditName) {
-      data.fullName = fullName.trim();
-    }
+    if (fullName?.trim()) data.fullName = fullName.trim();
     if (email?.trim()) data.email = email.toLowerCase().trim();
 
     if (Object.keys(data).length === 0) {
@@ -270,6 +271,10 @@ export const AdminAuthController = {
     const valid = await verifyPassword(password, existing.passwordHash, existing.salt);
     if (!valid) {
       sendError(res, 'INVALID_CREDENTIALS', 401);
+      return;
+    }
+    if (existing.mustSetup2FA) {
+      sendError(res, '2FA_ENFORCED', 403);
       return;
     }
     await prisma.admin.update({

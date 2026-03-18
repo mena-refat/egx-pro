@@ -4,7 +4,7 @@ import { adminApi } from '../lib/adminApi';
 import { useAdminStore } from '../store/adminAuthStore';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
-import { Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Trash2, ToggleLeft, ToggleRight, Pencil, KeyRound, ShieldOff } from 'lucide-react';
 
 const PERMS = [
   'users.view',
@@ -95,6 +95,23 @@ export default function AdminsPage() {
   const [delPassword, setDelPassword]   = useState('');
   const [delPasswordError, setDelPasswordError] = useState('');
 
+  // Edit profile state
+  const [editAdmin, setEditAdmin] = useState<{ id: string; fullName: string; email: string } | null>(null);
+  const [editForm, setEditForm]   = useState({ fullName: '', email: '' });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError]   = useState('');
+
+  // Reset password state
+  const [resetPwdId, setResetPwdId]   = useState<string | null>(null);
+  const [resetPwdNew, setResetPwdNew] = useState('');
+  const [resetPwdConfirm, setResetPwdConfirm] = useState('');
+  const [resetPwdError, setResetPwdError] = useState('');
+
+  // Reset 2FA state
+  const [reset2FAId, setReset2FAId]   = useState<string | null>(null);
+  const [reset2FAPwd, setReset2FAPwd] = useState('');
+  const [reset2FAError, setReset2FAError] = useState('');
+
   const loadAdmins = () =>
     adminApi.get('/admins').then((r) => setAdmins(r.data.data)).catch(() => setAdmins([]));
 
@@ -160,6 +177,47 @@ export default function AdminsPage() {
       await adminApi.patch(`/admins/${id}/permissions`, { isActive: !currentlyActive });
       setAdmins((prev) => prev.map((a) => a.id === id ? { ...a, isActive: !currentlyActive } : a));
     } catch { /* ignore */ }
+  };
+
+  const handleEditProfile = async () => {
+    if (!editAdmin) return;
+    setEditSaving(true); setEditError('');
+    try {
+      const res = await adminApi.patch(`/admins/${editAdmin.id}/profile`, editForm);
+      setAdmins((prev) => prev.map((a) => a.id === editAdmin.id ? { ...a, ...res.data.data } : a));
+      setEditAdmin(null);
+    } catch (err: any) {
+      const code = err?.response?.data?.error;
+      setEditError(code === 'EMAIL_ALREADY_EXISTS' ? t('admins.emailExists') : (code ?? 'Failed'));
+    } finally { setEditSaving(false); }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPwdId) return;
+    if (!resetPwdNew || resetPwdNew.length < 18) { setResetPwdError(t('account.passwordTooWeak')); return; }
+    setSaving(true); setResetPwdError('');
+    try {
+      await adminApi.post(`/admins/${resetPwdId}/reset-password`, { newPassword: resetPwdNew, confirmPassword: resetPwdConfirm });
+      setResetPwdId(null); setResetPwdNew(''); setResetPwdConfirm('');
+    } catch (err: any) {
+      const code = err?.response?.data?.error;
+      if (code === 'INVALID_CREDENTIALS') setResetPwdError(t('admins.confirmPasswordWrong'));
+      else setResetPwdError(code ?? 'Failed');
+    } finally { setSaving(false); }
+  };
+
+  const handleReset2FA = async () => {
+    if (!reset2FAId) return;
+    setSaving(true); setReset2FAError('');
+    try {
+      await adminApi.post(`/admins/${reset2FAId}/reset-2fa`, { confirmPassword: reset2FAPwd });
+      setAdmins((prev) => prev.map((a) => a.id === reset2FAId ? { ...a, twoFactorEnabled: false } : a));
+      setReset2FAId(null); setReset2FAPwd('');
+    } catch (err: any) {
+      const code = err?.response?.data?.error;
+      if (code === 'INVALID_CREDENTIALS') setReset2FAError(t('admins.confirmPasswordWrong'));
+      else setReset2FAError(code ?? 'Failed');
+    } finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
@@ -473,6 +531,33 @@ export default function AdminsPage() {
                 <td className="px-3 py-2">
                   {a.id !== currentAdmin?.id && (
                     <div className="flex items-center gap-2">
+                      {currentAdmin?.role === 'SUPER_ADMIN' && (
+                        <>
+                          <button
+                            onClick={() => { setEditAdmin({ id: a.id, fullName: a.fullName, email: a.email }); setEditForm({ fullName: a.fullName ?? '', email: a.email ?? '' }); setEditError(''); }}
+                            title={t('admins.editProfile')}
+                            className="text-slate-600 hover:text-blue-400 transition-colors"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            onClick={() => { setResetPwdId(a.id); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); }}
+                            title={t('admins.resetPassword')}
+                            className="text-slate-600 hover:text-amber-400 transition-colors"
+                          >
+                            <KeyRound size={13} />
+                          </button>
+                          {a.twoFactorEnabled && (
+                            <button
+                              onClick={() => { setReset2FAId(a.id); setReset2FAPwd(''); setReset2FAError(''); }}
+                              title={t('admins.reset2FA')}
+                              className="text-slate-600 hover:text-violet-400 transition-colors"
+                            >
+                              <ShieldOff size={13} />
+                            </button>
+                          )}
+                        </>
+                      )}
                       <button
                         onClick={() => void handleToggleActive(a.id, a.isActive)}
                         title={a.isActive ? t('admins.deactivate') : t('admins.activate')}
@@ -529,6 +614,121 @@ export default function AdminsPage() {
           >
             {saving ? t('common.loading') : t('common.delete')}
           </button>
+        </div>
+      </Modal>
+
+      {/* Edit Profile modal */}
+      <Modal
+        open={!!editAdmin}
+        onClose={() => setEditAdmin(null)}
+        title={t('admins.editProfile')}
+        width="max-w-sm"
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-slate-400 block mb-1.5">{t('admins.fullName')}</label>
+            <input
+              value={editForm.fullName}
+              onChange={(e) => setEditForm((f) => ({ ...f, fullName: e.target.value }))}
+              className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 block mb-1.5">{t('admins.email')}</label>
+            <input
+              value={editForm.email}
+              onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+              className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
+            />
+          </div>
+          {editError && <p className="text-xs text-red-400">{editError}</p>}
+          <div className="flex justify-end gap-3 pt-1">
+            <button onClick={() => setEditAdmin(null)} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200">{t('common.cancel')}</button>
+            <button
+              onClick={handleEditProfile}
+              disabled={editSaving || !editForm.fullName.trim() || !editForm.email.trim()}
+              className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all"
+            >
+              {editSaving ? t('common.saving') : t('common.save')}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Reset Password modal */}
+      <Modal
+        open={!!resetPwdId}
+        onClose={() => { setResetPwdId(null); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); }}
+        title={t('admins.resetPassword')}
+        width="max-w-sm"
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-slate-400 block mb-1.5">{t('admins.newPasswordLabel')}</label>
+            <input
+              type="text"
+              value={resetPwdNew}
+              onChange={(e) => { setResetPwdNew(e.target.value); setResetPwdError(''); }}
+              className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white font-mono focus:outline-none focus:border-amber-500/50"
+            />
+          </div>
+          <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3 space-y-2">
+            <p className="text-xs text-amber-400/80">{t('admins.confirmYourPasswordHint')}</p>
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={resetPwdConfirm}
+              onChange={(e) => { setResetPwdConfirm(e.target.value); setResetPwdError(''); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') void handleResetPassword(); }}
+              className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-amber-500/50"
+            />
+          </div>
+          {resetPwdError && <p className="text-xs text-red-400">{resetPwdError}</p>}
+          <div className="flex justify-end gap-3 pt-1">
+            <button onClick={() => { setResetPwdId(null); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); }} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200">{t('common.cancel')}</button>
+            <button
+              onClick={handleResetPassword}
+              disabled={saving || !resetPwdNew || !resetPwdConfirm}
+              className="px-4 py-2 text-sm font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all"
+            >
+              {saving ? t('common.loading') : t('admins.resetPassword')}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Reset 2FA modal */}
+      <Modal
+        open={!!reset2FAId}
+        onClose={() => { setReset2FAId(null); setReset2FAPwd(''); setReset2FAError(''); }}
+        title={t('admins.reset2FA')}
+        width="max-w-sm"
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-400">{t('admins.reset2FAMsg')}</p>
+          <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3 space-y-2">
+            <p className="text-xs text-amber-400/80">{t('admins.confirmYourPasswordHint')}</p>
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={reset2FAPwd}
+              onChange={(e) => { setReset2FAPwd(e.target.value); setReset2FAError(''); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') void handleReset2FA(); }}
+              autoFocus
+              className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-amber-500/50"
+            />
+          </div>
+          {reset2FAError && <p className="text-xs text-red-400">{reset2FAError}</p>}
+          <div className="flex justify-end gap-3 pt-1">
+            <button onClick={() => { setReset2FAId(null); setReset2FAPwd(''); setReset2FAError(''); }} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200">{t('common.cancel')}</button>
+            <button
+              onClick={handleReset2FA}
+              disabled={saving || !reset2FAPwd}
+              className="px-4 py-2 text-sm font-semibold bg-violet-500 hover:bg-violet-400 text-white rounded-lg disabled:opacity-50 transition-all"
+            >
+              {saving ? t('common.loading') : t('admins.reset2FA')}
+            </button>
+          </div>
         </div>
       </Modal>
 
