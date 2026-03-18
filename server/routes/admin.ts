@@ -47,6 +47,14 @@ router.get(
   }
 );
 
+router.post(
+  '/users/invite',
+  adminAuthenticate,
+  (req, res, next) => {
+    void AdminUsersController.inviteUser(req as any, res).catch(next);
+  }
+);
+
 router.get(
   '/users/stats',
   adminAuthenticate,

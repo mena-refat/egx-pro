@@ -1,8 +1,36 @@
 import type { Response } from 'express';
+import { randomBytes } from 'node:crypto';
 import { prisma } from '../../lib/prisma.ts';
 import { sendSuccess, sendError } from '../../lib/apiResponse.ts';
 import { adminAudit, type AdminRequest } from '../../middleware/adminAuth.middleware.ts';
 import { deleteCache } from '../../lib/redis.ts';
+import { hashPassword } from '../../../src/lib/auth.ts';
+import { EmailService } from '../../services/email.service.ts';
+
+function generateTempPassword(): string {
+  const upper   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lower   = 'abcdefghijklmnopqrstuvwxyz';
+  const digits  = '0123456789';
+  const symbols = '!@#$%^&*';
+  const all     = upper + lower + digits + symbols;
+
+  const randChar = (set: string) => set[randomBytes(1)[0] % set.length];
+
+  const chars = [
+    randChar(upper),  randChar(upper),
+    randChar(lower),  randChar(lower),
+    randChar(digits), randChar(digits),
+    randChar(symbols),randChar(symbols),
+  ];
+  while (chars.length < 18) chars.push(randChar(all));
+
+  // Fisher-Yates shuffle with crypto random
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = randomBytes(1)[0] % (i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
+}
 
 export const AdminUsersController = {
   async list(req: AdminRequest, res: Response): Promise<void> {
@@ -153,6 +181,71 @@ export const AdminUsersController = {
       );
     }
     sendSuccess(res, { isDeleted: newState });
+  },
+
+  async inviteUser(req: AdminRequest, res: Response): Promise<void> {
+    if (req.admin?.role !== 'SUPER_ADMIN') {
+      sendError(res, 'FORBIDDEN', 403);
+      return;
+    }
+
+    const {
+      email,
+      fullName,
+      options = {},
+    } = req.body as {
+      email?: string;
+      fullName?: string;
+      options?: { forcePasswordChange?: boolean; requireStrongPassword?: boolean; force2FA?: boolean };
+    };
+
+    if (!email?.trim()) {
+      sendError(res, 'VALIDATION_ERROR', 400);
+      return;
+    }
+
+    const existing = await prisma.user.findFirst({
+      where: { email: email.toLowerCase().trim(), isDeleted: false },
+    });
+    if (existing) {
+      sendError(res, 'EMAIL_ALREADY_EXISTS', 409);
+      return;
+    }
+
+    const forcePasswordChange  = options.forcePasswordChange  ?? true;
+    const requireStrongPassword = options.requireStrongPassword ?? true;
+    const force2FA             = options.force2FA             ?? true;
+
+    const tempPassword = generateTempPassword();
+    const { hash, salt } = await hashPassword(tempPassword);
+
+    const user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase().trim(),
+        fullName: fullName?.trim() || null,
+        passwordHash: hash,
+        salt,
+        isEmailVerified: true,
+        mustChangePassword: forcePasswordChange,
+        requireStrongPassword,
+        mustSetup2FA: force2FA,
+        referralCode: `EGX-${randomBytes(4).toString('hex').toUpperCase()}`,
+        lastPasswordChangeAt: new Date(),
+      },
+    });
+
+    void EmailService.sendUserInvite(
+      user.email as string,
+      fullName?.trim() ?? '',
+      tempPassword,
+      { forcePasswordChange, requireStrongPassword, force2FA },
+    );
+
+    if (req.admin) {
+      await adminAudit(req.admin.id, 'USER_INVITED', user.id, `email: ${email}`, req);
+    }
+
+    sendSuccess(res, { id: user.id, email: user.email });
   },
 
   async stats(_req: AdminRequest, res: Response): Promise<void> {

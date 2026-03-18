@@ -46,6 +46,9 @@ model User {
   aiAnalysisUsedThisMonth                Int            @default(0)
   aiAnalysisResetDate                    DateTime?
   planSetByAdmin                         Boolean        @default(false)
+  mustChangePassword                     Boolean        @default(false)
+  mustSetup2FA                           Boolean        @default(false)
+  requireStrongPassword                  Boolean        @default(false)
   referralCode                           String?        @unique
   referredBy                             String?
   referralUsed                           String?

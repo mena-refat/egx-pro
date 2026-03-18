@@ -54,13 +54,16 @@ export const AdminAnalyticsController = {
       // Single stock analysis: ticker has no '|' and is not '_recommendations'
       prisma.analysis.count({
         where: {
-          NOT: [{ ticker: { contains: '|' } }, { ticker: '_recommendations' }],
+          AND: [
+            { NOT: { ticker: { contains: '|' } } },
+            { NOT: { ticker: { equals: '_recommendations' } } },
+          ],
         },
       }),
       // Compare analysis: ticker contains '|'
       prisma.analysis.count({ where: { ticker: { contains: '|' } } }),
       // Recommendations analysis: ticker is '_recommendations'
-      prisma.analysis.count({ where: { ticker: '_recommendations' } }),
+      prisma.analysis.count({ where: { ticker: { equals: '_recommendations' } } }),
     ]);
 
     sendSuccess(res, {
@@ -151,6 +154,7 @@ export const AdminAnalyticsController = {
         where: {
           isDeleted: false,
           plan: { in: ['pro', 'yearly', 'ultra', 'ultra_yearly'] },
+          planSetByAdmin: false,
           updatedAt: { gte: monthStart },
         },
       }),
@@ -158,6 +162,7 @@ export const AdminAnalyticsController = {
         where: {
           isDeleted: false,
           plan: { in: ['pro', 'yearly', 'ultra', 'ultra_yearly'] },
+          planSetByAdmin: false,
           updatedAt: { gte: lastMonthStart, lte: lastMonthEnd },
         },
       }),
@@ -239,6 +244,7 @@ export const AdminAnalyticsController = {
         where: {
           isDeleted: false,
           plan: { in: ['pro', 'yearly', 'ultra', 'ultra_yearly'] },
+          planSetByAdmin: false,
           updatedAt: { gte: start, lte: end },
         },
         select: { plan: true },

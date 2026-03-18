@@ -6,7 +6,10 @@
       "Bash(node -e \"const p = require\\(''./node_modules/react-native-worklets/plugin/index.js''\\); console.log\\(JSON.stringify\\(Object.keys\\(p\\), null, 2\\)\\);\")",
       "Bash(node -e \"const p = require\\(''./node_modules/react-native-worklets/plugin/index.js''\\); console.log\\(typeof p\\); console.log\\(typeof p.default\\); console.log\\(JSON.stringify\\(Object.keys\\(p.default || {}\\), null, 2\\)\\);\")",
       "Bash(node -e \":*)",
-      "Bash(npx expo:*)"
+      "Bash(npx expo:*)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\(''''scripts'''',{}\\)\\)\")",
+      "Bash(ipconfig)",
+      "Bash(findstr /i \"IPv4\")"
     ]
   }
 }

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
+import { useAdminStore } from '../store/adminAuthStore';
 import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Pagination } from '../components/Pagination';
-import { Search, Download, RefreshCw } from 'lucide-react';
+import { Modal } from '../components/Modal';
+import { Search, Download, RefreshCw, UserPlus } from 'lucide-react';
 
 type UserRow = {
   id: string; email: string | null; phone: string | null;
@@ -14,8 +16,13 @@ type UserRow = {
   isEmailVerified: boolean; aiAnalysisUsedThisMonth: number;
 };
 
+const DEFAULT_OPTIONS = { forcePasswordChange: true, requireStrongPassword: true, force2FA: true };
+
 export default function UsersPage() {
   const { t } = useTranslation();
+  const admin = useAdminStore((s) => s.admin);
+  const isSuperAdmin = admin?.role === 'SUPER_ADMIN';
+
   const [users, setUsers]   = useState<UserRow[]>([]);
   const [total, setTotal]   = useState(0);
   const [page, setPage]     = useState(1);
@@ -23,6 +30,42 @@ export default function UsersPage() {
   const [plan, setPlan]     = useState('');
   const [loading, setLoading] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Invite modal
+  const [inviteOpen, setInviteOpen]   = useState(false);
+  const [inviteForm, setInviteForm]   = useState({ email: '', fullName: '' });
+  const [inviteOpts, setInviteOpts]   = useState(DEFAULT_OPTIONS);
+  const [inviting, setInviting]       = useState(false);
+  const [inviteError, setInviteError] = useState('');
+  const [inviteDone, setInviteDone]   = useState(false);
+
+  const openInvite = () => {
+    setInviteForm({ email: '', fullName: '' });
+    setInviteOpts(DEFAULT_OPTIONS);
+    setInviteError('');
+    setInviteDone(false);
+    setInviteOpen(true);
+  };
+
+  const handleInvite = async () => {
+    setInviteError('');
+    if (!inviteForm.email.trim()) { setInviteError(t('users.inviteEmailRequired')); return; }
+    setInviting(true);
+    try {
+      await adminApi.post('/users/invite', {
+        email: inviteForm.email.trim(),
+        fullName: inviteForm.fullName.trim() || undefined,
+        options: inviteOpts,
+      });
+      setInviteDone(true);
+      await load();
+    } catch (err: any) {
+      const code = err?.response?.data?.error;
+      setInviteError(code === 'EMAIL_ALREADY_EXISTS' ? t('users.inviteEmailExists') : t('users.inviteError'));
+    } finally {
+      setInviting(false);
+    }
+  };
 
   const load = useCallback(async (p = page, s = search, pl = plan) => {
     setLoading(true);
@@ -70,6 +113,14 @@ export default function UsersPage() {
           >
             <Download size={13} /> {t('users.exportCsv')}
           </a>
+          {isSuperAdmin && (
+            <button
+              onClick={openInvite}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg transition-all"
+            >
+              <UserPlus size={13} /> {t('users.inviteUser')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -131,6 +182,83 @@ export default function UsersPage() {
       </DataTable>
 
       <Pagination page={page} totalPages={Math.ceil(total / 20)} total={total} limit={20} onChange={setPage} />
+
+      {/* Invite User Modal */}
+      <Modal open={inviteOpen} onClose={() => setInviteOpen(false)} title={t('users.inviteTitle')} width="max-w-sm">
+        {inviteDone ? (
+          <div className="text-center py-4 space-y-3">
+            <p className="text-2xl">✅</p>
+            <p className="text-sm font-semibold text-emerald-400">{t('users.inviteSent')}</p>
+            <p className="text-xs text-slate-500">{t('users.inviteSentDesc')}</p>
+            <button onClick={() => setInviteOpen(false)} className="mt-2 px-6 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg transition-all">
+              {t('common.close')}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Email */}
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">{t('users.inviteEmail')} *</label>
+              <input
+                type="email"
+                placeholder="user@example.com"
+                value={inviteForm.email}
+                onChange={(e) => setInviteForm((p) => ({ ...p, email: e.target.value }))}
+                className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
+              />
+            </div>
+
+            {/* Full Name */}
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">{t('users.inviteFullName')}</label>
+              <input
+                type="text"
+                placeholder={t('users.inviteFullNamePlaceholder')}
+                value={inviteForm.fullName}
+                onChange={(e) => setInviteForm((p) => ({ ...p, fullName: e.target.value }))}
+                className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
+              />
+            </div>
+
+            {/* Security Options */}
+            <div>
+              <label className="text-xs text-slate-500 block mb-2">{t('users.inviteOptions')}</label>
+              <div className="space-y-2.5">
+                {([
+                  ['forcePasswordChange',  t('users.optForcePasswordChange')],
+                  ['requireStrongPassword', t('users.optRequireStrongPassword')],
+                  ['force2FA',             t('users.optForce2FA')],
+                ] as [keyof typeof inviteOpts, string][]).map(([key, label]) => (
+                  <label key={key} className="flex items-start gap-2.5 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={inviteOpts[key]}
+                      onChange={(e) => setInviteOpts((p) => ({ ...p, [key]: e.target.checked }))}
+                      className="mt-0.5 w-4 h-4 rounded accent-emerald-500 cursor-pointer"
+                    />
+                    <span className="text-xs text-slate-300 leading-relaxed group-hover:text-white transition-colors">{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {inviteError && <p className="text-xs text-red-400">{inviteError}</p>}
+
+            <div className="flex gap-3 justify-end pt-1">
+              <button onClick={() => setInviteOpen(false)} className="px-4 py-2 text-sm text-slate-400">
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleInvite}
+                disabled={inviting || !inviteForm.email.trim()}
+                className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all"
+              >
+                {inviting ? t('users.inviteSending') : t('users.inviteSend')}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

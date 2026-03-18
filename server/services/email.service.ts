@@ -55,6 +55,52 @@ export const EmailService = {
     });
   },
 
+  async sendUserInvite(
+    email: string,
+    name: string,
+    tempPassword: string,
+    options: { forcePasswordChange: boolean; requireStrongPassword: boolean; force2FA: boolean },
+  ): Promise<void> {
+    if (process.env.NODE_ENV !== 'production') {
+      logger.info('[EmailService DEV] User invite', { email, name, tempPassword, options });
+      return;
+    }
+    const resend = getResend();
+    if (!resend) return;
+
+    const requirements: string[] = [];
+    if (options.forcePasswordChange) requirements.push('تغيير كلمة المرور فور تسجيل الدخول الأول');
+    if (options.requireStrongPassword) requirements.push('اختيار كلمة مرور قوية (18–64 حرف، أحرف كبيرة وصغيرة ورموز)');
+    if (options.force2FA) requirements.push('تفعيل التحقق الثنائي (2FA) قبل استخدام التطبيق');
+
+    const reqList = requirements.map((r) => `<li style="margin-bottom:4px;">${r}</li>`).join('');
+
+    await resend.emails.send({
+      from: FROM,
+      to: email,
+      subject: 'دعوتك للانضمام إلى Borsa',
+      html: `
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; background: #f9f9f9; border-radius: 12px;">
+          <h2 style="color: #7c3aed; margin-bottom: 4px;">Borsa</h2>
+          <p style="color: #333; font-size: 16px;">أهلاً ${name || ''}،</p>
+          <p style="color: #333;">تم إنشاء حساب لك على منصة Borsa. استخدم البيانات التالية لتسجيل الدخول:</p>
+          <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:20px; margin:20px 0;">
+            <p style="margin:0 0 8px; color:#64748b; font-size:13px;">البريد الإلكتروني</p>
+            <p style="margin:0 0 16px; font-weight:bold; color:#1e293b;">${email}</p>
+            <p style="margin:0 0 8px; color:#64748b; font-size:13px;">كلمة المرور المؤقتة</p>
+            <p style="margin:0; font-family:monospace; font-size:18px; font-weight:bold; letter-spacing:2px; color:#7c3aed; background:#f5f3ff; padding:10px 16px; border-radius:6px; display:inline-block;">${tempPassword}</p>
+          </div>
+          ${requirements.length > 0 ? `
+          <p style="color:#333; font-weight:bold;">بعد تسجيل الدخول ستحتاج إلى:</p>
+          <ul style="color:#333; padding-right:20px; line-height:1.8;">${reqList}</ul>
+          ` : ''}
+          <p style="color:#ef4444; font-size:13px; margin-top:16px;">⚠️ لا تشارك كلمة المرور المؤقتة مع أي أحد.</p>
+          <a href="${process.env.APP_URL}" style="display:inline-block; background:#7c3aed; color:white; padding:12px 28px; border-radius:8px; text-decoration:none; margin-top:16px; font-weight:bold;">تسجيل الدخول الآن</a>
+        </div>
+      `,
+    });
+  },
+
   async sendPasswordChanged(email: string): Promise<void> {
     if (process.env.NODE_ENV !== 'production') return;
     const resend = getResend();
