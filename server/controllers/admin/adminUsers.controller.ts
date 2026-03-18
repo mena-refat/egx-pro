@@ -196,7 +196,14 @@ export const AdminUsersController = {
     } = req.body as {
       email?: string;
       fullName?: string;
-      options?: { forcePasswordChange?: boolean; requireStrongPassword?: boolean; force2FA?: boolean };
+      options?: {
+        forcePasswordChange?: boolean;
+        force2FA?: boolean;
+        pwdMinLength?: boolean;
+        pwdUppercase?: boolean;
+        pwdLowercase?: boolean;
+        pwdSymbols?: boolean;
+      };
     };
 
     if (!email?.trim()) {
@@ -212,9 +219,12 @@ export const AdminUsersController = {
       return;
     }
 
-    const forcePasswordChange  = options.forcePasswordChange  ?? true;
-    const requireStrongPassword = options.requireStrongPassword ?? true;
-    const force2FA             = options.force2FA             ?? true;
+    const forcePasswordChange = options.forcePasswordChange ?? true;
+    const force2FA            = options.force2FA            ?? true;
+    const pwdMinLength        = options.pwdMinLength        ?? true;
+    const pwdUppercase        = options.pwdUppercase        ?? true;
+    const pwdLowercase        = options.pwdLowercase        ?? true;
+    const pwdSymbols          = options.pwdSymbols          ?? true;
 
     const tempPassword = generateTempPassword();
     const { hash, salt } = await hashPassword(tempPassword);
@@ -227,8 +237,11 @@ export const AdminUsersController = {
         salt,
         isEmailVerified: true,
         mustChangePassword: forcePasswordChange,
-        requireStrongPassword,
         mustSetup2FA: force2FA,
+        pwdMinLength,
+        pwdUppercase,
+        pwdLowercase,
+        pwdSymbols,
         referralCode: `EGX-${randomBytes(4).toString('hex').toUpperCase()}`,
         lastPasswordChangeAt: new Date(),
       },
@@ -238,7 +251,7 @@ export const AdminUsersController = {
       user.email as string,
       fullName?.trim() ?? '',
       tempPassword,
-      { forcePasswordChange, requireStrongPassword, force2FA },
+      { forcePasswordChange, force2FA, pwdMinLength, pwdUppercase, pwdLowercase, pwdSymbols },
     );
 
     if (req.admin) {

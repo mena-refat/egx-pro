@@ -1,6 +1,17 @@
 import type { Request, Response } from 'express';
 import speakeasy from 'speakeasy';
 import { prisma } from '../../lib/prisma.ts';
+
+function validatePassword(
+  pw: string,
+  rules: { pwdMinLength: boolean; pwdUppercase: boolean; pwdLowercase: boolean; pwdSymbols: boolean },
+): string | null {
+  if (rules.pwdMinLength && (pw.length < 18 || pw.length > 64)) return 'PASSWORD_TOO_SHORT';
+  if (rules.pwdUppercase && !/[A-Z]/.test(pw)) return 'PASSWORD_MISSING_UPPERCASE';
+  if (rules.pwdLowercase && !/[a-z]/.test(pw)) return 'PASSWORD_MISSING_LOWERCASE';
+  if (rules.pwdSymbols  && !/[^A-Za-z0-9]/.test(pw)) return 'PASSWORD_MISSING_SYMBOL';
+  return null;
+}
 import { generateAdminToken } from '../../lib/adminAuth.ts';
 import { hashPassword, verifyPassword } from '../../../src/lib/auth.ts';
 import { adminAudit, type AdminRequest } from '../../middleware/adminAuth.middleware.ts';
@@ -70,6 +81,8 @@ export const AdminAuthController = {
         fullName: admin.fullName,
         role: admin.role,
         permissions: admin.permissions,
+        mustChangePassword: admin.mustChangePassword,
+        mustSetup2FA: admin.mustSetup2FA && !admin.twoFactorEnabled,
       },
     });
   },
@@ -126,10 +139,20 @@ export const AdminAuthController = {
       return;
     }
 
+    const pwdError = validatePassword(newPassword, existing);
+    if (pwdError) {
+      sendError(res, pwdError, 400);
+      return;
+    }
+
     const { hash, salt } = await hashPassword(newPassword);
     await prisma.admin.update({
       where: { id: existing.id },
-      data: { passwordHash: hash, salt },
+      data: {
+        passwordHash: hash,
+        salt,
+        mustChangePassword: false,
+      },
     });
 
     await adminAudit(existing.id, 'ADMIN_PASSWORD_CHANGED', existing.id, undefined, req);

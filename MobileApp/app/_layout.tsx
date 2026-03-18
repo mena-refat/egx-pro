@@ -117,6 +117,18 @@ export default function RootLayout() {
               name="settings/subscription"
               options={{ animation: 'slide_from_right' }}
             />
+            <Stack.Screen
+              name="ai/analyze"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="ai/compare"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="ai/recommendations"
+              options={{ animation: 'slide_from_right' }}
+            />
           </Stack>
         </SafeAreaProvider>
       </GestureHandlerRootView>

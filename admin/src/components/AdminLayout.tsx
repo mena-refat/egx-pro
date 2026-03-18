@@ -176,6 +176,27 @@ export function AdminLayout() {
 
       {/* ── Main content ── */}
       <main className="flex-1 overflow-auto">
+        {/* Security flags banner */}
+        {(admin?.mustChangePassword || admin?.mustSetup2FA) && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-xs text-amber-400">
+              <span>⚠️</span>
+              <span>
+                {admin.mustChangePassword && admin.mustSetup2FA
+                  ? t('admins.bannerBoth')
+                  : admin.mustChangePassword
+                  ? t('admins.bannerChangePassword')
+                  : t('admins.bannerSetup2FA')}
+              </span>
+            </div>
+            <button
+              onClick={() => nav('/account')}
+              className="text-xs font-semibold text-amber-400 hover:text-amber-300 underline shrink-0"
+            >
+              {t('admins.bannerAction')}
+            </button>
+          </div>
+        )}
         <div className="max-w-6xl mx-auto px-6 py-6">
           <Outlet />
         </div>

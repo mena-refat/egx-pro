@@ -16,7 +16,14 @@ type UserRow = {
   isEmailVerified: boolean; aiAnalysisUsedThisMonth: number;
 };
 
-const DEFAULT_OPTIONS = { forcePasswordChange: true, requireStrongPassword: true, force2FA: true };
+const DEFAULT_OPTIONS = {
+  forcePasswordChange: true,
+  force2FA: true,
+  pwdMinLength: true,
+  pwdUppercase: true,
+  pwdLowercase: true,
+  pwdSymbols: true,
+};
 
 export default function UsersPage() {
   const { t } = useTranslation();
@@ -221,24 +228,42 @@ export default function UsersPage() {
             </div>
 
             {/* Security Options */}
-            <div>
-              <label className="text-xs text-slate-500 block mb-2">{t('users.inviteOptions')}</label>
-              <div className="space-y-2.5">
+            <div className="space-y-2.5">
+              <label className="text-xs text-slate-500 block">{t('users.inviteOptions')}</label>
+
+              {/* Login requirements */}
+              <div className="space-y-1.5">
                 {([
-                  ['forcePasswordChange',  t('users.optForcePasswordChange')],
-                  ['requireStrongPassword', t('users.optRequireStrongPassword')],
-                  ['force2FA',             t('users.optForce2FA')],
+                  ['forcePasswordChange', t('users.optForcePasswordChange')],
+                  ['force2FA',            t('users.optForce2FA')],
                 ] as [keyof typeof inviteOpts, string][]).map(([key, label]) => (
-                  <label key={key} className="flex items-start gap-2.5 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={inviteOpts[key]}
+                  <label key={key} className="flex items-center gap-2.5 cursor-pointer group">
+                    <input type="checkbox" checked={inviteOpts[key]}
                       onChange={(e) => setInviteOpts((p) => ({ ...p, [key]: e.target.checked }))}
-                      className="mt-0.5 w-4 h-4 rounded accent-emerald-500 cursor-pointer"
-                    />
-                    <span className="text-xs text-slate-300 leading-relaxed group-hover:text-white transition-colors">{label}</span>
+                      className="w-4 h-4 rounded accent-emerald-500 cursor-pointer" />
+                    <span className="text-xs text-slate-300 group-hover:text-white transition-colors">{label}</span>
                   </label>
                 ))}
+              </div>
+
+              {/* Password rules */}
+              <div>
+                <p className="text-[11px] text-slate-600 mb-1.5">{t('users.pwdRulesLabel')}</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {([
+                    ['pwdMinLength', t('users.pwdMinLength')],
+                    ['pwdUppercase', t('users.pwdUppercase')],
+                    ['pwdLowercase', t('users.pwdLowercase')],
+                    ['pwdSymbols',   t('users.pwdSymbols')],
+                  ] as [keyof typeof inviteOpts, string][]).map(([key, label]) => (
+                    <label key={key} className="flex items-center gap-2 cursor-pointer group">
+                      <input type="checkbox" checked={inviteOpts[key]}
+                        onChange={(e) => setInviteOpts((p) => ({ ...p, [key]: e.target.checked }))}
+                        className="w-3.5 h-3.5 rounded accent-violet-500 cursor-pointer" />
+                      <span className="text-xs text-slate-400 group-hover:text-white transition-colors">{label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
 

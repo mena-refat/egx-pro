@@ -46,9 +46,12 @@ model User {
   aiAnalysisUsedThisMonth                Int            @default(0)
   aiAnalysisResetDate                    DateTime?
   planSetByAdmin                         Boolean        @default(false)
-  mustChangePassword                     Boolean        @default(false)
-  mustSetup2FA                           Boolean        @default(false)
-  requireStrongPassword                  Boolean        @default(false)
+  mustChangePassword Boolean        @default(false)
+  mustSetup2FA       Boolean        @default(false)
+  pwdMinLength       Boolean        @default(false)
+  pwdUppercase       Boolean        @default(false)
+  pwdLowercase       Boolean        @default(false)
+  pwdSymbols         Boolean        @default(false)
   referralCode                           String?        @unique
   referredBy                             String?
   referralUsed                           String?
@@ -121,8 +124,14 @@ model Admin {
   role         AdminRole @default(ADMIN)
   isActive     Boolean   @default(true)
   permissions  String[]  @default([])
-  twoFactorEnabled Boolean @default(false)
-  twoFactorSecret  String?
+  twoFactorEnabled      Boolean  @default(false)
+  twoFactorSecret       String?
+  mustChangePassword Boolean  @default(false)
+  mustSetup2FA       Boolean  @default(false)
+  pwdMinLength       Boolean  @default(false)
+  pwdUppercase       Boolean  @default(false)
+  pwdLowercase       Boolean  @default(false)
+  pwdSymbols         Boolean  @default(false)
   lastLoginAt  DateTime?
   lastLoginIp  String?
   createdAt    DateTime  @default(now())

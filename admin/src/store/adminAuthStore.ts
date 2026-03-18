@@ -7,6 +7,8 @@ interface AdminInfo {
   fullName: string;
   role: string;
   permissions: string[];
+  mustChangePassword?: boolean;
+  mustSetup2FA?: boolean;
 }
 
 interface AdminState {

@@ -15,6 +15,12 @@ export default function AdminsPage() {
     password: '',
     permissions: [] as string[],
     isSuperAdmin: false,
+    mustChangePassword: true,
+    mustSetup2FA: true,
+    pwdMinLength: true,
+    pwdUppercase: true,
+    pwdLowercase: true,
+    pwdSymbols: true,
   });
 
   useEffect(() => {
@@ -43,9 +49,17 @@ export default function AdminsPage() {
         password: form.password,
         permissions: form.permissions,
         role: form.isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN',
+        options: {
+          mustChangePassword: form.mustChangePassword,
+          mustSetup2FA:       form.mustSetup2FA,
+          pwdMinLength:       form.pwdMinLength,
+          pwdUppercase:       form.pwdUppercase,
+          pwdLowercase:       form.pwdLowercase,
+          pwdSymbols:         form.pwdSymbols,
+        },
       });
       setOpen(false);
-      setForm({ email: '', fullName: '', password: '', permissions: [], isSuperAdmin: false });
+      setForm({ email: '', fullName: '', password: '', permissions: [], isSuperAdmin: false, mustChangePassword: true, mustSetup2FA: true, pwdMinLength: true, pwdUppercase: true, pwdLowercase: true, pwdSymbols: true });
       const res = await adminApi.get('/admins');
       setAdmins(res.data.data);
     } finally {
@@ -154,6 +168,45 @@ export default function AdminsPage() {
               <span>{t('admins.superAdmin')}</span>
             </label>
             <p className="mt-1 text-[11px] text-slate-500">{t('admins.superAdminNote')}</p>
+          </div>
+
+          <div className="border-t border-white/[0.06] pt-3 space-y-3">
+            <p className="text-xs text-slate-500">{t('admins.securityOptions')}</p>
+
+            {/* Login requirements */}
+            <div className="space-y-1.5">
+              {([
+                ['mustChangePassword', t('admins.optMustChangePassword')],
+                ['mustSetup2FA',       t('admins.optMustSetup2FA')],
+              ] as [keyof typeof form, string][]).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 cursor-pointer group">
+                  <input type="checkbox" checked={form[key] as boolean}
+                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.checked }))}
+                    className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer" />
+                  <span className="text-xs text-slate-300 group-hover:text-white transition-colors">{label}</span>
+                </label>
+              ))}
+            </div>
+
+            {/* Password rules */}
+            <div>
+              <p className="text-[11px] text-slate-600 mb-1.5">{t('admins.pwdRulesLabel')}</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {([
+                  ['pwdMinLength', t('admins.pwdMinLength')],
+                  ['pwdUppercase', t('admins.pwdUppercase')],
+                  ['pwdLowercase', t('admins.pwdLowercase')],
+                  ['pwdSymbols',   t('admins.pwdSymbols')],
+                ] as [keyof typeof form, string][]).map(([key, label]) => (
+                  <label key={key} className="flex items-center gap-2 cursor-pointer group">
+                    <input type="checkbox" checked={form[key] as boolean}
+                      onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.checked }))}
+                      className="w-3.5 h-3.5 rounded accent-violet-500 cursor-pointer" />
+                    <span className="text-xs text-slate-400 group-hover:text-white transition-colors">{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button

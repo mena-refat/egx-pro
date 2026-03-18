@@ -31,12 +31,20 @@ export const AdminAdminsController = {
       sendError(res, 'ADMIN_FORBIDDEN', 403);
       return;
     }
-    const { email, password, fullName, permissions = [], role } = req.body as {
+    const { email, password, fullName, permissions = [], role, options = {} } = req.body as {
       email?: string;
       password?: string;
       fullName?: string;
       permissions?: string[];
       role?: 'SUPER_ADMIN' | 'ADMIN';
+      options?: {
+        mustChangePassword?: boolean;
+        mustSetup2FA?: boolean;
+        pwdMinLength?: boolean;
+        pwdUppercase?: boolean;
+        pwdLowercase?: boolean;
+        pwdSymbols?: boolean;
+      };
     };
     if (!email?.trim() || !password || !fullName?.trim()) {
       sendError(res, 'VALIDATION_ERROR', 400);
@@ -46,6 +54,13 @@ export const AdminAdminsController = {
       sendError(res, 'PASSWORD_TOO_WEAK', 400);
       return;
     }
+
+    const mustChangePassword = options.mustChangePassword ?? true;
+    const mustSetup2FA       = options.mustSetup2FA       ?? true;
+    const pwdMinLength       = options.pwdMinLength       ?? true;
+    const pwdUppercase       = options.pwdUppercase       ?? true;
+    const pwdLowercase       = options.pwdLowercase       ?? true;
+    const pwdSymbols         = options.pwdSymbols         ?? true;
 
     const existing = await prisma.admin.findUnique({
       where: { email: email.toLowerCase().trim() },
@@ -65,8 +80,12 @@ export const AdminAdminsController = {
         permissions,
         createdBy: req.admin?.id ?? null,
         role: role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'ADMIN',
-        // require first login password change for all created admins
-        lastLoginAt: null,
+        mustChangePassword,
+        mustSetup2FA,
+        pwdMinLength,
+        pwdUppercase,
+        pwdLowercase,
+        pwdSymbols,
       },
     });
 

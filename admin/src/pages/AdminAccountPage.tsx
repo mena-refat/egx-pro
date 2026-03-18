@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
+import { useAdminStore } from '../store/adminAuthStore';
 
 interface AdminMe {
   id: string;
@@ -13,6 +14,8 @@ interface AdminMe {
 
 export default function AdminAccountPage() {
   const { t } = useTranslation();
+  const setAuth   = useAdminStore((s) => s.setAuth);
+  const storeAuth = useAdminStore((s) => ({ token: s.token, admin: s.admin }));
   const [me, setMe] = useState<AdminMe | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
@@ -67,8 +70,13 @@ export default function AdminAccountPage() {
       });
       setPwdForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setMessage(t('account.passwordChanged'));
+      // Clear mustChangePassword flag from store
+      if (storeAuth.token && storeAuth.admin) {
+        setAuth(storeAuth.token, { ...storeAuth.admin, mustChangePassword: false });
+      }
     } catch (err: any) {
-      setMessage(err?.response?.data?.error ?? 'Failed to change password');
+      const code = err?.response?.data?.error;
+      setMessage(code === 'PASSWORD_TOO_WEAK' ? t('account.passwordTooWeak') : (err?.response?.data?.error ?? 'Failed to change password'));
     } finally {
       setPasswordSaving(false);
     }

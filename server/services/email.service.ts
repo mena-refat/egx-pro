@@ -59,7 +59,14 @@ export const EmailService = {
     email: string,
     name: string,
     tempPassword: string,
-    options: { forcePasswordChange: boolean; requireStrongPassword: boolean; force2FA: boolean },
+    options: {
+      forcePasswordChange: boolean;
+      force2FA: boolean;
+      pwdMinLength: boolean;
+      pwdUppercase: boolean;
+      pwdLowercase: boolean;
+      pwdSymbols: boolean;
+    },
   ): Promise<void> {
     if (process.env.NODE_ENV !== 'production') {
       logger.info('[EmailService DEV] User invite', { email, name, tempPassword, options });
@@ -70,7 +77,10 @@ export const EmailService = {
 
     const requirements: string[] = [];
     if (options.forcePasswordChange) requirements.push('تغيير كلمة المرور فور تسجيل الدخول الأول');
-    if (options.requireStrongPassword) requirements.push('اختيار كلمة مرور قوية (18–64 حرف، أحرف كبيرة وصغيرة ورموز)');
+    if (options.pwdMinLength)  requirements.push('كلمة المرور بين 18 و 64 حرفاً');
+    if (options.pwdUppercase)  requirements.push('تحتوي على حرف كبير على الأقل (A-Z)');
+    if (options.pwdLowercase)  requirements.push('تحتوي على حرف صغير على الأقل (a-z)');
+    if (options.pwdSymbols)    requirements.push('تحتوي على رمز خاص على الأقل (!@#$%...)');
     if (options.force2FA) requirements.push('تفعيل التحقق الثنائي (2FA) قبل استخدام التطبيق');
 
     const reqList = requirements.map((r) => `<li style="margin-bottom:4px;">${r}</li>`).join('');
