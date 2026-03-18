@@ -22,7 +22,7 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export function DashboardPage() {
+export default function DashboardPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [growth, setGrowth]     = useState<{ date: string; count: number }[]>([]);
 

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 interface DataTableProps {
   headers: ReactNode[];
-  children: ReactNode;
+  children?: ReactNode;
   loading?: boolean;
   empty?: string;
   rowCount?: number;

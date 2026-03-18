@@ -6,7 +6,7 @@ import { Modal } from '../components/Modal';
 import { Pagination } from '../components/Pagination';
 import { MessageSquare } from 'lucide-react';
 
-export function SupportPage() {
+export default function SupportPage() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [total, setTotal]     = useState(0);
   const [page, setPage]       = useState(1);

@@ -8,7 +8,7 @@ import { ArrowLeft, ShieldOff, ShieldCheck } from 'lucide-react';
 
 const PLANS = ['free', 'pro', 'yearly', 'ultra', 'ultra_yearly'];
 
-export function UserDetailPage() {
+export default function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const nav    = useNavigate();
   const [user, setUser]               = useState<any>(null);

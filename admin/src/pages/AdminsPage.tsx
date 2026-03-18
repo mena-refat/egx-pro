@@ -3,7 +3,7 @@ import { adminApi } from '../lib/adminApi';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
 
-export function AdminsPage() {
+export default function AdminsPage() {
   const [admins, setAdmins] = useState<any[]>([]);
   const [open, setOpen]     = useState(false);
   const [saving, setSaving] = useState(false);

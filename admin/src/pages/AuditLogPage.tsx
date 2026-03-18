@@ -3,7 +3,7 @@ import { adminApi } from '../lib/adminApi';
 import { DataTable } from '../components/DataTable';
 import { Pagination } from '../components/Pagination';
 
-export function AuditLogPage() {
+export default function AuditLogPage() {
   const [logs, setLogs]   = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage]   = useState(1);

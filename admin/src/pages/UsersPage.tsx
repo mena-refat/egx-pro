@@ -13,7 +13,7 @@ type UserRow = {
   isEmailVerified: boolean; aiAnalysisUsedThisMonth: number;
 };
 
-export function UsersPage() {
+export default function UsersPage() {
   const [users, setUsers]   = useState<UserRow[]>([]);
   const [total, setTotal]   = useState(0);
   const [page, setPage]     = useState(1);

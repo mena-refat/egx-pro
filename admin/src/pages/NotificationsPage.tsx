@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { adminApi } from '../lib/adminApi';
 
-export function NotificationsPage() {
+export default function NotificationsPage() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [plan, setPlan] = useState('');
