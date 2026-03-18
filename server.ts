@@ -33,6 +33,8 @@ import newsRoutes from './server/routes/news.ts';
 import referralRoutes from './server/routes/referral.ts';
 import socialRoutes from './server/routes/social.ts';
 import predictionsRoutes from './server/routes/predictions.ts';
+import adminRoutes from './server/routes/admin.ts';
+import supportRoutes from './server/routes/support.ts';
 import marketDataRoutes from './server/routes/market-data.ts';
 import { userApiLimiter } from './server/middleware/userRateLimit.middleware.ts';
 import { marketDataService } from './server/services/market-data/market-data.service.ts';
@@ -177,6 +179,7 @@ async function startServer() {
   });
 
   app.use('/api/auth/login', loginLimiter);
+  app.use('/api/admin/auth/login', loginLimiter);
   app.use('/api/auth/register', registerLimiter);
   app.use('/api/auth/refresh', refreshLimiter);
   app.use('/api/', apiLimiter);
@@ -208,6 +211,8 @@ async function startServer() {
   app.use('/api/market', marketDataRoutes);
   app.use('/api/social', socialRoutes);
   app.use('/api/predictions', predictionsRoutes);
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/support', supportRoutes);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -317,7 +322,11 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     app.use(express.static(path.join(__dirname, 'dist')));
-    app.get('*', (req, res) => {
+    app.use('/admin', express.static(path.join(__dirname, 'dist', 'admin')));
+    app.get('/admin/*', (_req, res) => {
+      res.sendFile(path.join(__dirname, 'dist', 'admin', 'index.html'));
+    });
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(__dirname, 'dist', 'index.html'));
     });
   }
@@ -366,11 +375,24 @@ async function startServer() {
 
   const trackRecordCron = cron.schedule('0 16 * * 0-4', () => runTrackRecordCheck().catch((err) => logger.error('Track record job error', { error: err })), { timezone: 'Africa/Cairo' });
 
-  const newsSyncCron = cron.schedule('*/30 * * * *', () => runNewsSyncJob().catch((err) => logger.error('News sync job error', { error: err })), { timezone: 'Africa/Cairo' });
+  let newsSyncRunning = false;
+  const safeRunNewsSyncJob = async () => {
+    if (newsSyncRunning) return;
+    newsSyncRunning = true;
+    try {
+      await runNewsSyncJob();
+    } catch (err) {
+      logger.error('News sync job error', { error: err });
+    } finally {
+      newsSyncRunning = false;
+    }
+  };
 
-  void runNewsSyncJob().catch((err) => {
-    logger.error('Initial news sync job error', { error: err });
-  });
+  const newsSyncCron = cron.schedule('*/30 * * * *', () => {
+    void safeRunNewsSyncJob();
+  }, { timezone: 'Africa/Cairo' });
+
+  void safeRunNewsSyncJob();
 
   const shutdown = (signal: string) => {
     logger.info(`${signal} received — shutting down gracefully`);

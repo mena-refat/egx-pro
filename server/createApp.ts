@@ -30,10 +30,11 @@ import referralRoutes from './routes/referral.ts';
 import marketDataRoutes from './routes/market-data.ts';
 import socialRoutes from './routes/social.ts';
 import predictionsRoutes from './routes/predictions.ts';
+import adminRoutes from './routes/admin.ts';
+import supportRoutes from './routes/support.ts';
 import { userApiLimiter } from './middleware/userRateLimit.middleware.ts';
 import { prisma } from './lib/prisma.ts';
 import { redis } from './lib/redis.ts';
-import { marketDataService } from './services/market-data/market-data.service.ts';
 
 /**
  * Build and return the Express app (no listen, no Vite).
@@ -183,6 +184,8 @@ export async function createApp(): Promise<express.Express> {
   app.use('/api/market', marketDataRoutes);
   app.use('/api/social', socialRoutes);
   app.use('/api/predictions', predictionsRoutes);
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/support', supportRoutes);
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -209,7 +212,6 @@ export async function createApp(): Promise<express.Express> {
       checks.redis = 'error';
     }
 
-    checks.marketData = marketDataService.isMarketOpen() ? 'open' : 'closed';
     const allOk = checks.db === 'ok';
     res.status(allOk ? 200 : 503).json({
       status: allOk ? 'ok' : 'degraded',

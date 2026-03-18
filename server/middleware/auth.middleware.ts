@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../../src/lib/auth.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
+import { getCache, setCache, deleteCache } from '../lib/redis.ts';
 import type { AuthRequest } from '../routes/types.ts';
 
 export async function authenticate(
@@ -16,18 +17,34 @@ export async function authenticate(
 
   try {
     const payload = verifyAccessToken(token) as { sub: string };
-    const user = await UserRepository.findUnique({
-      where: { id: payload.sub },
-      select: {
-        id: true,
-        email: true,
-        isDeleted: true,
-        isEmailVerified: true,
-        plan: true,
-        planExpiresAt: true,
-        referralProExpiresAt: true,
-      },
-    });
+    const cacheKey = `auth:user:${payload.sub}`;
+    let user = await getCache<{
+      id: string;
+      email: string | null;
+      isDeleted: boolean;
+      isEmailVerified: boolean;
+      plan: string;
+      planExpiresAt: Date | null;
+      referralProExpiresAt: Date | null;
+    }>(cacheKey).catch(() => null);
+
+    if (!user) {
+      user = await UserRepository.findUnique({
+        where: { id: payload.sub },
+        select: {
+          id: true,
+          email: true,
+          isDeleted: true,
+          isEmailVerified: true,
+          plan: true,
+          planExpiresAt: true,
+          referralProExpiresAt: true,
+        },
+      });
+      if (user && !user.isDeleted) {
+        await setCache(cacheKey, user, 60).catch(() => null);
+      }
+    }
     if (!user || user.isDeleted) {
       res.status(401).json({ error: 'UNAUTHORIZED' });
       return;
@@ -53,18 +70,34 @@ export async function optionalAuth(
   }
   try {
     const payload = verifyAccessToken(token) as { sub: string };
-    const user = await UserRepository.findUnique({
-      where: { id: payload.sub },
-      select: {
-        id: true,
-        email: true,
-        isDeleted: true,
-        isEmailVerified: true,
-        plan: true,
-        planExpiresAt: true,
-        referralProExpiresAt: true,
-      },
-    });
+    const cacheKey = `auth:user:${payload.sub}`;
+    let user = await getCache<{
+      id: string;
+      email: string | null;
+      isDeleted: boolean;
+      isEmailVerified: boolean;
+      plan: string;
+      planExpiresAt: Date | null;
+      referralProExpiresAt: Date | null;
+    }>(cacheKey).catch(() => null);
+
+    if (!user) {
+      user = await UserRepository.findUnique({
+        where: { id: payload.sub },
+        select: {
+          id: true,
+          email: true,
+          isDeleted: true,
+          isEmailVerified: true,
+          plan: true,
+          planExpiresAt: true,
+          referralProExpiresAt: true,
+        },
+      });
+      if (user && !user.isDeleted) {
+        await setCache(cacheKey, user, 60).catch(() => null);
+      }
+    }
     if (user && !user.isDeleted) {
       req.user = user;
       req.userId = user.id;
