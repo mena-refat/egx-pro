@@ -221,6 +221,7 @@ export const ar = {
     yourReply: 'ردك',
     setStatus: 'تغيير الحالة',
     sendReply: 'إرسال الرد',
+    noTickets: 'لا توجد تذاكر دعم',
   },
 
   account: {
@@ -301,7 +302,11 @@ export const ar = {
     action: 'الإجراء',
     target: 'الهدف',
     noEvents: 'لا توجد أحداث',
-    filterByAdmin: 'فلترة بالبريد الإلكتروني للمشرف...',
+    filterByAdmin: 'بحث بالبريد الإلكتروني...',
+    allActions: 'كل الإجراءات',
+    from: 'من تاريخ',
+    to: 'إلى تاريخ',
+    clearFilters: 'مسح الفلاتر',
   },
 
   notifications: {

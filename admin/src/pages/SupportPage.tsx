@@ -5,7 +5,7 @@ import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { Pagination } from '../components/Pagination';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, RefreshCw } from 'lucide-react';
 
 export default function SupportPage() {
   const { t } = useTranslation();
@@ -14,6 +14,7 @@ export default function SupportPage() {
   const [page, setPage]       = useState(1);
   const [status, setStatus]   = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [selected, setSelected] = useState<any | null>(null);
   const [reply, setReply]     = useState('');
   const [newStatus, setNewStatus] = useState('RESOLVED');
@@ -21,12 +22,16 @@ export default function SupportPage() {
 
   const load = useCallback(async (p = page, s = status) => {
     setLoading(true);
+    setLoadError('');
     try {
       const params: Record<string, string> = { page: String(p) };
       if (s) params.status = s;
       const r = await adminApi.get('/support', { params });
       setTickets(r.data.data.tickets ?? []);
       setTotal(r.data.data.total ?? 0);
+    } catch (err: any) {
+      setTickets([]);
+      setLoadError(err?.response?.data?.error ?? 'Failed to load tickets');
     } finally { setLoading(false); }
   }, [page, status]);
 
@@ -49,20 +54,36 @@ export default function SupportPage() {
           <h1 className="text-xl font-bold text-white">{t('support.title')}</h1>
           <p className="text-sm text-slate-500">{total} {t('support.tickets')}</p>
         </div>
-        <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); load(1, e.target.value); }}
-          className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none">
-          <option value="">{t('support.all')}</option>
-          <option value="OPEN">{t('support.open')}</option>
-          <option value="IN_PROGRESS">{t('support.inProgress')}</option>
-          <option value="RESOLVED">{t('support.resolved')}</option>
-          <option value="CLOSED">{t('support.closed')}</option>
-        </select>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => load(page, status)}
+            className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-all"
+            title="Refresh"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          </button>
+          <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); load(1, e.target.value); }}
+            className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none">
+            <option value="">{t('support.all')}</option>
+            <option value="OPEN">{t('support.open')}</option>
+            <option value="IN_PROGRESS">{t('support.inProgress')}</option>
+            <option value="RESOLVED">{t('support.resolved')}</option>
+            <option value="CLOSED">{t('support.closed')}</option>
+          </select>
+        </div>
       </div>
+
+      {loadError && (
+        <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+          {loadError}
+        </div>
+      )}
 
       <DataTable
         headers={[t('support.subject'), t('support.user'), t('support.status'), t('support.priority'), t('support.date'), '']}
         loading={loading}
         rowCount={tickets.length}
+        empty={t('support.noTickets')}
       >
         {tickets.map((tk) => (
           <tr key={tk.id} className="hover:bg-white/[0.02] transition-colors">

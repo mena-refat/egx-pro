@@ -257,9 +257,38 @@ export async function changePassword(req: Request, res: Response): Promise<void>
 
 export async function getMe(req: Request, res: Response): Promise<void> {
   try {
-    const token = req.cookies?.refreshToken;
-    const result = await AuthService.getMe(token);
-    sendSuccess(res, { accessToken: result.accessToken, user: result.user });
+    // Web flow: use refresh token cookie (issues a new access token)
+    const refreshCookie = req.cookies?.refreshToken;
+    if (refreshCookie) {
+      const result = await AuthService.getMe(refreshCookie);
+      sendSuccess(res, { accessToken: result.accessToken, user: result.user });
+      return;
+    }
+
+    // Mobile flow: validate access token from Authorization header
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      sendError(res, 'UNAUTHORIZED', 401);
+      return;
+    }
+    const user = await UserRepository.findUnique({
+      where: { id: userId },
+      select: {
+        id: true, email: true, phone: true, fullName: true, username: true,
+        avatarUrl: true, plan: true, planExpiresAt: true, language: true,
+        theme: true, shariaMode: true, onboardingCompleted: true,
+        isFirstLogin: true, aiAnalysisUsedThisMonth: true,
+        isEmailVerified: true, twoFactorEnabled: true,
+        riskTolerance: true, investmentHorizon: true, monthlyBudget: true,
+        interestedSectors: true, notifySignals: true, notifyPortfolio: true,
+        notifyNews: true, loginStreak: true, userTitle: true, isDeleted: true,
+      },
+    });
+    if (!user || (user as { isDeleted?: boolean }).isDeleted) {
+      sendError(res, 'UNAUTHORIZED', 401);
+      return;
+    }
+    sendSuccess(res, { user });
   } catch (e) {
     handleError(e, res, 'Auth check failed');
   }

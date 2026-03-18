@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import api from './lib/api';
-import { refreshAccessToken } from './lib/auth/tokens';
 import { useNotifications } from './hooks/useNotifications';
 import { useTheme } from './hooks/useTheme';
 import { useProfileCompletion } from './hooks/useProfileCompletion';
@@ -58,6 +57,7 @@ export default function App() {
   const [theme, setTheme] = useTheme(user);
   const { profileCompletion } = useProfileCompletion(isAuthenticated);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => (typeof window !== 'undefined' && localStorage.getItem('sidebarCollapsed') === 'true'));
+  const [authChecked, setAuthChecked] = useState(false);
   const location = useLocation();
   const pathname = location.pathname;
   const { notifications, unreadCount: notificationsUnread, notificationsLoading, fetchNotifications, markAllRead: markNotificationsRead, markOneRead: markOneNotificationRead, clearAll: clearAllNotifications } = useNotifications(isAuthenticated);
@@ -94,42 +94,50 @@ export default function App() {
     if (i18n.language !== nextLang) i18n.changeLanguage(nextLang);
   }, [user?.language, i18n]);
 
-  const hasCheckedAuth = useRef(false);
   useEffect(() => {
-    if (hasCheckedAuth.current) return;
-    hasCheckedAuth.current = true;
+    let cancelled = false;
+    const API = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL?.trim();
+    const base = API ? `${API.replace(/\/$/, '')}/api` : '/api';
+
     const checkAuth = async () => {
       try {
-        // استعادة الـ access token من الـ refresh cookie أولاً
-        let token: string;
-        try {
-          token = await refreshAccessToken();
-        } catch {
-          // الـ refresh cookie انتهى أو مش موجود → logout فعلي
-          if (isAuthenticated) logout();
-          return;
-        }
+        // GET /api/auth/me يقرأ الـ refresh cookie مباشرة ويرجع user + accessToken
+        const res = await fetch(`${base}/auth/me`, { credentials: 'include' });
+        if (cancelled) return;
 
-        const API = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL?.trim();
-        const base = API ? `${API.replace(/\/$/, '')}/api` : '/api';
-        const res = await fetch(`${base}/auth/me`, {
-          credentials: 'include',
-          headers: { Authorization: `Bearer ${token}` },
-        });
         if (res.ok) {
           const data = await res.json();
-          const p = (data as { data?: { user?: unknown } })?.data ?? data;
-          const userPayload = p?.user ?? (data as { user?: unknown }).user;
-          if (userPayload) useAuthStore.getState().setAuth(userPayload as import('./types').User, token);
-        } else {
-          if (isAuthenticated) logout();
+          const p = (data as { data?: { user?: unknown; accessToken?: string } })?.data ?? data;
+          const userPayload  = (p as { user?: unknown })?.user  ?? (data as { user?: unknown }).user;
+          const accessToken  = (p as { accessToken?: string })?.accessToken ?? (data as { accessToken?: string }).accessToken;
+          if (userPayload && typeof accessToken === 'string') {
+            useAuthStore.getState().setAuth(userPayload as import('./types').User, accessToken);
+          } else {
+            // رد ناجح لكن البيانات ناقصة → لا تعمل logout (مشكلة في السيرفر)
+            if (import.meta.env.DEV) console.warn('getMe: unexpected response shape', data);
+          }
+        } else if (res.status === 401) {
+          // الجلسة انتهت فعلاً → logout
+          useAuthStore.getState().logout();
         }
-      } catch (err) { if (import.meta.env.DEV) console.error('Initial auth check failed', err); }
+        // أي كود آخر (5xx, 0) → نبقي الجلسة الموجودة، ممكن السيرفر مؤقتاً غير متاح
+      } catch {
+        // Network error (offline) → لا تعمل logout
+        if (import.meta.env.DEV) console.warn('checkAuth: network error, keeping existing session');
+      } finally {
+        if (!cancelled) setAuthChecked(true);
+      }
     };
+
     checkAuth();
-  }, [isAuthenticated, logout]);
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount only
 
   useEffect(() => { document.documentElement.dir = i18n.language.startsWith('ar') ? 'rtl' : 'ltr'; document.documentElement.lang = i18n.language; }, [i18n.language]);
+
+  // انتظر التحقق من الجلسة قبل عرض أي شيء
+  if (!authChecked) return <PageLoader />;
 
   if (isAuthenticated && user?.isFirstLogin) {
     return (

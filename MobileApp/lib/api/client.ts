@@ -48,34 +48,40 @@ apiClient.interceptors.response.use(
       original._retry = true;
       isRefreshing = true;
 
-      try {
-        const refreshToken = await getRefreshToken();
-        if (!refreshToken) throw new Error('no refresh token');
+      // Step 1: get stored refresh token
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) {
+        failedQueue.forEach((p) => p.reject(error));
+        failedQueue = [];
+        isRefreshing = false;
+        return Promise.reject(error);
+      }
 
+      // Step 2: call refresh endpoint — ONLY clear tokens if THIS fails
+      let newToken: string;
+      try {
         const res = await axios.post(
           `${BASE_URL}/api/auth/refresh`,
           {},
-          {
-            headers: { Authorization: `Bearer ${refreshToken}` },
-          },
+          { headers: { Authorization: `Bearer ${refreshToken}` } },
         );
-
-        const newToken: string = res.data?.data?.accessToken ?? res.data?.accessToken;
+        newToken = res.data?.data?.accessToken ?? res.data?.accessToken;
         await setAccessToken(newToken);
-
-        failedQueue.forEach((p) => p.resolve(newToken));
-        failedQueue = [];
-
-        original.headers.Authorization = `Bearer ${newToken}`;
-        return apiClient(original);
       } catch (refreshError) {
+        // Refresh token is invalid/expired → user must log in again
         failedQueue.forEach((p) => p.reject(refreshError));
         failedQueue = [];
         await clearTokens();
-        return Promise.reject(refreshError);
-      } finally {
         isRefreshing = false;
+        return Promise.reject(refreshError);
       }
+
+      // Step 3: retry original request (tokens stay intact even if retry fails)
+      failedQueue.forEach((p) => p.resolve(newToken));
+      failedQueue = [];
+      isRefreshing = false;
+      original.headers.Authorization = `Bearer ${newToken}`;
+      return apiClient(original);
     }
 
     return Promise.reject(error);

@@ -103,7 +103,9 @@ export default function RecommendationsPage() {
       else setError('لم يتم استلام التوصيات');
     } catch (err: unknown) {
       const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      const status = (err as { response?: { status?: number } })?.response?.status;
       if (code === 'ANALYSIS_LIMIT_REACHED') setError('وصلت للحد الشهري من التحليلات');
+      else if (code === 'UNAUTHORIZED' || status === 401) setError('انتهت الجلسة — سجّل دخولك مرة أخرى');
       else if ((err as { error?: string })?.error === 'NETWORK_ERROR') setError('لا يوجد اتصال');
       else setError('حدث خطأ، حاول مرة أخرى');
     } finally {

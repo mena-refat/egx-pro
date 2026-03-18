@@ -64,9 +64,13 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const res = await apiClient.get(ENDPOINTS.auth.me);
-          const user = res.data?.user ?? res.data;
-          if (user) {
-            set({ user, isAuthenticated: true });
+          const body = res.data as { user?: MobileUser; accessToken?: string } | MobileUser;
+          const user = (body as { user?: MobileUser }).user ?? (body as MobileUser);
+          // If server issued a new access token (web cookie flow), save it
+          const newToken = (body as { accessToken?: string }).accessToken;
+          if (newToken) await setAccessToken(newToken);
+          if (user?.id) {
+            set({ user: user as MobileUser, isAuthenticated: true });
           } else {
             set({ user: null, isAuthenticated: false });
           }

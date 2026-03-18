@@ -21,6 +21,8 @@ export const userApiLimiter = rateLimit({
     }
     return ipKey(req);
   },
-  skip: (req) => req.originalUrl.startsWith('/api/auth'),
+  skip: (req) =>
+    req.originalUrl.startsWith('/api/auth') ||
+    req.originalUrl.startsWith('/api/admin'),
   handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
 });

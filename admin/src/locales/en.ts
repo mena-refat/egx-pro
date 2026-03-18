@@ -221,6 +221,7 @@ export const en = {
     yourReply: 'Your Reply',
     setStatus: 'Set Status',
     sendReply: 'Send Reply',
+    noTickets: 'No support tickets found',
   },
 
   account: {
@@ -301,7 +302,11 @@ export const en = {
     action: 'Action',
     target: 'Target',
     noEvents: 'No audit events found',
-    filterByAdmin: 'Filter by admin email...',
+    filterByAdmin: 'Search by admin email...',
+    allActions: 'All Actions',
+    from: 'From date',
+    to: 'To date',
+    clearFilters: 'Clear filters',
   },
 
   notifications: {

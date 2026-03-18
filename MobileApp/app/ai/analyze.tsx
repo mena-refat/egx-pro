@@ -118,11 +118,14 @@ export default function AnalyzePage() {
       if (data) setResult(data as AnalysisResult);
       else setError('لم يتم استلام نتيجة التحليل');
     } catch (err: unknown) {
-      const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      const axiosData = (err as { response?: { data?: { error?: string; ok?: boolean } } })?.response?.data;
+      const code = axiosData?.error;
       const status = (err as { response?: { status?: number } })?.response?.status;
+      const networkError = (err as { error?: string })?.error;
       if (code === 'ANALYSIS_LIMIT_REACHED') setError('وصلت للحد الشهري من التحليلات. جرب الشهر القادم أو ترقّ للباقة Pro.');
+      else if (code === 'UNAUTHORIZED' || status === 401) setError('انتهت الجلسة — سجّل دخولك مرة أخرى');
       else if (status === 429) setError('الخدمة مشغولة حالياً، حاول بعد دقيقة');
-      else if ((err as { error?: string })?.error === 'NETWORK_ERROR') setError('لا يوجد اتصال بالإنترنت');
+      else if (networkError === 'NETWORK_ERROR') setError('لا يوجد اتصال بالإنترنت');
       else setError('حدث خطأ أثناء التحليل، حاول مرة أخرى');
     } finally {
       setLoading(false);

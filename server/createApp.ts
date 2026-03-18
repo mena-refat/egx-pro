@@ -160,7 +160,7 @@ export async function createApp(): Promise<express.Express> {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => ipKey(req),
-    skip: (req) => req.path.startsWith('/api/auth'),
+    skip: (req) => req.path.startsWith('/auth') || req.path.startsWith('/admin'),
     handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
   });
 

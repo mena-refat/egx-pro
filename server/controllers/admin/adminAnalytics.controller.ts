@@ -86,9 +86,34 @@ export const AdminAnalyticsController = {
   },
 
   async auditLogs(req: AdminRequest, res: Response): Promise<void> {
-    const { page = '1', adminId = '' } = req.query as Record<string, string>;
+    const { page = '1', admin = '', action = '', from = '', to = '' } = req.query as Record<string, string>;
     const pageNum = Math.max(1, Number.parseInt(page, 10) || 1);
-    const where = adminId ? { adminId } : {};
+
+    const where: Record<string, unknown> = {};
+
+    // Filter by admin email
+    if (admin.trim()) {
+      const matchingAdmins = await prisma.admin.findMany({
+        where: { email: { contains: admin.trim(), mode: 'insensitive' } },
+        select: { id: true },
+      });
+      where.adminId = { in: matchingAdmins.map((a) => a.id) };
+    }
+
+    // Filter by action
+    if (action.trim()) where.action = action.trim();
+
+    // Filter by date range
+    if (from || to) {
+      const dateFilter: Record<string, Date> = {};
+      if (from) dateFilter.gte = new Date(from);
+      if (to) {
+        const toDate = new Date(to);
+        toDate.setHours(23, 59, 59, 999);
+        dateFilter.lte = toDate;
+      }
+      where.createdAt = dateFilter;
+    }
 
     const [logs, total] = await Promise.all([
       prisma.adminAuditLog.findMany({
