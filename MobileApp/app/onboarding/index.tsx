@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { View, Text, ScrollView, Pressable, Dimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, Dimensions, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Wallet, AlertTriangle, Target, ChevronLeft } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
@@ -146,6 +146,7 @@ export default function OnboardingPage() {
       router.replace('/');
     } catch {
       setSaving(false);
+      Alert.alert('خطأ', 'حدث خطأ أثناء الحفظ، حاول مرة أخرى');
     }
   };
 

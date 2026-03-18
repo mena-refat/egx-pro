@@ -57,7 +57,7 @@ function useWatchlist() {
 
   const refetch = useCallback(() => {
     const ctrl = new AbortController();
-    void fetch(ctrl.signal);
+    return fetch(ctrl.signal);
   }, [fetch]);
 
   return { items, loading, refetch };

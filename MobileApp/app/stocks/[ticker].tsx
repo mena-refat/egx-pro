@@ -77,16 +77,16 @@ export default function StockDetailPage() {
   const toggleWatchlist = async () => {
     if (!ticker || wlLoading) return;
     setWlLoading(true);
+    const prev = inWatchlist;
+    setInWatchlist(!prev);
     try {
-      if (inWatchlist) {
+      if (prev) {
         await apiClient.delete(`/api/watchlist/${ticker}`);
-        setInWatchlist(false);
       } else {
         await apiClient.post('/api/watchlist', { ticker });
-        setInWatchlist(true);
       }
     } catch {
-      // silent
+      setInWatchlist(prev);
     } finally {
       setWlLoading(false);
     }

@@ -23,7 +23,7 @@ interface Props {
   lineColor?: string;
 }
 
-export function StockChart({ ticker, lineColor = '#10b981' }: Props) {
+export function StockChart({ ticker, lineColor }: Props) {
   const [range, setRange] = useState<Range>('1mo');
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);

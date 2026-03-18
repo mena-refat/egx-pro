@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -66,11 +66,13 @@ export default function MarketPage() {
         .filter((s) => s.changePercent < 0)
         .sort((a, b) => a.changePercent - b.changePercent);
     }
-    list = list.sort((a, b) => b.changePercent - a.changePercent);
-    // حدّث قائمة الـ tickers المرئية (مثلاً أول 30 فقط) لتقليل اشتراكات WebSocket
-    setVisibleTickers(list.slice(0, 30).map((s) => s.ticker));
-    return list;
+    return list.sort((a, b) => b.changePercent - a.changePercent);
   }, [enriched, tab, search]);
+
+  // حدّث قائمة الـ tickers المرئية (أول 30 فقط) لتقليل اشتراكات WebSocket
+  useEffect(() => {
+    setVisibleTickers(filtered.slice(0, 30).map((s) => s.ticker));
+  }, [filtered]);
 
   const renderStock = useCallback(
     ({ item: s }: { item: Stock }) => (
