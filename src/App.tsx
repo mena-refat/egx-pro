@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import api from './lib/api';
+import { refreshAccessToken } from './lib/auth/tokens';
 import { useNotifications } from './hooks/useNotifications';
 import { useTheme } from './hooks/useTheme';
 import { useProfileCompletion } from './hooks/useProfileCompletion';
@@ -97,15 +98,30 @@ export default function App() {
     hasCheckedAuth.current = true;
     const checkAuth = async () => {
       try {
-        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        // استعادة الـ access token من الـ refresh cookie أولاً
+        let token: string;
+        try {
+          token = await refreshAccessToken();
+        } catch {
+          // الـ refresh cookie انتهى أو مش موجود → logout فعلي
+          if (isAuthenticated) logout();
+          return;
+        }
+
+        const API = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL?.trim();
+        const base = API ? `${API.replace(/\/$/, '')}/api` : '/api';
+        const res = await fetch(`${base}/auth/me`, {
+          credentials: 'include',
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (res.ok) {
           const data = await res.json();
-          const p = (data as { data?: { user?: unknown; accessToken?: string } })?.data ?? data;
+          const p = (data as { data?: { user?: unknown } })?.data ?? data;
           const userPayload = p?.user ?? (data as { user?: unknown }).user;
-          const accessTokenPayload = p?.accessToken ?? (data as { accessToken?: string }).accessToken;
-          if (userPayload && typeof accessTokenPayload === 'string') useAuthStore.getState().setAuth(userPayload as import('./types').User, accessTokenPayload);
+          if (userPayload) useAuthStore.getState().setAuth(userPayload as import('./types').User, token);
+        } else {
+          if (isAuthenticated) logout();
         }
-        else if (isAuthenticated) logout();
       } catch (err) { if (import.meta.env.DEV) console.error('Initial auth check failed', err); }
     };
     checkAuth();

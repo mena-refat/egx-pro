@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, GitCompare, Search, Trophy, CheckCircle, XCircle, AlertTriangle } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
+import { AnalysisLoader } from '../../components/shared/AnalysisLoader';
 import { EGX_STOCKS, getStockInfo } from '../../lib/egxStocks';
 import apiClient from '../../lib/api/client';
 
@@ -212,12 +213,7 @@ export default function ComparePage() {
           {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-sm font-bold text-white">مقارنة بالذكاء الاصطناعي</Text>}
         </Pressable>
 
-        {loading && (
-          <View className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 items-center gap-2">
-            <ActivityIndicator color="#3b82f6" />
-            <Text className="text-sm text-[#8b949e] text-center">جارٍ المقارنة... قد يستغرق دقيقة</Text>
-          </View>
-        )}
+        {loading && <AnalysisLoader variant="compare" />}
 
         {error && (
           <View className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">

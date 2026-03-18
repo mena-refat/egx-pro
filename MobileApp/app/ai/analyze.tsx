@@ -6,6 +6,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, ArrowRight, Brain, Search, CheckCircle, XCircle, AlertTriangle } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
+import { AnalysisLoader } from '../../components/shared/AnalysisLoader';
 import { EGX_STOCKS, getStockInfo } from '../../lib/egxStocks';
 import apiClient from '../../lib/api/client';
 
@@ -174,15 +175,8 @@ export default function AnalyzePage() {
             : <Text className="text-sm font-bold text-white">تحليل بالذكاء الاصطناعي</Text>}
         </Pressable>
 
-        {/* Loading hint */}
-        {loading && (
-          <View className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 items-center gap-2">
-            <ActivityIndicator color="#8b5cf6" />
-            <Text className="text-sm text-[#8b949e] text-center">
-              جارٍ تحليل السهم... قد يستغرق حتى دقيقة
-            </Text>
-          </View>
-        )}
+        {/* Loading */}
+        {loading && <AnalysisLoader variant="analyze" />}
 
         {/* Error */}
         {error && (

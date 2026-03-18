@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, XCircle, AlertTriangle, TrendingUp } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import apiClient from '../../lib/api/client';
+import { AnalysisLoader } from '../../components/shared/AnalysisLoader';
 
 interface RecommendedStock {
   ticker?: string;
@@ -149,12 +150,7 @@ export default function RecommendationsPage() {
             : <Text className="text-sm font-bold text-white">احصل على التوصيات</Text>}
         </Pressable>
 
-        {loading && (
-          <View className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 items-center gap-2">
-            <ActivityIndicator color="#f59e0b" />
-            <Text className="text-sm text-[#8b949e] text-center">جارٍ تحليل محفظتك... قد يستغرق دقيقة</Text>
-          </View>
-        )}
+        {loading && <AnalysisLoader variant="recommendations" />}
 
         {error && (
           <View className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
