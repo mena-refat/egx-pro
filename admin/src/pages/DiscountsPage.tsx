@@ -5,7 +5,11 @@ import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Trash2, ToggleLeft, ToggleRight, RefreshCw } from 'lucide-react';
+
+const CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const generateCode = () =>
+  Array.from({ length: 20 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
 
 export default function DiscountsPage() {
   const { t } = useTranslation();
@@ -26,14 +30,15 @@ export default function DiscountsPage() {
   useEffect(() => { void load(); }, [load]);
 
   const handleCreate = async () => {
-    if (!form.code || !form.value) return;
+    const effectiveValue = form.type === 'full' ? 100 : Number(form.value);
+    if (!form.code || !form.maxUses || (form.type !== 'full' && !form.value)) return;
     setSaving(true);
     try {
       await adminApi.post('/discounts', {
         code: form.code.toUpperCase(),
         type: form.type,
-        value: Number(form.value),
-        maxUses: form.maxUses ? Number(form.maxUses) : undefined,
+        value: effectiveValue,
+        maxUses: Number(form.maxUses),
         expiresAt: form.expiresAt || undefined,
       });
       setModal(false);
@@ -41,6 +46,18 @@ export default function DiscountsPage() {
       await load();
     } finally { setSaving(false); }
   };
+
+  // Only allow non-negative integers
+  const handleIntInput = (key: 'value' | 'maxUses', raw: string) => {
+    const cleaned = raw.replace(/[^0-9]/g, '');
+    setForm((p) => ({ ...p, [key]: cleaned }));
+  };
+
+  const isCreateDisabled =
+    saving ||
+    !form.code ||
+    !form.maxUses ||
+    (form.type !== 'full' && !form.value);
 
   const handleToggleActive = async (id: string, active: boolean) => {
     await adminApi.patch(`/discounts/${id}`, { active: !active });
@@ -121,28 +138,36 @@ export default function DiscountsPage() {
         width="max-w-sm"
         children={(
           <div className="space-y-3">
-            {[
-              { label: t('discounts.code'),    key: 'code',      type: 'text',           placeholder: 'PROMO20' },
-              { label: t('discounts.value'),   key: 'value',     type: 'number',         placeholder: '20' },
-              { label: t('discounts.maxUses'), key: 'maxUses',   type: 'number',         placeholder: t('discounts.unlimited') },
-              { label: t('discounts.expiresAt'), key: 'expiresAt', type: 'datetime-local', placeholder: '' },
-            ].map((f) => (
-              <div key={f.key}>
-                <label className="text-xs text-slate-400 block mb-1">{f.label}</label>
+
+            {/* Code + Generate */}
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">{t('discounts.code')}</label>
+              <div className="flex gap-2">
                 <input
-                  type={f.type}
-                  placeholder={f.placeholder}
-                  value={(form as any)[f.key]}
-                  onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
+                  type="text"
+                  placeholder="PROMO20"
+                  value={form.code}
+                  onChange={(e) => setForm((p) => ({ ...p, code: e.target.value.toUpperCase() }))}
+                  className="flex-1 px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500/50"
                 />
+                <button
+                  type="button"
+                  onClick={() => setForm((p) => ({ ...p, code: generateCode() }))}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] rounded-lg text-slate-300 transition-all whitespace-nowrap"
+                  title={t('discounts.generate')}
+                >
+                  <RefreshCw size={12} />
+                  {t('discounts.generate')}
+                </button>
               </div>
-            ))}
+            </div>
+
+            {/* Type */}
             <div>
               <label className="text-xs text-slate-400 block mb-1">{t('discounts.type')}</label>
               <select
                 value={form.type}
-                onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
+                onChange={(e) => setForm((p) => ({ ...p, type: e.target.value, value: e.target.value === 'full' ? '' : p.value }))}
                 className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
               >
                 <option value="percentage">{t('discounts.percentage')}</option>
@@ -150,16 +175,63 @@ export default function DiscountsPage() {
                 <option value="full">{t('discounts.full')}</option>
               </select>
             </div>
+
+            {/* Value */}
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">{t('discounts.value')}</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder={form.type === 'full' ? '100' : '20'}
+                  value={form.type === 'full' ? '100' : form.value}
+                  disabled={form.type === 'full'}
+                  onKeyDown={(e) => { if (e.key === '.' || e.key === '-' || e.key === 'e') e.preventDefault(); }}
+                  onChange={(e) => handleIntInput('value', e.target.value)}
+                  className={`w-full px-3 py-2 pe-14 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50 transition-all ${
+                    form.type === 'full' ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                />
+                <span className="absolute end-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 pointer-events-none">
+                  {form.type === 'percentage' || form.type === 'full' ? '%' : 'EGP'}
+                </span>
+              </div>
+            </div>
+
+            {/* Max Uses (required) */}
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">{t('discounts.maxUsesRequired')}</label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                placeholder="100"
+                value={form.maxUses}
+                onKeyDown={(e) => { if (e.key === '.' || e.key === '-' || e.key === 'e') e.preventDefault(); }}
+                onChange={(e) => handleIntInput('maxUses', e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
+              />
+            </div>
+
+            {/* Expires At (optional) */}
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">{t('discounts.expiresAtOptional')}</label>
+              <input
+                type="datetime-local"
+                value={form.expiresAt}
+                onChange={(e) => setForm((p) => ({ ...p, expiresAt: e.target.value }))}
+                className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
+              />
+            </div>
+
             <div className="flex gap-3 justify-end pt-2">
-              <button
-                onClick={() => setModal(false)}
-                className="px-4 py-2 text-sm text-slate-400"
-              >
+              <button onClick={() => setModal(false)} className="px-4 py-2 text-sm text-slate-400">
                 {t('common.cancel')}
               </button>
               <button
                 onClick={handleCreate}
-                disabled={saving || !form.code || !form.value}
+                disabled={isCreateDisabled}
                 className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all"
               >
                 {saving ? t('common.creating') : t('common.create')}
