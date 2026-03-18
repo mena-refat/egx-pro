@@ -361,8 +361,7 @@ export class MarketDataService {
         : Math.min(baseInterval * Math.pow(2, consecutiveFailures), 5 * 60_000);
 
       try {
-        // خارج ساعات التداول بالكامل (وبعد انتهاء فترة السماح بعد الإغلاق):
-        // لا نضرب أي مصدر خارجي إطلاقاً.
+        // خارج ساعات التداول بالكامل (وبعد انتهاء فترة السماح بعد الإغلاق):\n        // لا نضرب أي مصدر خارجي إطلاقاً.
         // نستخدم الـ cache فقط (Redis + in-memory)، ونحدد توقيت الاستيقاظ القادم حسب msToOpen.
         if (!marketOpen && !inPostCloseGrace) {
           const quotes = await this.getCachedQuotes(symbols);
@@ -410,9 +409,29 @@ export class MarketDataService {
       }
     };
 
-    poll();
+    // جلب مبدئي واحد عند بدء التشغيل لتعبئة الـ in-memory cache بأحدث الأسعار المتاحة
+    // (سعر الإغلاق إذا كان السوق مغلقاً) — بصرف النظر عن حالة السوق.
+    logger.info('Fetching initial prices on startup…');
+    this.getQuotes(symbols)
+      .then((quotes) => {
+        if (this.broadcastFn && quotes.size > 0) this.broadcastFn(quotes);
+        logger.info(`Initial fetch complete: ${quotes.size} stocks cached`, {
+          marketOpen: this.isMarketOpen(),
+        });
+      })
+      .catch((err: unknown) => {
+        logger.warn('Initial fetch failed, will retry on next poll', {
+          error: (err as Error).message,
+        });
+      })
+      .finally(() => {
+        // ابدأ دورة الـ polling العادية بعد انتهاء الـ initial fetch
+        poll();
+      });
+
     logger.info('Market data polling started');
   }
+
 
   stopPolling(): void {
     this.pollingActive = false;

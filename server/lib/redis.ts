@@ -21,6 +21,18 @@ let redisWriteDisabled = false;
 let redisReadDisabled = false;
 const LOCAL_CACHE_MAX_SIZE = 2000;
 
+/** Checks if a Redis error should trigger a full session disable */
+function isRedisDisablingError(message: string): boolean {
+  return (
+    message.includes('max requests limit exceeded') ||
+    message.includes('ECONNREFUSED') ||
+    message.includes('ENOTFOUND') ||
+    message.includes('ERR max') ||
+    message.includes('Upstash') ||
+    message.includes('rate limit')
+  );
+}
+
 /** Get value from Redis or in-memory fallback. Returns null if missing or expired. */
 export const getCache = async <T>(key: string): Promise<T | null> => {
   // Try Redis first
@@ -29,11 +41,13 @@ export const getCache = async <T>(key: string): Promise<T | null> => {
       return await redis.get<T>(key);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      logger.warn('Redis Get Error', { key, err: message });
-      // If Upstash is unavailable, disable further reads for this process to avoid log spam
-      if (err && (err as { name?: string }).name === 'UpstashError') {
+      // Disable Redis for this session immediately on rate limit or connection errors
+      if (isRedisDisablingError(message) || (err as { name?: string }).name === 'UpstashError') {
         redisReadDisabled = true;
-        logger.warn('⚠️ Redis read failures detected. Disabling Redis reads for this session; using in-memory cache only.');
+        redisWriteDisabled = true;
+        logger.warn('⚠️ Redis disabled for this session (rate limit or connection error). Using in-memory cache only.', { reason: message.slice(0, 120) });
+      } else {
+        logger.warn('Redis Get Error', { key, err: message });
       }
       // Fallback to local cache on error
     }
