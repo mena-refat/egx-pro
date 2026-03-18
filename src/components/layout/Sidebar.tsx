@@ -7,6 +7,7 @@ export type SidebarProps = {
   activeRoute: string;
   collapsed: boolean;
   onToggle: () => void;
+  supportUnreadCount?: number;
 };
 
 type NavItem =
@@ -36,7 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'support',    path: '/support',           icon: LifeBuoy        },
 ];
 
-export function Sidebar({ activeRoute, collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ activeRoute, collapsed, onToggle, supportUnreadCount = 0 }: SidebarProps) {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
 
@@ -78,6 +79,7 @@ export function Sidebar({ activeRoute, collapsed, onToggle }: SidebarProps) {
           }
           const isActive = item.path === '/' ? (activeRoute === '/' || activeRoute === '/dashboard') : (item.path === '/settings/account' ? activeRoute.startsWith('/settings') : (item.path === '/ai' ? activeRoute === '/ai' || activeRoute.startsWith('/ai/') : (item.path === '/predictions' ? activeRoute === '/predictions' : (activeRoute === item.path || activeRoute.startsWith(item.path + '/')))));
           const label = t(`nav.${item.id}`);
+          const isSupportWithUnread = item.id === 'support' && supportUnreadCount > 0;
           return (
             <button
               key={item.id}
@@ -85,8 +87,18 @@ export function Sidebar({ activeRoute, collapsed, onToggle }: SidebarProps) {
               onClick={() => navigate(item.path)}
               className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 ${collapsed ? 'justify-center' : ''} ${isActive ? 'bg-[var(--brand)] text-[var(--text-inverse)] shadow-md' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'}`}
             >
-              <item.icon className="w-5 h-5 shrink-0" />
-              <span className={`font-medium truncate transition-opacity duration-200 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>{label}</span>
+              <div className="relative shrink-0">
+                <item.icon className="w-5 h-5" />
+                {isSupportWithUnread && (
+                  <span className="absolute -top-1 -end-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-[var(--bg-sidebar)]" />
+                )}
+              </div>
+              <span className={`flex-1 font-medium truncate transition-opacity duration-200 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>{label}</span>
+              {!collapsed && isSupportWithUnread && (
+                <span className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  {supportUnreadCount}
+                </span>
+              )}
             </button>
           );
         })}

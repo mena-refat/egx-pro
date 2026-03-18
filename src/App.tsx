@@ -63,6 +63,8 @@ export default function App() {
   const { notifications, unreadCount: notificationsUnread, notificationsLoading, fetchNotifications, markAllRead: markNotificationsRead, markOneRead: markOneNotificationRead, clearAll: clearAllNotifications } = useNotifications(isAuthenticated);
   const stats = useDashboardStats(isAuthenticated, pathname);
 
+  const supportUnreadCount = notifications.filter(n => n.type === 'support_reply' && !n.isRead).length;
+
   useEffect(() => { localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed)); }, [sidebarCollapsed]);
 
   const onToggleSidebar = useCallback(() => setSidebarCollapsed((c) => !c), []);
@@ -145,7 +147,7 @@ export default function App() {
   return (
     <div className="min-h-screen w-full max-w-[100vw] bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row overflow-x-hidden">
       <ToastContainer />
-      <Sidebar activeRoute={pathname} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />
+      <Sidebar activeRoute={pathname} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} supportUnreadCount={supportUnreadCount} />
       <main className="main-content flex-1 p-4 sm:p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto overflow-x-hidden">
         <Header
           user={user ?? null}

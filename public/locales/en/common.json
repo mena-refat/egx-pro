@@ -306,6 +306,9 @@
     "yourMessage": "Your message",
     "adminReply": "Support reply",
     "hasReply": "Reply received",
+    "newReply": "New reply",
+    "sentAt": "Sent",
+    "waitingReply": "Waiting for a reply from support team...",
     "status": {
       "open": "Open",
       "in_progress": "In Progress",

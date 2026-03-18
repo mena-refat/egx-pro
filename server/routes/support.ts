@@ -45,5 +45,27 @@ router.get('/my', authenticate, async (req, res) => {
   sendSuccess(res, tickets);
 });
 
+router.patch('/:id/read-reply', authenticate, async (req, res) => {
+  const userId = (req as AuthRequest).user?.id;
+  const { id } = req.params as { id: string };
+  if (!userId) {
+    sendError(res, 'UNAUTHORIZED', 401);
+    return;
+  }
+
+  const ticket = await prisma.supportTicket.findUnique({ where: { id } });
+  if (!ticket || ticket.userId !== userId) {
+    sendError(res, 'NOT_FOUND', 404);
+    return;
+  }
+
+  await prisma.supportTicket.update({
+    where: { id },
+    data: { replyRead: true },
+  });
+
+  sendSuccess(res, { ok: true });
+});
+
 export default router;
 

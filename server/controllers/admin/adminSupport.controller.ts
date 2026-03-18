@@ -58,13 +58,14 @@ export const AdminSupportController = {
         reply: reply.trim(),
         repliedAt: new Date(),
         repliedBy: req.admin?.id ?? null,
+        replyRead: false,
         status: status as 'RESOLVED' | 'CLOSED' | 'IN_PROGRESS',
       },
     });
 
     await createNotification(
       ticket.userId,
-      'achievement',
+      'support_reply',
       'تم الرد على طلب دعمك',
       reply.slice(0, 100),
       { route: '/support' }

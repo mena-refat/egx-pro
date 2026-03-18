@@ -302,6 +302,9 @@
     "yourMessage": "رسالتك",
     "adminReply": "رد الدعم الفني",
     "hasReply": "تم الرد",
+    "newReply": "رد جديد",
+    "sentAt": "أُرسلت",
+    "waitingReply": "في انتظار رد فريق الدعم...",
     "status": {
       "open": "مفتوحة",
       "in_progress": "قيد المعالجة",
