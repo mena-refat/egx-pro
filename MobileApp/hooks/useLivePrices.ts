@@ -64,7 +64,7 @@ export function useLivePrices(tickers: string[] = []) {
     };
 
     ws.onerror = () => ws.close();
-  }, [connect]);
+  }, []);
 
   useEffect(() => {
     connect();
