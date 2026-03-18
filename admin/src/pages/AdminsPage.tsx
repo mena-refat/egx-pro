@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
 
 export default function AdminsPage() {
+  const { t } = useTranslation();
   const [admins, setAdmins] = useState<any[]>([]);
   const [open, setOpen]     = useState(false);
   const [saving, setSaving] = useState(false);
@@ -43,13 +45,7 @@ export default function AdminsPage() {
         role: form.isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN',
       });
       setOpen(false);
-      setForm({
-        email: '',
-        fullName: '',
-        password: '',
-        permissions: [],
-        isSuperAdmin: false,
-      });
+      setForm({ email: '', fullName: '', password: '', permissions: [], isSuperAdmin: false });
       const res = await adminApi.get('/admins');
       setAdmins(res.data.data);
     } finally {
@@ -70,12 +66,12 @@ export default function AdminsPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">Admins</h1>
+        <h1 className="text-xl font-bold text-white">{t('admins.title')}</h1>
         <button
           onClick={() => setOpen(true)}
           className="px-3 py-2 text-sm font-medium bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg transition-all"
         >
-          New Admin
+          {t('admins.newAdmin')}
         </button>
       </div>
 
@@ -83,10 +79,10 @@ export default function AdminsPage() {
         <table className="min-w-full text-sm">
           <thead className="text-slate-300 border-b border-white/[0.06] bg-[#0f0f17]">
             <tr>
-              <th className="px-3 py-2 text-left text-xs font-semibold">Email</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold">Name</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold">Role</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold">Active</th>
+              <th className="px-3 py-2 text-start text-xs font-semibold">{t('admins.email')}</th>
+              <th className="px-3 py-2 text-start text-xs font-semibold">{t('admins.name')}</th>
+              <th className="px-3 py-2 text-start text-xs font-semibold">{t('admins.role')}</th>
+              <th className="px-3 py-2 text-start text-xs font-semibold">{t('admins.active')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.04]">
@@ -94,11 +90,9 @@ export default function AdminsPage() {
               <tr key={a.id} className="hover:bg-white/[0.02]">
                 <td className="px-3 py-2 text-slate-200">{a.email}</td>
                 <td className="px-3 py-2 text-slate-300">{a.fullName}</td>
-                <td className="px-3 py-2">
-                  <Badge label={a.role ?? 'ADMIN'} />
-                </td>
+                <td className="px-3 py-2"><Badge label={a.role ?? 'ADMIN'} /></td>
                 <td className="px-3 py-2 text-slate-300">
-                  {a.isActive ? 'Yes' : 'No'}
+                  {a.isActive ? t('common.yes') : t('common.no')}
                 </td>
               </tr>
             ))}
@@ -106,10 +100,10 @@ export default function AdminsPage() {
         </table>
       </div>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="New Admin" width="max-w-md">
+      <Modal open={open} onClose={() => setOpen(false)} title={t('admins.newAdmin')} width="max-w-md">
         <div className="space-y-4">
           <div>
-            <label className="text-xs text-slate-400 block mb-1.5">Email</label>
+            <label className="text-xs text-slate-400 block mb-1.5">{t('admins.email')}</label>
             <input
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
@@ -117,7 +111,7 @@ export default function AdminsPage() {
             />
           </div>
           <div>
-            <label className="text-xs text-slate-400 block mb-1.5">Full Name</label>
+            <label className="text-xs text-slate-400 block mb-1.5">{t('admins.fullName')}</label>
             <input
               value={form.fullName}
               onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
@@ -125,7 +119,7 @@ export default function AdminsPage() {
             />
           </div>
           <div>
-            <label className="text-xs text-slate-400 block mb-1.5">Password</label>
+            <label className="text-xs text-slate-400 block mb-1.5">{t('admins.password')}</label>
             <input
               type="password"
               value={form.password}
@@ -134,7 +128,7 @@ export default function AdminsPage() {
             />
           </div>
           <div>
-            <label className="text-xs text-slate-400 block mb-1.5">Permissions</label>
+            <label className="text-xs text-slate-400 block mb-1.5">{t('admins.permissions')}</label>
             <div className="grid grid-cols-2 gap-2">
               {PERMS.map((p) => (
                 <label key={p} className="flex items-center gap-2 text-xs text-slate-300">
@@ -154,16 +148,12 @@ export default function AdminsPage() {
               <input
                 type="checkbox"
                 checked={form.isSuperAdmin}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, isSuperAdmin: e.target.checked }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, isSuperAdmin: e.target.checked }))}
                 className="w-3 h-3 rounded border border-white/[0.2] bg-transparent"
               />
-              <span>Super Admin</span>
+              <span>{t('admins.superAdmin')}</span>
             </label>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Gives full access, same as your current account.
-            </p>
+            <p className="mt-1 text-[11px] text-slate-500">{t('admins.superAdminNote')}</p>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button
@@ -171,7 +161,7 @@ export default function AdminsPage() {
               onClick={() => setOpen(false)}
               className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -179,7 +169,7 @@ export default function AdminsPage() {
               disabled={saving || !form.email || !form.password}
               className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all"
             >
-              {saving ? 'Creating...' : 'Create'}
+              {saving ? t('common.creating') : t('common.create')}
             </button>
           </div>
         </div>
@@ -187,4 +177,3 @@ export default function AdminsPage() {
     </div>
   );
 }
-

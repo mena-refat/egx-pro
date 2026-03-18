@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
-  useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,9 +25,6 @@ export function ScreenWrapper({
   padded = true,
   withKeyboard = false,
 }: Props) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme !== 'light';
-
   const content = scrollable ? (
     <ScrollView
       className="flex-1"
@@ -39,8 +35,8 @@ export function ScreenWrapper({
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#10b981"
-            colors={['#10b981']}
+            tintColor="#8b5cf6"
+            colors={['#8b5cf6']}
           />
         ) : undefined
       }
@@ -63,14 +59,8 @@ export function ScreenWrapper({
   );
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: isDark ? '#0a0a0f' : '#f8fafc',
-      }}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#0d1117' }}>
       {inner}
     </SafeAreaView>
   );
 }
-

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
@@ -7,6 +8,7 @@ import { Pagination } from '../components/Pagination';
 import { MessageSquare } from 'lucide-react';
 
 export default function SupportPage() {
+  const { t } = useTranslation();
   const [tickets, setTickets] = useState<any[]>([]);
   const [total, setTotal]     = useState(0);
   const [page, setPage]       = useState(1);
@@ -44,34 +46,38 @@ export default function SupportPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Support Tickets</h1>
-          <p className="text-sm text-slate-500">{total} tickets</p>
+          <h1 className="text-xl font-bold text-white">{t('support.title')}</h1>
+          <p className="text-sm text-slate-500">{total} {t('support.tickets')}</p>
         </div>
         <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); load(1, e.target.value); }}
           className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none">
-          <option value="">All</option>
-          <option value="OPEN">Open</option>
-          <option value="IN_PROGRESS">In Progress</option>
-          <option value="RESOLVED">Resolved</option>
-          <option value="CLOSED">Closed</option>
+          <option value="">{t('support.all')}</option>
+          <option value="OPEN">{t('support.open')}</option>
+          <option value="IN_PROGRESS">{t('support.inProgress')}</option>
+          <option value="RESOLVED">{t('support.resolved')}</option>
+          <option value="CLOSED">{t('support.closed')}</option>
         </select>
       </div>
 
-      <DataTable headers={['Subject', 'User', 'Status', 'Priority', 'Date', '']} loading={loading} rowCount={tickets.length}>
-        {tickets.map((t) => (
-          <tr key={t.id} className="hover:bg-white/[0.02] transition-colors">
+      <DataTable
+        headers={[t('support.subject'), t('support.user'), t('support.status'), t('support.priority'), t('support.date'), '']}
+        loading={loading}
+        rowCount={tickets.length}
+      >
+        {tickets.map((tk) => (
+          <tr key={tk.id} className="hover:bg-white/[0.02] transition-colors">
             <td className="px-4 py-3">
-              <p className="text-sm text-white font-medium">{t.subject}</p>
-              <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{t.message}</p>
+              <p className="text-sm text-white font-medium">{tk.subject}</p>
+              <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{tk.message}</p>
             </td>
-            <td className="px-4 py-3 text-sm text-slate-400">{t.user?.email ?? t.user?.username ?? '—'}</td>
-            <td className="px-4 py-3"><Badge label={t.status} /></td>
-            <td className="px-4 py-3"><Badge label={t.priority} /></td>
-            <td className="px-4 py-3 text-xs text-slate-500">{new Date(t.createdAt).toLocaleDateString()}</td>
+            <td className="px-4 py-3 text-sm text-slate-400">{tk.user?.email ?? tk.user?.username ?? '—'}</td>
+            <td className="px-4 py-3"><Badge label={tk.status} /></td>
+            <td className="px-4 py-3"><Badge label={tk.priority} /></td>
+            <td className="px-4 py-3 text-xs text-slate-500">{new Date(tk.createdAt).toLocaleDateString()}</td>
             <td className="px-4 py-3">
-              <button onClick={() => { setSelected(t); setReply(t.reply ?? ''); setNewStatus('RESOLVED'); }}
+              <button onClick={() => { setSelected(tk); setReply(tk.reply ?? ''); setNewStatus('RESOLVED'); }}
                 className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
-                <MessageSquare size={12} /> Reply
+                <MessageSquare size={12} /> {t('support.reply')}
               </button>
             </td>
           </tr>
@@ -80,7 +86,7 @@ export default function SupportPage() {
 
       <Pagination page={page} totalPages={Math.ceil(total / 20)} total={total} limit={20} onChange={setPage} />
 
-      <Modal open={!!selected} onClose={() => setSelected(null)} title="Reply to Ticket">
+      <Modal open={!!selected} onClose={() => setSelected(null)} title={t('support.replyToTicket')}>
         {selected && (
           <div className="space-y-4">
             <div className="bg-[#0d0d14] rounded-lg p-4 border border-white/[0.06]">
@@ -89,24 +95,24 @@ export default function SupportPage() {
               <p className="text-sm text-slate-300">{selected.message}</p>
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-1.5">Your Reply</label>
+              <label className="text-xs text-slate-400 block mb-1.5">{t('support.yourReply')}</label>
               <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={4}
                 className="w-full px-3 py-2.5 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50 resize-none" />
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-1.5">Set Status</label>
+              <label className="text-xs text-slate-400 block mb-1.5">{t('support.setStatus')}</label>
               <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}
                 className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none">
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="RESOLVED">Resolved</option>
-                <option value="CLOSED">Closed</option>
+                <option value="IN_PROGRESS">{t('support.inProgress')}</option>
+                <option value="RESOLVED">{t('support.resolved')}</option>
+                <option value="CLOSED">{t('support.closed')}</option>
               </select>
             </div>
             <div className="flex gap-3 justify-end">
-              <button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-slate-400">Cancel</button>
+              <button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-slate-400">{t('common.cancel')}</button>
               <button onClick={handleReply} disabled={saving || !reply.trim()}
                 className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all">
-                {saving ? 'Sending...' : 'Send Reply'}
+                {saving ? t('common.sending') : t('support.sendReply')}
               </button>
             </div>
           </div>
@@ -115,4 +121,3 @@ export default function SupportPage() {
     </div>
   );
 }
-

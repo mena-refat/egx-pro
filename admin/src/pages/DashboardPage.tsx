@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Users,
   TrendingUp,
@@ -33,18 +34,8 @@ type Health = {
   churnRisk: number;
 };
 
-// Custom tooltip for chart
-const ChartTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-[#1a1a24] border border-white/10 rounded-lg px-3 py-2 text-xs">
-      <p className="text-slate-400 mb-1">{label}</p>
-      <p className="text-emerald-400 font-semibold">+{payload[0]?.value} users</p>
-    </div>
-  );
-};
-
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [growth, setGrowth] = useState<{ date: string; count: number }[]>([]);
   const [health, setHealth] = useState<Health | null>(null);
@@ -64,34 +55,44 @@ export default function DashboardPage() {
       .catch(() => null);
   }, []);
 
+  const ChartTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-[#1a1a24] border border-white/10 rounded-lg px-3 py-2 text-xs">
+        <p className="text-slate-400 mb-1">{label}</p>
+        <p className="text-emerald-400 font-semibold">+{payload[0]?.value} {t('dashboard.users')}</p>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-white">Dashboard</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Platform overview</p>
+        <h1 className="text-xl font-bold text-white">{t('dashboard.title')}</h1>
+        <p className="text-sm text-slate-500 mt-0.5">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatsCard label="Total Users"     value={overview?.users.total ?? 0}        icon={Users}     accent="emerald" sub={`+${overview?.users.newToday ?? 0} today`} />
-        <StatsCard label="New This Month"  value={overview?.users.newThisMonth ?? 0} icon={UserPlus}  accent="blue"    />
-        <StatsCard label="Paid Active"     value={overview?.users.activePaid ?? 0}   icon={TrendingUp} accent="amber"  />
-        <StatsCard label="AI Analyses"     value={overview?.analyses.total ?? 0}     icon={Brain}     accent="rose"    sub={`${overview?.analyses.thisMonth ?? 0} this month`} />
+        <StatsCard label={t('dashboard.totalUsers')}    value={overview?.users.total ?? 0}        icon={Users}     accent="emerald" sub={`+${overview?.users.newToday ?? 0} ${t('common.today')}`} />
+        <StatsCard label={t('dashboard.newThisMonth')}  value={overview?.users.newThisMonth ?? 0} icon={UserPlus}  accent="blue"    />
+        <StatsCard label={t('dashboard.paidActive')}    value={overview?.users.activePaid ?? 0}   icon={TrendingUp} accent="amber"  />
+        <StatsCard label={t('dashboard.aiAnalyses')}    value={overview?.analyses.total ?? 0}     icon={Brain}     accent="rose"    sub={`${overview?.analyses.thisMonth ?? 0} ${t('common.thisMonth')}`} />
       </div>
 
       {/* AI Analysis Breakdown */}
       <div className="rounded-xl border border-white/[0.07] bg-[#111118] p-5">
         <div className="flex items-center gap-2 mb-4">
           <Brain size={14} className="text-rose-400" />
-          <h2 className="text-sm font-semibold text-white">AI Analyses Breakdown</h2>
-          <span className="ml-auto text-[11px] text-slate-500">Total: {overview?.analyses.total ?? 0}</span>
+          <h2 className="text-sm font-semibold text-white">{t('dashboard.aiBreakdown')}</h2>
+          <span className="ms-auto text-[11px] text-slate-500">{t('dashboard.aiTotal')}: {overview?.analyses.total ?? 0}</span>
         </div>
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Single Stock', value: overview?.analyses.bySingle ?? 0, color: 'text-blue-400' },
-            { label: 'Compare',      value: overview?.analyses.byCompare ?? 0, color: 'text-amber-400' },
-            { label: 'Recommendations', value: overview?.analyses.byRecommendations ?? 0, color: 'text-emerald-400' },
+            { label: t('dashboard.singleStock'),      value: overview?.analyses.bySingle ?? 0,          color: 'text-blue-400' },
+            { label: t('dashboard.compare'),           value: overview?.analyses.byCompare ?? 0,         color: 'text-amber-400' },
+            { label: t('dashboard.recommendations'),   value: overview?.analyses.byRecommendations ?? 0, color: 'text-emerald-400' },
           ].map((item) => (
             <div key={item.label} className="flex flex-col items-center gap-1 rounded-lg bg-white/[0.03] py-3 px-2">
               <span className={`text-xl font-bold tabular-nums ${item.color}`}>{item.value.toLocaleString()}</span>
@@ -107,8 +108,8 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 rounded-xl border border-white/[0.07] bg-[#111118] p-5">
           <div className="flex items-center gap-2 mb-5">
             <Activity size={14} className="text-emerald-400" />
-            <h2 className="text-sm font-semibold text-white">User Growth</h2>
-            <span className="ml-auto text-[11px] text-slate-500">Last 30 days</span>
+            <h2 className="text-sm font-semibold text-white">{t('dashboard.userGrowth')}</h2>
+            <span className="ms-auto text-[11px] text-slate-500">{t('dashboard.last30Days')}</span>
           </div>
           {growth.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
@@ -127,7 +128,7 @@ export default function DashboardPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-44 flex items-center justify-center text-slate-600 text-sm">No data yet</div>
+            <div className="h-44 flex items-center justify-center text-slate-600 text-sm">{t('dashboard.noData')}</div>
           )}
         </div>
 
@@ -136,7 +137,7 @@ export default function DashboardPage() {
           <div className="rounded-xl border border-white/[0.07] bg-[#111118] p-5">
             <div className="flex items-center gap-2 mb-5">
               <Target size={14} className="text-emerald-400" />
-              <h2 className="text-sm font-semibold text-white">By Plan</h2>
+              <h2 className="text-sm font-semibold text-white">{t('dashboard.byPlan')}</h2>
             </div>
             <div className="space-y-2.5">
               {(overview?.users.byPlan ?? []).map((p) => (
@@ -149,7 +150,7 @@ export default function DashboardPage() {
               ))}
               {!overview && (
                 <div className="text-slate-600 text-sm text-center py-4">
-                  Loading...
+                  {t('common.loading')}
                 </div>
               )}
             </div>
@@ -159,59 +160,21 @@ export default function DashboardPage() {
             <div className="rounded-xl border border-white/[0.07] bg-[#111118] p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Activity size={14} className="text-emerald-400" />
-                <h2 className="text-sm font-semibold text-white">Platform Health</h2>
+                <h2 className="text-sm font-semibold text-white">{t('dashboard.platformHealth')}</h2>
               </div>
               <div className="space-y-2.5 text-sm">
                 {[
-                  {
-                    label: 'Active today',
-                    value: health.activeUsersToday,
-                    color: 'text-emerald-400',
-                  },
-                  {
-                    label: 'Active (7 days)',
-                    value: health.activeUsers7d,
-                    color: 'text-blue-400',
-                  },
-                  {
-                    label: 'AI analyses today',
-                    value: health.analysesToday,
-                    color: 'text-purple-400',
-                  },
-                  {
-                    label: 'Predictions today',
-                    value: health.predictionsToday,
-                    color: 'text-amber-400',
-                  },
-                  {
-                    label: 'Open tickets ⚠',
-                    value: health.openTickets,
-                    color:
-                      health.openTickets > 5 ? 'text-red-400' : 'text-slate-300',
-                  },
-                  {
-                    label: 'Expiring (7 days) ⚠',
-                    value: health.expiringSoon,
-                    color:
-                      health.expiringSoon > 0 ? 'text-amber-400' : 'text-slate-300',
-                  },
-                  {
-                    label: 'Churn risk',
-                    value: health.churnRisk,
-                    color:
-                      health.churnRisk > 10 ? 'text-red-400' : 'text-slate-400',
-                  },
+                  { label: t('dashboard.activeToday'),      value: health.activeUsersToday, color: 'text-emerald-400' },
+                  { label: t('dashboard.active7d'),         value: health.activeUsers7d,    color: 'text-blue-400' },
+                  { label: t('dashboard.aiAnalysesToday'),  value: health.analysesToday,    color: 'text-purple-400' },
+                  { label: t('dashboard.predictionsToday'), value: health.predictionsToday, color: 'text-amber-400' },
+                  { label: t('dashboard.openTickets'),      value: health.openTickets,      color: health.openTickets > 5 ? 'text-red-400' : 'text-slate-300' },
+                  { label: t('dashboard.expiringSoon'),     value: health.expiringSoon,     color: health.expiringSoon > 0 ? 'text-amber-400' : 'text-slate-300' },
+                  { label: t('dashboard.churnRisk'),        value: health.churnRisk,        color: health.churnRisk > 10 ? 'text-red-400' : 'text-slate-400' },
                 ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-center justify-between"
-                  >
+                  <div key={item.label} className="flex items-center justify-between">
                     <span className="text-xs text-slate-500">{item.label}</span>
-                    <span
-                      className={`font-semibold tabular-nums ${item.color}`}
-                    >
-                      {item.value}
-                    </span>
+                    <span className={`font-semibold tabular-nums ${item.color}`}>{item.value}</span>
                   </div>
                 ))}
               </div>
@@ -222,30 +185,10 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          {
-            label: 'New Discount',
-            icon: Tag,
-            to: '/discounts',
-            color: 'hover:border-emerald-500/40',
-          },
-          {
-            label: 'Broadcast Message',
-            icon: Bell,
-            to: '/notifications',
-            color: 'hover:border-blue-500/40',
-          },
-          {
-            label: 'View Subscribers',
-            icon: DollarSign,
-            to: '/revenue',
-            color: 'hover:border-amber-500/40',
-          },
-          {
-            label: 'Open Tickets',
-            icon: Headphones,
-            to: '/support',
-            color: 'hover:border-rose-500/40',
-          },
+          { label: t('dashboard.newDiscount'),      icon: Tag,       to: '/discounts',      color: 'hover:border-emerald-500/40' },
+          { label: t('dashboard.broadcastMessage'), icon: Bell,      to: '/notifications',  color: 'hover:border-blue-500/40' },
+          { label: t('dashboard.viewSubscribers'),  icon: DollarSign, to: '/revenue',       color: 'hover:border-amber-500/40' },
+          { label: t('dashboard.openTicketsLink'),  icon: Headphones, to: '/support',       color: 'hover:border-rose-500/40' },
         ].map((a) => (
           <Link
             key={a.to}
@@ -260,4 +203,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

@@ -13,11 +13,11 @@ const TAB_ICONS = {
 };
 
 const TAB_LABELS = {
-  index: { ar: 'الرئيسية', en: 'Home' },
-  market: { ar: 'السوق', en: 'Market' },
-  portfolio: { ar: 'محفظتي', en: 'Portfolio' },
-  ai: { ar: 'AI', en: 'AI' },
-  profile: { ar: 'حسابي', en: 'Profile' },
+  index:     { ar: 'الرئيسية', en: 'Home' },
+  market:    { ar: 'السوق',    en: 'Market' },
+  portfolio: { ar: 'محفظتي',  en: 'Portfolio' },
+  ai:        { ar: 'AI',       en: 'AI' },
+  profile:   { ar: 'حسابي',   en: 'Profile' },
 };
 
 export default function TabsLayout() {
@@ -25,17 +25,18 @@ export default function TabsLayout() {
   const { i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const lang = i18n.language?.startsWith('ar') ? 'ar' : 'en';
+
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   return (
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#10b981',
-        tabBarInactiveTintColor: '#64748b',
+        tabBarActiveTintColor: '#8b5cf6',
+        tabBarInactiveTintColor: '#656d76',
         tabBarStyle: {
-          backgroundColor: '#0d0d14',
-          borderTopColor: 'rgba(255,255,255,0.06)',
+          backgroundColor: '#0d1117',
+          borderTopColor: '#30363d',
           borderTopWidth: 0.5,
           height: 56 + insets.bottom,
           paddingBottom: insets.bottom || 8,
@@ -50,4 +51,3 @@ export default function TabsLayout() {
     />
   );
 }
-

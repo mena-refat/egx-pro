@@ -28,7 +28,6 @@ export default function MarketPage() {
   const { overview, stocks, loadingStocks, loadingOverview, refreshing, refresh } =
     useMarketData();
 
-  // سنحدد الـ tickers المرئية بعد الفلترة، ثم نمرر subset فقط لـ useLivePrices
   const [visibleTickers, setVisibleTickers] = useState<string[]>([]);
   const { prices } = useLivePrices(visibleTickers);
 
@@ -69,7 +68,6 @@ export default function MarketPage() {
     return list.sort((a, b) => b.changePercent - a.changePercent);
   }, [enriched, tab, search]);
 
-  // حدّث قائمة الـ tickers المرئية (أول 30 فقط) لتقليل اشتراكات WebSocket
   useEffect(() => {
     setVisibleTickers(filtered.slice(0, 30).map((s) => s.ticker));
   }, [filtered]);
@@ -78,16 +76,16 @@ export default function MarketPage() {
     ({ item: s }: { item: Stock }) => (
       <Pressable
         onPress={() => router.push(`/stocks/${s.ticker}`)}
-        className="flex-row items-center justify-between py-3.5 px-4 border-b border-white/[0.04] active:bg-white/[0.03]"
+        className="flex-row items-center justify-between py-3.5 px-4 border-b border-[#21262d] active:bg-[#1c2128]"
       >
         <View className="flex-1">
-          <Text className="text-sm font-bold text-white">{s.ticker}</Text>
-          <Text className="text-xs text-slate-500 mt-0.5" numberOfLines={1}>
+          <Text className="text-sm font-bold text-[#e6edf3]">{s.ticker}</Text>
+          <Text className="text-xs text-[#8b949e] mt-0.5" numberOfLines={1}>
             {getStockName(s.ticker, 'ar')}
           </Text>
         </View>
         <View className="items-end gap-1">
-          <Text className="text-sm font-bold text-white tabular-nums">
+          <Text className="text-sm font-bold text-[#e6edf3] tabular-nums">
             {(s.price ?? 0).toFixed(2)}
           </Text>
           <PriceTag
@@ -107,10 +105,11 @@ export default function MarketPage() {
       <View className="flex-1">
         <View className="px-4 pt-5 pb-3 gap-3">
           <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold text-white">السوق</Text>
+            <Text className="text-xl font-bold text-[#e6edf3]">السوق</Text>
             <MarketStatusBadge />
           </View>
 
+          {/* Index Overview */}
           {loadingOverview ? (
             <View className="flex-row gap-2">
               {[1, 2, 3].map((i) => (
@@ -129,10 +128,7 @@ export default function MarketPage() {
                   { label: 'EGX70', data: overview.egx70 },
                   { label: 'EGX100', data: overview.egx100 },
                   overview.usdEgp
-                    ? {
-                        label: 'USD/EGP',
-                        data: { value: overview.usdEgp, changePercent: 0 },
-                      }
+                    ? { label: 'USD/EGP', data: { value: overview.usdEgp, changePercent: 0 } }
                     : null,
                 ]
                   .filter(Boolean)
@@ -141,22 +137,16 @@ export default function MarketPage() {
                       idx && (
                         <View
                           key={idx.label}
-                          className="bg-[#111118] border border-white/[0.07] rounded-xl px-3 py-2.5 mx-1 min-w-[90px]"
+                          className="bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-2.5 mx-1 min-w-[90px]"
                         >
-                          <Text className="text-xs text-slate-500 mb-1">
-                            {idx.label}
-                          </Text>
-                          <Text className="text-sm font-bold text-white tabular-nums">
-                            {idx.data?.value.toLocaleString('ar-EG', {
-                              maximumFractionDigits: 0,
-                            })}
+                          <Text className="text-xs text-[#656d76] mb-1">{idx.label}</Text>
+                          <Text className="text-sm font-bold text-[#e6edf3] tabular-nums">
+                            {idx.data?.value.toLocaleString('ar-EG', { maximumFractionDigits: 0 })}
                           </Text>
                           {idx.data?.changePercent !== 0 && (
                             <Text
                               className={`text-xs font-medium mt-0.5 ${
-                                (idx.data?.changePercent ?? 0) >= 0
-                                  ? 'text-emerald-400'
-                                  : 'text-red-400'
+                                (idx.data?.changePercent ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'
                               }`}
                             >
                               {(idx.data?.changePercent ?? 0) > 0 ? '+' : ''}
@@ -170,22 +160,24 @@ export default function MarketPage() {
             )
           )}
 
-          <View className="flex-row items-center bg-[#111118] border border-white/[0.07] rounded-xl px-3 gap-2">
-            <Search size={15} color="#64748b" />
+          {/* Search */}
+          <View className="flex-row items-center bg-[#161b22] border border-[#30363d] rounded-xl px-3 gap-2">
+            <Search size={15} color="#656d76" />
             <TextInput
               value={search}
               onChangeText={setSearch}
               placeholder="ابحث عن سهم..."
-              placeholderTextColor="#64748b"
-              className="flex-1 py-2.5 text-sm text-white"
+              placeholderTextColor="#656d76"
+              className="flex-1 py-2.5 text-sm text-[#e6edf3]"
             />
           </View>
 
-          <View className="flex-row bg-[#111118] border border-white/[0.07] rounded-xl p-1 gap-1">
+          {/* Tabs */}
+          <View className="flex-row bg-[#161b22] border border-[#30363d] rounded-xl p-1 gap-1">
             {[
               { id: 'gainers', label: 'الصاعدة', icon: TrendingUp },
-              { id: 'losers', label: 'الهابطة', icon: TrendingDown },
-              { id: 'all', label: 'الكل', icon: null },
+              { id: 'losers',  label: 'الهابطة', icon: TrendingDown },
+              { id: 'all',     label: 'الكل',     icon: null },
             ].map((t) => (
               <Pressable
                 key={t.id}
@@ -195,14 +187,11 @@ export default function MarketPage() {
                 }`}
               >
                 {t.icon && (
-                  <t.icon
-                    size={12}
-                    color={tab === t.id ? '#fff' : '#64748b'}
-                  />
+                  <t.icon size={12} color={tab === t.id ? '#fff' : '#656d76'} />
                 )}
                 <Text
                   className={`text-xs font-semibold ${
-                    tab === t.id ? 'text-white' : 'text-slate-400'
+                    tab === t.id ? 'text-white' : 'text-[#8b949e]'
                   }`}
                 >
                   {t.label}
@@ -227,8 +216,8 @@ export default function MarketPage() {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={refresh}
-                tintColor="#10b981"
-                colors={['#10b981']}
+                tintColor="#8b5cf6"
+                colors={['#8b5cf6']}
               />
             }
             showsVerticalScrollIndicator={false}
@@ -237,7 +226,7 @@ export default function MarketPage() {
             windowSize={10}
             ListEmptyComponent={
               <View className="items-center py-12">
-                <Text className="text-slate-500 text-sm">لا توجد نتائج</Text>
+                <Text className="text-[#656d76] text-sm">لا توجد نتائج</Text>
               </View>
             }
           />
@@ -246,4 +235,3 @@ export default function MarketPage() {
     </ScreenWrapper>
   );
 }
-

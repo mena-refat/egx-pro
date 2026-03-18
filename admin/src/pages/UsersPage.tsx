@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
@@ -14,6 +15,7 @@ type UserRow = {
 };
 
 export default function UsersPage() {
+  const { t } = useTranslation();
   const [users, setUsers]   = useState<UserRow[]>([]);
   const [total, setTotal]   = useState(0);
   const [page, setPage]     = useState(1);
@@ -37,7 +39,6 @@ export default function UsersPage() {
 
   useEffect(() => { void load(); }, [page]);// eslint-disable-line
 
-  // Debounce search
   const handleSearch = (v: string) => {
     setSearch(v);
     setPage(1);
@@ -55,8 +56,8 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Users</h1>
-          <p className="text-sm text-slate-500">{total.toLocaleString()} total</p>
+          <h1 className="text-xl font-bold text-white">{t('users.title')}</h1>
+          <p className="text-sm text-slate-500">{total.toLocaleString()} {t('users.total')}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => load()} className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-all">
@@ -67,7 +68,7 @@ export default function UsersPage() {
             download
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] rounded-lg text-slate-300 transition-all"
           >
-            <Download size={13} /> Export CSV
+            <Download size={13} /> {t('users.exportCsv')}
           </a>
         </div>
       </div>
@@ -75,18 +76,18 @@ export default function UsersPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             value={search} onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Search email, name, username..."
-            className="w-full pl-9 pr-4 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 transition-all"
+            placeholder={t('users.searchPlaceholder')}
+            className="w-full ps-9 pe-4 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 transition-all"
           />
         </div>
         <select
           value={plan} onChange={(e) => handlePlan(e.target.value)}
           className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-emerald-500/50 transition-all"
         >
-          <option value="">All Plans</option>
+          <option value="">{t('users.allPlans')}</option>
           <option value="free">Free</option>
           <option value="pro">Pro</option>
           <option value="yearly">Pro Yearly</option>
@@ -97,10 +98,10 @@ export default function UsersPage() {
 
       {/* Table */}
       <DataTable
-        headers={['User', 'Plan', 'AI Uses', 'Verified', 'Joined', '']}
+        headers={[t('users.user'), t('users.plan'), t('users.aiUses'), t('users.verified'), t('users.joined'), '']}
         loading={loading}
         rowCount={users.length}
-        empty="No users found"
+        empty={t('users.noUsers')}
       >
         {users.map((u) => (
           <tr key={u.id} className="hover:bg-white/[0.02] transition-colors">
@@ -114,7 +115,7 @@ export default function UsersPage() {
             <td className="px-4 py-3 text-sm text-slate-400 tabular-nums">{u.aiAnalysisUsedThisMonth}</td>
             <td className="px-4 py-3">
               <span className={`text-xs ${u.isEmailVerified ? 'text-emerald-400' : 'text-slate-600'}`}>
-                {u.isEmailVerified ? '✓ Yes' : '✗ No'}
+                {u.isEmailVerified ? t('users.verifiedYes') : t('users.verifiedNo')}
               </span>
             </td>
             <td className="px-4 py-3 text-xs text-slate-500">
@@ -122,7 +123,7 @@ export default function UsersPage() {
             </td>
             <td className="px-4 py-3">
               <Link to={`/users/${u.id}`} className="text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
-                View →
+                {t('users.view')}
               </Link>
             </td>
           </tr>
@@ -133,4 +134,3 @@ export default function UsersPage() {
     </div>
   );
 }
-

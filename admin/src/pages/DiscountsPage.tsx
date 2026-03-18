@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
@@ -7,6 +8,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 
 export default function DiscountsPage() {
+  const { t } = useTranslation();
   const [rows, setRows]       = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [modal, setModal]     = useState(false);
@@ -56,17 +58,17 @@ export default function DiscountsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Discount Codes</h1>
-          <p className="text-sm text-slate-500">{rows.length} codes</p>
+          <h1 className="text-xl font-bold text-white">{t('discounts.title')}</h1>
+          <p className="text-sm text-slate-500">{rows.length} {t('discounts.codes')}</p>
         </div>
         <button onClick={() => setModal(true)}
           className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg transition-all">
-          <Plus size={14} /> New Code
+          <Plus size={14} /> {t('discounts.newCode')}
         </button>
       </div>
 
       <DataTable
-        headers={['Code', 'Type', 'Value', 'Used', 'Expires', 'Active', '']}
+        headers={[t('discounts.code'), t('discounts.type'), t('discounts.value'), t('discounts.used'), t('discounts.expires'), t('discounts.active'), '']}
         loading={loading}
         rowCount={rows.length}
         children={(
@@ -115,15 +117,15 @@ export default function DiscountsPage() {
       <Modal
         open={modal}
         onClose={() => setModal(false)}
-        title="New Discount Code"
+        title={t('discounts.newDiscountCode')}
         width="max-w-sm"
         children={(
           <div className="space-y-3">
             {[
-              { label: 'Code', key: 'code', type: 'text', placeholder: 'PROMO20' },
-              { label: 'Value', key: 'value', type: 'number', placeholder: '20' },
-              { label: 'Max Uses', key: 'maxUses', type: 'number', placeholder: 'Unlimited' },
-              { label: 'Expires At', key: 'expiresAt', type: 'datetime-local', placeholder: '' },
+              { label: t('discounts.code'),    key: 'code',      type: 'text',           placeholder: 'PROMO20' },
+              { label: t('discounts.value'),   key: 'value',     type: 'number',         placeholder: '20' },
+              { label: t('discounts.maxUses'), key: 'maxUses',   type: 'number',         placeholder: t('discounts.unlimited') },
+              { label: t('discounts.expiresAt'), key: 'expiresAt', type: 'datetime-local', placeholder: '' },
             ].map((f) => (
               <div key={f.key}>
                 <label className="text-xs text-slate-400 block mb-1">{f.label}</label>
@@ -137,15 +139,15 @@ export default function DiscountsPage() {
               </div>
             ))}
             <div>
-              <label className="text-xs text-slate-400 block mb-1">Type</label>
+              <label className="text-xs text-slate-400 block mb-1">{t('discounts.type')}</label>
               <select
                 value={form.type}
                 onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
                 className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
               >
-                <option value="percentage">Percentage %</option>
-                <option value="fixed">Fixed EGP</option>
-                <option value="full">Full (100%)</option>
+                <option value="percentage">{t('discounts.percentage')}</option>
+                <option value="fixed">{t('discounts.fixed')}</option>
+                <option value="full">{t('discounts.full')}</option>
               </select>
             </div>
             <div className="flex gap-3 justify-end pt-2">
@@ -153,14 +155,14 @@ export default function DiscountsPage() {
                 onClick={() => setModal(false)}
                 className="px-4 py-2 text-sm text-slate-400"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleCreate}
                 disabled={saving || !form.code || !form.value}
                 className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all"
               >
-                {saving ? 'Creating...' : 'Create'}
+                {saving ? t('common.creating') : t('common.create')}
               </button>
             </div>
           </div>
@@ -168,13 +170,12 @@ export default function DiscountsPage() {
       />
 
       <ConfirmDialog
-        open={!!delId} title="Delete Discount Code"
-        message="This action is permanent and cannot be undone."
-        confirmLabel="Delete" danger loading={saving}
+        open={!!delId} title={t('discounts.deleteTitle')}
+        message={t('discounts.deleteMsg')}
+        confirmLabel={t('common.delete')} danger loading={saving}
         onConfirm={handleDelete}
         onCancel={() => setDelId(null)}
       />
     </div>
   );
 }
-

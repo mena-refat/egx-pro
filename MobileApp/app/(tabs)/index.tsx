@@ -122,15 +122,16 @@ export default function DashboardPage() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#10b981"
-            colors={['#10b981']}
+            tintColor="#8b5cf6"
+            colors={['#8b5cf6']}
           />
         }
       >
+        {/* Header */}
         <View className="flex-row items-center justify-between">
           <View>
-            <Text className="text-xs text-slate-500">أهلاً بك،</Text>
-            <Text className="text-lg font-bold text-white mt-0.5">
+            <Text className="text-xs text-[#656d76]">أهلاً بك،</Text>
+            <Text className="text-lg font-bold text-[#e6edf3] mt-0.5">
               {user?.fullName?.split(' ')[0] ?? 'مستثمر'}
             </Text>
           </View>
@@ -138,13 +139,14 @@ export default function DashboardPage() {
             <MarketStatusBadge />
             <Pressable
               onPress={() => router.push('/settings/notifications')}
-              className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.07] items-center justify-center"
+              className="w-9 h-9 rounded-xl bg-white/[0.05] border border-[#30363d] items-center justify-center"
             >
-              <Bell size={16} color="#94a3b8" />
+              <Bell size={16} color="#8b949e" />
             </Pressable>
           </View>
         </View>
 
+        {/* Portfolio Hero */}
         <PortfolioHero
           totalValue={summary.totalValue}
           totalCost={summary.totalCost}
@@ -153,6 +155,7 @@ export default function DashboardPage() {
           loading={portfolioLoading}
         />
 
+        {/* Top Gainer / Loser */}
         {(topGainer || topLoser) && (
           <View className="flex-row gap-3">
             {topGainer && (
@@ -161,22 +164,12 @@ export default function DashboardPage() {
                 className="flex-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3"
               >
                 <View className="flex-row items-center gap-1.5 mb-2">
-                  <TrendingUp size={12} color="#10b981" />
-                  <Text className="text-xs text-emerald-400 font-medium">
-                    أفضل أداء
-                  </Text>
+                  <TrendingUp size={12} color="#4ade80" />
+                  <Text className="text-xs text-emerald-400 font-medium">أفضل أداء</Text>
                 </View>
-                <Text className="text-sm font-bold text-white">
-                  {topGainer.ticker}
-                </Text>
+                <Text className="text-sm font-bold text-[#e6edf3]">{topGainer.ticker}</Text>
                 <Text className="text-xs text-emerald-400 mt-0.5">
-                  +
-                  {(
-                    prices[topGainer.ticker]?.changePercent ??
-                    topGainer.gainLossPercent ??
-                    0
-                  ).toFixed(2)}
-                  %
+                  +{(prices[topGainer.ticker]?.changePercent ?? topGainer.gainLossPercent ?? 0).toFixed(2)}%
                 </Text>
               </Pressable>
             )}
@@ -186,32 +179,22 @@ export default function DashboardPage() {
                 className="flex-1 bg-red-500/10 border border-red-500/20 rounded-xl p-3"
               >
                 <View className="flex-row items-center gap-1.5 mb-2">
-                  <TrendingDown size={12} color="#ef4444" />
-                  <Text className="text-xs text-red-400 font-medium">
-                    أقل أداء
-                  </Text>
+                  <TrendingDown size={12} color="#f87171" />
+                  <Text className="text-xs text-red-400 font-medium">أقل أداء</Text>
                 </View>
-                <Text className="text-sm font-bold text-white">
-                  {topLoser.ticker}
-                </Text>
+                <Text className="text-sm font-bold text-[#e6edf3]">{topLoser.ticker}</Text>
                 <Text className="text-xs text-red-400 mt-0.5">
-                  {(
-                    prices[topLoser.ticker]?.changePercent ??
-                    topLoser.gainLossPercent ??
-                    0
-                  ).toFixed(2)}
-                  %
+                  {(prices[topLoser.ticker]?.changePercent ?? topLoser.gainLossPercent ?? 0).toFixed(2)}%
                 </Text>
               </Pressable>
             )}
           </View>
         )}
 
-        <View className="bg-[#111118] border border-white/[0.07] rounded-2xl px-4 py-3">
+        {/* Watchlist */}
+        <View className="bg-[#161b22] border border-[#30363d] rounded-2xl px-4 py-3">
           <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-sm font-semibold text-white">
-              قائمة المراقبة
-            </Text>
+            <Text className="text-sm font-semibold text-[#e6edf3]">قائمة المراقبة</Text>
             <Pressable onPress={() => router.push('/market')}>
               <Text className="text-xs text-brand">عرض السوق</Text>
             </Pressable>
@@ -228,9 +211,7 @@ export default function DashboardPage() {
               onPress={() => router.push('/market')}
               className="py-6 items-center gap-2"
             >
-              <Text className="text-sm text-slate-500">
-                قائمة المراقبة فارغة
-              </Text>
+              <Text className="text-sm text-[#656d76]">قائمة المراقبة فارغة</Text>
               <Text className="text-xs text-brand">أضف أسهم الآن</Text>
             </Pressable>
           ) : (
@@ -247,4 +228,3 @@ export default function DashboardPage() {
     </ScreenWrapper>
   );
 }
-
