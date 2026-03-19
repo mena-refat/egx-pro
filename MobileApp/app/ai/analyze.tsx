@@ -122,11 +122,23 @@ export default function AnalyzePage() {
       const code = axiosData?.error;
       const status = (err as { response?: { status?: number } })?.response?.status;
       const networkError = (err as { error?: string })?.error;
-      if (code === 'ANALYSIS_LIMIT_REACHED') setError('وصلت للحد الشهري من التحليلات. جرب الشهر القادم أو ترقّ للباقة Pro.');
-      else if (code === 'UNAUTHORIZED' || status === 401) setError('انتهت الجلسة — سجّل دخولك مرة أخرى');
-      else if (status === 429) setError('الخدمة مشغولة حالياً، حاول بعد دقيقة');
-      else if (networkError === 'NETWORK_ERROR') setError('لا يوجد اتصال بالإنترنت');
-      else setError('حدث خطأ أثناء التحليل، حاول مرة أخرى');
+      if (code === 'ANALYSIS_LIMIT_REACHED') {
+        setError('وصلت للحد الشهري من التحليلات. جرب الشهر القادم أو ترقّ للباقة Pro.');
+      } else if (code === 'UNAUTHORIZED' || status === 401) {
+        setError('انتهت الجلسة — سجّل دخولك مرة أخرى');
+      } else if (status === 429) {
+        setError('الخدمة مشغولة حالياً، حاول بعد دقيقة');
+      } else if (code === 'ANALYSIS_TIMEOUT' || status === 504 || networkError === 'REQUEST_TIMEOUT') {
+        setError('استغرق التحليل وقتاً طويلاً — حاول مرة أخرى');
+      } else if (code === 'ANALYSIS_FAILED' || status === 502) {
+        setError('تعذّر إجراء التحليل — خدمة الذكاء الاصطناعي غير متاحة مؤقتاً، حاول بعد قليل');
+      } else if (code === 'SERVICE_UNAVAILABLE' || status === 503) {
+        setError('الخدمة غير متاحة حالياً، حاول بعد قليل');
+      } else if (networkError === 'NETWORK_ERROR') {
+        setError('لا يوجد اتصال بالإنترنت');
+      } else {
+        setError('حدث خطأ أثناء التحليل، حاول مرة أخرى');
+      }
     } finally {
       setLoading(false);
     }

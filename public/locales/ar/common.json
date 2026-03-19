@@ -1125,5 +1125,11 @@
     "cancel": "إلغاء",
     "later": "لاحقاً",
     "usedAnalysisThisMonth": "استخدمت {{used}} من {{quota}} تحليلات هذا الشهر"
+  },
+  "nav_group": {
+    "overview": "الرئيسية",
+    "research": "بحث وتحليل",
+    "planning": "التخطيط",
+    "social": "المجتمع"
   }
 }

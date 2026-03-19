@@ -23,13 +23,22 @@ apiClient.interceptors.response.use(
   (response) => {
     const body = response.data;
     if (body && typeof body === 'object' && 'ok' in body) {
-      if (!(body as { ok: boolean }).ok) return Promise.reject(body);
+      if (!(body as { ok: boolean }).ok) {
+        // Preserve response so error interceptor can read error code (not misidentify as NETWORK_ERROR)
+        const err = new Error('API_ERROR') as Error & { response: typeof response };
+        err.response = response;
+        return Promise.reject(err);
+      }
       response.data = (body as { data?: unknown }).data;
     }
     return response;
   },
   async (error) => {
     const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    if (!error.response && error.code === 'ECONNABORTED') {
+      return Promise.reject({ ok: false, error: 'REQUEST_TIMEOUT', message: 'انتهت مهلة الطلب' });
+    }
 
     if (!error.response && error.code !== 'ERR_CANCELED') {
       return Promise.reject({ ok: false, error: 'NETWORK_ERROR', message: 'لا يوجد اتصال' });

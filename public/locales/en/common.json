@@ -1128,5 +1128,11 @@
     "cancel": "Cancel",
     "later": "Later",
     "usedAnalysisThisMonth": "Used {{used}} of {{quota}} analyses this month"
+  },
+  "nav_group": {
+    "overview": "Overview",
+    "research": "Research",
+    "planning": "Planning",
+    "social": "Community"
   }
 }
