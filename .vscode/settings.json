@@ -1,4 +1,7 @@
 {
     "claudeCode.allowDangerouslySkipPermissions": true,
-    "files.readonlyFromPermissions": true
+    "files.readonlyFromPermissions": true,
+    "github.copilot.chat.claudeAgent.allowDangerouslySkipPermissions": true,
+    "chat.autopilot.enabled": true,
+    "claudeCode.initialPermissionMode": "bypassPermissions"
 }

@@ -51,7 +51,22 @@
       "Bash(wc -l c:/Users/menar/Desktop/egx-pro/server/tests/*.ts)",
       "Bash(grep -r \"schema\\\\|validate\" c:/Users/menar/Desktop/egx-pro/server/schemas/*.ts)",
       "Bash(wc -l \"c:\\\\Users\\\\menar\\\\Desktop\\\\egx-pro\\\\server\\\\tests\"*.test.ts)",
-      "Bash(ls -la /c/Users/menar/Desktop/egx-pro/server/middleware/*.ts)"
+      "Bash(ls -la /c/Users/menar/Desktop/egx-pro/server/middleware/*.ts)",
+      "Bash(node -e \"console.log\\(require\\(''./node_modules/colors/package.json''\\).version\\); console.log\\(require\\(''./node_modules/winston/package.json''\\).version\\); console.log\\(require\\(''./node_modules/logform/package.json''\\).version\\)\")",
+      "Bash(node -e \"const c = require\\(''./node_modules/@colors/colors/safe''\\); console.log\\(typeof c.yellow\\); console.log\\(typeof c.red\\); console.log\\(Object.keys\\(c\\).slice\\(0,10\\)\\)\")",
+      "Bash(node -e \"const {Colorizer} = require\\(''./node_modules/logform/colorize''\\); console.log\\(JSON.stringify\\(Colorizer.allColors\\)\\)\")",
+      "Bash(node -e \"const colorize = require\\(''./node_modules/logform/colorize''\\); console.log\\(Object.keys\\(colorize\\)\\); const c = colorize.default || colorize; console.log\\(c.Colorizer && JSON.stringify\\(c.Colorizer.allColors\\)\\)\")",
+      "Bash(node --import tsx/esm -e \"import\\(''./server/lib/logger.ts''\\).then\\(m => m.logger.warn\\(''test''\\)\\)\")",
+      "Bash(node --import tsx/esm -e \"import\\(''./server/lib/logger.ts''\\).then\\(m => { m.logger.warn\\(''test warn''\\); m.logger.info\\(''test info''\\); m.logger.error\\(''test error''\\); }\\)\")",
+      "Bash(node -e \"const pc = require\\(''./node_modules/picocolors''\\); console.log\\(pc.yellow\\(''warn''\\), pc.red\\(''error''\\), pc.green\\(''info''\\), pc.blue\\(''debug''\\)\\)\")",
+      "Bash(node --import tsx/esm -e \"import\\(''./server/lib/logger.ts''\\).then\\(m => { m.logger.warn\\(''test warn''\\); m.logger.info\\(''test info''\\); m.logger.error\\(''test error''\\); m.logger.debug\\(''test debug''\\); }\\)\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(node -e \"const rl = require\\(''''./node_modules/express-rate-limit''''\\); console.log\\(Object.keys\\(rl\\)\\)\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":3000 \")",
+      "Bash(findstr LISTENING)",
+      "Bash(taskkill /PID 16588 /F)",
+      "Bash(cmd /c \"taskkill /PID 16588 /F\")"
     ]
   }
 }

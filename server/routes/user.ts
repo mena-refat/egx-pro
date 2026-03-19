@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { rateLimit } from 'express-rate-limit';
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { authenticate } from '../middleware/auth.middleware.ts';
 import { idempotencyMiddleware } from '../middleware/idempotency.middleware.ts';
 import { UserController } from '../controllers/user.controller.ts';
@@ -16,7 +16,7 @@ const avatarLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => `avatar:${(req as AuthRequest).user?.id ?? req.ip}`,
+  keyGenerator: (req) => `avatar:${(req as AuthRequest).user?.id ?? ipKeyGenerator(req.ip ?? 'unknown')}`,
   handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
 });
 

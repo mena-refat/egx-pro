@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { Badge } from '../components/Badge';
@@ -7,7 +7,7 @@ import { Pagination } from '../components/Pagination';
 import {
   RefreshCw, Users, Star, UserCheck,
   CheckSquare, ArrowUpDown, TrendingUp, ChevronRight, AlertTriangle,
-  Inbox, Send, X, Filter, ArrowUpCircle, Zap, Clock, Plus, Trash2,
+  Inbox, Send, X, Filter, ArrowUpCircle, Zap, Clock, Plus, Trash2, Pencil,
 } from 'lucide-react';
 import { useAdminStore } from '../store/adminAuthStore';
 
@@ -266,6 +266,10 @@ export default function SupportPage() {
   const [savingQR, setSavingQR]                 = useState(false);
   const [qrError, setQrError]                   = useState('');
   const [deletingQRId, setDeletingQRId]         = useState<number | null>(null);
+  const [editingQRId, setEditingQRId]           = useState<number | null>(null);
+  const [editQRTitle, setEditQRTitle]           = useState('');
+  const [editQRContent, setEditQRContent]       = useState('');
+  const [savingEditQR, setSavingEditQR]         = useState(false);
   const qrDropdownRef                           = useRef<HTMLDivElement>(null);
 
   /* Team stats */
@@ -497,6 +501,29 @@ export default function SupportPage() {
     loadQuickReplies();
   };
 
+  const startEditQuickReply = (qr: QuickReply) => {
+    setEditingQRId(qr.id);
+    setEditQRTitle(qr.title);
+    setEditQRContent(qr.content);
+  };
+
+  const cancelEditQuickReply = () => {
+    setEditingQRId(null);
+    setEditQRTitle('');
+    setEditQRContent('');
+  };
+
+  const handleUpdateQuickReply = async () => {
+    if (!editingQRId || !editQRTitle.trim() || !editQRContent.trim()) return;
+    setSavingEditQR(true);
+    try {
+      await adminApi.patch(`/support/quick-replies/${editingQRId}`, { title: editQRTitle.trim(), content: editQRContent.trim() });
+      cancelEditQuickReply();
+      loadQuickReplies();
+    } catch { /* silent */ }
+    finally { setSavingEditQR(false); }
+  };
+
   const handleEscalate = async () => {
     if (!escalateTarget) return;
     setEscalating(true);
@@ -549,7 +576,7 @@ export default function SupportPage() {
             {([
               { key: 'tickets', label: t('support.ticketsView'), icon: <Inbox size={12} /> },
               ...(managerMode ? [{ key: 'team', label: t('support.teamView'), icon: <Users size={12} /> }] : []),
-            ] as { key: 'tickets' | 'team'; label: string; icon: React.ReactNode }[]).map((item) => (
+            ] as { key: 'tickets' | 'team'; label: string; icon: ReactNode }[]).map((item) => (
               <button
                 key={item.key}
                 onClick={() => setView(item.key)}
@@ -910,18 +937,20 @@ export default function SupportPage() {
                                 {5000 - reply.length}
                               </span>
                             )}
-                            {quickReplies.length > 0 && (
-                              <div ref={qrDropdownRef} className="relative">
-                                <button
-                                  type="button"
-                                  onClick={() => setShowQRDropdown((v) => !v)}
-                                  className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-md bg-violet-500/15 border border-violet-500/20 text-violet-400 hover:bg-violet-500/25 transition-all"
-                                >
-                                  <Zap size={9} /> {t('support.quickReplies')}
-                                </button>
-                                {showQRDropdown && (
-                                  <div className="absolute bottom-7 end-0 w-64 bg-[#1a1a2e] border border-white/[0.1] rounded-xl shadow-2xl z-50 overflow-hidden">
-                                    {quickReplies.map((qr) => (
+                            <div ref={qrDropdownRef} className="relative">
+                              <button
+                                type="button"
+                                onClick={() => setShowQRDropdown((v) => !v)}
+                                className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-md bg-violet-500/15 border border-violet-500/20 text-violet-400 hover:bg-violet-500/25 transition-all"
+                              >
+                                <Zap size={9} /> {t('support.quickReplies')}
+                              </button>
+                              {showQRDropdown && (
+                                <div className="absolute bottom-7 end-0 w-64 bg-[#1a1a2e] border border-white/[0.1] rounded-xl shadow-2xl z-50 overflow-hidden">
+                                  {quickReplies.length === 0 ? (
+                                    <p className="px-3 py-4 text-[11px] text-slate-500 text-center">{t('support.noQuickRepliesHint')}</p>
+                                  ) : (
+                                    quickReplies.map((qr) => (
                                       <button
                                         key={qr.id}
                                         type="button"
@@ -931,11 +960,11 @@ export default function SupportPage() {
                                         <p className="text-[11px] font-medium text-white">{qr.title}</p>
                                         <p className="text-[10px] text-slate-500 truncate mt-0.5">{qr.content}</p>
                                       </button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                                    ))
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                         {replyError && (
@@ -1242,36 +1271,82 @@ export default function SupportPage() {
                 <p className="text-xs text-slate-500 text-center py-4">{t('support.noQuickReplies')}</p>
               )}
               {quickReplies.map((qr) => (
-                <div key={qr.id} className="flex items-start gap-2 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-white">{qr.title}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{qr.content}</p>
-                  </div>
-                  {deletingQRId === qr.id ? (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => void confirmDeleteQuickReply(qr.id)}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-                      >
-                        {t('common.confirm')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeletingQRId(null)}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.05] text-slate-400 hover:bg-white/[0.1] transition-colors"
-                      >
-                        {t('common.cancel')}
-                      </button>
+                <div key={qr.id} className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2">
+                  {editingQRId === qr.id ? (
+                    <div className="space-y-2">
+                      <input
+                        value={editQRTitle}
+                        onChange={(e) => setEditQRTitle(e.target.value)}
+                        maxLength={100}
+                        className="w-full px-2 py-1.5 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-violet-500/50"
+                      />
+                      <textarea
+                        value={editQRContent}
+                        onChange={(e) => setEditQRContent(e.target.value)}
+                        rows={3}
+                        maxLength={2000}
+                        className="w-full px-2 py-1.5 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-violet-500/50 resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleUpdateQuickReply()}
+                          disabled={savingEditQR || !editQRTitle.trim() || !editQRContent.trim()}
+                          className="flex-1 text-[10px] px-2 py-1 rounded-md bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 transition-colors"
+                        >
+                          {savingEditQR ? t('common.saving') : t('support.saveQuickReply')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEditQuickReply}
+                          className="text-[10px] px-2 py-1 rounded-md bg-white/[0.05] text-slate-400 hover:bg-white/[0.1] transition-colors"
+                        >
+                          {t('common.cancel')}
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => void handleDeleteQuickReply(qr.id)}
-                      className="shrink-0 text-slate-600 hover:text-red-400 transition-colors mt-0.5"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-white">{qr.title}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{qr.content}</p>
+                      </div>
+                      {deletingQRId === qr.id ? (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => void confirmDeleteQuickReply(qr.id)}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                          >
+                            {t('common.confirm')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeletingQRId(null)}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.05] text-slate-400 hover:bg-white/[0.1] transition-colors"
+                          >
+                            {t('common.cancel')}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => startEditQuickReply(qr)}
+                            className="text-slate-600 hover:text-violet-400 transition-colors"
+                          >
+                            <Pencil size={11} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteQuickReply(qr.id)}
+                            className="text-slate-600 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}

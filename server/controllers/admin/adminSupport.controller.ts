@@ -642,6 +642,22 @@ export const AdminSupportController = {
     sendSuccess(res, reply, 201);
   },
 
+  async updateQuickReply(req: AdminRequest, res: Response): Promise<void> {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+    const { title, content } = req.body as { title?: string; content?: string };
+    if (!title?.trim() || !content?.trim()) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+    if (title.trim().length > 100) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+    if (content.trim().length > 2000) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+    const reply = await prisma.quickReply.update({
+      where: { id },
+      data: { title: title.trim(), content: content.trim() },
+      select: { id: true, title: true, content: true, createdAt: true },
+    }).catch(() => null);
+    if (!reply) { sendError(res, 'NOT_FOUND', 404); return; }
+    sendSuccess(res, reply);
+  },
+
   async deleteQuickReply(req: AdminRequest, res: Response): Promise<void> {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }

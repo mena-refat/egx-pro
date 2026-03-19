@@ -1,4 +1,5 @@
 import winston from 'winston';
+import pc from 'picocolors';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -25,18 +26,28 @@ const redactFormat = winston.format((info) => {
   return { level, message, timestamp, ...redactSensitive(meta) as object };
 });
 
+const LEVEL_COLOR: Record<string, (s: string) => string> = {
+  error: pc.red,
+  warn: pc.yellow,
+  info: pc.green,
+  debug: pc.blue,
+  http: pc.cyan,
+  verbose: pc.magenta,
+  silly: pc.gray,
+};
+
 export const logger = winston.createLogger({
   level: isDev ? 'debug' : 'info',
   format: isDev
     ? winston.format.combine(
         redactFormat(),
-        winston.format.colorize(),
         winston.format.timestamp({ format: 'HH:mm:ss' }),
         winston.format.printf(({ level, message, timestamp, ...meta }) => {
+          const colorLevel = (LEVEL_COLOR[level] ?? ((s: string) => s))(level.toUpperCase());
           const metaStr = Object.keys(meta).length
             ? '\n' + JSON.stringify(meta, null, 2)
             : '';
-          return `${timestamp} [${level}]: ${message}${metaStr}`;
+          return `${timestamp} [${colorLevel}]: ${message}${metaStr}`;
         })
       )
     : winston.format.combine(

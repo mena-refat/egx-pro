@@ -218,6 +218,15 @@ router.post(
   }
 );
 
+router.patch(
+  '/support/quick-replies/:id',
+  adminAuthenticate,
+  requirePermission('support.manage'),
+  (req, res, next) => {
+    void AdminSupportController.updateQuickReply(req as any, res).catch(next);
+  }
+);
+
 router.delete(
   '/support/quick-replies/:id',
   adminAuthenticate,
