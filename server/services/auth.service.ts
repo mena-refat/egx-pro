@@ -327,7 +327,7 @@ export async function twoFaAuthenticate(
     secret: user.twoFactorSecret,
     encoding: 'base32',
     token: cleanCode,
-    window: 2,
+    window: 1,
   });
   if (!valid) throw new AppError('invalid_code', 401);
 
@@ -403,7 +403,7 @@ export async function twoFaVerify(
     secret: user.twoFactorSecret,
     encoding: 'base32',
     token: cleanCode,
-    window: 2,
+    window: 1,
   });
   if (!valid) throw new AppError('invalid_code', 400, 'الكود غير صحيح، تأكد من التطبيق وحاول مجدداً');
 
@@ -438,7 +438,7 @@ export async function twoFaDisable(
     secret: user.twoFactorSecret,
     encoding: 'base32',
     token: cleanCode,
-    window: 2,
+    window: 1,
   });
   if (!valid) throw new AppError('invalid_code', 400);
 

@@ -1,4 +1,5 @@
 import type { Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.ts';
 import { sendSuccess, sendError } from '../../lib/apiResponse.ts';
 import { adminAudit, type AdminRequest } from '../../middleware/adminAuth.middleware.ts';
@@ -21,6 +22,7 @@ export const AdminAdminsController = {
       return;
     }
     const admins = await prisma.admin.findMany({
+      where: { isDeleted: false },
       select: {
         id: true,
         email: true,
@@ -83,33 +85,36 @@ export const AdminAdminsController = {
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedPhone = phone?.trim() || undefined;
 
-    const existingEmail = await prisma.admin.findUnique({ where: { email: normalizedEmail } });
-    if (existingEmail) { sendError(res, 'EMAIL_ALREADY_EXISTS', 409); return; }
-
-    if (normalizedPhone) {
-      const existingPhone = await prisma.admin.findUnique({ where: { phone: normalizedPhone } });
-      if (existingPhone) { sendError(res, 'PHONE_ALREADY_EXISTS', 409); return; }
-    }
-
     const { hash, salt } = await hashPassword(password);
-    const admin = await prisma.admin.create({
-      data: {
-        email: normalizedEmail,
-        phone: normalizedPhone,
-        passwordHash: hash,
-        salt,
-        fullName,
-        permissions,
-        createdBy: req.admin?.id ?? null,
-        role: role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'ADMIN',
-        mustChangePassword,
-        mustSetup2FA,
-        pwdMinLength,
-        pwdUppercase,
-        pwdLowercase,
-        pwdSymbols,
-      },
-    });
+
+    let admin;
+    try {
+      admin = await prisma.admin.create({
+        data: {
+          email: normalizedEmail,
+          phone: normalizedPhone,
+          passwordHash: hash,
+          salt,
+          fullName,
+          permissions,
+          createdBy: req.admin?.id ?? null,
+          role: role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'ADMIN',
+          mustChangePassword,
+          mustSetup2FA,
+          pwdMinLength,
+          pwdUppercase,
+          pwdLowercase,
+          pwdSymbols,
+        },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const field = (err.meta?.target as string[] | undefined)?.[0];
+        sendError(res, field === 'phone' ? 'PHONE_ALREADY_EXISTS' : 'EMAIL_ALREADY_EXISTS', 409);
+        return;
+      }
+      throw err;
+    }
 
     if (req.admin) {
       await adminAudit(
@@ -148,16 +153,25 @@ export const AdminAdminsController = {
     }
     const target = await prisma.admin.findUnique({
       where: { id },
-      select: { role: true },
+      select: { role: true, isDeleted: true },
     });
-    if (!target) {
+    if (!target || target.isDeleted) {
       sendError(res, 'NOT_FOUND', 404);
       return;
     }
-    await prisma.$transaction([
-      prisma.adminAuditLog.deleteMany({ where: { adminId: id } }),
-      prisma.admin.delete({ where: { id } }),
-    ]);
+
+    // Soft-delete: preserve audit logs and all related data
+    await prisma.admin.update({
+      where: { id },
+      data: {
+        isActive: false,
+        isDeleted: true,
+        deletedAt: new Date(),
+        // Invalidate tokens
+        tokenVersion: { increment: 1 },
+      },
+    });
+
     if (req.admin) {
       await adminAudit(req.admin.id, 'ADMIN_DELETED', id.toString(), undefined, req);
     }
@@ -198,7 +212,8 @@ export const AdminAdminsController = {
     const { hash, salt } = await hashPassword(newPassword);
     await prisma.admin.update({
       where: { id },
-      data: { passwordHash: hash, salt, mustChangePassword: true },
+      // tokenVersion increment invalidates all existing JWTs for this admin
+      data: { passwordHash: hash, salt, mustChangePassword: true, tokenVersion: { increment: 1 } },
     });
     if (req.admin) await adminAudit(req.admin.id, 'ADMIN_RESET_PASSWORD', id.toString(), undefined, req);
     sendSuccess(res, { ok: true });
@@ -214,7 +229,8 @@ export const AdminAdminsController = {
 
     await prisma.admin.update({
       where: { id },
-      data: { twoFactorEnabled: false, twoFactorSecret: null, mustSetup2FA: true },
+      // tokenVersion increment invalidates all existing JWTs for this admin
+      data: { twoFactorEnabled: false, twoFactorSecret: null, mustSetup2FA: true, tokenVersion: { increment: 1 } },
     });
     if (req.admin) await adminAudit(req.admin.id, 'ADMIN_RESET_2FA', id.toString(), undefined, req);
     sendSuccess(res, { ok: true });
@@ -227,6 +243,13 @@ export const AdminAdminsController = {
     }
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+
+    // Prevent super admin from editing their own permissions via this endpoint
+    if (id === req.admin.id) {
+      sendError(res, 'USE_ACCOUNT_PAGE', 400);
+      return;
+    }
+
     const { permissions, isActive, managerId } = req.body as {
       permissions?: string[];
       isActive?: boolean;
@@ -235,11 +258,27 @@ export const AdminAdminsController = {
 
     const target = await prisma.admin.findUnique({
       where: { id },
-      select: { role: true },
+      select: { role: true, isDeleted: true },
     });
-    if (target?.role === 'SUPER_ADMIN') {
+    if (!target || target.isDeleted) {
+      sendError(res, 'NOT_FOUND', 404);
+      return;
+    }
+    if (target.role === 'SUPER_ADMIN') {
       sendError(res, 'CANNOT_MODIFY_SUPER_ADMIN', 403);
       return;
+    }
+
+    // Validate managerId references a real, active, non-deleted admin
+    if (managerId != null) {
+      const manager = await prisma.admin.findUnique({
+        where: { id: managerId },
+        select: { id: true, isActive: true, isDeleted: true },
+      });
+      if (!manager || !manager.isActive || manager.isDeleted) {
+        sendError(res, 'MANAGER_NOT_FOUND', 404);
+        return;
+      }
     }
 
     await prisma.admin.update({
@@ -264,4 +303,3 @@ export const AdminAdminsController = {
     sendSuccess(res, { ok: true });
   },
 };
-

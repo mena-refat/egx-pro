@@ -68,6 +68,9 @@ export default function AdminAccountPage() {
     }
   }, [twoFaSetup]);
 
+  // Cleanup copy timer on unmount
+  useEffect(() => () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current); }, []);
+
   const copySecret = () => {
     if (!twoFaSetup?.secret) return;
     navigator.clipboard.writeText(twoFaSetup.secret).then(() => {

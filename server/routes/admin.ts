@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { adminAuthenticate, requirePermission, requireSuperAdmin } from '../middleware/adminAuth.middleware.ts';
 import { AdminAuthController } from '../controllers/admin/adminAuth.controller.ts';
 import { AdminUsersController } from '../controllers/admin/adminUsers.controller.ts';
@@ -11,7 +12,24 @@ import { AdminBlocklistController } from '../controllers/admin/adminBlocklist.co
 
 const router = Router();
 
-router.post('/auth/login', (req, res, next) => {
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'RATE_LIMITED' },
+  skipSuccessfulRequests: true,
+});
+
+const authActionLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'RATE_LIMITED' },
+});
+
+router.post('/auth/login', loginLimiter, (req, res, next) => {
   void AdminAuthController.login(req, res).catch(next);
 });
 
@@ -31,11 +49,11 @@ router.post('/auth/2fa/setup', adminAuthenticate, (req, res, next) => {
   void AdminAuthController.twoFaSetup(req as any, res).catch(next);
 });
 
-router.post('/auth/2fa/enable', adminAuthenticate, (req, res, next) => {
+router.post('/auth/2fa/enable', adminAuthenticate, authActionLimiter, (req, res, next) => {
   void AdminAuthController.twoFaEnable(req as any, res).catch(next);
 });
 
-router.post('/auth/2fa/disable', adminAuthenticate, (req, res, next) => {
+router.post('/auth/2fa/disable', adminAuthenticate, authActionLimiter, (req, res, next) => {
   void AdminAuthController.twoFaDisable(req as any, res).catch(next);
 });
 

@@ -126,6 +126,8 @@ model Admin {
   fullName     String
   role         AdminRole @default(ADMIN)
   isActive     Boolean   @default(true)
+  isDeleted    Boolean   @default(false)
+  deletedAt    DateTime?
   permissions  String[]  @default([])
   twoFactorEnabled      Boolean  @default(false)
   twoFactorSecret       String?
@@ -135,6 +137,7 @@ model Admin {
   pwdUppercase       Boolean  @default(false)
   pwdLowercase       Boolean  @default(false)
   pwdSymbols         Boolean  @default(false)
+  tokenVersion Int       @default(0)
   lastLoginAt  DateTime?
   lastLoginIp  String?
   createdAt    DateTime  @default(now())
@@ -146,6 +149,7 @@ model Admin {
   auditLogs    AdminAuditLog[]
 
   @@index([managerId])
+  @@index([isDeleted])
 }
 
 model AdminAuditLog {
@@ -203,6 +207,7 @@ model SupportTicket {
   @@index([status])
   @@index([createdAt])
   @@index([assignedTo])
+  @@index([assignedTo, status])
 }
 
 enum SupportTicketStatus {

@@ -14,3 +14,18 @@ adminApi.interceptors.request.use((config) => {
   return config;
 });
 
+adminApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      // Token expired or invalidated — force logout
+      useAdminStore.getState().logout();
+      // Navigate to login without a full page reload if possible
+      if (typeof window !== 'undefined') {
+        window.location.href = '/admin/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+

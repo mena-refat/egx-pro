@@ -33,9 +33,16 @@ export async function adminAuthenticate(
         role: true,
         permissions: true,
         isActive: true,
+        isDeleted: true,
+        tokenVersion: true,
       },
     });
-    if (!admin || !admin.isActive) {
+    if (!admin || !admin.isActive || admin.isDeleted) {
+      res.status(401).json({ error: 'ADMIN_UNAUTHORIZED' });
+      return;
+    }
+    // Reject tokens issued before a password/2FA reset
+    if (payload.tokenVersion !== admin.tokenVersion) {
       res.status(401).json({ error: 'ADMIN_UNAUTHORIZED' });
       return;
     }

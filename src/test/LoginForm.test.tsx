@@ -9,13 +9,14 @@ vi.mock('react-i18next', () => ({
 }));
 
 function LoginFormWrapper() {
-  const { register, formState: { errors } } = useForm<AuthFormData>({
+  const { register, control, formState: { errors } } = useForm<AuthFormData>({
     defaultValues: { emailOrPhone: '', password: '' },
   });
   return (
     <AuthFormBlock
       isLogin
       register={register}
+      control={control}
       errors={errors}
       isSubmitting={false}
       showPassword={false}
@@ -43,11 +44,12 @@ describe('LoginForm (AuthFormBlock)', () => {
 
   it('shows authError when provided', () => {
     function FormWithError() {
-      const { register, formState: { errors } } = useForm<AuthFormData>();
+      const { register, control, formState: { errors } } = useForm<AuthFormData>();
       return (
         <AuthFormBlock
           isLogin
           register={register}
+          control={control}
           errors={errors}
           isSubmitting={false}
           showPassword={false}

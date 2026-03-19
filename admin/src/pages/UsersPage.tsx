@@ -53,6 +53,9 @@ export default function UsersPage() {
 
   useEffect(() => { void load(); }, [page]); // eslint-disable-line
 
+  // Cleanup search debounce timer on unmount
+  useEffect(() => () => { if (searchTimer.current) clearTimeout(searchTimer.current); }, []);
+
   const handleSearch = (v: string) => {
     setSearch(v); setPage(1);
     if (searchTimer.current) clearTimeout(searchTimer.current);

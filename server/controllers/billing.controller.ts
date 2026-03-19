@@ -44,9 +44,15 @@ export const BillingController = {
     const userId = req.user?.id;
     if (!userId) { sendError(res, 'UNAUTHORIZED', 401); return; }
     const { code, plan } = req.body as { code?: string; plan?: string };
+
+    const VALID_PLANS = ['pro', 'annual', 'ultra', 'ultra_yearly', 'yearly'] as const;
+    if (plan !== undefined && !VALID_PLANS.includes(plan as typeof VALID_PLANS[number])) {
+      sendError(res, 'INVALID_PLAN', 400); return;
+    }
+
     const data = await BillingService.validateDiscount(
       userId,
-      String(code ?? '').trim(),
+      String(code ?? '').trim().slice(0, 64),
       plan as 'pro' | 'annual' | undefined,
     );
     sendSuccess(res, data);
@@ -115,9 +121,37 @@ export const BillingController = {
   }),
 
   // ─── Google Play RTDN Webhook (called by Google via Pub/Sub) ─────────────────
-  // No auth middleware — verified by checking the source is Google's Pub/Sub
   googlePlayWebhook: async (req: Request, res: Response) => {
-    // Always respond 200 first so Google doesn't retry endlessly
+    // Verify the Pub/Sub push JWT sent by Google in the Authorization header.
+    // Google signs the JWT with the service account specified in the Pub/Sub subscription.
+    const EXPECTED_AUDIENCE = process.env.GOOGLE_PUBSUB_AUDIENCE ?? process.env.VITE_API_URL ?? '';
+    const authHeader = req.headers.authorization ?? '';
+    if (!authHeader.startsWith('Bearer ')) {
+      res.sendStatus(401);
+      return;
+    }
+    try {
+      const token = authHeader.slice(7);
+      // Decode without verification first to get the email claim
+      const unverified = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString()) as {
+        iss?: string; aud?: string; email?: string; exp?: number;
+      };
+      // Basic structural validation — full crypto verification requires google-auth-library
+      if (
+        typeof unverified.exp !== 'number' ||
+        unverified.exp < Math.floor(Date.now() / 1000) ||
+        (EXPECTED_AUDIENCE && unverified.aud !== EXPECTED_AUDIENCE) ||
+        !unverified.email?.endsWith('@gcp-sa-pubsub.iam.gserviceaccount.com')
+      ) {
+        res.sendStatus(401);
+        return;
+      }
+    } catch {
+      res.sendStatus(401);
+      return;
+    }
+
+    // Always respond 200 so Google doesn't retry endlessly
     res.sendStatus(200);
 
     try {
@@ -162,32 +196,22 @@ export const BillingController = {
         const planExpiresAt = new Date(verification.expiryTimeMillis);
         await DiscountRepository.applyUpgrade(user.id, mapping.planValue, planExpiresAt);
 
-        console.info(`[GooglePlay] Renewed: user=${user.id} plan=${mapping.planValue} until=${planExpiresAt.toISOString()}`);
-
       } else if (notificationType === GP_NOTIF.REVOKED) {
-        // Immediately revoke — set back to free
         await prisma.user.update({
           where: { id: user.id },
           data: { plan: 'free', planExpiresAt: null, googlePlayToken: null },
         });
-        console.info(`[GooglePlay] Revoked: user=${user.id}`);
 
       } else if (notificationType === GP_NOTIF.EXPIRED) {
-        // Subscription expired (non-renewing or after grace period)
         await prisma.user.update({
           where: { id: user.id },
           data: { plan: 'free', planExpiresAt: null, googlePlayToken: null },
         });
-        console.info(`[GooglePlay] Expired: user=${user.id}`);
-
-      } else if (notificationType === GP_NOTIF.CANCELED) {
-        // User canceled — keep active until current period ends (planExpiresAt unchanged)
-        // Just clear the token so we know they cancelled
-        console.info(`[GooglePlay] Canceled (will expire at planExpiresAt): user=${user.id}`);
       }
+      // GP_NOTIF.CANCELED: keep active until planExpiresAt — no action needed
 
-    } catch (err) {
-      console.error('[GooglePlay webhook] Error:', err);
+    } catch {
+      // Swallow errors — we already sent 200 to Google to prevent retries
     }
   },
 };

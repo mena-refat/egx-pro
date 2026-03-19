@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import { prisma } from '../../lib/prisma.ts';
-import { sendSuccess } from '../../lib/apiResponse.ts';
+import { sendSuccess, sendError } from '../../lib/apiResponse.ts';
 import type { AdminRequest } from '../../middleware/adminAuth.middleware.ts';
 
 const PLAN_PRICES: Record<string, number> = {
@@ -89,26 +89,35 @@ export const AdminAnalyticsController = {
     const { page = '1', admin = '', action = '', from = '', to = '' } = req.query as Record<string, string>;
     const pageNum = Math.max(1, Number.parseInt(page, 10) || 1);
 
+    // Use nested Prisma relation filter — no extra pre-query needed
     const where: Record<string, unknown> = {};
-
-    // Filter by admin email
     if (admin.trim()) {
-      const matchingAdmins = await prisma.admin.findMany({
-        where: { email: { contains: admin.trim(), mode: 'insensitive' } },
-        select: { id: true },
-      });
-      where.adminId = { in: matchingAdmins.map((a) => a.id) };
+      where.admin = { email: { contains: admin.trim(), mode: 'insensitive' } };
     }
+    if (action.trim()) where.action = action.trim().slice(0, 100);
 
-    // Filter by action
-    if (action.trim()) where.action = action.trim();
-
-    // Filter by date range
+    // Filter by date range — validate and cap at 365 days
     if (from || to) {
+      const fromDate = from ? new Date(from) : null;
+      const toDate   = to   ? new Date(to)   : null;
+      if ((fromDate && isNaN(fromDate.getTime())) || (toDate && isNaN(toDate.getTime()))) {
+        sendError(res, 'INVALID_DATE_RANGE', 400);
+        return;
+      }
+      if (fromDate && toDate && fromDate > toDate) {
+        sendError(res, 'INVALID_DATE_RANGE', 400);
+        return;
+      }
+      if (fromDate && toDate) {
+        const diffDays = (toDate.getTime() - fromDate.getTime()) / 86_400_000;
+        if (diffDays > 365) {
+          sendError(res, 'DATE_RANGE_TOO_LARGE', 400);
+          return;
+        }
+      }
       const dateFilter: Record<string, Date> = {};
-      if (from) dateFilter.gte = new Date(from);
-      if (to) {
-        const toDate = new Date(to);
+      if (fromDate) dateFilter.gte = fromDate;
+      if (toDate) {
         toDate.setHours(23, 59, 59, 999);
         dateFilter.lte = toDate;
       }

@@ -32,7 +32,7 @@ export const AdminAuthController = {
     const admin = await prisma.admin.findUnique({
       where: { email: email.toLowerCase().trim() },
     });
-    if (!admin || !admin.isActive) {
+    if (!admin || !admin.isActive || admin.isDeleted) {
       sendError(res, 'INVALID_CREDENTIALS', 401);
       return;
     }
@@ -69,6 +69,7 @@ export const AdminAuthController = {
       id: admin.id,
       role: admin.role,
       permissions: admin.permissions,
+      tokenVersion: admin.tokenVersion ?? 0,
     });
 
     await adminAudit(admin.id, 'ADMIN_LOGIN', undefined, undefined, req);

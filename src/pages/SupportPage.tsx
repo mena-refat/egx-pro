@@ -492,11 +492,14 @@ export default function SupportPage() {
       const res  = await api.get('/support/my');
       // The Axios interceptor unwraps { ok, data } → res.data = data (the array)
       const raw  = res.data;
+      // Backend returns { tickets, total, page, pages } — unwrap accordingly
       const list: SupportTicket[] = Array.isArray(raw)
         ? raw
-        : Array.isArray((raw as { items?: SupportTicket[] })?.items)
-          ? (raw as { items: SupportTicket[] }).items
-          : [];
+        : Array.isArray((raw as { tickets?: SupportTicket[] })?.tickets)
+          ? (raw as { tickets: SupportTicket[] }).tickets
+          : Array.isArray((raw as { items?: SupportTicket[] })?.items)
+            ? (raw as { items: SupportTicket[] }).items
+            : [];
       setTickets(list);
       // keep selected in sync if viewing detail
       setSelected(prev => prev ? (list.find(t => t.id === prev.id) ?? prev) : null);

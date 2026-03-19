@@ -87,6 +87,15 @@ export const AdminSupportController = {
       sendError(res, 'VALIDATION_ERROR', 400);
       return;
     }
+    if (reply.trim().length > 5000) {
+      sendError(res, 'REPLY_TOO_LONG', 400);
+      return;
+    }
+    const VALID_REPLY_STATUSES = ['IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const;
+    if (!(VALID_REPLY_STATUSES as readonly string[]).includes(status)) {
+      sendError(res, 'INVALID_STATUS', 400);
+      return;
+    }
 
     const existing = await prisma.supportTicket.findUnique({ where: { id }, select: { assignedTo: true, status: true } });
     if (!existing) { sendError(res, 'NOT_FOUND', 404); return; }
@@ -132,6 +141,17 @@ export const AdminSupportController = {
   async updateStatus(req: AdminRequest, res: Response): Promise<void> {
     const { id } = req.params as { id: string };
     const { status, priority } = req.body as { status?: string; priority?: string };
+
+    const VALID_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'CANCELLED'] as const;
+    const VALID_PRIORITIES = ['LOW', 'NORMAL', 'HIGH', 'URGENT'] as const;
+    if (status && !(VALID_STATUSES as readonly string[]).includes(status)) {
+      sendError(res, 'INVALID_STATUS', 400);
+      return;
+    }
+    if (priority && !(VALID_PRIORITIES as readonly string[]).includes(priority)) {
+      sendError(res, 'INVALID_PRIORITY', 400);
+      return;
+    }
 
     const ticket = await prisma.supportTicket.update({
       where: { id },
@@ -182,6 +202,7 @@ export const AdminSupportController = {
   async getAgents(req: AdminRequest, res: Response): Promise<void> {
     const where: Record<string, unknown> = {
       isActive: true,
+      isDeleted: false,
       permissions: { has: 'support.reply' },
     };
     // Managers (non-super-admin) see only agents assigned to them
@@ -199,6 +220,7 @@ export const AdminSupportController = {
   async agentStats(req: AdminRequest, res: Response): Promise<void> {
     const where: Record<string, unknown> = {
       isActive: true,
+      isDeleted: false,
       permissions: { has: 'support.reply' },
     };
     const { managerId: managerIdParam } = req.query as Record<string, string>;
@@ -216,84 +238,112 @@ export const AdminSupportController = {
 
     const agentIds = agents.map((a) => a.id);
 
-    const stats = await Promise.all(
-      agents.map(async (agent) => {
-        const [total, resolved, active, ratingAgg] = await Promise.all([
-          prisma.supportTicket.count({ where: { assignedTo: agent.id } }),
-          prisma.supportTicket.count({ where: { assignedTo: agent.id, status: { in: ['RESOLVED', 'CLOSED'] } } }),
-          prisma.supportTicket.count({ where: { assignedTo: agent.id, status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
-          prisma.supportTicket.aggregate({
-            where: { assignedTo: agent.id, rating: { not: null } },
-            _avg: { rating: true },
-            _count: { rating: true },
-          }),
-        ]);
-
-        // Avg response time: from assignedAt → repliedAt (only valid records where reply came after assignment)
-        const respondedTickets = (await prisma.supportTicket.findMany({
-          where: { assignedTo: agent.id, assignedAt: { not: null }, repliedAt: { not: null } },
-          select: { assignedAt: true, repliedAt: true },
-        })).filter((t) => t.repliedAt!.getTime() > t.assignedAt!.getTime());
-
-        const avgResponseHours =
-          respondedTickets.length > 0
-            ? Math.round(
-                (respondedTickets.reduce(
-                  (sum, t) => sum + (t.repliedAt!.getTime() - t.assignedAt!.getTime()),
-                  0
-                ) / respondedTickets.length / 3_600_000) * 10
-              ) / 10
-            : null;
-
-        return {
-          agent,
-          total,
-          resolved,
-          active,
-          avgRating: ratingAgg._avg.rating ? Math.round(ratingAgg._avg.rating * 10) / 10 : null,
-          ratingCount: ratingAgg._count.rating,
-          avgResponseHours,
-        };
-      })
-    );
-
-    // ── Manager performance stats ─────────────────────────────────
-    let assignedTickets: { createdAt: Date; assignedAt: Date | null; status: string }[] = [];
-    if (agentIds.length > 0) {
-      assignedTickets = (await prisma.supportTicket.findMany({
-        where: { assignedTo: { in: agentIds }, assignedAt: { not: null } },
-        select: { createdAt: true, assignedAt: true, status: true },
-      })).filter((t) => t.assignedAt!.getTime() > t.createdAt.getTime());
+    if (agentIds.length === 0) {
+      sendSuccess(res, {
+        agents: [],
+        managerStats: { avgAssignmentHours: null, unassignedOpen: 0, teamTotal: 0, teamResolved: 0, teamResolveRate: 0 },
+      });
+      return;
     }
 
+    // ── Batch all ticket aggregations in a single round-trip ──────
+    const [totalByAgent, resolvedByAgent, activeByAgent, ratingByAgent, responseTickets, assignedTickets, unassignedOpen] =
+      await Promise.all([
+        // Total tickets per agent
+        prisma.supportTicket.groupBy({
+          by: ['assignedTo'],
+          where: { assignedTo: { in: agentIds } },
+          _count: { id: true },
+        }),
+        // Resolved/closed per agent
+        prisma.supportTicket.groupBy({
+          by: ['assignedTo'],
+          where: { assignedTo: { in: agentIds }, status: { in: ['RESOLVED', 'CLOSED'] } },
+          _count: { id: true },
+        }),
+        // Active (open/in-progress) per agent
+        prisma.supportTicket.groupBy({
+          by: ['assignedTo'],
+          where: { assignedTo: { in: agentIds }, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+          _count: { id: true },
+        }),
+        // Rating stats per agent
+        prisma.supportTicket.groupBy({
+          by: ['assignedTo'],
+          where: { assignedTo: { in: agentIds }, rating: { not: null } },
+          _avg: { rating: true },
+          _count: { rating: true },
+        }),
+        // Response time calculation: assignedAt → repliedAt
+        prisma.supportTicket.findMany({
+          where: { assignedTo: { in: agentIds }, assignedAt: { not: null }, repliedAt: { not: null } },
+          select: { assignedTo: true, assignedAt: true, repliedAt: true },
+        }),
+        // Assignment time: createdAt → assignedAt (for manager perf stats)
+        prisma.supportTicket.findMany({
+          where: { assignedTo: { in: agentIds }, assignedAt: { not: null } },
+          select: { createdAt: true, assignedAt: true, status: true },
+        }),
+        // Unassigned open tickets
+        prisma.supportTicket.count({ where: { status: 'OPEN', assignedTo: null } }),
+      ]);
+
+    // Build lookup maps
+    const totalMap = Object.fromEntries(totalByAgent.map((r) => [r.assignedTo!, r._count.id]));
+    const resolvedMap = Object.fromEntries(resolvedByAgent.map((r) => [r.assignedTo!, r._count.id]));
+    const activeMap = Object.fromEntries(activeByAgent.map((r) => [r.assignedTo!, r._count.id]));
+    const ratingMap = Object.fromEntries(
+      ratingByAgent.map((r) => [r.assignedTo!, { avg: r._avg.rating, count: r._count.rating }])
+    );
+    // Group response tickets by agent
+    const responseByAgent: Record<number, { assignedAt: Date; repliedAt: Date }[]> = {};
+    for (const t of responseTickets) {
+      if (t.repliedAt!.getTime() > t.assignedAt!.getTime()) {
+        (responseByAgent[t.assignedTo!] ??= []).push({ assignedAt: t.assignedAt!, repliedAt: t.repliedAt! });
+      }
+    }
+
+    const stats = agents.map((agent) => {
+      const resp = responseByAgent[agent.id] ?? [];
+      const avgResponseHours =
+        resp.length > 0
+          ? Math.round(
+              (resp.reduce((sum, t) => sum + (t.repliedAt.getTime() - t.assignedAt.getTime()), 0) /
+                resp.length /
+                3_600_000) *
+                10
+            ) / 10
+          : null;
+      const rating = ratingMap[agent.id];
+      return {
+        agent,
+        total: totalMap[agent.id] ?? 0,
+        resolved: resolvedMap[agent.id] ?? 0,
+        active: activeMap[agent.id] ?? 0,
+        avgRating: rating?.avg ? Math.round(rating.avg * 10) / 10 : null,
+        ratingCount: rating?.count ?? 0,
+        avgResponseHours,
+      };
+    });
+
+    // ── Manager performance stats ─────────────────────────────────
+    const validAssigned = assignedTickets.filter((t) => t.assignedAt!.getTime() > t.createdAt.getTime());
     const avgAssignmentHours =
-      assignedTickets.length > 0
+      validAssigned.length > 0
         ? Math.round(
-            (assignedTickets.reduce(
-              (sum, t) => sum + (t.assignedAt!.getTime() - t.createdAt.getTime()),
-              0
-            ) / assignedTickets.length / 3_600_000) * 10
+            (validAssigned.reduce((sum, t) => sum + (t.assignedAt!.getTime() - t.createdAt.getTime()), 0) /
+              validAssigned.length /
+              3_600_000) *
+              10
           ) / 10
         : null;
-
-    const teamTotal    = assignedTickets.length;
-    const teamResolved = assignedTickets.filter((t) => t.status === 'RESOLVED' || t.status === 'CLOSED').length;
+    const teamTotal    = validAssigned.length;
+    const teamResolved = validAssigned.filter((t) => t.status === 'RESOLVED' || t.status === 'CLOSED').length;
     const teamResolveRate = teamTotal > 0 ? Math.round((teamResolved / teamTotal) * 100) : 0;
-
-    // Unassigned open tickets (global — helps manager know backlog)
-    const unassignedOpen = await prisma.supportTicket.count({
-      where: { status: 'OPEN', assignedTo: null },
-    });
 
     sendSuccess(res, {
       agents: stats,
-      managerStats: {
-        avgAssignmentHours,
-        unassignedOpen,
-        teamTotal,
-        teamResolved,
-        teamResolveRate,
-      },
+      managerStats: { avgAssignmentHours, unassignedOpen, teamTotal, teamResolved, teamResolveRate },
     });
   },
 
@@ -301,6 +351,11 @@ export const AdminSupportController = {
     const { ticketIds, agentId } = req.body as { ticketIds: string[]; agentId: number | null };
 
     if (!Array.isArray(ticketIds) || ticketIds.length === 0) {
+      sendError(res, 'VALIDATION_ERROR', 400);
+      return;
+    }
+    // Guard: all IDs must be non-empty strings (no empty strings, numbers, or garbage)
+    if (ticketIds.length > 200 || ticketIds.some((id) => typeof id !== 'string' || id.trim().length === 0)) {
       sendError(res, 'VALIDATION_ERROR', 400);
       return;
     }
@@ -371,7 +426,7 @@ export const AdminSupportController = {
     }
 
     const managers = await prisma.admin.findMany({
-      where: { isActive: true, permissions: { has: 'support.manage' } },
+      where: { isActive: true, isDeleted: false, permissions: { has: 'support.manage' } },
       select: { id: true, fullName: true, email: true },
       orderBy: { fullName: 'asc' },
     });
@@ -382,7 +437,7 @@ export const AdminSupportController = {
 
     const result = await Promise.all(managers.map(async (manager) => {
       const agents = await prisma.admin.findMany({
-        where: { managerId: manager.id, isActive: true, permissions: { has: 'support.reply' } },
+        where: { managerId: manager.id, isActive: true, isDeleted: false, permissions: { has: 'support.reply' } },
         select: { id: true },
       });
       const agentIds = agents.map((a) => a.id);
