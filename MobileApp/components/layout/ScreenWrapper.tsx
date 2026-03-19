@@ -5,8 +5,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets, type Edge } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
 
 interface Props {
@@ -16,6 +17,8 @@ interface Props {
   onRefresh?: () => void;
   padded?: boolean;
   withKeyboard?: boolean;
+  edges?: Edge[];
+  contentStyle?: ViewStyle;
 }
 
 export function ScreenWrapper({
@@ -25,14 +28,26 @@ export function ScreenWrapper({
   onRefresh,
   padded = true,
   withKeyboard = false,
+  edges = ['top'],
+  contentStyle,
 }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const content = scrollable ? (
     <ScrollView
-      className="flex-1"
-      contentContainerStyle={{ padding: padded ? 16 : 0, paddingBottom: 32 }}
+      style={{ flex: 1 }}
+      contentContainerStyle={[
+        {
+          paddingHorizontal: padded ? 16 : 0,
+          paddingTop: padded ? 8 : 0,
+          paddingBottom: Math.max(24, insets.bottom + 16),
+          flexGrow: 1,
+        },
+        contentStyle,
+      ]}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
       refreshControl={
         onRefresh ? (
           <RefreshControl
@@ -47,12 +62,22 @@ export function ScreenWrapper({
       {children}
     </ScrollView>
   ) : (
-    <View className={`flex-1 ${padded ? 'px-4' : ''}`}>{children}</View>
+    <View
+      style={[
+        {
+          flex: 1,
+          paddingHorizontal: padded ? 16 : 0,
+        },
+        contentStyle,
+      ]}
+    >
+      {children}
+    </View>
   );
 
   const inner = withKeyboard ? (
     <KeyboardAvoidingView
-      className="flex-1"
+      style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {content}
@@ -62,7 +87,7 @@ export function ScreenWrapper({
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor: colors.bg }}>
       {inner}
     </SafeAreaView>
   );

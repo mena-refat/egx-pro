@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, Pressable,
   Modal, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView,
-  Platform, I18nManager,
+  Platform, I18nManager, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -475,6 +475,8 @@ function SectionHeader({
 export default function PortfolioPage() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const { holdings, summary, loading, refreshing, refresh } = usePortfolioData();
   const { items: watchlist, loading: watchlistLoading, reload: reloadWatchlist } = useWatchlist();
   const { goals, loading: goalsLoading } = useGoalsPreview();
@@ -511,7 +513,7 @@ export default function PortfolioPage() {
   const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
 
   return (
-    <ScreenWrapper padded={false}>
+    <ScreenWrapper padded={false} edges={['top']}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
@@ -524,15 +526,15 @@ export default function PortfolioPage() {
         <View style={{
           borderBottomColor: colors.border, borderBottomWidth: 1,
           flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-          paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14,
+          paddingHorizontal: 16, paddingTop: isCompact ? 12 : 18, paddingBottom: isCompact ? 10 : 14,
         }}>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '800' }}>محفظتي</Text>
+          <Text style={{ color: colors.text, fontSize: isCompact ? 19 : 22, fontWeight: '800' }}>محفظتي</Text>
           <Pressable
             onPress={() => setShowAdd(true)}
             style={{
               backgroundColor: '#8b5cf6',
               flexDirection: 'row', alignItems: 'center', gap: 5,
-              paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
+              paddingHorizontal: isCompact ? 12 : 14, paddingVertical: isCompact ? 7 : 8, borderRadius: 12,
             }}
           >
             <Plus size={14} color="#fff" strokeWidth={2.5} />

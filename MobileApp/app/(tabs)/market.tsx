@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, Pressable, RefreshControl,
-  TextInput, I18nManager,
+  TextInput, I18nManager, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -461,6 +461,8 @@ function StockRow({
 export default function MarketPage() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const [tab, setTab] = useState<Tab>('gainers');
   const [search, setSearch] = useState('');
   const { overview, stocks, loadingStocks, loadingOverview, refreshing, refresh } = useMarketData();
@@ -502,15 +504,15 @@ export default function MarketPage() {
   }, [filtered]);
 
   return (
-    <ScreenWrapper padded={false}>
+    <ScreenWrapper padded={false} edges={['top']}>
       <View style={{ flex: 1 }}>
         {/* ─── Header ─── */}
         <View style={{
           borderBottomWidth: 1, borderBottomColor: colors.border,
-          paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14,
+          paddingHorizontal: 16, paddingTop: isCompact ? 12 : 18, paddingBottom: isCompact ? 10 : 14,
           flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '800' }}>Market</Text>
+          <Text style={{ color: colors.text, fontSize: isCompact ? 19 : 22, fontWeight: '800' }}>Market</Text>
           <MarketStatusBadge />
         </View>
 
@@ -574,7 +576,7 @@ export default function MarketPage() {
                     onPress={() => setTab(t.id as Tab)}
                     style={{
                       flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                      gap: 5, paddingVertical: 9, borderRadius: 10,
+                      gap: 5, paddingVertical: isCompact ? 8 : 9, borderRadius: 10,
                       backgroundColor: active ? (t.color + '22') : 'transparent',
                       borderWidth: active ? 1 : 0,
                       borderColor: active ? (t.color + '44') : 'transparent',
@@ -582,7 +584,7 @@ export default function MarketPage() {
                   >
                     {t.icon && <t.icon size={12} color={active ? t.color : colors.textMuted} />}
                     <Text style={{
-                      fontSize: 12, fontWeight: '700',
+                      fontSize: isCompact ? 11 : 12, fontWeight: '700',
                       color: active ? t.color : colors.textMuted,
                     }}>
                       {t.label}

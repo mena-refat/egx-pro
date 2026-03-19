@@ -26,9 +26,9 @@ export default function TabsLayout() {
     backgroundColor: colors.card,
     borderTopColor: colors.border,
     borderTopWidth: 1,
-    height: 56 + insets.bottom,
-    paddingBottom: insets.bottom || 8,
-    paddingTop: 6,
+    height: 62 + insets.bottom,
+    paddingBottom: Math.max(insets.bottom, 8),
+    paddingTop: 8,
   };
 
   const screenOptions = (name: keyof typeof TAB_LABELS) => ({
@@ -37,30 +37,32 @@ export default function TabsLayout() {
     tabBarInactiveTintColor: colors.textMuted,
     tabBarStyle,
     tabBarLabel: TAB_LABELS[name]?.[lang] ?? name,
-    tabBarLabelStyle: { fontSize: 10, fontWeight: '500' as const, marginTop: 1 },
+    tabBarHideOnKeyboard: true,
+    tabBarLabelStyle: { fontSize: 11, fontWeight: '600' as const, marginTop: 2 },
+    tabBarItemStyle: { paddingVertical: 2 },
   });
 
   return (
     <Tabs>
       <Tabs.Screen
         name="index"
-        options={{ ...screenOptions('index'), tabBarIcon: ({ color, size }) => <Home size={size - 2} color={color} /> }}
+        options={{ ...screenOptions('index'), tabBarIcon: ({ color }) => <Home size={19} color={color} /> }}
       />
       <Tabs.Screen
         name="portfolio"
-        options={{ ...screenOptions('portfolio'), tabBarIcon: ({ color, size }) => <Briefcase size={size - 2} color={color} /> }}
+        options={{ ...screenOptions('portfolio'), tabBarIcon: ({ color }) => <Briefcase size={19} color={color} /> }}
       />
       <Tabs.Screen
         name="market"
-        options={{ ...screenOptions('market'), tabBarIcon: ({ color, size }) => <BarChart2 size={size - 2} color={color} /> }}
+        options={{ ...screenOptions('market'), tabBarIcon: ({ color }) => <BarChart2 size={19} color={color} /> }}
       />
       <Tabs.Screen
         name="ai"
-        options={{ ...screenOptions('ai'), tabBarIcon: ({ color, size }) => <Sparkles size={size - 2} color={color} /> }}
+        options={{ ...screenOptions('ai'), tabBarIcon: ({ color }) => <Sparkles size={19} color={color} /> }}
       />
       <Tabs.Screen
         name="profile"
-        options={{ ...screenOptions('profile'), tabBarIcon: ({ color, size }) => <User size={size - 2} color={color} /> }}
+        options={{ ...screenOptions('profile'), tabBarIcon: ({ color }) => <User size={19} color={color} /> }}
       />
     </Tabs>
   );

@@ -84,7 +84,10 @@
       "Bash(ls -la \"c:/Users/menar/Desktop/egx-pro/MobileApp/app/\\(tabs\\)/\")",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(''''browser:'''', d.get\\(''''browser''''\\)\\); print\\(''''module:'''', d.get\\(''''module''''\\)\\); print\\(''''main:'''', d.get\\(''''main''''\\)\\)\")",
       "Bash(node -e \"const p = require\\(''./node_modules/qrcode/package.json''\\); console.log\\(''browser:'', p.browser\\); console.log\\(''module:'', p.module\\); console.log\\(''main:'', p.main\\)\")",
-      "Bash(node -e \"const l = require\\(''./node_modules/lucide-react''\\); [''Eye'',''EyeOff'',''Copy'',''Check'',''Shield'',''Smartphone'',''KeyRound''].forEach\\(n => console.log\\(n, typeof l[n]\\)\\)\")"
+      "Bash(node -e \"const l = require\\(''./node_modules/lucide-react''\\); [''Eye'',''EyeOff'',''Copy'',''Check'',''Shield'',''Smartphone'',''KeyRound''].forEach\\(n => console.log\\(n, typeof l[n]\\)\\)\")",
+      "Bash(grep -o [a-zA-Z_]*.toDataURL c:/Users/menar/Desktop/egx-pro/dist/admin/assets/AdminAccountPage-bOA9fwXH.js)",
+      "Bash(grep -n \"^import \" admin/src/pages/*.tsx)",
+      "Bash(node -e \"const l = require\\(''./node_modules/lucide-react''\\); console.log\\(''Smartphone:'', !!l.Smartphone, ''KeyRound:'', !!l.KeyRound, ''Shield:'', !!l.Shield, ''Check:'', !!l.Check, ''Copy:'', !!l.Copy\\)\")"
     ]
   }
 }

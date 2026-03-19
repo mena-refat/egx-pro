@@ -7,6 +7,9 @@ import {
   nullFinancials,
   defaultMarketCtx,
   atomicConsumeQuota,
+  preCheckQuota,
+  tryAcquireAnalysisCooldown,
+  releaseAnalysisCooldown,
   withTimeout,
   runAnalysisEngine,
   parseAnalysisJson,
@@ -26,6 +29,16 @@ export async function recommendationsAnalysis(
   _body?: { riskTolerance?: string; investmentHorizon?: number; interestedSectors?: string[] }
 ): Promise<{ recommendations: unknown; id: string }> {
   if (!userId) throw new AppError('UNAUTHORIZED', 401);
+
+  // فحص الكوتا والـ cooldown قبل استدعاء الـ AI
+  await preCheckQuota(userId);
+  const cooldownAcquired = await tryAcquireAnalysisCooldown(userId);
+  if (!cooldownAcquired) {
+    throw new AppError('ANALYSIS_COOLDOWN', 429, 'يرجى الانتظار دقيقة بين كل تحليل وآخر', {
+      code: 'ANALYSIS_COOLDOWN',
+      retryAfterSeconds: 60,
+    });
+  }
 
   const dataMs = ANALYSIS_DATA_GATHER_TIMEOUT_MS;
   const portfolioFallback: [Array<{ ticker: string; shares: number; avgPrice: number }>, number] = [[], 0];
@@ -117,7 +130,13 @@ export async function recommendationsAnalysis(
 ${portfolioScoresBlock ? portfolioScoresBlock + '\n' : ''}سوق: ${marketCtx.marketStatus} EGX30: ${marketCtx.egx30?.price ?? '—'} USD/EGP: ${marketCtx.usdEgp ?? '—'}
 توصيات EGX: سعر مستهدف، وقف خسارة، سبب جملة واحدة. عند التوصية على أسهم المحفظة استند إلى التقييم المحسوب أعلاه. JSON فقط.`;
 
-  const raw = await runAnalysisEngine(systemWithSharia, prompt, ANALYSIS_MAX_TOKENS_RECOMMENDATIONS);
+  let raw: string;
+  try {
+    raw = await runAnalysisEngine(systemWithSharia, prompt, ANALYSIS_MAX_TOKENS_RECOMMENDATIONS);
+  } catch (err) {
+    await releaseAnalysisCooldown(userId);
+    throw err;
+  }
   // نخصم الكوتا فقط بعد نجاح استدعاء الـ AI
   await atomicConsumeQuota(userId, 1);
   const recommendations = parseAnalysisJson(raw);

@@ -247,7 +247,7 @@ export const AdminAuthController = {
     }
     await prisma.admin.update({
       where: { id: req.admin.id },
-      data: { twoFactorEnabled: true, twoFactorSecret: secret },
+      data: { twoFactorEnabled: true, twoFactorSecret: secret, mustSetup2FA: false },
     });
     await adminAudit(req.admin.id, 'ADMIN_2FA_ENABLED', req.admin.id.toString(), undefined, req);
     sendSuccess(res, { success: true });

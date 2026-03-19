@@ -8,6 +8,9 @@ import {
   nullFinancials,
   defaultMarketCtx,
   atomicConsumeQuota,
+  preCheckQuota,
+  tryAcquireAnalysisCooldown,
+  releaseAnalysisCooldown,
   withTimeout,
   getPriceForAnalysis,
   runAnalysisEngine,
@@ -55,6 +58,16 @@ export async function createAnalysis(
     const completedBefore = await getCompletedAchievementIds(userId);
     const newAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
     return { analysis: globalCached, id: saved.id, newUnseenAchievements: newAchievements };
+  }
+
+  // فحص الكوتا والـ cooldown قبل استدعاء الـ AI (توفير تكلفة API)
+  await preCheckQuota(userId);
+  const cooldownAcquired = await tryAcquireAnalysisCooldown(userId);
+  if (!cooldownAcquired) {
+    throw new AppError('ANALYSIS_COOLDOWN', 429, 'يرجى الانتظار دقيقة بين كل تحليل وآخر', {
+      code: 'ANALYSIS_COOLDOWN',
+      retryAfterSeconds: 60,
+    });
   }
 
   const completedBefore = await getCompletedAchievementIds(userId);
@@ -150,7 +163,14 @@ ${marketLine}
 أخبار: ${newsLine}
 اشرح لماذا هذا التقييم (${scoringResult.score}) وهذا القرار منطقيان بناءً على البيانات أعلاه. اخرج JSON بالشكل المحدد. لا تغيّر القرار ولا الأرقام.`;
 
-  const rawText = await runAnalysisEngine(EXPLAIN_SINGLE_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_SINGLE);
+  let rawText: string;
+  try {
+    rawText = await runAnalysisEngine(EXPLAIN_SINGLE_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_SINGLE);
+  } catch (err) {
+    // فشل الـ AI — نرجّع الـ cooldown عشان المستخدم يقدر يحاول تاني
+    await releaseAnalysisCooldown(userId);
+    throw err;
+  }
   // لو وصلنا هنا يبقى استدعاء الـ AI نجح، دلوقتي نخصم من الكوتا
   await atomicConsumeQuota(userId, 1);
   const aiJson = parseAnalysisJson(rawText) as Record<string, unknown>;

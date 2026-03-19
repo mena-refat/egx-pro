@@ -17,6 +17,7 @@ import {
   ANALYSIS_MAX_TOKENS_RECOMMENDATIONS,
 } from '../../lib/constants.ts';
 import { prisma } from '../../lib/prisma.ts';
+import { redis, getCache, setCache, deleteCache } from '../../lib/redis.ts';
 
 export const nullFinancials = {
   pe: null as number | null,
@@ -52,6 +53,75 @@ export function getFirstDayOfNextMonth(): Date {
   d.setDate(1);
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+const COOLDOWN_SECONDS = 60;
+
+/**
+ * Fast pre-check: throws ANALYSIS_LIMIT_REACHED if user is clearly over quota.
+ * Non-transactional (optimistic read). atomicConsumeQuota still does the final atomic check.
+ */
+export async function preCheckQuota(userId: number): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      plan: true,
+      planExpiresAt: true,
+      referralProExpiresAt: true,
+      aiAnalysisUsedThisMonth: true,
+      aiAnalysisResetDate: true,
+    },
+  });
+  if (!user) throw new AppError('UNAUTHORIZED', 401);
+
+  const now = new Date();
+  const usedThisMonth =
+    user.aiAnalysisResetDate == null || now >= user.aiAnalysisResetDate
+      ? 0
+      : (user.aiAnalysisUsedThisMonth ?? 0);
+
+  const planUser: UserForPlan = {
+    plan: user.plan,
+    planExpiresAt: user.planExpiresAt,
+    referralProExpiresAt: user.referralProExpiresAt,
+  };
+  const quota = getLimit(planUser, 'aiAnalysisPerMonth') as number;
+
+  if (usedThisMonth >= quota) {
+    throw new AppError('ANALYSIS_LIMIT_REACHED', 402, 'تم استنفاد حصة التحليلات لهذا الشهر', {
+      code: 'ANALYSIS_LIMIT_REACHED',
+      used: usedThisMonth,
+      quota,
+    });
+  }
+}
+
+/**
+ * Atomic cooldown check-and-set via Redis SET NX EX.
+ * Returns true if cooldown was acquired (request can proceed).
+ * Returns false if user already made a request within the last 60 seconds.
+ */
+export async function tryAcquireAnalysisCooldown(userId: number): Promise<boolean> {
+  const key = `analysis_cooldown:${userId}`;
+  if (redis) {
+    try {
+      const result = await redis.set(key, '1', { nx: true, ex: COOLDOWN_SECONDS });
+      return result === 'OK';
+    } catch {
+      // Redis error — allow the request rather than blocking the user
+      return true;
+    }
+  }
+  // No Redis: fallback to in-memory cache
+  const existing = await getCache<string>(key);
+  if (existing) return false;
+  await setCache(key, '1', COOLDOWN_SECONDS);
+  return true;
+}
+
+/** Release cooldown key (call if AI request fails, so user isn't penalised). */
+export async function releaseAnalysisCooldown(userId: number): Promise<void> {
+  await deleteCache(`analysis_cooldown:${userId}`);
 }
 
 export async function atomicConsumeQuota(userId: number, points: number): Promise<void> {

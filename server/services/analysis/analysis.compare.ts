@@ -8,6 +8,9 @@ import {
   nullFinancials,
   defaultMarketCtx,
   atomicConsumeQuota,
+  preCheckQuota,
+  tryAcquireAnalysisCooldown,
+  releaseAnalysisCooldown,
   withTimeout,
   runAnalysisEngine,
   parseAnalysisJson,
@@ -55,6 +58,16 @@ export async function compareAnalysis(
       content: JSON.stringify(globalCachedCompare),
     });
     return { comparison: globalCachedCompare, id: saved.id };
+  }
+
+  // فحص الكوتا والـ cooldown قبل استدعاء الـ AI (المقارنة تستهلك 2 نقطة)
+  await preCheckQuota(userId);
+  const cooldownAcquired = await tryAcquireAnalysisCooldown(userId);
+  if (!cooldownAcquired) {
+    throw new AppError('ANALYSIS_COOLDOWN', 429, 'يرجى الانتظار دقيقة بين كل تحليل وآخر', {
+      code: 'ANALYSIS_COOLDOWN',
+      retryAfterSeconds: 60,
+    });
   }
 
   const info1 = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === t1);
@@ -114,7 +127,13 @@ export async function compareAnalysis(
 
   const prompt = `${line(t1, info1, p1, f1, ind1, news1, score1)}\n${line(t2, info2, p2, f2, ind2, news2, score2)}\nسوق: ${marketCtx.marketStatus} EGX30: ${marketCtx.egx30?.price ?? '—'} USD/EGP: ${marketCtx.usdEgp ?? '—'}\nالفائز محسوب آلياً: ${winner} (درجته أعلى). اشرح لماذا بناءً على الأرقام فقط. لا تغيّر winner ولا الـ scores. JSON فقط.`;
 
-  const raw = await runAnalysisEngine(EXPLAIN_COMPARE_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_COMPARE);
+  let raw: string;
+  try {
+    raw = await runAnalysisEngine(EXPLAIN_COMPARE_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_COMPARE);
+  } catch (err) {
+    await releaseAnalysisCooldown(userId);
+    throw err;
+  }
   // بعد نجاح استدعاء الـ AI فقط نخصم من الكوتا
   await atomicConsumeQuota(userId, 2);
   const aiCompare = parseAnalysisJson(raw) as Record<string, unknown>;

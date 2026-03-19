@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { useAdminStore } from '../store/adminAuthStore';
 import { Eye, EyeOff, Copy, Check, Shield, Smartphone, KeyRound } from 'lucide-react';
-import * as QRCode from 'qrcode';
+import QRCode from 'qrcode';
 
 interface AdminMe {
   id: number;

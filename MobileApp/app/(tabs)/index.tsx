@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
   View, Text, ScrollView, RefreshControl, Pressable, ActivityIndicator, I18nManager,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -85,6 +86,8 @@ function PortfolioSummaryCard({
   loading: boolean; onPress: () => void;
 }) {
   const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const isUp = totalGainLoss > 0;
   const isDown = totalGainLoss < 0;
   const gainColor = isUp ? '#4ade80' : isDown ? '#f87171' : colors.textSub;
@@ -128,11 +131,11 @@ function PortfolioSummaryCard({
           قيمة محفظتي
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 4, marginBottom: 12 }}>
-          <Text style={{ color: colors.textMuted, fontSize: 18, fontWeight: '500', marginBottom: 4 }}>EGP</Text>
-          <Text style={{ color: colors.text, fontSize: 48, fontWeight: '800', letterSpacing: -1, fontVariant: ['tabular-nums'] }}>
+          <Text style={{ color: colors.textMuted, fontSize: isCompact ? 15 : 18, fontWeight: '500', marginBottom: 4 }}>EGP</Text>
+          <Text style={{ color: colors.text, fontSize: isCompact ? 38 : 48, fontWeight: '800', letterSpacing: -1, fontVariant: ['tabular-nums'] }}>
             {whole}
           </Text>
-          <Text style={{ color: colors.text, fontSize: 24, fontWeight: '600', marginBottom: 6, fontVariant: ['tabular-nums'] }}>
+          <Text style={{ color: colors.text, fontSize: isCompact ? 19 : 24, fontWeight: '600', marginBottom: 6, fontVariant: ['tabular-nums'] }}>
             .{dec}
           </Text>
         </View>
@@ -361,6 +364,8 @@ function PortfolioChart({ holdings }: { holdings: Array<{ ticker: string; shares
 export default function HomePage() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const user = useAuthStore((s) => s.user);
   const unreadCount = useUnreadCount();
   const { stocks, loadingStocks, refreshing: mktRefreshing, refresh: refreshMarket } = useMarketData();
@@ -420,7 +425,7 @@ export default function HomePage() {
   const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
 
   return (
-    <ScreenWrapper padded={false}>
+    <ScreenWrapper padded={false} edges={['top']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
@@ -429,10 +434,10 @@ export default function HomePage() {
         }
       >
         {/* ─── Header ─── */}
-        <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14 }}>
+        <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: isCompact ? 12 : 18, paddingBottom: isCompact ? 10 : 14 }}>
           <View>
             <Text style={{ color: colors.textMuted, fontSize: 12 }}>أهلاً بك،</Text>
-            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800', marginTop: 2 }}>
+            <Text style={{ color: colors.text, fontSize: isCompact ? 18 : 20, fontWeight: '800', marginTop: 2 }}>
               {user?.fullName?.split(' ')[0] || 'مستثمر'}
             </Text>
           </View>
@@ -540,7 +545,7 @@ export default function HomePage() {
           {!loadingStocks && (topGainers.length > 0 || topLosers.length > 0) && (
             <View style={{ paddingHorizontal: 16 }}>
               <SectionHeader title="الأكثر تحركاً" icon={BarChart2} linkLabel="السوق" onLink={() => router.push('/market')} />
-              <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flexDirection: isCompact ? 'column' : 'row', gap: 12 }}>
                 {/* Gainers */}
                 {topGainers.length > 0 && (
                   <View style={{ flex: 1, backgroundColor: colors.card, borderWidth: 1, borderColor: '#4ade8025', borderRadius: 20, overflow: 'hidden' }}>
