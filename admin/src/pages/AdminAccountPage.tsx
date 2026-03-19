@@ -146,7 +146,7 @@ export default function AdminAccountPage() {
         </div>
       )}
 
-      {me?.role === 'SUPER_ADMIN' ? (
+      {me?.role === 'SUPER_ADMIN' && (
         <form onSubmit={handleProfileSubmit} className="space-y-3 rounded-xl border border-white/[0.07] bg-[#111118] p-5">
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-sm font-semibold text-white">{t('account.profile')}</h2>
@@ -179,21 +179,6 @@ export default function AdminAccountPage() {
             {profileSaving ? t('common.saving') : t('account.saveChanges')}
           </button>
         </form>
-      ) : (
-        <div className="rounded-xl border border-white/[0.07] bg-[#111118] p-5">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="text-sm font-semibold text-white">{t('account.profile')}</h2>
-            <span className="text-[11px] text-slate-500">
-              {t('account.role')}:{' '}
-              <span className="font-semibold text-slate-200">{me?.role ?? '—'}</span>
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-2">{t('account.superAdminOnly')}</p>
-          <div className="mt-3 space-y-1.5">
-            <p className="text-xs text-slate-500">{t('account.fullName')}: <span className="text-slate-300">{me?.fullName}</span></p>
-            <p className="text-xs text-slate-500">{t('account.email')}: <span className="text-slate-300">{me?.email}</span></p>
-          </div>
-        </div>
       )}
 
       <form onSubmit={handlePasswordSubmit} className="space-y-3 rounded-xl border border-white/[0.07] bg-[#111118] p-5">

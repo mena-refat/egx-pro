@@ -5,66 +5,184 @@ import { DataTable } from '../components/DataTable';
 import { Pagination } from '../components/Pagination';
 import { Search, RefreshCw, X, Monitor } from 'lucide-react';
 
-const AUDIT_ACTIONS = [
-  'ADMIN_LOGIN',
-  'ADMIN_CREATED',
-  'ADMIN_DELETED',
-  'ADMIN_PERMISSIONS_UPDATED',
-  'ADMIN_PASSWORD_CHANGED',
-  'ADMIN_PROFILE_UPDATED',
-  'ADMIN_2FA_ENABLED',
-  'ADMIN_2FA_DISABLED',
-  'ADMIN_RESET_PASSWORD',
-  'ADMIN_RESET_2FA',
-  'USER_PLAN_UPDATED',
-  'USER_DEACTIVATED',
-  'USER_REACTIVATED',
-  'USER_INVITED',
-  'SUPPORT_REPLIED',
-  'SUPPORT_STATUS_UPDATED',
-  'DISCOUNT_CREATED',
-  'DISCOUNT_UPDATED',
-  'DISCOUNT_DELETED',
-  'NOTIFICATIONS_BROADCAST',
-  'BLOCKLIST_ADDED',
-  'BLOCKLIST_REMOVED',
-] as const;
+const AUDIT_ACTIONS: { value: string; label: string }[] = [
+  { value: 'ADMIN_LOGIN',               label: 'Admin Login' },
+  { value: 'ADMIN_CREATED',             label: 'Admin Created' },
+  { value: 'ADMIN_DELETED',             label: 'Admin Deleted' },
+  { value: 'ADMIN_PERMISSIONS_UPDATED', label: 'Permissions Updated' },
+  { value: 'ADMIN_PASSWORD_CHANGED',    label: 'Password Changed' },
+  { value: 'ADMIN_PROFILE_UPDATED',     label: 'Profile Updated' },
+  { value: 'ADMIN_2FA_ENABLED',         label: '2FA Enabled' },
+  { value: 'ADMIN_2FA_DISABLED',        label: '2FA Disabled' },
+  { value: 'ADMIN_RESET_PASSWORD',      label: 'Admin Password Reset' },
+  { value: 'ADMIN_RESET_2FA',           label: 'Admin 2FA Reset' },
+  { value: 'USER_PLAN_UPDATED',         label: 'User Plan Updated' },
+  { value: 'USER_DEACTIVATED',          label: 'User Deactivated' },
+  { value: 'USER_REACTIVATED',          label: 'User Reactivated' },
+  { value: 'USER_INVITED',              label: 'User Invited' },
+  { value: 'SUPPORT_REPLIED',           label: 'Support Reply Sent' },
+  { value: 'SUPPORT_STATUS_UPDATED',    label: 'Ticket Status Updated' },
+  { value: 'DISCOUNT_CREATED',          label: 'Discount Created' },
+  { value: 'DISCOUNT_UPDATED',          label: 'Discount Updated' },
+  { value: 'DISCOUNT_DELETED',          label: 'Discount Deleted' },
+  { value: 'NOTIFICATIONS_BROADCAST',   label: 'Broadcast Sent' },
+  { value: 'BLOCKLIST_ADDED',           label: 'Blocklist Added' },
+  { value: 'BLOCKLIST_REMOVED',         label: 'Blocklist Removed' },
+];
 
 function actionBadge(action: string) {
-  if (action === 'ADMIN_LOGIN')             return 'bg-slate-500/15 text-slate-300';
-  if (action.startsWith('ADMIN_'))          return 'bg-violet-500/15 text-violet-300';
-  if (action.startsWith('USER_'))           return 'bg-blue-500/15 text-blue-300';
-  if (action.startsWith('SUPPORT_'))        return 'bg-emerald-500/15 text-emerald-300';
-  if (action.startsWith('DISCOUNT_'))       return 'bg-amber-500/15 text-amber-300';
-  if (action.startsWith('NOTIFICATIONS_'))  return 'bg-pink-500/15 text-pink-300';
-  if (action.startsWith('BLOCKLIST_'))      return 'bg-red-500/15 text-red-300';
+  if (action === 'ADMIN_LOGIN')            return 'bg-slate-500/15 text-slate-300 border border-slate-500/20';
+  if (action.startsWith('ADMIN_'))         return 'bg-violet-500/15 text-violet-300 border border-violet-500/20';
+  if (action.startsWith('USER_'))          return 'bg-blue-500/15 text-blue-300 border border-blue-500/20';
+  if (action.startsWith('SUPPORT_'))       return 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20';
+  if (action.startsWith('DISCOUNT_'))      return 'bg-amber-500/15 text-amber-300 border border-amber-500/20';
+  if (action.startsWith('NOTIFICATIONS_')) return 'bg-pink-500/15 text-pink-300 border border-pink-500/20';
+  if (action.startsWith('BLOCKLIST_'))     return 'bg-red-500/15 text-red-300 border border-red-500/20';
   return 'bg-white/[0.06] text-slate-300';
 }
 
-// Parse browser/OS from user-agent string
-function parseUA(ua: string | null): string {
-  if (!ua) return '—';
-  let browser = 'Unknown';
-  let os = 'Unknown';
-  if (/Edg\//.test(ua))       browser = 'Edge';
-  else if (/Chrome\//.test(ua))  browser = 'Chrome';
-  else if (/Firefox\//.test(ua)) browser = 'Firefox';
-  else if (/Safari\//.test(ua))  browser = 'Safari';
-  if (/Windows/.test(ua))     os = 'Windows';
-  else if (/Macintosh/.test(ua)) os = 'macOS';
-  else if (/Linux/.test(ua))    os = 'Linux';
-  else if (/Android/.test(ua))  os = 'Android';
-  else if (/iPhone|iPad/.test(ua)) os = 'iOS';
-  return `${browser} / ${os}`;
+function actionLabel(action: string): string {
+  return AUDIT_ACTIONS.find((a) => a.value === action)?.label ?? action;
 }
 
-// Format target based on action type
-function formatTarget(action: string, target: string | null, details: string | null): string {
-  if (!target && !details) return '—';
-  const parts: string[] = [];
-  if (target) parts.push(target);
-  if (details) parts.push(details);
-  return parts.join(' — ');
+function parseUA(ua: string | null): string {
+  if (!ua) return '';
+  let browser = 'Unknown';
+  let os = 'Unknown';
+  if (/Edg\//.test(ua))           browser = 'Edge';
+  else if (/Chrome\//.test(ua))   browser = 'Chrome';
+  else if (/Firefox\//.test(ua))  browser = 'Firefox';
+  else if (/Safari\//.test(ua))   browser = 'Safari';
+  if (/Windows/.test(ua))         os = 'Windows';
+  else if (/Macintosh/.test(ua))  os = 'macOS';
+  else if (/Linux/.test(ua))      os = 'Linux';
+  else if (/Android/.test(ua))    os = 'Android';
+  else if (/iPhone|iPad/.test(ua)) os = 'iOS';
+  return `${browser} · ${os}`;
+}
+
+function formatTarget(
+  action: string,
+  target: string | null,
+  details: string | null
+): { primary: string; secondary?: string } {
+  switch (action) {
+    case 'ADMIN_LOGIN':
+      return { primary: 'Logged in' };
+
+    case 'ADMIN_CREATED':
+      // details = "email: admin@example.com"
+      return { primary: details ?? 'New admin created' };
+
+    case 'ADMIN_DELETED':
+      return { primary: 'Admin account deleted' };
+
+    case 'ADMIN_PASSWORD_CHANGED':
+      return { primary: 'Own password changed' };
+
+    case 'ADMIN_PROFILE_UPDATED': {
+      try {
+        const d = JSON.parse(details ?? '{}') as Record<string, unknown>;
+        const keys = Object.keys(d);
+        return { primary: keys.length ? `Fields: ${keys.join(', ')}` : 'Profile updated' };
+      } catch {
+        return { primary: details ?? 'Profile updated' };
+      }
+    }
+
+    case 'ADMIN_2FA_ENABLED':
+      return { primary: '2FA enabled on own account' };
+
+    case 'ADMIN_2FA_DISABLED':
+      return { primary: '2FA disabled on own account' };
+
+    case 'ADMIN_PERMISSIONS_UPDATED': {
+      try {
+        const d = JSON.parse(details ?? '{}') as { permissions?: string[]; isActive?: boolean };
+        const parts: string[] = [];
+        if (d.isActive != null) parts.push(d.isActive ? 'Account activated' : 'Account deactivated');
+        if (d.permissions?.length) parts.push(`Perms: ${d.permissions.join(', ')}`);
+        return { primary: parts.join(' · ') || 'Permissions updated' };
+      } catch {
+        return { primary: 'Permissions updated' };
+      }
+    }
+
+    case 'ADMIN_RESET_PASSWORD':
+      return { primary: 'Admin password was reset' };
+
+    case 'ADMIN_RESET_2FA':
+      return { primary: 'Admin 2FA was reset' };
+
+    case 'USER_PLAN_UPDATED':
+      // details = "plan → premium"
+      return { primary: details ?? 'Plan updated' };
+
+    case 'USER_DEACTIVATED':
+      return { primary: 'User account deactivated' };
+
+    case 'USER_REACTIVATED':
+      return { primary: 'User account reactivated' };
+
+    case 'USER_INVITED':
+      // details = "email: user@example.com"
+      return { primary: details ?? 'User invited' };
+
+    case 'SUPPORT_REPLIED':
+      // details = "status → IN_PROGRESS"
+      return { primary: 'Reply sent to ticket', secondary: details ?? undefined };
+
+    case 'SUPPORT_STATUS_UPDATED': {
+      try {
+        const d = JSON.parse(details ?? '{}') as { status?: string; priority?: string };
+        const parts: string[] = [];
+        if (d.status)   parts.push(`Status: ${d.status}`);
+        if (d.priority) parts.push(`Priority: ${d.priority}`);
+        return { primary: parts.join(' · ') || 'Ticket updated' };
+      } catch {
+        return { primary: details ?? 'Ticket updated' };
+      }
+    }
+
+    case 'DISCOUNT_CREATED':
+      // details = "code: SAVE20"
+      return { primary: details ?? 'Discount code created' };
+
+    case 'DISCOUNT_UPDATED': {
+      try {
+        const d = JSON.parse(details ?? '{}') as Record<string, unknown>;
+        const keys = Object.keys(d);
+        return { primary: keys.length ? `Updated: ${keys.join(', ')}` : 'Discount updated' };
+      } catch {
+        return { primary: details ?? 'Discount updated' };
+      }
+    }
+
+    case 'DISCOUNT_DELETED':
+      return { primary: 'Discount code deleted' };
+
+    case 'NOTIFICATIONS_BROADCAST': {
+      try {
+        const d = JSON.parse(details ?? '{}') as { title?: string; plans?: string[] };
+        return {
+          primary: d.title ? `"${d.title}"` : 'Broadcast sent',
+          secondary: d.plans?.length ? `Plans: ${d.plans.join(', ')}` : 'All users',
+        };
+      } catch {
+        return { primary: 'Broadcast sent' };
+      }
+    }
+
+    case 'BLOCKLIST_ADDED':
+      // details = "EMAIL: test@example.com"
+      return { primary: details ?? 'Identifier blocked' };
+
+    case 'BLOCKLIST_REMOVED':
+      return { primary: details ?? 'Identifier unblocked' };
+
+    default:
+      return { primary: details ?? target ?? '—' };
+  }
 }
 
 export default function AuditLogPage() {
@@ -75,7 +193,7 @@ export default function AuditLogPage() {
   const [page, setPage]   = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const [adminSearch, setAdminSearch]     = useState('');
+  const [adminSearch, setAdminSearch]       = useState('');
   const [adminDebounced, setAdminDebounced] = useState('');
   const [action, setAction] = useState('');
   const [from, setFrom]     = useState('');
@@ -115,8 +233,8 @@ export default function AuditLogPage() {
     setAction(''); setFrom(''); setTo('');
   };
 
-  const hasFilters = adminSearch || action || from || to;
-  const totalPages = Math.ceil(total / 50) || 1;
+  const hasFilters  = adminSearch || action || from || to;
+  const totalPages  = Math.ceil(total / 50) || 1;
 
   return (
     <div className="space-y-5">
@@ -141,23 +259,50 @@ export default function AuditLogPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[180px]">
-          <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input value={adminSearch} onChange={(e) => setAdminSearch(e.target.value)}
+        {/* Admin email search */}
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+          <input
+            value={adminSearch}
+            onChange={(e) => setAdminSearch(e.target.value)}
             placeholder={t('audit.filterByAdmin')}
-            className="w-full ps-9 pe-4 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 transition-all" />
+            className="w-full ps-9 pe-4 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40 transition-colors"
+          />
         </div>
-        <select value={action} onChange={(e) => setAction(e.target.value)}
-          className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-emerald-500/50 transition-all">
+
+        {/* Action dropdown */}
+        <select
+          value={action}
+          onChange={(e) => setAction(e.target.value)}
+          className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-emerald-500/40 transition-colors min-w-[160px]"
+        >
           <option value="">{t('audit.allActions')}</option>
-          {AUDIT_ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+          {AUDIT_ACTIONS.map((a) => (
+            <option key={a.value} value={a.value}>{a.label}</option>
+          ))}
         </select>
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
-          title={t('audit.from')}
-          className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-emerald-500/50 transition-all [color-scheme:dark]" />
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
-          title={t('audit.to')}
-          className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-emerald-500/50 transition-all [color-scheme:dark]" />
+
+        {/* Date range */}
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-slate-600 px-1">{t('audit.from')}</span>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-emerald-500/40 transition-colors [color-scheme:dark]"
+            />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-slate-600 px-1">{t('audit.to')}</span>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-emerald-500/40 transition-colors [color-scheme:dark]"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Table */}
@@ -175,47 +320,56 @@ export default function AuditLogPage() {
         empty={t('audit.noEvents')}
       >
         {logs.map((l) => {
-          const dt = new Date(l.createdAt);
+          const dt  = new Date(l.createdAt);
+          const tgt = formatTarget(l.action, l.target, l.details);
           return (
-            <tr key={l.id} className="hover:bg-white/[0.02] transition-colors text-xs">
+            <tr key={l.id} className="hover:bg-white/[0.025] transition-colors text-xs border-b border-white/[0.04] last:border-0">
               {/* Date */}
-              <td className="px-4 py-3 text-slate-400 whitespace-nowrap">
-                {dt.toLocaleDateString()}
-              </td>
-              {/* Time */}
-              <td className="px-4 py-3 text-slate-400 whitespace-nowrap tabular-nums">
-                {dt.toLocaleTimeString()}
-              </td>
-              {/* Admin */}
-              <td className="px-4 py-3">
-                <p className="text-slate-200">{l.admin?.email ?? '—'}</p>
-                {l.admin?.fullName && (
-                  <p className="text-[11px] text-slate-500">{l.admin.fullName}</p>
-                )}
-                <p className="text-[11px] text-slate-600 font-mono mt-0.5">{l.adminId}</p>
-              </td>
-              {/* Action */}
-              <td className="px-4 py-3">
-                <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${actionBadge(l.action)}`}>
-                  {l.action}
+              <td className="px-4 py-3 whitespace-nowrap">
+                <span className="text-slate-300">
+                  {dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </span>
               </td>
-              {/* Target */}
-              <td className="px-4 py-3 text-slate-400 max-w-[220px]">
-                {l.target && (
-                  <p className="font-mono text-[11px] text-slate-300 truncate" title={l.target}>{l.target}</p>
-                )}
-                {l.details && (
-                  <p className="text-[11px] text-slate-500 mt-0.5 truncate" title={l.details}>{l.details}</p>
-                )}
-                {!l.target && !l.details && '—'}
+
+              {/* Time */}
+              <td className="px-4 py-3 whitespace-nowrap tabular-nums text-slate-400">
+                {dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
               </td>
+
+              {/* Admin */}
+              <td className="px-4 py-3">
+                <p className="text-slate-200 font-medium">{l.admin?.email ?? '—'}</p>
+                {l.admin?.fullName && (
+                  <p className="text-[11px] text-slate-500 mt-0.5">{l.admin.fullName}</p>
+                )}
+              </td>
+
+              {/* Action badge */}
+              <td className="px-4 py-3 whitespace-nowrap">
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium ${actionBadge(l.action)}`}>
+                  {actionLabel(l.action)}
+                </span>
+              </td>
+
+              {/* Target — human readable */}
+              <td className="px-4 py-3 max-w-[240px]">
+                <p className="text-slate-200 truncate" title={tgt.primary}>{tgt.primary}</p>
+                {tgt.secondary && (
+                  <p className="text-[11px] text-slate-500 mt-0.5 truncate" title={tgt.secondary}>
+                    {tgt.secondary}
+                  </p>
+                )}
+              </td>
+
               {/* IP + Device */}
               <td className="px-4 py-3">
-                <p className="text-[11px] font-mono text-slate-400">{l.ipAddress ?? '—'}</p>
+                <p className="font-mono text-[11px] text-slate-400 tabular-nums">
+                  {l.ipAddress ?? '—'}
+                </p>
                 {l.userAgent && (
                   <p className="text-[11px] text-slate-600 flex items-center gap-1 mt-0.5">
-                    <Monitor size={10} /> {parseUA(l.userAgent)}
+                    <Monitor size={10} className="shrink-0" />
+                    {parseUA(l.userAgent)}
                   </p>
                 )}
               </td>

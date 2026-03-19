@@ -87,6 +87,11 @@ async function startServer() {
   // يمكن أن يكون origin واحد أو عدة أصول مفصولة بفاصلة (مثلاً Vercel + Railway)
   const frontendOriginRaw = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
   const frontendOrigins = frontendOriginRaw.split(',').map((o) => o.trim()).filter(Boolean);
+  // في التطوير دائماً نضيف localhost عشان يشتغل بدون إعداد إضافي
+  if (process.env.NODE_ENV !== 'production') {
+    if (!frontendOrigins.includes('http://localhost:3000')) frontendOrigins.push('http://localhost:3000');
+    if (!frontendOrigins.includes('http://127.0.0.1:3000')) frontendOrigins.push('http://127.0.0.1:3000');
+  }
   const frontendOrigin = frontendOrigins.length === 1 ? frontendOrigins[0] : frontendOrigins;
 
   // في التطوير نعطّل CSP بالكامل عشان Vite و HMR يشتغلوا بسرعة من غير أخطاء

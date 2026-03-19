@@ -136,8 +136,9 @@ export default function App() {
 
   useEffect(() => { document.documentElement.dir = i18n.language.startsWith('ar') ? 'rtl' : 'ltr'; document.documentElement.lang = i18n.language; }, [i18n.language]);
 
-  // انتظر التحقق من الجلسة قبل عرض أي شيء
-  if (!authChecked) return <PageLoader />;
+  // لو المستخدم مكانش logged in قبل كده → انتظر التحقق
+  // لو كان logged in → اعرض الأبلكيشن فورًا والـ checkAuth يشتغل في الخلفية
+  if (!authChecked && !isAuthenticated) return <PageLoader />;
 
   if (isAuthenticated && user?.isFirstLogin) {
     return (
