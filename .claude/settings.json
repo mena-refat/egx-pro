@@ -92,7 +92,8 @@
       "Bash(find c:/Users/menar/Desktop/egx-pro -path */.vite/deps*qrcode*)",
       "Bash(find c:/Users/menar/Desktop/egx-pro -path */.vite* -name *.json)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\(''''optimized'''',{}\\).keys\\(\\)\\)[:20]\\)\")",
-      "Bash(find c:/Users/menar/Desktop/egx-pro/admin -path */.vite*)"
+      "Bash(find c:/Users/menar/Desktop/egx-pro/admin -path */.vite*)",
+      "Bash(grep -v \"map$\")"
     ]
   }
 }

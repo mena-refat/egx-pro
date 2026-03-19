@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { useAdminStore } from '../store/adminAuthStore';
 import { Eye, EyeOff, Copy, Check, Shield, Smartphone, KeyRound } from 'lucide-react';
-import QRCode from 'qrcode';
+import { toDataURL as qrToDataURL } from 'qrcode';
 
 interface AdminMe {
   id: number;
@@ -60,7 +60,7 @@ export default function AdminAccountPage() {
 
   useEffect(() => {
     if (twoFaSetup?.otpauthUrl) {
-      QRCode.toDataURL(twoFaSetup.otpauthUrl, { width: 200, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
+      qrToDataURL(twoFaSetup.otpauthUrl, { width: 200, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
         .then(setQrDataUrl)
         .catch(() => setQrDataUrl(null));
     } else {

@@ -19,6 +19,9 @@ export default defineConfig({
     },
     dedupe: ['react', 'react-dom'],
   },
+  optimizeDeps: {
+    include: ['qrcode'],
+  },
   server: {
     port: 3001,
     proxy: {
