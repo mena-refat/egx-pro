@@ -87,7 +87,12 @@
       "Bash(node -e \"const l = require\\(''./node_modules/lucide-react''\\); [''Eye'',''EyeOff'',''Copy'',''Check'',''Shield'',''Smartphone'',''KeyRound''].forEach\\(n => console.log\\(n, typeof l[n]\\)\\)\")",
       "Bash(grep -o [a-zA-Z_]*.toDataURL c:/Users/menar/Desktop/egx-pro/dist/admin/assets/AdminAccountPage-bOA9fwXH.js)",
       "Bash(grep -n \"^import \" admin/src/pages/*.tsx)",
-      "Bash(node -e \"const l = require\\(''./node_modules/lucide-react''\\); console.log\\(''Smartphone:'', !!l.Smartphone, ''KeyRound:'', !!l.KeyRound, ''Shield:'', !!l.Shield, ''Check:'', !!l.Check, ''Copy:'', !!l.Copy\\)\")"
+      "Bash(node -e \"const l = require\\(''./node_modules/lucide-react''\\); console.log\\(''Smartphone:'', !!l.Smartphone, ''KeyRound:'', !!l.KeyRound, ''Shield:'', !!l.Shield, ''Check:'', !!l.Check, ''Copy:'', !!l.Copy\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\([k for k in d.get\\(''''optimized'''',{}\\).keys\\(\\) if ''''qrcode'''' in k]\\)\")",
+      "Bash(find c:/Users/menar/Desktop/egx-pro -path */.vite/deps*qrcode*)",
+      "Bash(find c:/Users/menar/Desktop/egx-pro -path */.vite* -name *.json)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\(''''optimized'''',{}\\).keys\\(\\)\\)[:20]\\)\")",
+      "Bash(find c:/Users/menar/Desktop/egx-pro/admin -path */.vite*)"
     ]
   }
 }
