@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Platform } from 'react-native';
-import * as RNIap from 'react-native-iap';
 import apiClient from '../lib/api/client';
 
 export type IAPPlanKey = 'pro_monthly' | 'pro_yearly' | 'ultra_monthly' | 'ultra_yearly';
@@ -12,35 +11,43 @@ const PRODUCT_IDS: Record<IAPPlanKey, string> = {
   ultra_yearly: 'borsa_ultra_yearly',
 };
 
+// Lazy-load react-native-iap so the app doesn't crash when running in Expo Go
+// (react-native-iap requires a native build via EAS Build)
+let RNIap: typeof import('react-native-iap') | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  RNIap = require('react-native-iap');
+} catch {
+  // Not available in Expo Go or when not yet installed — billing will fall back to email
+}
+
 export function useGooglePlayBilling() {
   const [connected, setConnected] = useState(false);
   const [purchasing, setPurchasing] = useState<IAPPlanKey | null>(null);
-  const [subscriptions, setSubscriptions] = useState<RNIap.Subscription[]>([]);
+  const [subscriptions, setSubscriptions] = useState<import('react-native-iap').Subscription[]>([]);
 
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    if (Platform.OS !== 'android' || !RNIap) return;
 
-    let purchaseUpdateSub: ReturnType<typeof RNIap.purchaseUpdatedListener> | null = null;
-    let purchaseErrorSub: ReturnType<typeof RNIap.purchaseErrorListener> | null = null;
+    let purchaseUpdateSub: { remove: () => void } | null = null;
+    let purchaseErrorSub: { remove: () => void } | null = null;
 
     const setup = async () => {
       try {
-        await RNIap.initConnection();
+        await RNIap!.initConnection();
         setConnected(true);
-
-        const subs = await RNIap.getSubscriptions({ skus: Object.values(PRODUCT_IDS) });
+        const subs = await RNIap!.getSubscriptions({ skus: Object.values(PRODUCT_IDS) });
         setSubscriptions(subs);
       } catch {
         setConnected(false);
       }
     };
 
-    purchaseUpdateSub = RNIap.purchaseUpdatedListener(async (purchase) => {
-      // Handled in purchasePlan
-      void purchase;
+    purchaseUpdateSub = RNIap!.purchaseUpdatedListener(async (purchase) => {
+      void purchase; // handled inside purchasePlan
     });
 
-    purchaseErrorSub = RNIap.purchaseErrorListener((err) => {
+    purchaseErrorSub = RNIap!.purchaseErrorListener((err) => {
       console.warn('IAP error', err);
     });
 
@@ -49,42 +56,37 @@ export function useGooglePlayBilling() {
     return () => {
       purchaseUpdateSub?.remove();
       purchaseErrorSub?.remove();
-      RNIap.endConnection();
+      RNIap?.endConnection();
     };
   }, []);
 
   const purchasePlan = useCallback(async (planKey: IAPPlanKey): Promise<'success' | 'cancelled' | 'error'> => {
-    if (Platform.OS !== 'android') return 'error';
+    if (Platform.OS !== 'android' || !RNIap) return 'error';
 
     const productId = PRODUCT_IDS[planKey];
     setPurchasing(planKey);
 
     try {
-      // Get offer token for this product (required for Google Play Billing v5+)
       const sub = subscriptions.find((s) => s.productId === productId);
-      const offerToken = (sub as any)?.subscriptionOfferDetails?.[0]?.offerToken;
+      const offerToken = (sub as any)?.subscriptionOfferDetails?.[0]?.offerToken as string | undefined;
 
-      const purchase = await RNIap.requestSubscription({
+      const purchase = await RNIap!.requestSubscription({
         sku: productId,
         ...(offerToken ? { subscriptionOffers: [{ sku: productId, offerToken }] } : {}),
       });
 
-      if (!purchase || Array.isArray(purchase)) {
-        return 'cancelled';
-      }
+      if (!purchase || Array.isArray(purchase)) return 'cancelled';
 
       const purchaseToken = (purchase as any).purchaseToken as string;
       if (!purchaseToken) return 'error';
 
-      // Verify with server
       await apiClient.post('/api/billing/google-play/verify', {
         purchaseToken,
         productId,
         plan: planKey,
       });
 
-      // Acknowledge/finish transaction
-      await RNIap.finishTransaction({ purchase, isConsumable: false });
+      await RNIap!.finishTransaction({ purchase, isConsumable: false });
 
       return 'success';
     } catch (err: unknown) {

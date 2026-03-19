@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, Pressable, Share, I18nManager,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import {
   ArrowLeft, ArrowRight, Gift, Users, Crown,
@@ -41,6 +42,7 @@ export default function ReferralPage() {
   const { colors } = useTheme();
   const [data, setData] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
   const mountedRef = useRef(true);
   const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
 
@@ -65,9 +67,11 @@ export default function ReferralPage() {
     return () => ctrl.abort();
   }, [load]);
 
-  const copyCode = () => {
+  const copyCode = async () => {
     if (!data?.referralCode) return;
-    void Share.share({ message: data.referralCode, title: 'كود الإحالة' });
+    await Clipboard.setStringAsync(data.referralCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const shareCode = async () => {
@@ -146,10 +150,12 @@ export default function ReferralPage() {
                 <Pressable
                   onPress={copyCode}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  style={{ backgroundColor: '#8b5cf618' }}
+                  style={{ backgroundColor: copied ? '#4ade8018' : '#8b5cf618' }}
                   className="w-9 h-9 rounded-xl items-center justify-center"
                 >
-                  <Copy size={16} color="#8b5cf6" />
+                  {copied
+                    ? <Check size={16} color="#4ade80" />
+                    : <Copy size={16} color="#8b5cf6" />}
                 </Pressable>
               </View>
 

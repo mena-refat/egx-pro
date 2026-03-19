@@ -216,7 +216,7 @@ export default function ProfilePage() {
         {/* ─── Security ─── */}
         <Section title="الأمان">
           <MenuItem icon={Shield}      label="الأمان والخصوصية"  sub="كلمة المرور و2FA"                 onPress={() => router.push('/settings/security')}      iconColor="#f59e0b" />
-          <MenuItem icon={Fingerprint} label="البصمة / Face ID"  sub="تسجيل الدخول البيومتري"           onPress={() => router.push('/settings/biometric')}     iconColor="#3b82f6" />
+          <MenuItem icon={Fingerprint} label="البصمة والـ PIN"    sub="ادخل بسرعة بالبصمة أو PIN"       onPress={() => router.push('/settings/biometric')}     iconColor="#3b82f6" />
         </Section>
 
         {/* ─── Support & Notifications ─── */}

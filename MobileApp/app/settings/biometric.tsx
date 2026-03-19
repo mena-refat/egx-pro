@@ -149,7 +149,7 @@ export default function BiometricPage() {
     : 'أدخل رمز PIN الحالي';
 
   const pinStepSub = pinStep === 'enter'
-    ? 'اختر رمزاً مكوناً من 4 أرقام'
+    ? 'اختر رمزاً مكوناً من 6 أرقام'
     : pinStep === 'confirm'
     ? 'أعد إدخال الرمز للتأكيد'
     : 'أدخل رمزك الحالي لتعطيله';
@@ -172,7 +172,7 @@ export default function BiometricPage() {
           {pinStep !== 'idle' ? <Hash size={15} color="#8b5cf6" /> : <Fingerprint size={15} color="#8b5cf6" />}
         </View>
         <Text style={{ color: colors.text }} className="text-base font-bold">
-          {pinStep !== 'idle' ? 'إعداد PIN' : 'البصمة / Face ID'}
+          {pinStep !== 'idle' ? 'إعداد PIN' : 'البصمة والـ PIN'}
         </Text>
       </View>
 
@@ -189,7 +189,6 @@ export default function BiometricPage() {
 
           <OTPInput
             key={pinInputKey}
-            length={4}
             onComplete={handlePinComplete}
             error={Boolean(pinError)}
           />
@@ -225,7 +224,7 @@ export default function BiometricPage() {
                 {!supported
                   ? 'جهازك لا يدعم المصادقة البيومترية'
                   : !enrolled
-                    ? 'أضف بصمة أو Face ID في إعدادات الجهاز أولاً'
+                    ? 'أضف بصمة في إعدادات الجهاز أولاً'
                     : biometricEnabled
                       ? 'يمكنك الدخول للتطبيق بدون كلمة مرور'
                       : 'فعّل للدخول بسرعة وأمان'}
@@ -269,8 +268,8 @@ export default function BiometricPage() {
               </Text>
               <Text style={{ color: colors.textSub }} className="text-sm text-center leading-5">
                 {pinEnabled
-                  ? 'يمكنك الدخول للتطبيق برمز 4 أرقام'
-                  : 'فعّل للدخول برمز سري من 4 أرقام'}
+                  ? 'يمكنك الدخول للتطبيق برمز 6 أرقام'
+                  : 'فعّل للدخول برمز سري من 6 أرقام'}
               </Text>
             </View>
 

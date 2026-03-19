@@ -1,6 +1,6 @@
 import { View, Text, Pressable, ScrollView, I18nManager } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight, Fingerprint, Shield, ChevronRight, ChevronLeft } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Fingerprint, ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 
 export default function SecurityPage() {
@@ -25,29 +25,19 @@ export default function SecurityPage() {
         <View className="bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden">
           <Pressable
             onPress={() => router.push('/settings/biometric')}
-            className="flex-row items-center gap-3 px-4 py-4 border-b border-[#21262d] active:bg-white/[0.03]"
+            className="flex-row items-center gap-3 px-4 py-4 active:bg-white/[0.03]"
           >
             <View className="w-8 h-8 rounded-xl bg-white/[0.05] items-center justify-center">
               <Fingerprint size={15} color="#8b949e" />
             </View>
             <View className="flex-1">
-              <Text className="text-sm font-medium text-[#e6edf3]">تسجيل الدخول بالبصمة</Text>
-              <Text className="text-xs text-[#656d76] mt-0.5">استخدم بصمتك لتسجيل الدخول بسرعة</Text>
+              <Text className="text-sm font-medium text-[#e6edf3]">البصمة والـ PIN</Text>
+              <Text className="text-xs text-[#656d76] mt-0.5">ادخل بسرعة عبر البصمة أو رمز 6 أرقام</Text>
             </View>
             {I18nManager.isRTL
               ? <ChevronLeft size={14} color="#30363d" />
               : <ChevronRight size={14} color="#30363d" />}
           </Pressable>
-
-          <View className="flex-row items-center gap-3 px-4 py-4">
-            <View className="w-8 h-8 rounded-xl bg-white/[0.05] items-center justify-center">
-              <Shield size={15} color="#8b949e" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm font-medium text-[#e6edf3]">المصادقة الثنائية (2FA)</Text>
-              <Text className="text-xs text-[#f59e0b] mt-0.5">قريباً — حماية إضافية لحسابك</Text>
-            </View>
-          </View>
         </View>
       </ScrollView>
     </ScreenWrapper>

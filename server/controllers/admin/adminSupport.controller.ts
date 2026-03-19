@@ -96,6 +96,8 @@ export const AdminSupportController = {
       return;
     }
 
+    if (existing.escalatedAt) { sendError(res, 'ALREADY_ESCALATED', 400); return; }
+
     if (!isManager(req.admin) && existing.assignedTo !== req.admin!.id) {
       sendError(res, 'ADMIN_FORBIDDEN', 403);
       return;
@@ -227,11 +229,11 @@ export const AdminSupportController = {
           }),
         ]);
 
-        // Avg response time: from assignedAt → repliedAt
-        const respondedTickets = await prisma.supportTicket.findMany({
+        // Avg response time: from assignedAt → repliedAt (only valid records where reply came after assignment)
+        const respondedTickets = (await prisma.supportTicket.findMany({
           where: { assignedTo: agent.id, assignedAt: { not: null }, repliedAt: { not: null } },
           select: { assignedAt: true, repliedAt: true },
-        });
+        })).filter((t) => t.repliedAt!.getTime() > t.assignedAt!.getTime());
 
         const avgResponseHours =
           respondedTickets.length > 0
@@ -258,10 +260,10 @@ export const AdminSupportController = {
     // ── Manager performance stats ─────────────────────────────────
     let assignedTickets: { createdAt: Date; assignedAt: Date | null; status: string }[] = [];
     if (agentIds.length > 0) {
-      assignedTickets = await prisma.supportTicket.findMany({
+      assignedTickets = (await prisma.supportTicket.findMany({
         where: { assignedTo: { in: agentIds }, assignedAt: { not: null } },
         select: { createdAt: true, assignedAt: true, status: true },
-      });
+      })).filter((t) => t.assignedAt!.getTime() > t.createdAt.getTime());
     }
 
     const avgAssignmentHours =
@@ -337,10 +339,10 @@ export const AdminSupportController = {
       }),
     ]);
 
-    const respondedTickets = await prisma.supportTicket.findMany({
+    const respondedTickets = (await prisma.supportTicket.findMany({
       where: { assignedTo: id, assignedAt: { not: null }, repliedAt: { not: null } },
       select: { assignedAt: true, repliedAt: true },
-    });
+    })).filter((t) => t.repliedAt!.getTime() > t.assignedAt!.getTime());
 
     const avgResponseHours =
       respondedTickets.length > 0
@@ -394,10 +396,10 @@ export const AdminSupportController = {
         prisma.supportTicket.count({ where: { assignedTo: { in: agentIds }, status: { in: ['RESOLVED', 'CLOSED'] } } }),
       ]);
 
-      const assignedTickets = await prisma.supportTicket.findMany({
+      const assignedTickets = (await prisma.supportTicket.findMany({
         where: { assignedTo: { in: agentIds }, assignedAt: { not: null } },
         select: { createdAt: true, assignedAt: true },
-      });
+      })).filter((t) => t.assignedAt!.getTime() > t.createdAt.getTime());
 
       const avgAssignmentHours =
         assignedTickets.length > 0
@@ -432,10 +434,14 @@ export const AdminSupportController = {
       return;
     }
 
-    const ticket = await prisma.supportTicket.findUnique({ where: { id }, select: { assignedTo: true, escalatedAt: true } });
+    const ticket = await prisma.supportTicket.findUnique({ where: { id }, select: { assignedTo: true, escalatedAt: true, status: true } });
     if (!ticket) { sendError(res, 'NOT_FOUND', 404); return; }
     if (ticket.assignedTo !== req.admin!.id) { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
     if (ticket.escalatedAt) { sendError(res, 'ALREADY_ESCALATED', 400); return; }
+    if (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') {
+      sendError(res, 'TICKET_ALREADY_CLOSED', 400);
+      return;
+    }
 
     // Get the agent's manager
     const agent = await prisma.admin.findUnique({ where: { id: req.admin!.id }, select: { managerId: true } });

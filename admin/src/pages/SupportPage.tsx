@@ -185,12 +185,15 @@ export default function SupportPage() {
   const isSuperAdmin = currentAdmin?.role === 'SUPER_ADMIN';
 
   /* Permissions */
+  const hasManage = isSuperAdmin || !!(currentAdmin?.permissions?.includes('support.manage'));
   const canReply =
     isSuperAdmin ||
     currentAdmin?.permissions?.includes('support.reply') ||
-    currentAdmin?.permissions?.includes('support.manage');
-  const canAssign = isSuperAdmin || currentAdmin?.permissions?.includes('support.assign') || currentAdmin?.permissions?.includes('support.manage');
-  const managerMode = isSuperAdmin || !!(currentAdmin?.permissions?.includes('support.manage'));
+    hasManage;
+  const canAssign = isSuperAdmin || currentAdmin?.permissions?.includes('support.assign') || hasManage;
+  const managerMode = hasManage;
+  // Agents can escalate: they have support.reply but NOT support.manage/super-admin
+  const canEscalate = !!(currentAdmin?.permissions?.includes('support.reply')) && !hasManage;
 
   /* View state */
   const [view, setView]                   = useState<'tickets' | 'team'>('tickets');
@@ -678,8 +681,9 @@ export default function SupportPage() {
                     </button>
                   )}
 
-                  {/* Escalate button — agents only, assigned to current agent, not yet escalated */}
-                  {!managerMode && canReply && selected.assignedTo === currentAdmin?.id && !selected.escalatedAt && (
+                  {/* Escalate button — agents only, assigned to them, not yet escalated, ticket still open/in-progress */}
+                  {canEscalate && selected.assignedTo === currentAdmin?.id && !selected.escalatedAt &&
+                   (selected.status === 'OPEN' || selected.status === 'IN_PROGRESS') && (
                     <button
                       onClick={() => { setEscalateTarget(selected); setEscalateNote(''); setEscalateError(''); }}
                       className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-orange-500/25 text-orange-400 hover:bg-orange-500/10 transition-all"
@@ -687,8 +691,8 @@ export default function SupportPage() {
                       <ArrowUpCircle size={12} /> {t('support.escalate')}
                     </button>
                   )}
-                  {/* Escalated label */}
-                  {!managerMode && selected.escalatedAt && (
+                  {/* Escalated label — show agent their ticket was escalated */}
+                  {canEscalate && selected.escalatedAt && (
                     <div className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs rounded-lg border border-orange-500/15 bg-orange-500/5 text-orange-400">
                       <ArrowUpCircle size={12} /> {t('support.escalated')} · {timeAgo(selected.escalatedAt)}
                     </div>

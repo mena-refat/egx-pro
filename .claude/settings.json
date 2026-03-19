@@ -38,7 +38,8 @@
       "Bash(curl -s -X POST http://localhost:3000/api/admin/auth/login -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"sgr@gmail.com\"\",\"\"password\"\":\"\"AdminPass@2024!!\"\"}')",
       "Bash(node_modules/.bin/tsc --noEmit --project tsconfig.json)",
       "Bash(node_modules/.bin/tsc --noEmit --rootDir admin/src --target ESNext --moduleResolution bundler --jsx react-jsx --strict false --allowImportingTsExtensions false)",
-      "Bash(find /c/Users/menar/Desktop/egx-pro/MobileApp -name *support* -type f)"
+      "Bash(find /c/Users/menar/Desktop/egx-pro/MobileApp -name *support* -type f)",
+      "Bash(npm run:*)"
     ]
   }
 }

@@ -21,10 +21,34 @@ import {
 export function AdminLayout() {
   const { t, i18n } = useTranslation();
   const admin   = useAdminStore((s) => s.admin);
+  const token   = useAdminStore((s) => s.token);
+  const setAuth = useAdminStore((s) => s.setAuth);
   const logout  = useAdminStore((s) => s.logout);
   const hasP    = useAdminStore((s) => s.hasPermission);
   const nav     = useNavigate();
   const [openTickets, setOpenTickets] = useState(0);
+
+  // Refresh permissions from server on every mount so stale store data is corrected
+  useEffect(() => {
+    if (!token || !admin) return;
+    adminApi
+      .get('/auth/me')
+      .then((r) => {
+        const fresh = r.data.data;
+        if (fresh && token) {
+          setAuth(token, {
+            id: fresh.id,
+            email: fresh.email,
+            fullName: fresh.fullName,
+            role: fresh.role,
+            permissions: fresh.permissions ?? [],
+            mustChangePassword: fresh.mustChangePassword ?? false,
+            mustSetup2FA: (fresh.mustSetup2FA && !fresh.twoFactorEnabled) ?? false,
+          });
+        }
+      })
+      .catch(() => null);
+  }, []); // eslint-disable-line
 
   const NAV = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard, permission: 'analytics.view', end: true },

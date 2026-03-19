@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Linking, Alert, I18nManager } from 'react-native';
+import { View, Text, ScrollView, Pressable, Linking, Alert, I18nManager, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Crown, Zap, Check } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
+import { useGooglePlayBilling } from '../../hooks/useGooglePlayBilling';
+import type { IAPPlanKey } from '../../hooks/useGooglePlayBilling';
+import apiClient from '../../lib/api/client';
 
 type BillingPeriod = 'monthly' | 'yearly';
 
@@ -58,9 +61,10 @@ const PLANS = [
 
 export default function SubscriptionPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const { colors } = useTheme();
   const [billing, setBilling] = useState<BillingPeriod>('monthly');
+  const { connected, purchasing, purchasePlan } = useGooglePlayBilling();
 
   const currentPlan = user?.plan ?? 'free';
 
@@ -85,16 +89,36 @@ export default function SubscriptionPage() {
     return { saved, pct };
   };
 
-  const handleUpgrade = (planLabel: string, isYearly: boolean) => {
-    const billingNote = isYearly ? ' (سنوي)' : ' (شهري)';
-    Alert.alert(
-      `ترقية لـ ${planLabel}${billingNote}`,
-      'للترقية تواصل معنا عبر البريد الإلكتروني أو واتساب وسنرسل لك رابط الدفع.',
-      [
-        { text: 'إلغاء', style: 'cancel' },
-        { text: 'تواصل معنا', onPress: () => Linking.openURL('mailto:support@borsa.app') },
-      ],
-    );
+  const handleUpgrade = async (planKey: string, isYearly: boolean) => {
+    const key = (billing === 'yearly'
+      ? planKey === 'pro' ? 'pro_yearly' : 'ultra_yearly'
+      : planKey === 'pro' ? 'pro_monthly' : 'ultra_monthly') as IAPPlanKey;
+
+    if (Platform.OS === 'android' && connected) {
+      const result = await purchasePlan(key);
+      if (result === 'success') {
+        // Refresh user plan
+        try {
+          const res = await apiClient.get('/api/billing/plan');
+          const data = (res.data as any)?.data ?? res.data;
+          if (data?.plan) updateUser({ plan: data.plan, planExpiresAt: data.planExpiresAt });
+        } catch { /* ignore */ }
+        Alert.alert('تم الاشتراك!', 'تم تفعيل اشتراكك بنجاح 🎉');
+      } else if (result === 'error') {
+        Alert.alert('خطأ', 'تعذّر إتمام عملية الشراء، حاول مرة أخرى');
+      }
+      // 'cancelled' → do nothing
+    } else {
+      // Fallback for iOS or non-connected
+      Alert.alert(
+        `ترقية لـ ${planKey}`,
+        'للترقية تواصل معنا عبر البريد الإلكتروني أو واتساب وسنرسل لك رابط الدفع.',
+        [
+          { text: 'إلغاء', style: 'cancel' },
+          { text: 'تواصل معنا', onPress: () => Linking.openURL('mailto:support@borsa.app') },
+        ],
+      );
+    }
   };
 
   return (
@@ -163,6 +187,10 @@ export default function SubscriptionPage() {
           const active = isActive(plan.id, plan.yearlyId);
           const price = getPrice(plan);
           const savings = getSavings(plan);
+          const planIAPKey = (billing === 'yearly'
+            ? plan.id === 'pro' ? 'pro_yearly' : 'ultra_yearly'
+            : plan.id === 'pro' ? 'pro_monthly' : 'ultra_monthly') as IAPPlanKey;
+          const isPurchasing = purchasing === planIAPKey;
 
           return (
             <View
@@ -221,12 +249,18 @@ export default function SubscriptionPage() {
 
               {!active && plan.id !== 'free' && (
                 <Pressable
-                  onPress={() => handleUpgrade(plan.label, billing === 'yearly')}
-                  className="py-2.5 rounded-xl items-center mt-1"
-                  style={{ backgroundColor: plan.color }}
+                  onPress={() => handleUpgrade(plan.id, billing === 'yearly')}
+                  disabled={isPurchasing}
+                  className="py-2.5 rounded-xl items-center mt-1 flex-row justify-center gap-2"
+                  style={{ backgroundColor: plan.color, opacity: isPurchasing ? 0.7 : 1 }}
                 >
+                  {isPurchasing ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : null}
                   <Text className="text-sm font-bold text-white">
-                    ترقية لـ {plan.label} {billing === 'yearly' ? '(سنوي)' : '(شهري)'}
+                    {isPurchasing
+                      ? 'جارٍ الشراء...'
+                      : `ترقية لـ ${plan.label} ${billing === 'yearly' ? '(سنوي)' : '(شهري)'}`}
                   </Text>
                 </Pressable>
               )}
@@ -234,8 +268,8 @@ export default function SubscriptionPage() {
           );
         })}
 
-        <Text style={{ color: colors.textMuted }} className="text-xs text-center leading-5">
-          للترقية تواصل معنا — الدفع عبر Paymob
+        <Text style={{ color: colors.textMuted }} className="text-xs text-center leading-5 px-4">
+          {Platform.OS === 'android' ? 'الدفع عبر جوجل بلاي • يُجدَّد تلقائياً' : 'للترقية تواصل معنا — الدفع عبر Paymob'}
         </Text>
       </ScrollView>
     </ScreenWrapper>

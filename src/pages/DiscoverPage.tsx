@@ -12,35 +12,34 @@ import {
   Bell,
 } from 'lucide-react';
 
+function UserListSkeleton() {
+  return (
+    <div className="space-y-2 animate-pulse">
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} className="flex items-center gap-3 p-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl">
+          <div className="w-10 h-10 rounded-full bg-[var(--bg-card-hover)] shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3 w-28 bg-[var(--bg-card-hover)] rounded-full" />
+            <div className="h-2.5 w-20 bg-[var(--bg-card-hover)] rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DiscoverSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      {/* Leaderboard skeleton */}
-      <div className="space-y-3">
-        <div className="h-4 w-32 bg-[var(--bg-card-hover)] rounded-full" />
+      <div className="space-y-2">
+        <div className="h-3.5 w-28 bg-[var(--bg-card-hover)] rounded-full mb-3" />
         {[1,2,3,4,5].map(i => (
           <div key={i} className="flex items-center gap-3 p-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl">
             <div className="w-6 h-6 rounded-full bg-[var(--bg-card-hover)] shrink-0" />
             <div className="w-9 h-9 rounded-full bg-[var(--bg-card-hover)] shrink-0" />
             <div className="flex-1 space-y-1.5">
               <div className="h-3 w-24 bg-[var(--bg-card-hover)] rounded-full" />
-              <div className="h-2.5 w-32 bg-[var(--bg-card-hover)] rounded-full" />
-            </div>
-          </div>
-        ))}
-      </div>
-      {/* Feed skeleton */}
-      <div className="space-y-3">
-        <div className="h-4 w-40 bg-[var(--bg-card-hover)] rounded-full" />
-        {[1,2,3].map(i => (
-          <div key={i} className="p-4 bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="h-3 w-20 bg-[var(--bg-card-hover)] rounded-full" />
-              <div className="h-5 w-14 bg-[var(--bg-card-hover)] rounded-full" />
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-12 bg-[var(--bg-card-hover)] rounded-full" />
-              <div className="h-3 w-20 bg-[var(--bg-card-hover)] rounded-full" />
+              <div className="h-2.5 w-36 bg-[var(--bg-card-hover)] rounded-full" />
             </div>
           </div>
         ))}
@@ -181,7 +180,7 @@ export default function DiscoverPage() {
       } catch {
         // ignore — cancelled or network error, just show empty state
       } finally {
-        if (mountedRef.current) setListLoading(false);
+        setListLoading(false);
       }
     },
     [accessToken]
@@ -199,10 +198,9 @@ export default function DiscoverPage() {
     const controller = new AbortController();
 
     void (async () => {
-      if (!mountedRef.current) return;
       setDiscoverLoading(true);
       // timeout 8s — never hang forever
-      const timeoutId = setTimeout(() => { if (mountedRef.current) setDiscoverLoading(false); }, 8000);
+      const timeoutId = setTimeout(() => setDiscoverLoading(false), 8000);
       try {
         const [lb, feed, fwrs, fwng, reqs] = await Promise.allSettled([
           api.get('/predictions/leaderboard?period=month&limit=5', {
@@ -216,7 +214,7 @@ export default function DiscoverPage() {
           api.get('/social/requests', { signal: controller.signal }),
         ]);
 
-        if (!mountedRef.current) return;
+        if (controller.signal.aborted) return;
 
         if (lb.status === 'fulfilled') {
           const d = lb.value.data?.data ?? lb.value.data;
@@ -256,7 +254,7 @@ export default function DiscoverPage() {
         // ignore — allSettled handles individual failures
       } finally {
         clearTimeout(timeoutId);
-        if (mountedRef.current) setDiscoverLoading(false);
+        setDiscoverLoading(false);
       }
     })();
 
@@ -540,9 +538,7 @@ export default function DiscoverPage() {
           {activeTab === 'followers' && (
             <div className={styles.listContent}>
               {listLoading ? (
-                <div className={styles.loader}>
-                  <Loader2 className={styles.spinnerLarge} aria-hidden />
-                </div>
+                <UserListSkeleton />
               ) : followers.length > 0 ? (
                 <ul className={styles.userList}>
                   {followers.map((u) => (
@@ -603,9 +599,7 @@ export default function DiscoverPage() {
           {activeTab === 'following' && (
             <div className={styles.listContent}>
               {listLoading ? (
-                <div className={styles.loader}>
-                  <Loader2 className={styles.spinnerLarge} aria-hidden />
-                </div>
+                <UserListSkeleton />
               ) : following.length > 0 ? (
                 <ul className={styles.userList}>
                   {following.map((u) => (
@@ -666,9 +660,7 @@ export default function DiscoverPage() {
           {activeTab === 'requests' && (
             <div className={styles.listContent}>
               {listLoading ? (
-                <div className={styles.loader}>
-                  <Loader2 className={styles.spinnerLarge} aria-hidden />
-                </div>
+                <UserListSkeleton />
               ) : requests.length > 0 ? (
                 <ul className={styles.userList}>
                   {requests.map((r) => (
