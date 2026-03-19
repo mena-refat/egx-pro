@@ -1,28 +1,27 @@
 {
-  "include": ["src", "server"],
-  "exclude": ["node_modules", "server/tests"],
+  "include": [
+    "packages/shared/src",
+    "packages/server/src",
+    "packages/web/src",
+    "packages/admin/src"
+  ],
+  "exclude": ["node_modules", "packages/server/src/tests"],
   "compilerOptions": {
     "target": "ES2022",
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
     "module": "ESNext",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",
     "allowJs": true,
     "jsx": "react-jsx",
-    "paths": {
-      "@/*": [
-        "./*"
-      ]
-    },
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./packages/web/*"]
+    }
   }
 }

@@ -4,7 +4,7 @@ import { prisma } from '../../lib/prisma.ts';
 import { sendSuccess, sendError } from '../../lib/apiResponse.ts';
 import { adminAudit, type AdminRequest } from '../../middleware/adminAuth.middleware.ts';
 import { deleteCache } from '../../lib/redis.ts';
-import { hashPassword } from '../../../src/lib/auth.ts';
+import { hashPassword } from '../../lib/auth.ts';
 import { EmailService } from '../../services/email.service.ts';
 
 function generateTempPassword(): string {

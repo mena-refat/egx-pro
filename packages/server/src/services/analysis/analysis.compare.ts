@@ -2,7 +2,7 @@ import { getCachedAnalysis, setCachedAnalysis, compareKey, personalCompareKey } 
 import { getAnalysisNewsCutoff } from '../../lib/cairo-date.ts';
 import { AnalysisRepository } from '../../repositories/analysis.repository.ts';
 import { AppError } from '../../lib/errors.ts';
-import { EGX_STOCKS } from '../../../src/lib/egxStocks.ts';
+import { EGX_STOCKS } from '../../lib/egxStocks.ts';
 import { marketDataService } from '../market-data/market-data.service.ts';
 import {
   nullFinancials,

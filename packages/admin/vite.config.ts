@@ -4,18 +4,17 @@ import { defineConfig } from 'vite';
 import path from 'path';
 
 export default defineConfig({
-  root: 'admin',
   plugins: [
     react(),
     tailwindcss(),
   ],
   build: {
-    outDir: '../dist/admin',
+    outDir: '../../dist/admin',
     emptyOutDir: false,
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'admin/src'),
+      '@': path.resolve(__dirname, 'src'),
     },
     dedupe: ['react', 'react-dom'],
   },
@@ -29,4 +28,3 @@ export default defineConfig({
     },
   },
 });
-

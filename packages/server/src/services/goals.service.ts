@@ -1,5 +1,5 @@
 import { UserRepository } from '../repositories/user.repository.ts';
-import { goalSchema, goalUpdateSchema, goalAmountSchema } from '../../src/lib/validations.ts';
+import { goalSchema, goalUpdateSchema, goalAmountSchema } from '../lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { getLimit } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';

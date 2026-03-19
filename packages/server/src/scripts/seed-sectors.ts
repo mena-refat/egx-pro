@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma.ts';
 import { GicsSector } from '@prisma/client';
-import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
+import { EGX_STOCKS } from '../lib/egxStocks.ts';
 import { getOfficialGics, getOfficialSharia } from '../lib/egxStockOfficialData.ts';
 
 // ─── 1) Name-based map (longest match wins per stock) ─────────────────────

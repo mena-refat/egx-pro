@@ -1,6 +1,6 @@
 import '../lib/dotenv.ts';
 import { prisma } from '../lib/prisma.ts';
-import { hashPassword } from '../../src/lib/auth.ts';
+import { hashPassword } from '../lib/auth.ts';
 
 async function main(): Promise<void> {
   const email = process.env.SUPER_ADMIN_EMAIL ?? 'admin@borsa.app';

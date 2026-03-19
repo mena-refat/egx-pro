@@ -13,7 +13,7 @@ function validatePassword(
   return null;
 }
 import { generateAdminToken } from '../../lib/adminAuth.ts';
-import { hashPassword, verifyPassword } from '../../../src/lib/auth.ts';
+import { hashPassword, verifyPassword } from '../../lib/auth.ts';
 import { adminAudit, type AdminRequest } from '../../middleware/adminAuth.middleware.ts';
 import { sendSuccess, sendError } from '../../lib/apiResponse.ts';
 

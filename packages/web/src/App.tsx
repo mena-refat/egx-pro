@@ -9,7 +9,7 @@ import { useProfileCompletion } from './hooks/useProfileCompletion';
 import { useDashboardStats } from './hooks/useDashboardStats';
 import { motion, AnimatePresence } from 'framer-motion';
 const OnboardingWizard = lazy(() => import('./components/OnboardingWizard'));
-import DelayNotice from './components/DelayNotice';
+import DelayNotice from './components/shared/DelayNotice';
 import DashboardPage from './pages/DashboardPage';
 import AuthPage from './pages/AuthPage';
 import { Sidebar } from './components/layout/Sidebar';

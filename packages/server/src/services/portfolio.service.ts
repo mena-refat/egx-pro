@@ -1,5 +1,5 @@
 import { marketDataService } from './market-data/market-data.service.ts';
-import { addHoldingSchema } from '../../src/lib/validations.ts';
+import { addHoldingSchema } from '../lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { getLimit } from '../lib/plan.ts';
 import { AppError } from '../lib/errors.ts';

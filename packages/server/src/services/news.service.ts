@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import type { NewsSourceType } from '@prisma/client';
-import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
+import { EGX_STOCKS } from '../lib/egxStocks.ts';
 import { logger } from '../lib/logger.ts';
 import { withRetry } from '../lib/retry.ts';
 import { NewsRepository } from '../repositories/news.repository.ts';

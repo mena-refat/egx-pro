@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import StockAnalysis from '../components/StockAnalysis';
+import StockAnalysis from '../components/features/stocks/StockAnalysis';
 import { Skeleton } from '../components/ui/Skeleton';
 import api from '../lib/api';
 import { Stock } from '../types';

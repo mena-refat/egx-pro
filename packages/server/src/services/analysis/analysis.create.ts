@@ -3,7 +3,7 @@ import { getAnalysisNewsCutoff, getAnalysisSessionDateString } from '../../lib/c
 import { AnalysisRepository } from '../../repositories/analysis.repository.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../../lib/achievementCheck.ts';
 import { AppError } from '../../lib/errors.ts';
-import { EGX_STOCKS } from '../../../src/lib/egxStocks.ts';
+import { EGX_STOCKS } from '../../lib/egxStocks.ts';
 import {
   nullFinancials,
   defaultMarketCtx,

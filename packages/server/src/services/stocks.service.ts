@@ -1,5 +1,5 @@
 import { getStockHistory, getFinancials, searchEgxStocks } from '../lib/stockData.ts';
-import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
+import { EGX_STOCKS } from '../lib/egxStocks.ts';
 import { EGX_TICKERS } from '../lib/egxTickers.ts';
 import { StockRepository } from '../repositories/stock.repository.ts';
 import type { GicsSector } from '@prisma/client';

@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.ts';
 import { sendSuccess, sendError } from '../../lib/apiResponse.ts';
 import { adminAudit, type AdminRequest } from '../../middleware/adminAuth.middleware.ts';
-import { hashPassword, verifyPassword } from '../../../src/lib/auth.ts';
+import { hashPassword, verifyPassword } from '../../lib/auth.ts';
 
 async function verifySuperAdminPassword(req: AdminRequest, confirmPassword?: string): Promise<boolean> {
   if (!confirmPassword || !req.admin) return false;

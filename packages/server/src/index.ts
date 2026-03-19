@@ -1,4 +1,4 @@
-import './server/lib/dotenv.ts';
+import './lib/dotenv.ts';
 
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
@@ -13,43 +13,43 @@ import { randomUUID } from 'crypto';
 import cron from 'node-cron';
 
 import * as Sentry from '@sentry/node';
-import { setupWebSocket } from './server/websocket.ts';
-import { validateEnv } from './server/lib/env.ts';
-import { logger } from './server/lib/logger.ts';
-import { RATE_LIMITS } from './server/lib/constants.ts';
-import { AppError } from './server/lib/errors.ts';
-import { sanitizeInput } from './server/lib/sanitize.ts';
-import authRoutes from './server/routes/auth.ts';
-import portfolioRoutes from './server/routes/portfolio.ts';
-import stocksRoutes from './server/routes/stocks.ts';
-import analysisRoutes from './server/routes/analysis.ts';
-import userRoutes from './server/routes/user.ts';
-import profileRoutes from './server/routes/profile.ts';
-import watchlistRoutes from './server/routes/watchlist.ts';
-import goalsRoutes from './server/routes/goals.ts';
-import notificationsRoutes from './server/routes/notifications.ts';
-import billingRoutes from './server/routes/billing.ts';
-import newsRoutes from './server/routes/news.ts';
-import referralRoutes from './server/routes/referral.ts';
-import socialRoutes from './server/routes/social.ts';
-import predictionsRoutes from './server/routes/predictions.ts';
-import adminRoutes from './server/routes/admin.ts';
-import supportRoutes from './server/routes/support.ts';
-import marketDataRoutes from './server/routes/market-data.ts';
-import { userApiLimiter } from './server/middleware/userRateLimit.middleware.ts';
-import { marketDataService } from './server/services/market-data/market-data.service.ts';
+import { setupWebSocket } from './websocket.ts';
+import { validateEnv } from './lib/env.ts';
+import { logger } from './lib/logger.ts';
+import { RATE_LIMITS } from './lib/constants.ts';
+import { AppError } from './lib/errors.ts';
+import { sanitizeInput } from './lib/sanitize.ts';
+import authRoutes from './routes/auth.ts';
+import portfolioRoutes from './routes/portfolio.ts';
+import stocksRoutes from './routes/stocks.ts';
+import analysisRoutes from './routes/analysis.ts';
+import userRoutes from './routes/user.ts';
+import profileRoutes from './routes/profile.ts';
+import watchlistRoutes from './routes/watchlist.ts';
+import goalsRoutes from './routes/goals.ts';
+import notificationsRoutes from './routes/notifications.ts';
+import billingRoutes from './routes/billing.ts';
+import newsRoutes from './routes/news.ts';
+import referralRoutes from './routes/referral.ts';
+import socialRoutes from './routes/social.ts';
+import predictionsRoutes from './routes/predictions.ts';
+import adminRoutes from './routes/admin.ts';
+import supportRoutes from './routes/support.ts';
+import marketDataRoutes from './routes/market-data.ts';
+import { userApiLimiter } from './middleware/userRateLimit.middleware.ts';
+import { marketDataService } from './services/market-data/market-data.service.ts';
 import swaggerUi from 'swagger-ui-express';
-import { swaggerDocument } from './server/lib/swagger.ts';
-import { prisma } from './server/lib/prisma.ts';
-import { redis } from './server/lib/redis.ts';
-import { EGX_TICKERS } from './server/lib/egxTickers.ts';
-import { runResolvePredictions } from './server/jobs/resolve-predictions.ts';
-import { runTrackRecordCheck } from './server/jobs/track-record.ts';
-import { runNewsSyncJob } from './server/jobs/sync-news.ts';
-import { runArchiveUsersJob } from './server/jobs/archive-users.ts';
-import { runResetAiUsageJob } from './server/jobs/reset-ai-usage.ts';
-import { runDelayedPricesJob, DELAYED_PRICES_INTERVAL_MS } from './server/jobs/delayed-prices.ts';
-import { runScheduledNotificationsJob } from './server/jobs/scheduled-notifications.ts';
+import { swaggerDocument } from './lib/swagger.ts';
+import { prisma } from './lib/prisma.ts';
+import { redis } from './lib/redis.ts';
+import { EGX_TICKERS } from './lib/egxTickers.ts';
+import { runResolvePredictions } from './jobs/resolve-predictions.ts';
+import { runTrackRecordCheck } from './jobs/track-record.ts';
+import { runNewsSyncJob } from './jobs/sync-news.ts';
+import { runArchiveUsersJob } from './jobs/archive-users.ts';
+import { runResetAiUsageJob } from './jobs/reset-ai-usage.ts';
+import { runDelayedPricesJob, DELAYED_PRICES_INTERVAL_MS } from './jobs/delayed-prices.ts';
+import { runScheduledNotificationsJob } from './jobs/scheduled-notifications.ts';
 
 async function startServer() {
   if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
@@ -146,7 +146,7 @@ async function startServer() {
   });
 
   // Static uploads (avatars, etc.)
-  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
   // Rate Limiting — always respond with JSON so the client never gets "Too many requests" as plain text
   const ipKey = (req: express.Request) => ipKeyGenerator(req.ip ?? 'unknown');

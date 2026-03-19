@@ -94,6 +94,9 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\(''''optimized'''',{}\\).keys\\(\\)\\)[:20]\\)\")",
       "Bash(find c:/Users/menar/Desktop/egx-pro/admin -path */.vite*)",
       "Bash(grep -v \"map$\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\menar\\Desktop\\src\\lib\\lib"
     ]
   }
 }

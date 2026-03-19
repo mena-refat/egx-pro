@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import { verifyAccessToken } from '../../src/lib/auth.ts';
+import { verifyAccessToken } from '../lib/auth.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { getCache, setCache } from '../lib/redis.ts';
 import type { AuthRequest } from '../routes/types.ts';

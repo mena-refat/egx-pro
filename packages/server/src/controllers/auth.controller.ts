@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import crypto from 'crypto';
-import { verifyAccessToken } from '../../src/lib/auth.ts';
+import { verifyAccessToken } from '../lib/auth.ts';
 import * as AuthService from '../services/auth.service.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { getCache, setCache, deleteCache } from '../lib/redis.ts';

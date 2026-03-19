@@ -12,6 +12,7 @@ import {
   Bell,
 } from 'lucide-react';
 
+
 function UserListSkeleton() {
   return (
     <div className="space-y-2 animate-pulse">
@@ -50,9 +51,8 @@ function DiscoverSkeleton() {
 import { useAuthStore } from '../store/authStore';
 import { useDiscoverSearch } from '../hooks/useDiscoverSearch';
 import { useDiscoverAutocomplete } from '../hooks/useDiscoverAutocomplete';
-import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { DiscoverAutocompleteDropdown } from '../components/features/discover/DiscoverAutocompleteDropdown';
+import { DiscoverSearchBar } from '../components/features/discover/DiscoverSearchBar';
 import { DiscoverResultsList } from '../components/features/discover/DiscoverResultsList';
 import EmptyState from '../components/shared/EmptyState';
 import { DISCOVER } from '../lib/constants';
@@ -335,43 +335,23 @@ export default function DiscoverPage() {
       <p className={styles.subtitle}>{t('social.discoverPage.subtitle')}</p>
 
       {/* ══ Search ══ */}
-      <div className={styles.searchWrap}>
-        <Input
-          ref={inputRef}
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onFocus={() => {
-            if (
-              query.trim().length >= DISCOVER.minUsernameLength &&
-              (suggestions.length > 0 || autoLoading)
-            )
-              setDropOpen(true);
-          }}
-          placeholder={t('social.discoverPage.searchPlaceholder')}
-          aria-label={t('social.discoverPage.searchAria')}
-          icon={
-            autoLoading || searchLoading ? (
-              <Loader2 className={styles.spinner} aria-hidden />
-            ) : (
-              <Search style={{ width: '1.25rem', height: '1.25rem' }} aria-hidden />
-            )
-          }
-          iconPosition={isRtl ? 'right' : 'left'}
-          wrapperClassName={styles.inputWrapper}
-        />
-        {showDrop && (
-          <DiscoverAutocompleteDropdown
-            suggestions={suggestions}
-            loading={autoLoading}
-            query={query}
-            highlightedIndex={highlightedIndex}
-            dropdownRef={dropdownRef}
-            onSelect={handleSelect}
-          />
-        )}
-      </div>
+      <DiscoverSearchBar
+        query={query}
+        setQuery={setQuery}
+        searchLoading={searchLoading}
+        autoLoading={autoLoading}
+        suggestions={suggestions}
+        showDrop={showDrop}
+        setDropOpen={setDropOpen}
+        highlightedIndex={highlightedIndex}
+        inputRef={inputRef}
+        dropdownRef={dropdownRef}
+        handleSelect={handleSelect}
+        handleKeyDown={handleKeyDown}
+        minUsernameLength={DISCOVER.minUsernameLength}
+        isRtl={isRtl}
+        t={t}
+      />
 
       {/* ══ Search Results (overlay) ══ */}
       {isSearchActive ? (

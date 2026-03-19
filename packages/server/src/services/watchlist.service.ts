@@ -1,5 +1,5 @@
 import { UserRepository } from '../repositories/user.repository.ts';
-import { watchlistTickerSchema, watchlistCheckTargetsSchema } from '../../src/lib/validations.ts';
+import { watchlistTickerSchema, watchlistCheckTargetsSchema } from '../lib/validations.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../lib/achievementCheck.ts';
 import { createNotification } from '../lib/createNotification.ts';
 import { isPaid, getLimit } from '../lib/plan.ts';

@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { z } from 'zod';
-import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
+import { EGX_STOCKS } from '../lib/egxStocks.ts';
 import { getCache, setCache } from '../lib/redis.ts';
 import { analysisEngine } from './ai/index.ts';
 import { NEWS_EXTRACTION_SYSTEM, NEWS_IMPACT_SYSTEM, NEWS_SUMMARY_SYSTEM } from '../lib/newsAnalysisPrompts.ts';

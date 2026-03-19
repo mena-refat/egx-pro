@@ -11,7 +11,7 @@ import {
   hashRefreshToken,
   generate2FATempToken,
   verify2FATempToken,
-} from '../../src/lib/auth.ts';
+} from '../lib/auth.ts';
 import {
   registerSchema,
   loginSchema,
@@ -20,7 +20,7 @@ import {
   isValidEgyptianPhone,
   validateRegisterPassword,
   validateChangePassword,
-} from '../../src/lib/validations.ts';
+} from '../lib/validations.ts';
 import { auditLog, type AuditReq } from '../lib/audit.ts';
 import { getCache, setCache, deleteCache } from '../lib/redis.ts';
 import { EmailService } from './email.service.ts';

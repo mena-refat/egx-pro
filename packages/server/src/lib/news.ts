@@ -1,4 +1,4 @@
-import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
+import { EGX_STOCKS } from '../lib/egxStocks.ts';
 import { NewsService } from '../services/news.service.ts';
 
 export async function getStockNews(companyNameOrTicker: string, publishedBefore?: Date) {
