@@ -270,7 +270,7 @@ function AddHoldingModal({
             }}>
               <Text style={{ color: colors.textSub, fontSize: 13 }}>إجمالي الشراء</Text>
               <Text style={{ color: '#8b5cf6', fontSize: 16, fontWeight: '700' }}>
-                {(parseInt(shares) * parseFloat(price)).toLocaleString('ar-EG', { maximumFractionDigits: 2 })} EGP
+                {(parseInt(shares) * parseFloat(price)).toLocaleString('en-US', { maximumFractionDigits: 2 })} EGP
               </Text>
             </View>
           )}
@@ -394,16 +394,16 @@ function HoldingRow({
             {getStockName(holding.ticker, 'ar')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
-            {holding.shares.toLocaleString()} سهم · متوسط {holding.avgPrice.toFixed(2)}
+            {holding.shares.toLocaleString('en-US')} سهم · متوسط {holding.avgPrice.toFixed(2)}
           </Text>
         </View>
 
         {/* Value + PnL */}
-        <View style={{ alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+        <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end', gap: 4, flexShrink: 0 }}>
           <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
             {value >= 1000
               ? (value / 1000).toFixed(1) + 'K'
-              : value.toLocaleString('ar-EG', { maximumFractionDigits: 0 })}
+              : value.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '400' }}> EGP</Text>
           </Text>
           <View style={{
@@ -619,7 +619,7 @@ export default function PortfolioPage() {
                 }}>
                   <Text style={{ color: colors.textMuted, fontSize: 12 }}>إجمالي المحفظة</Text>
                   <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
-                    {summary.totalValue.toLocaleString('ar-EG', { maximumFractionDigits: 0 })} EGP
+                    {summary.totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 })} EGP
                   </Text>
                 </View>
               </>
@@ -735,10 +735,10 @@ export default function PortfolioPage() {
                     {/* Amounts */}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                       <Text style={{ color: colors.textMuted, fontSize: 11 }}>
-                        {g.currentAmount.toLocaleString()} {g.currency}
+                        {g.currentAmount.toLocaleString('en-US')} {g.currency}
                       </Text>
                       <Text style={{ color: colors.textSub, fontSize: 11 }}>
-                        الهدف: {g.targetAmount.toLocaleString()} {g.currency}
+                        الهدف: {g.targetAmount.toLocaleString('en-US')} {g.currency}
                       </Text>
                     </View>
                   </Pressable>

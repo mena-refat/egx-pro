@@ -28,12 +28,12 @@ function fmt(n: number): string {
   if (!Number.isFinite(n)) return '0';
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)} م`;
   if (n >= 1_000)     return `${(n / 1_000).toFixed(1)} ألف`;
-  return Math.round(n).toLocaleString('ar-EG');
+  return Math.round(n).toLocaleString('en-US');
 }
 
 function fmtFull(n: number): string {
   if (!Number.isFinite(n)) return '0';
-  return Math.round(n).toLocaleString('ar-EG');
+  return Math.round(n).toLocaleString('en-US');
 }
 
 function NumInput({

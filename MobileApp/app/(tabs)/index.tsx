@@ -83,7 +83,7 @@ function useWatchlist() {
 
 /* ─── formatters ─── */
 function fmtNum(n: number) {
-  return n.toLocaleString('ar-EG', { maximumFractionDigits: 0 });
+  return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
 function fmtMoney(n: number) {

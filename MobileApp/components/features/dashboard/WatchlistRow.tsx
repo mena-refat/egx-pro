@@ -21,9 +21,9 @@ export function WatchlistRow({ stock, livePrice }: Props) {
     <Pressable
       onPress={() => router.push(`/stocks/${stock.ticker}`)}
       style={({ pressed }) => [
-        { backgroundColor: pressed ? colors.hover : 'transparent' },
+        { backgroundColor: pressed ? colors.hover : 'transparent', paddingHorizontal: 16 },
       ]}
-      className="flex-row items-center justify-between py-3.5"
+      className="flex-row items-center justify-between py-3"
     >
       <View className="flex-1">
         <Text style={{ color: colors.text }} className="text-sm font-semibold">{stock.ticker}</Text>

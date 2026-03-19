@@ -71,7 +71,12 @@
       "Bash(powershell -Command \"Get-Process -Id 6932 | Select-Object Name, Id, MainWindowTitle\")",
       "Bash(powershell -Command \"Stop-Process -Id 6932 -Force; Write-Host ''killed''\")",
       "Bash(grep -rn \"AdminAccountPage\\\\|AccountPage\" c:/Users/menar/Desktop/egx-pro/admin/src/ --include=*.tsx --include=*.ts)",
-      "Bash(cat c:/Users/menar/Desktop/egx-pro/server/jobs/*.ts)"
+      "Bash(cat c:/Users/menar/Desktop/egx-pro/server/jobs/*.ts)",
+      "Bash(grep -r \"TODO\\\\|FIXME\\\\|BUG\\\\|HACK\" /c/Users/menar/Desktop/egx-pro/src /c/Users/menar/Desktop/egx-pro/server --include=*.ts --include=*.tsx)",
+      "Bash(find /c/Users/menar/Desktop/egx-pro/server -name \"*.ts\" -type f -exec grep -l \"SQL\\\\|injection\\\\|exec\" {})",
+      "Read(//c/Users/menar/Desktop/**)",
+      "Bash(node --import tsx/esm -e \"import\\(''''./server/services/auth.service.ts''''\\).then\\(\\(\\) => console.log\\(''''OK''''\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")",
+      "Bash(npx vite:*)"
     ]
   }
 }

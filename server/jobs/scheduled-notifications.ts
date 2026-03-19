@@ -44,7 +44,7 @@ export async function runScheduledNotificationsJob(): Promise<void> {
           data: { status: 'SENT', lastSentAt: now, sentCount: newSentCount },
         });
       } else {
-        const nextSendAt = calcNextSendAt(now, notif.repeat);
+        const nextSendAt = calcNextSendAt(notif.nextSendAt, notif.repeat);
         await prisma.scheduledNotification.update({
           where: { id: notif.id },
           data: { nextSendAt, lastSentAt: now, sentCount: newSentCount },

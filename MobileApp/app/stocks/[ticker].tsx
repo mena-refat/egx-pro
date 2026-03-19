@@ -50,7 +50,7 @@ function formatBig(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n) || n === 0) return '—';
   if (n >= 1e9) return `${(n / 1e9).toFixed(2)} مليار EGP`;
   if (n >= 1e6) return `${(n / 1e6).toFixed(2)} مليون EGP`;
-  return n.toLocaleString('ar-EG') + ' EGP';
+  return n.toLocaleString('en-US') + ' EGP';
 }
 
 function formatVolume(n: number | null | undefined): string {
@@ -58,7 +58,7 @@ function formatVolume(n: number | null | undefined): string {
   if (n >= 1e9) return `${(n / 1e9).toFixed(2)} م`;
   if (n >= 1e6) return `${(n / 1e6).toFixed(2)} م`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)} ألف`;
-  return n.toLocaleString('ar-EG');
+  return n.toLocaleString('en-US');
 }
 
 const SECTOR_LABELS: Record<string, string> = {

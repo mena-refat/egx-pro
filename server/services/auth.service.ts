@@ -248,7 +248,7 @@ export async function login(
 
   await UserRepository.update({
     where: { id: user.id },
-    data: { failedLoginAttempts: 0, lockedUntil: null },
+    data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date(), lastLoginIp: ctx.ip || null },
   });
 
   let restored = false;
@@ -271,8 +271,11 @@ export async function login(
 
   const referral = await ReferralRepository.findUnique({ referredUserId: user.id });
   if (referral && referral.status !== 'completed') {
-    await ReferralRepository.update({ id: referral.id }, { status: 'completed' });
-    await checkAndRewardReferrer(referral.referrerId);
+    const updated = await prisma.referral.updateMany({
+      where: { id: referral.id, status: { not: 'completed' } },
+      data: { status: 'completed' },
+    });
+    if (updated.count > 0) await checkAndRewardReferrer(referral.referrerId);
   }
 
   const loginId = user.email ?? user.phone ?? '';
@@ -333,8 +336,11 @@ export async function twoFaAuthenticate(
 
   const referral = await ReferralRepository.findUnique({ referredUserId: user.id });
   if (referral && referral.status !== 'completed') {
-    await ReferralRepository.update({ id: referral.id }, { status: 'completed' });
-    await checkAndRewardReferrer(referral.referrerId);
+    const updated = await prisma.referral.updateMany({
+      where: { id: referral.id, status: { not: 'completed' } },
+      data: { status: 'completed' },
+    });
+    if (updated.count > 0) await checkAndRewardReferrer(referral.referrerId);
   }
 
   const loginId = user.email ?? user.phone ?? '';
@@ -693,6 +699,10 @@ export async function googleCallback(
     buildRefreshTokenData(userId, refreshHash, expiresAt, null, ctx.userAgent)
   );
   await RefreshTokenRepository.create(refreshData);
+  await UserRepository.update({
+    where: { id: userId },
+    data: { lastLoginAt: new Date(), lastLoginIp: ctx.ip || null },
+  });
 
   const origin = process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
   const redirectHtml = `

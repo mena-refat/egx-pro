@@ -22,9 +22,9 @@ const analysisLimiter = rateLimit({
   keyGenerator: (req) => ipKeyGenerator(req.ip ?? 'unknown'),
 });
 
-router.get('/accuracy', AnalysisController.accuracy);
+router.get('/accuracy', analysisLimiter, AnalysisController.accuracy);
 // Quick analysis — بدون authenticate (مجاني للجميع، صفر tokens)
-router.get('/quick/:ticker', validate(tickerParamSchema, 'params'), AnalysisController.quick);
+router.get('/quick/:ticker', analysisLimiter, validate(tickerParamSchema, 'params'), AnalysisController.quick);
 router.post('/compare', authenticate, analysisLimiter, idempotencyMiddleware, validate(compareStocksBodySchema, 'body'), AnalysisController.compare);
 router.post('/recommendations', authenticate, analysisLimiter, idempotencyMiddleware, validate(recommendationsBodySchema, 'body'), AnalysisController.recommendations);
 router.post('/:ticker', authenticate, analysisLimiter, idempotencyMiddleware, validate(tickerParamSchema, 'params'), AnalysisController.create);

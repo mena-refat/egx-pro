@@ -33,8 +33,9 @@ export function useAuthPage(refCode: string) {
   const { handleSubmit, setError, reset } = form;
 
   useEffect(() => {
+    const expectedOrigin = AUTH_BASE.startsWith('http') ? new URL(AUTH_BASE).origin : window.location.origin;
     const handler = async (event: MessageEvent) => {
-      if (!event.origin.endsWith('.run.app') && !event.origin.includes('localhost')) return;
+      if (event.origin !== expectedOrigin) return;
       if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
         try {
           const res = await fetch(`${AUTH_BASE}/auth/me`, { credentials: 'include' });
@@ -192,7 +193,6 @@ export function useAuthPage(refCode: string) {
       setShowTwoFactorInput(false);
       setTwoFactorOtp('');
       setTwoFaTempToken('');
-      setAuthMessage({ text: t('auth.loginSuccess'), type: 'success' });
     } catch (err: unknown) {
       setAuthError(err instanceof Error ? err.message : 'Verification failed');
     }

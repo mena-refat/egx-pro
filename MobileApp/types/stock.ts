@@ -17,12 +17,32 @@ export interface Stock {
   description?: string;
 }
 
+export interface IndexData {
+  value: number;
+  change?: number;
+  changePercent: number;
+}
+
+export interface CommodityData {
+  value: number;
+  change?: number;
+  changePercent?: number;
+  valueEgxPerGram?: number;
+  buyEgxPerGram?: number;
+  sellEgxPerGram?: number;
+  isDelayed?: boolean;
+}
+
 export interface MarketOverview {
-  egx30?: { value: number; changePercent: number };
-  egx70?: { value: number; changePercent: number };
-  egx100?: { value: number; changePercent: number };
-  usdEgp?: number;
-  gold?: { price: number; changePercent: number };
+  egx30?: IndexData;
+  egx30Capped?: IndexData;
+  egx70?: IndexData;
+  egx100?: IndexData;
+  egx33?: IndexData;
+  egx35?: IndexData;
+  usdEgp?: { value: number; change?: number; changePercent?: number } | number;
+  gold?: CommodityData;
+  silver?: CommodityData;
   lastUpdated?: number;
 }
 

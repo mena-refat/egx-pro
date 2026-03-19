@@ -184,7 +184,7 @@ export const AdminSupportController = {
     const { id } = req.params as { id: string };
     const { agentId } = req.body as { agentId: number | null };
 
-    const ticketExists = await prisma.supportTicket.findUnique({ where: { id }, select: { id: true } });
+    const ticketExists = await prisma.supportTicket.findUnique({ where: { id }, select: { id: true, status: true } });
     if (!ticketExists) { sendError(res, 'NOT_FOUND', 404); return; }
 
     if (agentId) {
@@ -198,12 +198,19 @@ export const AdminSupportController = {
       }
     }
 
+    // Only transition status when it makes sense:
+    // assigning → IN_PROGRESS only if currently OPEN
+    // unassigning → OPEN only if currently IN_PROGRESS
+    const newStatus = agentId
+      ? (ticketExists.status === 'OPEN' ? 'IN_PROGRESS' : ticketExists.status)
+      : (ticketExists.status === 'IN_PROGRESS' ? 'OPEN' : ticketExists.status);
+
     const ticket = await prisma.supportTicket.update({
       where: { id },
       data: {
         assignedTo: agentId ?? null,
         assignedAt: agentId ? new Date() : null,
-        status: agentId ? 'IN_PROGRESS' : 'OPEN',
+        status: newStatus as 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'CANCELLED',
       },
     });
 
@@ -386,14 +393,27 @@ export const AdminSupportController = {
       if (!agent) { sendError(res, 'AGENT_NOT_FOUND', 404); return; }
     }
 
-    await prisma.supportTicket.updateMany({
-      where: { id: { in: ticketIds } },
-      data: {
-        assignedTo: agentId ?? null,
-        assignedAt: agentId ? new Date() : null,
-        status: agentId ? 'IN_PROGRESS' : 'OPEN',
-      },
-    });
+    if (agentId) {
+      // Assigning: set IN_PROGRESS only for OPEN tickets; leave RESOLVED/CLOSED/IN_PROGRESS unchanged
+      await prisma.supportTicket.updateMany({
+        where: { id: { in: ticketIds }, status: 'OPEN' },
+        data: { assignedTo: agentId, assignedAt: new Date(), status: 'IN_PROGRESS' },
+      });
+      await prisma.supportTicket.updateMany({
+        where: { id: { in: ticketIds }, status: { not: 'OPEN' } },
+        data: { assignedTo: agentId, assignedAt: new Date() },
+      });
+    } else {
+      // Unassigning: revert IN_PROGRESS back to OPEN; leave other statuses unchanged
+      await prisma.supportTicket.updateMany({
+        where: { id: { in: ticketIds }, status: 'IN_PROGRESS' },
+        data: { assignedTo: null, assignedAt: null, status: 'OPEN' },
+      });
+      await prisma.supportTicket.updateMany({
+        where: { id: { in: ticketIds }, status: { not: 'IN_PROGRESS' } },
+        data: { assignedTo: null, assignedAt: null },
+      });
+    }
 
     if (req.admin) {
       await adminAudit(req.admin.id, 'SUPPORT_BULK_ASSIGNED', undefined, `${ticketIds.length} tickets → agent:${agentId ?? 'unassigned'}`, req);
@@ -579,15 +599,8 @@ export const AdminSupportController = {
           priority: 'HIGH',
         },
       }),
-      // Notify the manager in-app
-      createNotification(
-        // AdminNotification: reuse user notification for manager (managerId maps to a User id only if same table — if separated, skip gracefully)
-        agent.managerId,
-        'support_escalated',
-        'تيكت دعم تم تصعيده',
-        `تيكت #${id} تم إرساله إليك من قِبل أحد الأعضاء${note?.trim() ? ` — ${note.trim().slice(0, 80)}` : ''}`,
-        { route: '/support' }
-      ).catch(() => null),
+      // Manager notification skipped: Admin IDs and User IDs are separate ID spaces.
+      // Managers see escalated tickets via the support list filtered by escalatedAt.
       req.admin ? adminAudit(req.admin.id, 'SUPPORT_ESCALATED', id, note?.trim() || '', req) : null,
     ]);
 
@@ -785,6 +798,15 @@ export const AdminSupportController = {
         select: { warningCount: true, isSuspended: true },
       });
 
+      // Always notify the user about the warning first
+      await createNotification(
+        report.userId,
+        'abuse_warning',
+        'تحذير: سلوك مخالف',
+        'تلقيت تحذيراً بسبب سلوك مخالف في أحد تذاكر الدعم. الانتهاك المتكرر سيؤدي لتعليق الحساب.',
+        { route: '/support' }
+      ).catch(() => null);
+
       if (user.warningCount >= 2 && !user.isSuspended) {
         await prisma.user.update({
           where: { id: report.userId },
@@ -796,14 +818,6 @@ export const AdminSupportController = {
           'account_suspended',
           'تم تعليق حسابك',
           'تم تعليق حسابك بسبب تكرار الانتهاكات. يرجى التواصل مع الدعم.',
-          { route: '/support' }
-        ).catch(() => null);
-      } else {
-        await createNotification(
-          report.userId,
-          'abuse_warning',
-          'تحذير: سلوك مخالف',
-          'تلقيت تحذيراً بسبب سلوك مخالف في أحد تذاكر الدعم. الانتهاك المتكرر سيؤدي لتعليق الحساب.',
           { route: '/support' }
         ).catch(() => null);
       }

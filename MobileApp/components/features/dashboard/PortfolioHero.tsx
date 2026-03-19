@@ -107,9 +107,9 @@ function buildPaths(data: ChartPoint[], w: number, h: number): { line: string; a
 
 function fmtTooltipDate(x: number, range: Range): string {
   const d = new Date(x);
-  if (range === '1D') return d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
-  if (range === '1W' || range === '1M') return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' });
-  return d.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
+  if (range === '1D') return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  if (range === '1W' || range === '1M') return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
 // ─── Chart component ───
@@ -184,7 +184,7 @@ function PortfolioChart({ holdings, totalCost, totalValue, gainColor }: {
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ color: colors.textMuted, fontSize: 12 }}>{fmtTooltipDate(cursorPt.x, range)}</Text>
             <Text style={{ color: gainColor, fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
-              {cursorPt.value.toLocaleString('ar-EG', { maximumFractionDigits: 0 })} EGP
+              {cursorPt.value.toLocaleString('en-US', { maximumFractionDigits: 0 })} EGP
             </Text>
           </View>
         ) : hasData ? (
@@ -277,7 +277,7 @@ export function PortfolioHero({ totalValue, totalCost, totalGainLoss, totalGainL
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginBottom: 10 }}>
           <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', fontVariant: ['tabular-nums'], lineHeight: 40 }}>
-            {totalValue.toLocaleString('ar-EG', { maximumFractionDigits: 0 })}
+            {totalValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: 15, fontWeight: '500', marginBottom: 4 }}>EGP</Text>
         </View>
@@ -288,7 +288,7 @@ export function PortfolioHero({ totalValue, totalCost, totalGainLoss, totalGainL
           paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 }}>
           {isUp ? <TrendingUp size={13} color={gainColor} /> : isDown ? <TrendingDown size={13} color={gainColor} /> : <Minus size={13} color={gainColor} />}
           <Text style={{ color: gainColor, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
-            {isUp ? '+' : ''}{totalGainLoss.toLocaleString('ar-EG', { maximumFractionDigits: 0 })} EGP
+            {isUp ? '+' : ''}{totalGainLoss.toLocaleString('en-US', { maximumFractionDigits: 0 })} EGP
           </Text>
           <View style={{ width: 1, height: 12, backgroundColor: gainColor, opacity: 0.3 }} />
           <Text style={{ color: gainColor, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
@@ -302,14 +302,14 @@ export function PortfolioHero({ totalValue, totalCost, totalGainLoss, totalGainL
         <View style={{ flex: 1, paddingHorizontal: 20, paddingVertical: 14, borderRightWidth: 1, borderRightColor: colors.border }}>
           <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 4 }}>رأس المال</Text>
           <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
-            {totalCost.toLocaleString('ar-EG', { maximumFractionDigits: 0 })}
+            {totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '400' }}> EGP</Text>
           </Text>
         </View>
         <View style={{ flex: 1, paddingHorizontal: 20, paddingVertical: 14 }}>
           <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 4 }}>الربح / الخسارة</Text>
           <Text style={{ color: gainColor, fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
-            {isUp ? '+' : ''}{totalGainLoss.toLocaleString('ar-EG', { maximumFractionDigits: 0 })}
+            {isUp ? '+' : ''}{totalGainLoss.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             <Text style={{ fontSize: 11, fontWeight: '400' }}> EGP</Text>
           </Text>
         </View>

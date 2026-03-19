@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { verifyAccessToken } from '../../src/lib/auth.ts';
 import * as AuthService from '../services/auth.service.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
-import { getCache, setCache } from '../lib/redis.ts';
+import { getCache, setCache, deleteCache } from '../lib/redis.ts';
 import { EmailService } from '../services/email.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { logger } from '../lib/logger.ts';
@@ -99,7 +100,7 @@ export async function register(req: Request, res: Response): Promise<void> {
       sendError(res, 'service_unavailable', 503, 'تعذر الاتصال بقاعدة البيانات. تأكد أن الخادم يعمل وحاول لاحقاً.');
       return;
     }
-    sendError(res, 'Registration failed', 500, errMessage.length <= 120 ? errMessage : errMessage.slice(0, 117) + '...');
+    sendError(res, 'INTERNAL_ERROR', 500, 'حدث خطأ أثناء التسجيل. حاول مرة أخرى.');
   }
 }
 
@@ -132,7 +133,7 @@ export async function twoFaAuthenticate(req: Request, res: Response): Promise<vo
       return;
     }
     logger.error('2FA authenticate error', { error: e });
-    sendError(res, 'Verification failed', 500, e instanceof Error ? e.message : 'Verification failed');
+    sendError(res, 'INTERNAL_ERROR', 500, 'حدث خطأ أثناء التحقق. حاول مرة أخرى.');
   }
 }
 
@@ -330,6 +331,14 @@ export async function sendVerifyEmail(req: AuthRequest, res: Response): Promise<
     return;
   }
   try {
+    // Rate limit: max 3 sends per user per hour
+    const rateLimitKey = `email_verify_send_limit:${userId}`;
+    const sends = parseInt((await getCache<string>(rateLimitKey)) ?? '0', 10);
+    if (sends >= 3) {
+      sendError(res, 'RATE_LIMIT_EXCEEDED', 429, 'تجاوزت الحد المسموح. انتظر ساعة وحاول مجدداً.');
+      return;
+    }
+
     const user = await UserRepository.findUnique({
       where: { id: userId },
       select: { email: true, isEmailVerified: true },
@@ -342,8 +351,10 @@ export async function sendVerifyEmail(req: AuthRequest, res: Response): Promise<
       sendError(res, 'already_verified', 400);
       return;
     }
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // Cryptographically secure 6-digit code
+    const code = crypto.randomInt(100000, 1000000).toString();
     await setCache(`email_verify:${userId}`, code, 15 * 60);
+    await setCache(rateLimitKey, String(sends + 1), 60 * 60);
     await EmailService.sendVerificationCode(user.email, code);
     sendSuccess(res, { success: true });
   } catch (e) {
@@ -364,11 +375,23 @@ export async function confirmVerifyEmail(req: AuthRequest, res: Response): Promi
     return;
   }
   try {
+    // Attempt limit: max 5 wrong tries per code window
+    const attemptsKey = `email_verify_attempts:${userId}`;
+    const attempts = parseInt((await getCache<string>(attemptsKey)) ?? '0', 10);
+    if (attempts >= 5) {
+      sendError(res, 'TOO_MANY_ATTEMPTS', 429, 'تجاوزت عدد المحاولات المسموحة. اطلب كود جديد.');
+      return;
+    }
+
     const stored = await getCache<string>(`email_verify:${userId}`);
     if (!stored || stored !== code.trim()) {
+      await setCache(attemptsKey, String(attempts + 1), 15 * 60);
       sendError(res, 'invalid_code', 400);
       return;
     }
+    // Invalidate code immediately after successful use
+    await deleteCache(`email_verify:${userId}`);
+    await deleteCache(attemptsKey);
     await UserRepository.update({
       where: { id: userId },
       data: { isEmailVerified: true },
