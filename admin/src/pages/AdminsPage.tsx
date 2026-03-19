@@ -63,25 +63,75 @@ const PERM_BLOCKS: Record<string, string[]> = {
   'support.assign': ['support.manage'],
 };
 
-function resolvePermToggle(perm: string, current: string[]): string[] {
-  if (current.includes(perm)) {
-    // Disabling: remove this perm and any that require it
-    let result = current.filter((p) => p !== perm);
-    for (const blocked of PERM_BLOCKS[perm] ?? []) {
-      result = resolvePermToggle(blocked, result);
-    }
-    return result;
-  } else {
-    // Enabling: add this perm and all prerequisites
-    let result = [...current];
-    for (const req of PERM_REQUIRES[perm] ?? []) {
-      if (!result.includes(req)) {
-        result = resolvePermToggle(req, result);
-      }
-    }
-    return [...new Set([...result, perm])];
-  }
+// Only removes — never enables anything
+function disablePerm(perm: string, current: string[]): string[] {
+  if (!current.includes(perm)) return current;
+  const result = current.filter((p) => p !== perm);
+  return (PERM_BLOCKS[perm] ?? []).reduce((acc, blocked) => disablePerm(blocked, acc), result);
 }
+
+// Only adds — never removes anything
+function enablePerm(perm: string, current: string[]): string[] {
+  if (current.includes(perm)) return current;
+  const withDeps = (PERM_REQUIRES[perm] ?? []).reduce(
+    (acc, req) => enablePerm(req, acc),
+    [...current]
+  );
+  return [...new Set([...withDeps, perm])];
+}
+
+function resolvePermToggle(perm: string, current: string[]): string[] {
+  return current.includes(perm) ? disablePerm(perm, current) : enablePerm(perm, current);
+}
+
+// ── Preset roles ────────────────────────────────────────────────
+const PRESET_ROLES: { label: string; color: string; desc: string; permissions: string[] }[] = [
+  {
+    label: 'Support Agent',
+    color: 'blue',
+    desc: 'View & reply to assigned tickets only',
+    permissions: ['support.view', 'support.reply'],
+  },
+  {
+    label: 'Support Manager',
+    color: 'violet',
+    desc: 'Assign tickets, manage team, view all tickets',
+    permissions: ['support.view', 'support.reply', 'support.assign', 'support.manage'],
+  },
+  {
+    label: 'Content Manager',
+    color: 'amber',
+    desc: 'Manage discounts and send notifications',
+    permissions: ['discounts.view', 'discounts.manage', 'notifications.send'],
+  },
+  {
+    label: 'Analyst',
+    color: 'emerald',
+    desc: 'View users and analytics dashboards',
+    permissions: ['users.view', 'analytics.view'],
+  },
+  {
+    label: 'Auditor',
+    color: 'rose',
+    desc: 'Read-only access to analytics and audit logs',
+    permissions: ['users.view', 'analytics.view', 'audit.view'],
+  },
+  {
+    label: 'Moderator',
+    color: 'orange',
+    desc: 'Manage users and handle support tickets',
+    permissions: ['users.view', 'users.edit', 'support.view', 'support.reply'],
+  },
+];
+
+const ROLE_COLORS: Record<string, string> = {
+  blue:    'bg-blue-500/10 text-blue-300 border border-blue-500/20 hover:bg-blue-500/20',
+  violet:  'bg-violet-500/10 text-violet-300 border border-violet-500/20 hover:bg-violet-500/20',
+  amber:   'bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20',
+  emerald: 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/20',
+  rose:    'bg-rose-500/10 text-rose-300 border border-rose-500/20 hover:bg-rose-500/20',
+  orange:  'bg-orange-500/10 text-orange-300 border border-orange-500/20 hover:bg-orange-500/20',
+};
 
 const EMPTY_FORM = {
   email: '',
@@ -523,6 +573,25 @@ export default function AdminsPage() {
       case 3:
         return (
           <div className="space-y-3">
+            {/* Quick preset roles */}
+            <div>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-2">Quick Presets</p>
+              <div className="flex flex-wrap gap-1.5">
+                {PRESET_ROLES.map((role) => (
+                  <button
+                    key={role.label}
+                    type="button"
+                    title={role.desc}
+                    onClick={() => setForm((f) => ({ ...f, permissions: [...role.permissions] }))}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all ${ROLE_COLORS[role.color]}`}
+                  >
+                    {role.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Permission groups grid */}
             <div className="grid grid-cols-2 gap-2">
               {PERM_GROUPS.map((group) => (
                 <div key={group.label} className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3">
@@ -552,6 +621,7 @@ export default function AdminsPage() {
               ))}
             </div>
 
+            {/* Super Admin */}
             <div className="border border-amber-500/20 bg-amber-500/5 rounded-xl px-3 py-2.5">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
@@ -1016,6 +1086,24 @@ export default function AdminsPage() {
       >
         {editPermAdmin && (
           <div className="space-y-3">
+            {/* Quick preset roles */}
+            <div>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-2">Quick Presets</p>
+              <div className="flex flex-wrap gap-1.5">
+                {PRESET_ROLES.map((role) => (
+                  <button
+                    key={role.label}
+                    type="button"
+                    title={role.desc}
+                    onClick={() => setEditPermissions([...role.permissions])}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all ${ROLE_COLORS[role.color]}`}
+                  >
+                    {role.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               {PERM_GROUPS.map((group) => (
                 <div key={group.label} className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3">
