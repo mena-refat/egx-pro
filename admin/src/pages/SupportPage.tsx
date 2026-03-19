@@ -222,11 +222,13 @@ export default function SupportPage() {
   const [reply, setReply]           = useState('');
   const [newStatus, setNewStatus]   = useState('RESOLVED');
   const [saving, setSaving]         = useState(false);
+  const [replyError, setReplyError] = useState('');
 
   /* Assign */
   const [assignTarget, setAssignTarget] = useState<Ticket | null>(null);
   const [assignTo, setAssignTo]         = useState('');
   const [assigning, setAssigning]       = useState(false);
+  const [assignError, setAssignError]   = useState('');
   const [agents, setAgents]             = useState<Agent[]>([]);
 
   /* Escalate */
@@ -235,11 +237,17 @@ export default function SupportPage() {
   const [escalating, setEscalating]         = useState(false);
   const [escalateError, setEscalateError]   = useState('');
 
+  /* Search */
+  const [searchQuery, setSearchQuery]       = useState('');
+  const searchTimerRef                      = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   /* Bulk */
   const [selectedIds, setSelectedIds]       = useState<Set<string>>(new Set());
   const [bulkAgentId, setBulkAgentId]       = useState('');
   const [bulkAssigning, setBulkAssigning]   = useState(false);
   const [bulkStatusing, setBulkStatusing]   = useState(false);
+  const [bulkError, setBulkError]           = useState('');
+  const [bulkConfirm, setBulkConfirm]       = useState<'RESOLVED' | 'CLOSED' | null>(null);
 
   /* Quick replies */
   const [quickReplies, setQuickReplies]         = useState<QuickReply[]>([]);
@@ -248,6 +256,9 @@ export default function SupportPage() {
   const [newQRTitle, setNewQRTitle]             = useState('');
   const [newQRContent, setNewQRContent]         = useState('');
   const [savingQR, setSavingQR]                 = useState(false);
+  const [qrError, setQrError]                   = useState('');
+  const [deletingQRId, setDeletingQRId]         = useState<number | null>(null);
+  const qrDropdownRef                           = useRef<HTMLDivElement>(null);
 
   /* Team stats */
   const [agentStats, setAgentStats]         = useState<AgentStat[]>([]);
@@ -259,8 +270,8 @@ export default function SupportPage() {
   const skipNext = useRef(false);
 
   /* ── Load tickets ── */
-  const load = useCallback(async (p: number, s: string, pr: string, a: string, srt: string) => {
-    setLoading(true);
+  const load = useCallback(async (p: number, s: string, pr: string, a: string, srt: string, srch = '', silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const params: Record<string, string> = { page: String(p) };
       if (s) params.status = s;
@@ -268,11 +279,12 @@ export default function SupportPage() {
       if (srt) params.sort = srt;
       if (a) params.agentId = a;
       else if (!managerMode) params.agentId = '';
+      if (srch) params.search = srch;
       const r = await adminApi.get('/support', { params });
       setTickets(r.data.data.tickets ?? []);
       setTotal(r.data.data.total ?? 0);
-    } catch { setTickets([]); }
-    finally { setLoading(false); }
+    } catch { if (!silent) setTickets([]); }
+    finally { if (!silent) setLoading(false); }
   }, [managerMode]);
 
   /* ── Load agents ── */
@@ -291,6 +303,50 @@ export default function SupportPage() {
 
   useEffect(() => { loadQuickReplies(); }, [loadQuickReplies]);
 
+  /* ── QR dropdown: close on outside click ── */
+  useEffect(() => {
+    if (!showQRDropdown) return;
+    const handle = (e: MouseEvent) => {
+      if (qrDropdownRef.current && !qrDropdownRef.current.contains(e.target as Node)) {
+        setShowQRDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [showQRDropdown]);
+
+  /* ── Reset reply state when selected ticket changes ── */
+  useEffect(() => {
+    setReplyError('');
+    setShowQRDropdown(false);
+  }, [selected?.id]);
+
+  /* ── Polling: silent refresh every 30s when on tickets view ── */
+  const currentParamsRef = useRef({ page, statusFilter, priorityFilter, agentFilter, sortOrder, searchQuery });
+  useEffect(() => {
+    currentParamsRef.current = { page, statusFilter, priorityFilter, agentFilter, sortOrder, searchQuery };
+  }, [page, statusFilter, priorityFilter, agentFilter, sortOrder, searchQuery]);
+
+  useEffect(() => {
+    if (view !== 'tickets') return;
+    const id = setInterval(() => {
+      const p = currentParamsRef.current;
+      void load(p.page, p.statusFilter, p.priorityFilter, p.agentFilter, p.sortOrder, p.searchQuery, true);
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [view, load]);
+
+  /* ── Escape key: close ticket panel ── */
+  useEffect(() => {
+    if (!selected) return;
+    const handle = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelected(null); };
+    document.addEventListener('keydown', handle);
+    return () => document.removeEventListener('keydown', handle);
+  }, [selected]);
+
+  /* ── Search timer cleanup on unmount ── */
+  useEffect(() => () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); }, []);
+
   /* ── Load own stats (agent only) ── */
   useEffect(() => {
     if (!managerMode && currentAdmin?.permissions?.includes('support.reply')) {
@@ -300,12 +356,12 @@ export default function SupportPage() {
 
   /* ── Initial load ── */
   useEffect(() => {
-    void load(1, '', '', '', sortOrder);
+    void load(1, '', '', '', sortOrder, '');
   }, []); // eslint-disable-line
 
   useEffect(() => {
     if (skipNext.current) { skipNext.current = false; return; }
-    void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
+    void load(page, statusFilter, priorityFilter, agentFilter, sortOrder, searchQuery);
   }, [page]); // eslint-disable-line
 
   /* ── Load team stats ── */
@@ -340,55 +396,96 @@ export default function SupportPage() {
   const handleReply = async () => {
     if (!selected || !reply.trim()) return;
     setSaving(true);
+    setReplyError('');
     try {
-      await adminApi.patch(`/support/${selected.id}/reply`, { reply, status: newStatus });
-      setSelected(null); setReply('');
-      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
+      const res = await adminApi.patch(`/support/${selected.id}/reply`, { reply, status: newStatus });
+      const patch = res.data.data as Ticket;
+      // Update in-place: preserve user + assignedAgent from current selected
+      const updated: Ticket = { ...patch, user: selected.user, assignedAgent: selected.assignedAgent };
+      setSelected(updated);
+      setTickets((prev) => prev.map((tk) => tk.id === updated.id ? updated : tk));
+      setReply('');
+      setShowQRDropdown(false);
+    } catch (err: any) {
+      const code = err?.response?.data?.error;
+      if (code === 'TICKET_ALREADY_CLOSED') setReplyError(t('support.ticketClosed'));
+      else if (code === 'ALREADY_ESCALATED') setReplyError(t('support.alreadyEscalated'));
+      else if (code === 'ADMIN_FORBIDDEN') setReplyError(t('support.replyForbidden'));
+      else setReplyError(t('support.actionFailed'));
     } finally { setSaving(false); }
   };
 
   const handleAssign = async () => {
     if (!assignTarget) return;
     setAssigning(true);
+    setAssignError('');
     try {
       await adminApi.patch(`/support/${assignTarget.id}/assign`, { agentId: assignTo ? parseInt(assignTo, 10) : null });
+      const newAgent = agents.find((a) => String(a.id) === assignTo) ?? null;
+      // Update selected panel in-place if it's the same ticket
+      if (selected?.id === assignTarget.id) {
+        setSelected((prev) => prev ? {
+          ...prev,
+          assignedTo: assignTo ? parseInt(assignTo, 10) : null,
+          assignedAt: assignTo ? new Date().toISOString() : null,
+          status: assignTo ? 'IN_PROGRESS' : 'OPEN',
+          assignedAgent: newAgent ? { fullName: newAgent.fullName, email: newAgent.email } : null,
+        } : null);
+      }
       setAssignTarget(null); setAssignTo('');
-      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
+      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder, searchQuery);
+    } catch {
+      setAssignError(t('support.actionFailed'));
     } finally { setAssigning(false); }
   };
 
   const handleBulkAssign = async () => {
     if (selectedIds.size === 0 || !bulkAgentId) return;
     setBulkAssigning(true);
+    setBulkError('');
     try {
       await adminApi.post('/support/bulk-assign', { ticketIds: [...selectedIds], agentId: parseInt(bulkAgentId, 10) });
       setSelectedIds(new Set()); setBulkAgentId('');
-      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
+      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder, searchQuery);
+    } catch {
+      setBulkError(t('support.actionFailed'));
     } finally { setBulkAssigning(false); }
   };
 
-  const handleBulkStatus = async (status: 'RESOLVED' | 'CLOSED') => {
+  const executeBulkStatus = async (status: 'RESOLVED' | 'CLOSED') => {
     if (selectedIds.size === 0) return;
     setBulkStatusing(true);
+    setBulkError('');
+    setBulkConfirm(null);
     try {
       await adminApi.post('/support/bulk-status', { ticketIds: [...selectedIds], status });
       setSelectedIds(new Set());
-      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
+      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder, searchQuery);
+    } catch {
+      setBulkError(t('support.actionFailed'));
     } finally { setBulkStatusing(false); }
   };
 
   const handleAddQuickReply = async () => {
     if (!newQRTitle.trim() || !newQRContent.trim()) return;
     setSavingQR(true);
+    setQrError('');
     try {
       await adminApi.post('/support/quick-replies', { title: newQRTitle.trim(), content: newQRContent.trim() });
       setNewQRTitle(''); setNewQRContent('');
       loadQuickReplies();
+    } catch {
+      setQrError(t('support.actionFailed'));
     } finally { setSavingQR(false); }
   };
 
   const handleDeleteQuickReply = async (id: number) => {
+    setDeletingQRId(id);
+  };
+
+  const confirmDeleteQuickReply = async (id: number) => {
     await adminApi.delete(`/support/quick-replies/${id}`).catch(() => null);
+    setDeletingQRId(null);
     loadQuickReplies();
   };
 
@@ -401,12 +498,12 @@ export default function SupportPage() {
       setEscalateTarget(null);
       setEscalateNote('');
       setSelected(null);
-      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
+      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder, searchQuery);
     } catch (err: any) {
       const code = err?.response?.data?.error;
       if (code === 'NO_MANAGER_ASSIGNED') setEscalateError(t('support.escalateNoManager'));
       else if (code === 'ALREADY_ESCALATED') setEscalateError(t('support.alreadyEscalated'));
-      else setEscalateError(t('login.loginFailed'));
+      else setEscalateError(t('support.actionFailed'));
     } finally {
       setEscalating(false);
     }
@@ -415,7 +512,17 @@ export default function SupportPage() {
   const applyFilter = (s: string, pr: string, a: string, srt: string) => {
     skipNext.current = true;
     setPage(1);
-    void load(1, s, pr, a, srt);
+    void load(1, s, pr, a, srt, searchQuery);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      skipNext.current = true;
+      setPage(1);
+      void load(1, statusFilter, priorityFilter, agentFilter, sortOrder, value);
+    }, 400);
   };
 
   /* ─── RENDER ─────────────────────────────────────────────────── */
@@ -456,7 +563,8 @@ export default function SupportPage() {
             </button>
           )}
           <button
-            onClick={() => void load(page, statusFilter, priorityFilter, agentFilter, sortOrder)}
+            onClick={() => void load(page, statusFilter, priorityFilter, agentFilter, sortOrder, searchQuery)}
+            aria-label="Refresh tickets"
             className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-all"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
@@ -497,6 +605,14 @@ export default function SupportPage() {
             <div className="flex items-center gap-1.5 text-slate-500">
               <Filter size={12} />
             </div>
+
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder={t('support.searchPlaceholder')}
+              className="px-2.5 py-1.5 text-xs bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-blue-500/40 w-44 placeholder-slate-600"
+            />
 
             <select
               value={statusFilter}
@@ -674,7 +790,7 @@ export default function SupportPage() {
                       <span className="text-[10px] text-slate-500">{new Date(selected.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                     </div>
                   </div>
-                  <button onClick={() => setSelected(null)} className="shrink-0 text-slate-600 hover:text-slate-300 transition-colors mt-0.5">
+                  <button onClick={() => setSelected(null)} aria-label="Close ticket panel" className="shrink-0 text-slate-600 hover:text-slate-300 transition-colors mt-0.5">
                     <X size={14} />
                   </button>
                 </div>
@@ -774,38 +890,49 @@ export default function SupportPage() {
                         <div className="relative">
                           <textarea
                             value={reply}
-                            onChange={(e) => setReply(e.target.value)}
+                            onChange={(e) => { setReply(e.target.value); if (replyError) setReplyError(''); }}
                             rows={3}
+                            maxLength={5000}
                             placeholder={t('support.yourReply')}
                             className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50 resize-none placeholder-slate-600"
                           />
-                          {quickReplies.length > 0 && (
-                            <div className="absolute bottom-2 end-2">
-                              <button
-                                type="button"
-                                onClick={() => setShowQRDropdown((v) => !v)}
-                                className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-md bg-violet-500/15 border border-violet-500/20 text-violet-400 hover:bg-violet-500/25 transition-all"
-                              >
-                                <Zap size={9} /> {t('support.quickReplies')}
-                              </button>
-                              {showQRDropdown && (
-                                <div className="absolute bottom-7 end-0 w-64 bg-[#1a1a2e] border border-white/[0.1] rounded-xl shadow-2xl z-50 overflow-hidden">
-                                  {quickReplies.map((qr) => (
-                                    <button
-                                      key={qr.id}
-                                      type="button"
-                                      onClick={() => { setReply(qr.content); setShowQRDropdown(false); }}
-                                      className="w-full text-start px-3 py-2 hover:bg-white/[0.05] transition-colors border-b border-white/[0.05] last:border-0"
-                                    >
-                                      <p className="text-[11px] font-medium text-white">{qr.title}</p>
-                                      <p className="text-[10px] text-slate-500 truncate mt-0.5">{qr.content}</p>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
+                          <div className="absolute bottom-2 end-2 flex items-center gap-2">
+                            {reply.length > 4000 && (
+                              <span className={`text-[10px] tabular-nums ${reply.length > 4800 ? 'text-red-400' : 'text-slate-500'}`}>
+                                {5000 - reply.length}
+                              </span>
+                            )}
+                            {quickReplies.length > 0 && (
+                              <div ref={qrDropdownRef} className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowQRDropdown((v) => !v)}
+                                  className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-md bg-violet-500/15 border border-violet-500/20 text-violet-400 hover:bg-violet-500/25 transition-all"
+                                >
+                                  <Zap size={9} /> {t('support.quickReplies')}
+                                </button>
+                                {showQRDropdown && (
+                                  <div className="absolute bottom-7 end-0 w-64 bg-[#1a1a2e] border border-white/[0.1] rounded-xl shadow-2xl z-50 overflow-hidden">
+                                    {quickReplies.map((qr) => (
+                                      <button
+                                        key={qr.id}
+                                        type="button"
+                                        onClick={() => { setReply(qr.content); setShowQRDropdown(false); }}
+                                        className="w-full text-start px-3 py-2 hover:bg-white/[0.05] transition-colors border-b border-white/[0.05] last:border-0"
+                                      >
+                                        <p className="text-[11px] font-medium text-white">{qr.title}</p>
+                                        <p className="text-[10px] text-slate-500 truncate mt-0.5">{qr.content}</p>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
+                        {replyError && (
+                          <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1.5">{replyError}</p>
+                        )}
                         <div className="flex items-center gap-2">
                           <select
                             value={newStatus}
@@ -929,41 +1056,75 @@ export default function SupportPage() {
 
       {/* ── Bulk action floating bar ── */}
       {managerMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#12121f] border border-blue-500/25 rounded-2xl px-5 py-3 shadow-2xl shadow-black/40 backdrop-blur-sm flex-wrap justify-center">
-          <span className="text-sm font-bold text-white">{selectedIds.size}</span>
-          <span className="text-sm text-slate-400">{t('support.ticketsSelected')}</span>
-          <div className="w-px h-4 bg-white/[0.1]" />
-          <select
-            value={bulkAgentId}
-            onChange={(e) => setBulkAgentId(e.target.value)}
-            className="px-3 py-1.5 text-sm bg-[#1a1a2e] border border-white/[0.1] rounded-lg text-slate-300 focus:outline-none focus:border-blue-500/50 min-w-[160px]"
-          >
-            <option value="">{t('support.chooseAgent')}</option>
-            {agents.map((a) => <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>)}
-          </select>
-          <button
-            onClick={() => void handleBulkAssign()}
-            disabled={bulkAssigning || !bulkAgentId}
-            className="px-4 py-1.5 text-sm font-semibold bg-blue-500 hover:bg-blue-400 text-white rounded-lg disabled:opacity-50 transition-all"
-          >
-            {bulkAssigning ? t('common.saving') : t('support.confirmAssign')}
-          </button>
-          <div className="w-px h-4 bg-white/[0.1]" />
-          <button
-            onClick={() => void handleBulkStatus('RESOLVED')}
-            disabled={bulkStatusing}
-            className="px-4 py-1.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg disabled:opacity-50 transition-all"
-          >
-            {t('support.bulkResolve')}
-          </button>
-          <button
-            onClick={() => void handleBulkStatus('CLOSED')}
-            disabled={bulkStatusing}
-            className="px-4 py-1.5 text-sm font-semibold bg-slate-700 hover:bg-slate-600 text-white rounded-lg disabled:opacity-50 transition-all"
-          >
-            {t('support.bulkClose')}
-          </button>
-          <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-600 hover:text-slate-300 transition-colors">✕</button>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 bg-[#12121f] border border-blue-500/25 rounded-2xl px-5 py-3 shadow-2xl shadow-black/40 backdrop-blur-sm">
+          {bulkConfirm ? (
+            /* ── Step 2: Confirmation ── */
+            <div className="flex items-center gap-3 flex-wrap justify-center">
+              <span className="text-sm text-slate-300">
+                {bulkConfirm === 'RESOLVED' ? t('support.bulkResolve') : t('support.bulkClose')} {selectedIds.size} {t('support.tickets')}?
+              </span>
+              <button
+                onClick={() => void executeBulkStatus(bulkConfirm)}
+                disabled={bulkStatusing}
+                className={`px-4 py-1.5 text-sm font-semibold text-white rounded-lg disabled:opacity-50 transition-all ${
+                  bulkConfirm === 'RESOLVED' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-600 hover:bg-slate-500'
+                }`}
+              >
+                {bulkStatusing ? t('common.saving') : t('common.confirm')}
+              </button>
+              <button
+                onClick={() => setBulkConfirm(null)}
+                className="px-4 py-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          ) : (
+            /* ── Step 1: Actions ── */
+            <div className="flex items-center gap-3 flex-wrap justify-center">
+              <span className="text-sm font-bold text-white">{selectedIds.size}</span>
+              <span className="text-sm text-slate-400">{t('support.ticketsSelected')}</span>
+              <div className="w-px h-4 bg-white/[0.1]" />
+              <select
+                value={bulkAgentId}
+                onChange={(e) => setBulkAgentId(e.target.value)}
+                className="px-3 py-1.5 text-sm bg-[#1a1a2e] border border-white/[0.1] rounded-lg text-slate-300 focus:outline-none focus:border-blue-500/50 min-w-[160px]"
+              >
+                <option value="">{t('support.chooseAgent')}</option>
+                {agents.map((a) => <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>)}
+              </select>
+              <button
+                onClick={() => void handleBulkAssign()}
+                disabled={bulkAssigning || !bulkAgentId}
+                className="px-4 py-1.5 text-sm font-semibold bg-blue-500 hover:bg-blue-400 text-white rounded-lg disabled:opacity-50 transition-all"
+              >
+                {bulkAssigning ? t('common.saving') : t('support.confirmAssign')}
+              </button>
+              <div className="w-px h-4 bg-white/[0.1]" />
+              <button
+                onClick={() => setBulkConfirm('RESOLVED')}
+                disabled={bulkStatusing}
+                className="px-4 py-1.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg disabled:opacity-50 transition-all"
+              >
+                {t('support.bulkResolve')}
+              </button>
+              <button
+                onClick={() => setBulkConfirm('CLOSED')}
+                disabled={bulkStatusing}
+                className="px-4 py-1.5 text-sm font-semibold bg-slate-700 hover:bg-slate-600 text-white rounded-lg disabled:opacity-50 transition-all"
+              >
+                {t('support.bulkClose')}
+              </button>
+              <button
+                onClick={() => { setSelectedIds(new Set()); setBulkError(''); setBulkConfirm(null); }}
+                aria-label="Clear selection"
+                className="text-xs text-slate-600 hover:text-slate-300 transition-colors"
+              >✕</button>
+            </div>
+          )}
+          {bulkError && (
+            <p className="text-[11px] text-red-400">{bulkError}</p>
+          )}
         </div>
       )}
 
@@ -1017,7 +1178,7 @@ export default function SupportPage() {
       </Modal>
 
       {/* ── Assign Modal ── */}
-      <Modal open={!!assignTarget} onClose={() => setAssignTarget(null)} title={t('support.assignTicket')}>
+      <Modal open={!!assignTarget} onClose={() => { setAssignTarget(null); setAssignError(''); }} title={t('support.assignTicket')}>
         {assignTarget && (
           <div className="space-y-4">
             <div className="bg-[#0d0d14] rounded-lg p-3 border border-white/[0.06]">
@@ -1042,8 +1203,11 @@ export default function SupportPage() {
             {assignTo && (
               <p className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">{t('support.assignNote')}</p>
             )}
+            {assignError && (
+              <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{assignError}</p>
+            )}
             <div className="flex gap-3 justify-end">
-              <button onClick={() => setAssignTarget(null)} className="px-4 py-2 text-sm text-slate-400">{t('common.cancel')}</button>
+              <button onClick={() => { setAssignTarget(null); setAssignError(''); }} className="px-4 py-2 text-sm text-slate-400">{t('common.cancel')}</button>
               <button
                 onClick={() => void handleAssign()}
                 disabled={assigning}
@@ -1075,13 +1239,32 @@ export default function SupportPage() {
                     <p className="text-xs font-semibold text-white">{qr.title}</p>
                     <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{qr.content}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void handleDeleteQuickReply(qr.id)}
-                    className="shrink-0 text-slate-600 hover:text-red-400 transition-colors mt-0.5"
-                  >
-                    <Trash2 size={12} />
-                  </button>
+                  {deletingQRId === qr.id ? (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => void confirmDeleteQuickReply(qr.id)}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                      >
+                        {t('common.confirm')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingQRId(null)}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.05] text-slate-400 hover:bg-white/[0.1] transition-colors"
+                      >
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteQuickReply(qr.id)}
+                      className="shrink-0 text-slate-600 hover:text-red-400 transition-colors mt-0.5"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -1103,6 +1286,9 @@ export default function SupportPage() {
                 maxLength={2000}
                 className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-violet-500/50 resize-none placeholder-slate-600"
               />
+              {qrError && (
+                <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1.5">{qrError}</p>
+              )}
               <button
                 type="button"
                 onClick={() => void handleAddQuickReply()}

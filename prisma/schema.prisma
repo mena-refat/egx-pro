@@ -91,6 +91,7 @@ model User {
   followsSent                            Follow[]       @relation("FollowFollower")
   goals                                  Goal[]
   idempotencyKeys                        IdempotencyKey[]
+  paymentTransactions                    PaymentTransaction[]
   notifications                          Notification[]
   portfolios                             Portfolio[]
   predictionLikes                        PredictionLike[]
@@ -559,6 +560,19 @@ model IdempotencyKey {
   @@unique([userId, key])
   @@index([userId, status, expiresAt])
   @@index([expiresAt])
+}
+
+model PaymentTransaction {
+  id            String   @id @default(cuid())
+  paymobId      String   @unique
+  userId        Int
+  plan          String
+  amountEGP     Float
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model ArchivedUser {

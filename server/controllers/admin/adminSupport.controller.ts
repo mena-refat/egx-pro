@@ -12,7 +12,7 @@ function isManager(admin: AdminRequest['admin']): boolean {
 
 export const AdminSupportController = {
   async list(req: AdminRequest, res: Response): Promise<void> {
-    const { page = '1', status = '', priority = '', agentId = '', sort = '' } = req.query as Record<string, string>;
+    const { page = '1', status = '', priority = '', agentId = '', sort = '', search = '' } = req.query as Record<string, string>;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const manager = isManager(req.admin);
 
@@ -26,6 +26,15 @@ export const AdminSupportController = {
       where.assignedTo = null;
     } else if (agentId) {
       where.assignedTo = parseInt(agentId, 10);
+    }
+
+    if (search.trim()) {
+      where.OR = [
+        { subject: { contains: search.trim(), mode: 'insensitive' } },
+        { user: { fullName: { contains: search.trim(), mode: 'insensitive' } } },
+        { user: { email: { contains: search.trim(), mode: 'insensitive' } } },
+        { user: { username: { contains: search.trim(), mode: 'insensitive' } } },
+      ];
     }
 
     // Sort order — agents default to oldest first so they answer longest-waiting users
@@ -97,7 +106,7 @@ export const AdminSupportController = {
       return;
     }
 
-    const existing = await prisma.supportTicket.findUnique({ where: { id }, select: { assignedTo: true, status: true } });
+    const existing = await prisma.supportTicket.findUnique({ where: { id }, select: { assignedTo: true, status: true, escalatedAt: true } });
     if (!existing) { sendError(res, 'NOT_FOUND', 404); return; }
 
     if (existing.status === 'RESOLVED' || existing.status === 'CLOSED') {
@@ -153,6 +162,9 @@ export const AdminSupportController = {
       return;
     }
 
+    const existingTicket = await prisma.supportTicket.findUnique({ where: { id }, select: { id: true } });
+    if (!existingTicket) { sendError(res, 'NOT_FOUND', 404); return; }
+
     const ticket = await prisma.supportTicket.update({
       where: { id },
       data: {
@@ -172,9 +184,12 @@ export const AdminSupportController = {
     const { id } = req.params as { id: string };
     const { agentId } = req.body as { agentId: number | null };
 
+    const ticketExists = await prisma.supportTicket.findUnique({ where: { id }, select: { id: true } });
+    if (!ticketExists) { sendError(res, 'NOT_FOUND', 404); return; }
+
     if (agentId) {
       const agent = await prisma.admin.findUnique({
-        where: { id: agentId, isActive: true },
+        where: { id: agentId, isActive: true, isDeleted: false },
         select: { id: true },
       });
       if (!agent) {
@@ -227,7 +242,9 @@ export const AdminSupportController = {
     if (req.admin!.role !== 'SUPER_ADMIN') {
       where.managerId = req.admin!.id;
     } else if (managerIdParam) {
-      where.managerId = parseInt(managerIdParam, 10);
+      const parsedManagerId = parseInt(managerIdParam, 10);
+      if (isNaN(parsedManagerId)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+      where.managerId = parsedManagerId;
     }
 
     const agents = await prisma.admin.findMany({
@@ -278,11 +295,15 @@ export const AdminSupportController = {
         prisma.supportTicket.findMany({
           where: { assignedTo: { in: agentIds }, assignedAt: { not: null }, repliedAt: { not: null } },
           select: { assignedTo: true, assignedAt: true, repliedAt: true },
+          take: 5_000,
+          orderBy: { repliedAt: 'desc' },
         }),
         // Assignment time: createdAt → assignedAt (for manager perf stats)
         prisma.supportTicket.findMany({
           where: { assignedTo: { in: agentIds }, assignedAt: { not: null } },
           select: { createdAt: true, assignedAt: true, status: true },
+          take: 10_000,
+          orderBy: { assignedAt: 'desc' },
         }),
         // Unassigned open tickets
         prisma.supportTicket.count({ where: { status: 'OPEN', assignedTo: null } }),
@@ -361,7 +382,7 @@ export const AdminSupportController = {
     }
 
     if (agentId) {
-      const agent = await prisma.admin.findUnique({ where: { id: agentId, isActive: true }, select: { id: true } });
+      const agent = await prisma.admin.findUnique({ where: { id: agentId, isActive: true, isDeleted: false }, select: { id: true } });
       if (!agent) { sendError(res, 'AGENT_NOT_FOUND', 404); return; }
     }
 
@@ -397,6 +418,8 @@ export const AdminSupportController = {
     const respondedTickets = (await prisma.supportTicket.findMany({
       where: { assignedTo: id, assignedAt: { not: null }, repliedAt: { not: null } },
       select: { assignedAt: true, repliedAt: true },
+      take: 1_000,
+      orderBy: { repliedAt: 'desc' },
     })).filter((t) => t.repliedAt!.getTime() > t.assignedAt!.getTime());
 
     const avgResponseHours =
@@ -435,37 +458,80 @@ export const AdminSupportController = {
       where: { status: 'OPEN', assignedTo: null },
     });
 
-    const result = await Promise.all(managers.map(async (manager) => {
-      const agents = await prisma.admin.findMany({
-        where: { managerId: manager.id, isActive: true, isDeleted: false, permissions: { has: 'support.reply' } },
-        select: { id: true },
-      });
-      const agentIds = agents.map((a) => a.id);
+    // ── Batch all queries — O(5) total regardless of manager count ──
+    const allAgents = await prisma.admin.findMany({
+      where: {
+        managerId: { in: managers.map((m) => m.id) },
+        isActive: true,
+        isDeleted: false,
+        permissions: { has: 'support.reply' },
+      },
+      select: { id: true, managerId: true },
+    });
 
+    const allAgentIds = allAgents.map((a) => a.id);
+
+    // Build managerId → agentIds map
+    const agentsByManager: Record<number, number[]> = {};
+    for (const agent of allAgents) {
+      (agentsByManager[agent.managerId!] ??= []).push(agent.id);
+    }
+
+    if (allAgentIds.length === 0) {
+      sendSuccess(res, {
+        managers: managers.map((m) => ({
+          manager: m, teamSize: 0, teamTotal: 0, teamResolved: 0, teamResolveRate: 0, avgAssignmentHours: null,
+        })),
+        globalUnassigned: unassignedOpen,
+      });
+      return;
+    }
+
+    const [totalByAgent, resolvedByAgent, assignedTickets] = await Promise.all([
+      prisma.supportTicket.groupBy({
+        by: ['assignedTo'],
+        where: { assignedTo: { in: allAgentIds } },
+        _count: { id: true },
+      }),
+      prisma.supportTicket.groupBy({
+        by: ['assignedTo'],
+        where: { assignedTo: { in: allAgentIds }, status: { in: ['RESOLVED', 'CLOSED'] } },
+        _count: { id: true },
+      }),
+      prisma.supportTicket.findMany({
+        where: { assignedTo: { in: allAgentIds }, assignedAt: { not: null } },
+        select: { assignedTo: true, createdAt: true, assignedAt: true },
+        take: 10_000,
+        orderBy: { assignedAt: 'desc' },
+      }),
+    ]);
+
+    const totalMap    = Object.fromEntries(totalByAgent.map((r) => [r.assignedTo!, r._count.id]));
+    const resolvedMap = Object.fromEntries(resolvedByAgent.map((r) => [r.assignedTo!, r._count.id]));
+
+    // Group valid assignment times by agent
+    const assignedByAgent: Record<number, { createdAt: Date; assignedAt: Date }[]> = {};
+    for (const t of assignedTickets) {
+      if (t.assignedAt!.getTime() > t.createdAt.getTime()) {
+        (assignedByAgent[t.assignedTo!] ??= []).push({ createdAt: t.createdAt, assignedAt: t.assignedAt! });
+      }
+    }
+
+    const result = managers.map((manager) => {
+      const agentIds = agentsByManager[manager.id] ?? [];
       if (agentIds.length === 0) {
         return { manager, teamSize: 0, teamTotal: 0, teamResolved: 0, teamResolveRate: 0, avgAssignmentHours: null };
       }
-
-      const [teamTotal, teamResolved] = await Promise.all([
-        prisma.supportTicket.count({ where: { assignedTo: { in: agentIds } } }),
-        prisma.supportTicket.count({ where: { assignedTo: { in: agentIds }, status: { in: ['RESOLVED', 'CLOSED'] } } }),
-      ]);
-
-      const assignedTickets = (await prisma.supportTicket.findMany({
-        where: { assignedTo: { in: agentIds }, assignedAt: { not: null } },
-        select: { createdAt: true, assignedAt: true },
-      })).filter((t) => t.assignedAt!.getTime() > t.createdAt.getTime());
-
+      const teamTotal    = agentIds.reduce((sum, id) => sum + (totalMap[id] ?? 0), 0);
+      const teamResolved = agentIds.reduce((sum, id) => sum + (resolvedMap[id] ?? 0), 0);
+      const allAssigned  = agentIds.flatMap((id) => assignedByAgent[id] ?? []);
       const avgAssignmentHours =
-        assignedTickets.length > 0
+        allAssigned.length > 0
           ? Math.round(
-              (assignedTickets.reduce((sum, t) => sum + (t.assignedAt!.getTime() - t.createdAt.getTime()), 0) /
-                assignedTickets.length /
-                3_600_000) *
-                10
+              (allAssigned.reduce((sum, t) => sum + (t.assignedAt.getTime() - t.createdAt.getTime()), 0) /
+                allAssigned.length / 3_600_000) * 10
             ) / 10
           : null;
-
       return {
         manager,
         teamSize: agentIds.length,
@@ -474,7 +540,7 @@ export const AdminSupportController = {
         teamResolveRate: teamTotal > 0 ? Math.round((teamResolved / teamTotal) * 100) : 0,
         avgAssignmentHours,
       };
-    }));
+    });
 
     sendSuccess(res, { managers: result, globalUnassigned: unassignedOpen });
   },

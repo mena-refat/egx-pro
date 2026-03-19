@@ -576,6 +576,8 @@ export async function changePassword(
     where: { id: userId },
     data: { passwordHash: hash, salt, lastPasswordChangeAt: new Date() },
   });
+  // Revoke all sessions so stolen tokens can't be used after a password change
+  await RefreshTokenRepository.revokeAllByUser(userId);
   if (user.email) {
     EmailService.sendPasswordChanged(user.email).catch((err) =>
       logger.error('Failed to send password change email', { err })

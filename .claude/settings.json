@@ -43,7 +43,15 @@
       "Bash(find /c/Users/menar/Desktop/egx-pro/server -type f \\\\\\(-name *.ts -o -name *.js \\\\\\))",
       "Bash(grep -r \"raw\\\\|query\\\\|$\\\\|\\\\.sql\\\\|queryRaw\\\\|unsafeRaw\" /c/Users/menar/Desktop/egx-pro/server --include=*.ts)",
       "Bash(grep -r \"$executeRaw\\\\|$queryRaw\" /c/Users/menar/Desktop/egx-pro/server --include=\"*.ts\")",
-      "Bash(find c:UsersmenarDesktopegx-pro -name index.ts -path */server/* -type f)"
+      "Bash(find c:UsersmenarDesktopegx-pro -name index.ts -path */server/* -type f)",
+      "Bash(xargs head:*)",
+      "Bash(grep -r sk-ant- c:/Users/menar/Desktop/egx-pro --include=*.ts --include=*.tsx --include=*.js --include=*.json)",
+      "Bash(grep -n \"missing\\\\|unimplemented\\\\|not implemented\" c:/Users/menar/Desktop/egx-pro/server/controllers/*.ts c:/Users/menar/Desktop/egx-pro/server/services/*.ts)",
+      "Bash(grep -n \"TODO\\\\|FIXME\\\\|HACK\\\\|CRITICAL\\\\|BUG\" c:/Users/menar/Desktop/egx-pro/server/services/*.ts)",
+      "Bash(wc -l c:/Users/menar/Desktop/egx-pro/server/tests/*.ts)",
+      "Bash(grep -r \"schema\\\\|validate\" c:/Users/menar/Desktop/egx-pro/server/schemas/*.ts)",
+      "Bash(wc -l \"c:\\\\Users\\\\menar\\\\Desktop\\\\egx-pro\\\\server\\\\tests\"*.test.ts)",
+      "Bash(ls -la /c/Users/menar/Desktop/egx-pro/server/middleware/*.ts)"
     ]
   }
 }

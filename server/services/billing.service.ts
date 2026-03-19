@@ -3,6 +3,7 @@ import { DiscountRepository } from '../repositories/discount.repository.ts';
 import { isPro, getLimit } from '../lib/plan.ts';
 import { PLAN_PRICES } from '../lib/constants.ts';
 import { AppError } from '../lib/errors.ts';
+import { PaymobService } from './paymob.service.ts';
 
 type Plan = 'free' | 'pro' | 'annual' | 'ultra' | 'ultra_annual';
 export type PlanUpgrade = 'pro_monthly' | 'pro_yearly' | 'ultra_monthly' | 'ultra_yearly' | 'pro' | 'annual';
@@ -157,10 +158,20 @@ export const BillingService = {
 
     const basePrice = getBasePrice(planValue);
     const finalPrice = Math.round(basePrice * (1 - discountPercent / 100));
-    void finalPrice;
-    // TODO: verify payment with Paymob using options.paymentToken and finalPrice
 
-    await DiscountRepository.applyUpgrade(userId, planValue, planExpiresAt, discount ? { id: discount.id, maxUses: discount.maxUses } : undefined);
+    // Verify payment with Paymob before activating the plan
+    const payment = await PaymobService.verifyTransaction(options.paymentToken!, finalPrice);
+    if (!payment.valid) {
+      throw new AppError('PAYMENT_VERIFICATION_FAILED', 400);
+    }
+
+    await DiscountRepository.applyUpgrade(
+      userId,
+      planValue,
+      planExpiresAt,
+      discount ? { id: discount.id, maxUses: discount.maxUses } : undefined,
+      { paymobId: options.paymentToken!, amountEGP: payment.amountEGP }
+    );
 
     return { success: true };
   },

@@ -113,13 +113,14 @@ function Section({ icon: Icon, title, children }: { icon: React.ComponentType<{ 
   );
 }
 
-function OptionCard({ selected, onClick, title, desc, icon: Icon }: {
+type OptionCardProps = {
   selected: boolean;
   onClick: () => void;
   title: string;
   desc?: string;
   icon?: React.ComponentType<{ className?: string }>;
-}) {
+};
+const OptionCard: React.FC<OptionCardProps> = ({ selected, onClick, title, desc, icon: Icon }) => {
   return (
     <button
       type="button"

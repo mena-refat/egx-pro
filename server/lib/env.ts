@@ -46,6 +46,17 @@ export function validateEnv(): void {
       const keys = prodResult.error.issues.map((e) => e.path.join('.')).filter(Boolean);
       keys.forEach((k) => missing.push(k));
     }
+
+    // Payment & third-party integrations
+    if (!process.env.PAYMOB_API_KEY?.trim()) {
+      missing.push('PAYMOB_API_KEY');
+    }
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()) {
+      missing.push('GOOGLE_SERVICE_ACCOUNT_JSON (Google Play billing)');
+    }
+    if (!process.env.GOOGLE_PUBSUB_AUDIENCE?.trim()) {
+      missing.push('GOOGLE_PUBSUB_AUDIENCE (Google Play RTDN webhook)');
+    }
   }
 
   if (missing.length > 0) {

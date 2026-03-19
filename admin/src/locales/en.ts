@@ -318,6 +318,9 @@ export const en = {
     quickReplyContent: 'Content',
     noQuickReplies: 'No quick replies yet. Add one below.',
     manageQuickReplies: 'Manage Quick Replies',
+    actionFailed: 'Action failed. Please try again.',
+    replyForbidden: 'You are not assigned to this ticket.',
+    searchPlaceholder: 'Search by subject or user...',
   },
 
   account: {

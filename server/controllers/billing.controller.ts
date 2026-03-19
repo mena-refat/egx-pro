@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { OAuth2Client } from 'google-auth-library';
 import { BillingService } from '../services/billing.service.ts';
 import { GooglePlayService } from '../services/googlePlay.service.ts';
 import { DiscountRepository } from '../repositories/discount.repository.ts';
@@ -7,6 +8,8 @@ import type { AuthRequest } from '../routes/types.ts';
 import { auditLog } from '../lib/audit.ts';
 import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 import { prisma } from '../lib/prisma.ts';
+
+const pubsubClient = new OAuth2Client();
 
 function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -136,17 +139,13 @@ export const BillingController = {
     }
     try {
       const token = authHeader.slice(7);
-      // Decode without verification first to get the email claim
-      const unverified = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString()) as {
-        iss?: string; aud?: string; email?: string; exp?: number;
-      };
-      // Basic structural validation — full crypto verification requires google-auth-library
-      if (
-        typeof unverified.exp !== 'number' ||
-        unverified.exp < Math.floor(Date.now() / 1000) ||
-        (EXPECTED_AUDIENCE && unverified.aud !== EXPECTED_AUDIENCE) ||
-        !unverified.email?.endsWith('@gcp-sa-pubsub.iam.gserviceaccount.com')
-      ) {
+      // Full cryptographic verification using Google's public keys (RS256)
+      const ticket = await pubsubClient.verifyIdToken({
+        idToken: token,
+        audience: EXPECTED_AUDIENCE || undefined,
+      });
+      const payload = ticket.getPayload();
+      if (!payload?.email?.endsWith('@gcp-sa-pubsub.iam.gserviceaccount.com')) {
         res.sendStatus(401);
         return;
       }

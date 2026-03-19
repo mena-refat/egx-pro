@@ -318,6 +318,9 @@ export const ar = {
     quickReplyContent: 'المحتوى',
     noQuickReplies: 'لا توجد ردود سريعة. أضف واحدة أدناه.',
     manageQuickReplies: 'إدارة الردود السريعة',
+    actionFailed: 'فشلت العملية. يرجى المحاولة مجددًا.',
+    replyForbidden: 'لست مسندًا إلى هذه التذكرة.',
+    searchPlaceholder: 'ابحث بالموضوع أو المستخدم...',
   },
 
   account: {

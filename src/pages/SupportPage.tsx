@@ -295,15 +295,11 @@ function TicketDetail({
 
 /* ─── Ticket Card ─────────────────────────────────────────────────────────── */
 
-function TicketCard({
-  ticket,
-  isAr,
-  onClick,
-}: {
+const TicketCard: React.FC<{
   ticket: SupportTicket;
   isAr: boolean;
   onClick: () => void;
-}) {
+}> = ({ ticket, isAr, onClick }) => {
   const hasUnread = ticket.reply && !ticket.replyRead;
 
   return (

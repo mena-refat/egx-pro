@@ -21,7 +21,7 @@ export async function auditLog(params: {
     const ua = params.req?.headers?.['user-agent'] ?? 'unknown';
     await prisma.auditLog.create({
       data: {
-        userId: params.userId ?? null,
+        userId: params.userId != null ? Number(params.userId) : null,
         action: params.action,
         details: params.details ?? null,
         ipAddress: params.req ? (ip === 'unknown' ? null : ip) : null,

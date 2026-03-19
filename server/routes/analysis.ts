@@ -9,8 +9,10 @@ import { tickerParamSchema } from '../schemas/params.ts';
 
 const router = Router();
 
-// تشخيص اتصال Claude — غير متاح في production (لا تسريب API key)
-router.get('/test-connection', AnalysisController.testConnection);
+// تشخيص اتصال Claude — متاح في dev فقط
+if (process.env.NODE_ENV !== 'production') {
+  router.get('/test-connection', AnalysisController.testConnection);
+}
 
 // ipKeyGenerator يُستخدم لمعالجة IPv6 بشكل صحيح (يمنع مشاكل الإقلاع)
 const analysisLimiter = rateLimit({

@@ -19,7 +19,7 @@ const watchlistAddLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req: Request) => {
     const userId = (req as AuthRequest).userId;
-    if (userId) return userId;
+    if (userId) return String(userId);
     return ipKeyGenerator(req.ip ?? 'unknown');
   },
   handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),

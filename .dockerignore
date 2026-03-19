@@ -1,0 +1,12 @@
+node_modules
+.env
+.env.*
+!.env.example
+MobileApp/node_modules
+MobileApp/.expo
+dist
+.git
+.github
+*.log
+coverage
+.claude

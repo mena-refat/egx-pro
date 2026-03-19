@@ -19,7 +19,7 @@ const createLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req: Request) => {
     const uid = (req as AuthRequest).userId;
-    if (uid) return uid;
+    if (uid) return String(uid);
     return ipKeyGenerator(req.ip ?? 'unknown');
   },
   handler: (_req, res) => {

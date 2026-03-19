@@ -65,30 +65,48 @@ export const SocialService = {
     await FollowRepository.deleteByPair(currentUserId, target.id);
   },
 
-  async getFollowers(currentUserId: number) {
+  async getFollowers(currentUserId: number, page = 1, limit = 50) {
+    const skip = (page - 1) * limit;
+    const take = limit + 1;
     const rows = (await FollowRepository.findFollowers(currentUserId, {
       include: { follower: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } } },
-    } as { include: object })) as unknown as Array<{ follower: { id: number; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
-    return rows.map((row) => ({
-      id: row.follower.id,
-      username: row.follower.username,
-      fullName: row.follower.fullName,
-      avatarUrl: row.follower.avatarUrl,
-      followedAt: row.createdAt,
-    }));
+      skip,
+      take,
+    } as { include: object; skip: number; take: number })) as unknown as Array<{ follower: { id: number; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
+    const hasMore = rows.length > limit;
+    return {
+      items: rows.slice(0, limit).map((row) => ({
+        id: row.follower.id,
+        username: row.follower.username,
+        fullName: row.follower.fullName,
+        avatarUrl: row.follower.avatarUrl,
+        followedAt: row.createdAt,
+      })),
+      hasMore,
+      page,
+    };
   },
 
-  async getFollowing(currentUserId: number) {
+  async getFollowing(currentUserId: number, page = 1, limit = 50) {
+    const skip = (page - 1) * limit;
+    const take = limit + 1;
     const rows = (await FollowRepository.findFollowing(currentUserId, {
       include: { following: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } } },
-    } as { include: object })) as unknown as Array<{ following: { id: number; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
-    return rows.map((row) => ({
-      id: row.following.id,
-      username: row.following.username,
-      fullName: row.following.fullName,
-      avatarUrl: row.following.avatarUrl,
-      followedAt: row.createdAt,
-    }));
+      skip,
+      take,
+    } as { include: object; skip: number; take: number })) as unknown as Array<{ following: { id: number; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
+    const hasMore = rows.length > limit;
+    return {
+      items: rows.slice(0, limit).map((row) => ({
+        id: row.following.id,
+        username: row.following.username,
+        fullName: row.following.fullName,
+        avatarUrl: row.following.avatarUrl,
+        followedAt: row.createdAt,
+      })),
+      hasMore,
+      page,
+    };
   },
 
   async getProfileFollowers(profileUsername: string, viewerId: number, page: number, limit: number) {

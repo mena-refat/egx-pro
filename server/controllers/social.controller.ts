@@ -38,8 +38,10 @@ export const SocialController = {
       sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
-    const followers = await SocialService.getFollowers(userId);
-    sendSuccess(res, followers);
+    const page = Math.max(1, parseInt(String(req.query.page || 1), 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit || 50), 10) || 50));
+    const result = await SocialService.getFollowers(userId, page, limit);
+    sendSuccess(res, result);
   }),
 
   following: run(async (req, res) => {
@@ -48,8 +50,10 @@ export const SocialController = {
       sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
-    const following = await SocialService.getFollowing(userId);
-    sendSuccess(res, following);
+    const page = Math.max(1, parseInt(String(req.query.page || 1), 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit || 50), 10) || 50));
+    const result = await SocialService.getFollowing(userId, page, limit);
+    sendSuccess(res, result);
   }),
 
   requests: run(async (req, res) => {

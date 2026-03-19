@@ -1,0 +1,62 @@
+version: '3.9'
+
+services:
+  # ─── PostgreSQL ───────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: borsa
+      POSTGRES_USER: borsa
+      POSTGRES_PASSWORD: borsa_dev_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U borsa -d borsa']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis (Upstash-compatible local) ────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --requirepass redis_dev_password
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', 'redis_dev_password', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── API Server ───────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://borsa:borsa_dev_password@postgres:5432/borsa
+      # Copy remaining vars from your .env file
+    env_file:
+      - .env
+    ports:
+      - '3000:3000'
+    volumes:
+      # Hot-reload: mount source for development
+      - .:/app
+      - /app/node_modules
+    command: ['node_modules/.bin/tsx', 'server.ts']
+
+volumes:
+  postgres_data:

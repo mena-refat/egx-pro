@@ -29,12 +29,13 @@ function authContext(req: Request): AuthService.AuthContext {
   };
 }
 
-function getAuthUserId(req: Request): string | null {
+function getAuthUserId(req: Request): number | null {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
   try {
     const decoded = verifyAccessToken(authHeader.slice(7)) as { sub: string };
-    return decoded.sub;
+    const id = parseInt(decoded.sub, 10);
+    return isNaN(id) ? null : id;
   } catch {
     return null;
   }

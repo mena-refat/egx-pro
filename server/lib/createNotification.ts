@@ -14,7 +14,8 @@ export type NotificationType =
   | 'prediction_missed'
   | 'prediction_liked'
   | 'rank_up'
-  | 'support_reply';
+  | 'support_reply'
+  | 'support_escalated';
 
 export async function createNotification(
   userId: number,
