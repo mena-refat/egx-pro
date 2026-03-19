@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.ts';
 
 type IdempotencyCreateInput = {
-  userId: string;
+  userId: number;
   key: string;
   method: string;
   path: string;
@@ -12,7 +12,7 @@ type IdempotencyCreateInput = {
 };
 
 export const IdempotencyRepository = {
-  findByUserAndKey(userId: string, key: string) {
+  findByUserAndKey(userId: number, key: string) {
     return prisma.idempotencyKey.findUnique({
       where: { userId_key: { userId, key } },
     });

@@ -1,14 +1,20 @@
+import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Linking, Alert, I18nManager } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Crown, Zap, Check } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
+import { useTheme } from '../../hooks/useTheme';
+
+type BillingPeriod = 'monthly' | 'yearly';
 
 const PLANS = [
   {
     id: 'free',
+    yearlyId: 'free',
     label: 'Free',
-    price: 0,
+    monthlyPrice: 0,
+    yearlyPrice: 0,
     color: '#8b949e',
     features: [
       '3 تحليلات AI شهرياً',
@@ -19,8 +25,10 @@ const PLANS = [
   },
   {
     id: 'pro',
+    yearlyId: 'yearly',
     label: 'Pro',
-    price: 189,
+    monthlyPrice: 189,
+    yearlyPrice: 1690,
     color: '#3b82f6',
     highlight: true,
     features: [
@@ -33,8 +41,10 @@ const PLANS = [
   },
   {
     id: 'ultra',
+    yearlyId: 'ultra_yearly',
     label: 'Ultra',
-    price: 397,
+    monthlyPrice: 397,
+    yearlyPrice: 3564,
     color: '#f59e0b',
     features: [
       '60 تحليل AI شهرياً',
@@ -49,18 +59,36 @@ const PLANS = [
 export default function SubscriptionPage() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { colors } = useTheme();
+  const [billing, setBilling] = useState<BillingPeriod>('monthly');
+
   const currentPlan = user?.plan ?? 'free';
 
-  const isActive = (planId: string) =>
-    planId === 'free'
-      ? currentPlan === 'free'
-      : planId === 'pro'
-      ? currentPlan === 'pro' || currentPlan === 'yearly'
-      : currentPlan === 'ultra' || currentPlan === 'ultra_yearly';
+  const isActive = (planId: string, yearlyId: string) => {
+    if (planId === 'free') return currentPlan === 'free';
+    if (billing === 'monthly') return currentPlan === planId;
+    return currentPlan === yearlyId;
+  };
 
-  const handleUpgrade = (planLabel: string) => {
+  const getPrice = (plan: typeof PLANS[number]) => {
+    if (plan.monthlyPrice === 0) return null;
+    if (billing === 'monthly') return { amount: plan.monthlyPrice, label: '/شهر' };
+    const monthly = Math.round(plan.yearlyPrice / 12);
+    return { amount: monthly, label: '/شهر', yearly: plan.yearlyPrice };
+  };
+
+  const getSavings = (plan: typeof PLANS[number]) => {
+    if (plan.monthlyPrice === 0 || billing === 'monthly') return null;
+    const fullYear = plan.monthlyPrice * 12;
+    const saved = fullYear - plan.yearlyPrice;
+    const pct = Math.round((saved / fullYear) * 100);
+    return { saved, pct };
+  };
+
+  const handleUpgrade = (planLabel: string, isYearly: boolean) => {
+    const billingNote = isYearly ? ' (سنوي)' : ' (شهري)';
     Alert.alert(
-      `ترقية لـ ${planLabel}`,
+      `ترقية لـ ${planLabel}${billingNote}`,
       'للترقية تواصل معنا عبر البريد الإلكتروني أو واتساب وسنرسل لك رابط الدفع.',
       [
         { text: 'إلغاء', style: 'cancel' },
@@ -71,20 +99,25 @@ export default function SubscriptionPage() {
 
   return (
     <ScreenWrapper padded={false}>
-      <View className="flex-row items-center gap-3 px-4 pt-5 pb-4 border-b border-[#30363d]">
+      {/* Header */}
+      <View
+        style={{ borderBottomColor: colors.border }}
+        className="flex-row items-center gap-3 px-4 pt-5 pb-4 border-b"
+      >
         <Pressable
           onPress={() => router.back()}
-          className="w-9 h-9 rounded-xl bg-white/[0.04] border border-[#30363d] items-center justify-center"
+          style={{ backgroundColor: colors.hover, borderColor: colors.border }}
+          className="w-9 h-9 rounded-xl border items-center justify-center"
         >
-          {I18nManager.isRTL ? <ArrowRight size={16} color="#8b949e" /> : <ArrowLeft size={16} color="#8b949e" />}
+          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textMuted} /> : <ArrowLeft size={16} color={colors.textMuted} />}
         </Pressable>
         <View className="w-8 h-8 rounded-xl bg-brand/15 items-center justify-center">
           <Crown size={15} color="#8b5cf6" />
         </View>
-        <Text className="text-base font-bold text-[#e6edf3]">الاشتراك والخطة</Text>
+        <Text style={{ color: colors.text }} className="text-base font-bold">الاشتراك والخطة</Text>
       </View>
 
-      <ScrollView contentContainerClassName="px-4 py-5 gap-4" showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
         {/* Current plan badge */}
         <View className="bg-brand/10 border border-brand/25 rounded-2xl px-4 py-3 flex-row items-center gap-2">
           <Crown size={16} color="#8b5cf6" />
@@ -92,21 +125,52 @@ export default function SubscriptionPage() {
             خطتك الحالية: {currentPlan.toUpperCase()}
           </Text>
           {user?.planExpiresAt && (
-            <Text className="text-xs text-[#8b949e] mr-auto">
+            <Text style={{ color: colors.textMuted }} className="text-xs mr-auto">
               تنتهي: {new Date(user.planExpiresAt).toLocaleDateString('ar-EG')}
             </Text>
           )}
         </View>
 
+        {/* Billing toggle */}
+        <View
+          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          className="border rounded-2xl p-1.5 flex-row gap-1"
+        >
+          {(['monthly', 'yearly'] as const).map((b) => {
+            const active = billing === b;
+            return (
+              <Pressable
+                key={b}
+                onPress={() => setBilling(b)}
+                className="flex-1 flex-row items-center justify-center gap-1.5 py-2.5 rounded-xl"
+                style={{ backgroundColor: active ? '#8b5cf6' : 'transparent' }}
+              >
+                <Text className="text-sm font-semibold" style={{ color: active ? '#fff' : colors.textMuted }}>
+                  {b === 'monthly' ? 'شهري' : 'سنوي'}
+                </Text>
+                {b === 'yearly' && !active && (
+                  <View className="bg-emerald-500/20 px-1.5 py-0.5 rounded-md">
+                    <Text className="text-[10px] font-bold text-emerald-400">وفّر 25%</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* Plan cards */}
         {PLANS.map((plan) => {
-          const active = isActive(plan.id);
+          const active = isActive(plan.id, plan.yearlyId);
+          const price = getPrice(plan);
+          const savings = getSavings(plan);
+
           return (
             <View
               key={plan.id}
               className="rounded-2xl border p-4 gap-3"
               style={{
-                borderColor: active ? '#8b5cf640' : plan.id === 'pro' ? '#3b82f625' : '#30363d',
-                backgroundColor: active ? '#8b5cf608' : '#161b22',
+                borderColor: active ? '#8b5cf640' : plan.id === 'pro' ? `${plan.color}25` : colors.border,
+                backgroundColor: active ? '#8b5cf608' : colors.card,
               }}
             >
               <View className="flex-row items-center justify-between">
@@ -119,11 +183,30 @@ export default function SubscriptionPage() {
                     </View>
                   )}
                 </View>
-                <View className="items-end">
-                  <Text className="text-lg font-bold text-[#e6edf3] tabular-nums">
-                    {plan.price === 0 ? 'مجاناً' : `${plan.price} EGP`}
-                  </Text>
-                  {plan.price > 0 && <Text className="text-xs text-[#656d76]">/شهر</Text>}
+
+                <View className="items-end gap-0.5">
+                  {price === null ? (
+                    <Text style={{ color: colors.text }} className="text-lg font-bold">مجاناً</Text>
+                  ) : (
+                    <>
+                      <Text style={{ color: colors.text }} className="text-lg font-bold tabular-nums">
+                        {price.amount} EGP
+                        <Text style={{ color: colors.textMuted }} className="text-xs font-normal">{price.label}</Text>
+                      </Text>
+                      {price.yearly && (
+                        <Text style={{ color: colors.textMuted }} className="text-xs">
+                          {price.yearly} EGP/سنة
+                        </Text>
+                      )}
+                      {savings && (
+                        <View className="bg-emerald-500/15 px-1.5 py-0.5 rounded-md mt-0.5">
+                          <Text className="text-[10px] font-bold text-emerald-400">
+                            وفّر {savings.saved} EGP
+                          </Text>
+                        </View>
+                      )}
+                    </>
+                  )}
                 </View>
               </View>
 
@@ -131,25 +214,27 @@ export default function SubscriptionPage() {
                 {plan.features.map((f, i) => (
                   <View key={i} className="flex-row items-center gap-2">
                     <Check size={13} color="#4ade80" />
-                    <Text className="text-xs text-[#8b949e]">{f}</Text>
+                    <Text style={{ color: colors.textSub }} className="text-xs">{f}</Text>
                   </View>
                 ))}
               </View>
 
               {!active && plan.id !== 'free' && (
                 <Pressable
-                  onPress={() => handleUpgrade(plan.label)}
+                  onPress={() => handleUpgrade(plan.label, billing === 'yearly')}
                   className="py-2.5 rounded-xl items-center mt-1"
                   style={{ backgroundColor: plan.color }}
                 >
-                  <Text className="text-sm font-bold text-white">ترقية لـ {plan.label}</Text>
+                  <Text className="text-sm font-bold text-white">
+                    ترقية لـ {plan.label} {billing === 'yearly' ? '(سنوي)' : '(شهري)'}
+                  </Text>
                 </Pressable>
               )}
             </View>
           );
         })}
 
-        <Text className="text-xs text-[#656d76] text-center leading-5">
+        <Text style={{ color: colors.textMuted }} className="text-xs text-center leading-5">
           للترقية تواصل معنا — الدفع عبر Paymob
         </Text>
       </ScrollView>

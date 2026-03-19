@@ -11,12 +11,12 @@ type WatchlistTickerInput = z.infer<typeof watchlistTickerSchema>;
 type WatchlistCheckTargetsInput = z.infer<typeof watchlistCheckTargetsSchema>;
 
 export const WatchlistService = {
-  async list(userId: string) {
+  async list(userId: number) {
     const items = await WatchlistRepository.findByUser(userId);
     return { items, pagination: { total: items.length } };
   },
 
-  async add(userId: string, body: unknown): Promise<
+  async add(userId: number, body: unknown): Promise<
     { item: Awaited<ReturnType<typeof WatchlistRepository.create>>; newUnseenAchievements: string[] }
   > {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
@@ -48,7 +48,7 @@ export const WatchlistService = {
     return { item, newUnseenAchievements };
   },
 
-  async update(userId: string, ticker: string, body: { targetPrice?: number | null }) {
+  async update(userId: number, ticker: string, body: { targetPrice?: number | null }) {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
     const normalizedTicker = ticker?.toUpperCase();
     if (!normalizedTicker) throw new AppError('VALIDATION_ERROR', 400);
@@ -71,7 +71,7 @@ export const WatchlistService = {
     return { updated: updated.count > 0 };
   },
 
-  async checkTargets(userId: string, body: unknown): Promise<void> {
+  async checkTargets(userId: number, body: unknown): Promise<void> {
     const parsed = watchlistCheckTargetsSchema.parse(body) as WatchlistCheckTargetsInput;
     for (const { ticker, targetPrice, currentPrice } of parsed.items) {
       if (currentPrice < targetPrice) continue;
@@ -88,7 +88,7 @@ export const WatchlistService = {
     }
   },
 
-  async remove(userId: string, ticker: string): Promise<boolean> {
+  async remove(userId: number, ticker: string): Promise<boolean> {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
     const result = await WatchlistRepository.deleteMany(userId, ticker);
     return result.count > 0;

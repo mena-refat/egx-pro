@@ -54,7 +54,7 @@ export function getFirstDayOfNextMonth(): Date {
   return d;
 }
 
-export async function atomicConsumeQuota(userId: string, points: number): Promise<void> {
+export async function atomicConsumeQuota(userId: number, points: number): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.findUnique({
       where: { id: userId },

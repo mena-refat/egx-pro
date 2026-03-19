@@ -17,12 +17,12 @@ function compareKey(t1: string, t2: string): string {
   return `ai:compare:${sorted}:${sessionDate}`;
 }
 
-function personalKey(userId: string, ticker: string): string {
+function personalKey(userId: number, ticker: string): string {
   const sessionDate = getAnalysisSessionDateString();
   return `ai:personal:${userId}:${ticker.toUpperCase()}:${sessionDate}`;
 }
 
-function personalCompareKey(userId: string, t1: string, t2: string): string {
+function personalCompareKey(userId: number, t1: string, t2: string): string {
   const sessionDate = getAnalysisSessionDateString();
   const sorted = [t1, t2].sort().join('_');
   return `ai:personal:${userId}:compare:${sorted}:${sessionDate}`;

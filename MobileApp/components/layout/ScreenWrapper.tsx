@@ -7,6 +7,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../../hooks/useTheme';
 
 interface Props {
   children: ReactNode;
@@ -25,6 +26,8 @@ export function ScreenWrapper({
   padded = true,
   withKeyboard = false,
 }: Props) {
+  const { colors } = useTheme();
+
   const content = scrollable ? (
     <ScrollView
       className="flex-1"
@@ -59,7 +62,7 @@ export function ScreenWrapper({
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0d1117' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       {inner}
     </SafeAreaView>
   );

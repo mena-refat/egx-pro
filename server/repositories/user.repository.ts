@@ -3,14 +3,14 @@ import { prisma } from '../lib/prisma.ts';
 
 /** Single place for all User table access. No business logic. */
 export const UserRepository = {
-  getPlanUser(id: string) {
+  getPlanUser(id: number) {
     return prisma.user.findUnique({
       where: { id },
       select: { plan: true, planExpiresAt: true, referralProExpiresAt: true },
     });
   },
 
-  getForBillingPlan(id: string) {
+  getForBillingPlan(id: number) {
     return prisma.user.findUnique({
       where: { id },
       select: {

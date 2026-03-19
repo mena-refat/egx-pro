@@ -48,7 +48,7 @@ function ensureFullName(payload: Record<string, unknown>, fullName: string | nul
 }
 
 function toUserPayload(user: {
-  id: string;
+  id: number;
   email: string | null;
   phone: string | null;
   fullName: string | null;
@@ -297,9 +297,11 @@ export async function twoFaAuthenticate(
   if (!body.tempToken || !body.code || typeof body.code !== 'string' || cleanCode.length !== 6) {
     throw new AppError('Invalid request', 400);
   }
-  let userId: string;
+  let userId: number;
   try {
-    userId = verify2FATempToken(body.tempToken).userId;
+    const parsed = parseInt(verify2FATempToken(body.tempToken).userId, 10);
+    if (isNaN(parsed)) throw new Error('invalid id');
+    userId = parsed;
   } catch {
     throw new AppError('invalid_or_expired_token', 401);
   }
@@ -353,7 +355,7 @@ export async function twoFaAuthenticate(
   return { user: userPayload, accessToken, refreshToken };
 }
 
-export async function twoFaSetup(userId: string): Promise<{ secret: string; qrCodeUrl: string; manualCode: string }> {
+export async function twoFaSetup(userId: number): Promise<{ secret: string; qrCodeUrl: string; manualCode: string }> {
   const user = await UserRepository.findUnique({
     where: { id: userId },
     select: { id: true, email: true, twoFactorSecret: true, twoFactorEnabled: true },
@@ -383,7 +385,7 @@ export async function twoFaSetup(userId: string): Promise<{ secret: string; qrCo
 }
 
 export async function twoFaVerify(
-  userId: string,
+  userId: number,
   body: { code?: string },
   ctx?: AuthContext
 ): Promise<{ success: true }> {
@@ -414,7 +416,7 @@ export async function twoFaVerify(
 }
 
 export async function twoFaDisable(
-  userId: string,
+  userId: number,
   body: { code?: string; password?: string },
   ctx?: AuthContext
 ): Promise<{ success: true }> {
@@ -465,8 +467,8 @@ export async function refresh(refreshTokenCookie: string | undefined): Promise<{
 export async function logout(
   refreshTokenCookie: string | undefined,
   ctx?: AuthContext
-): Promise<{ userId?: string }> {
-  let userId: string | null = null;
+): Promise<{ userId?: number }> {
+  let userId: number | null = null;
   if (refreshTokenCookie) {
     const refreshHash = hashRefreshToken(refreshTokenCookie);
     const rt = await RefreshTokenRepository.findByTokenSelect(refreshHash, { userId: true });
@@ -529,7 +531,7 @@ export async function revokeSession(
   refreshTokenCookie: string | undefined,
   tokenId: string,
   ctx?: AuthContext
-): Promise<{ userId: string }> {
+): Promise<{ userId: number }> {
   if (!refreshTokenCookie) throw new AppError('UNAUTHORIZED', 401);
   const refreshHash = hashRefreshToken(refreshTokenCookie);
   const current = await RefreshTokenRepository.findByTokenSelect(refreshHash, { userId: true });
@@ -540,7 +542,7 @@ export async function revokeSession(
 }
 
 export async function changePassword(
-  userId: string,
+  userId: number,
   body: { currentPassword?: string; newPassword?: string },
   ctx?: AuthContext
 ): Promise<{ success: true }> {

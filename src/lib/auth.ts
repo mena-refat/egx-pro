@@ -34,7 +34,7 @@ export async function verifyPassword(password: string, hash: string, salt: strin
   return crypto.timingSafeEqual(a, b);
 }
 
-export function generateAccessToken(user: { id: string; email: string }) {
+export function generateAccessToken(user: { id: number | string; email: string }) {
   const rawKey = process.env.JWT_PRIVATE_KEY;
   const isRealKey = rawKey && rawKey.includes('BEGIN RSA PRIVATE KEY') && !rawKey.includes('...');
 
@@ -50,7 +50,7 @@ export function generateAccessToken(user: { id: string; email: string }) {
   const algorithm = isRealKey ? 'RS256' : 'HS256';
 
   return jwt.sign(
-    { sub: user.id, email: user.email },
+    { sub: String(user.id), email: user.email },
     effectiveSecret,
     { 
       expiresIn: '15m', 
@@ -88,10 +88,10 @@ function get2FATokenSecret(): string {
 }
 
 /** Short-lived token returned after login when 2FA is required. Uses separate secret so it cannot be used as access token. */
-export function generate2FATempToken(userId: string): string {
+export function generate2FATempToken(userId: number | string): string {
   const secret = get2FATokenSecret();
   return jwt.sign(
-    { sub: userId, purpose: '2fa_pending' },
+    { sub: String(userId), purpose: '2fa_pending' },
     secret,
     { expiresIn: '5m', algorithm: 'HS256' }
   );

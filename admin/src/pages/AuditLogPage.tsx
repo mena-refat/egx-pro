@@ -68,23 +68,27 @@ function formatTarget(
 ): { primary: string; secondary?: string } {
   switch (action) {
     case 'ADMIN_LOGIN':
-      return { primary: 'Logged in' };
+      return { primary: 'Logged in successfully' };
 
     case 'ADMIN_CREATED':
       // details = "email: admin@example.com"
-      return { primary: details ?? 'New admin created' };
+      return { primary: details ?? 'New admin created', secondary: 'New admin account' };
 
     case 'ADMIN_DELETED':
-      return { primary: 'Admin account deleted' };
+      return { primary: 'Admin account permanently deleted' };
 
     case 'ADMIN_PASSWORD_CHANGED':
-      return { primary: 'Own password changed' };
+      return { primary: 'Changed own password' };
 
     case 'ADMIN_PROFILE_UPDATED': {
       try {
         const d = JSON.parse(details ?? '{}') as Record<string, unknown>;
         const keys = Object.keys(d);
-        return { primary: keys.length ? `Fields: ${keys.join(', ')}` : 'Profile updated' };
+        const vals = keys.map((k) => `${k}: ${String(d[k])}`).join(' · ');
+        return {
+          primary: keys.length ? `Updated: ${keys.join(', ')}` : 'Profile updated',
+          secondary: vals || undefined,
+        };
       } catch {
         return { primary: details ?? 'Profile updated' };
       }
@@ -101,32 +105,35 @@ function formatTarget(
         const d = JSON.parse(details ?? '{}') as { permissions?: string[]; isActive?: boolean };
         const parts: string[] = [];
         if (d.isActive != null) parts.push(d.isActive ? 'Account activated' : 'Account deactivated');
-        if (d.permissions?.length) parts.push(`Perms: ${d.permissions.join(', ')}`);
-        return { primary: parts.join(' · ') || 'Permissions updated' };
+        const perms = d.permissions;
+        return {
+          primary: parts.join(' · ') || 'Permissions updated',
+          secondary: perms?.length ? `Perms: ${perms.join(', ')}` : (perms ? 'Permissions cleared' : undefined),
+        };
       } catch {
         return { primary: 'Permissions updated' };
       }
     }
 
     case 'ADMIN_RESET_PASSWORD':
-      return { primary: 'Admin password was reset' };
+      return { primary: 'Password reset (forced change on next login)' };
 
     case 'ADMIN_RESET_2FA':
-      return { primary: 'Admin 2FA was reset' };
+      return { primary: '2FA reset (setup required on next login)' };
 
     case 'USER_PLAN_UPDATED':
       // details = "plan → premium"
-      return { primary: details ?? 'Plan updated' };
+      return { primary: details ?? 'Plan updated', secondary: 'Subscription changed' };
 
     case 'USER_DEACTIVATED':
-      return { primary: 'User account deactivated' };
+      return { primary: 'User account deactivated', secondary: 'Login access revoked' };
 
     case 'USER_REACTIVATED':
-      return { primary: 'User account reactivated' };
+      return { primary: 'User account reactivated', secondary: 'Login access restored' };
 
     case 'USER_INVITED':
       // details = "email: user@example.com"
-      return { primary: details ?? 'User invited' };
+      return { primary: details ?? 'User invited', secondary: 'Credentials sent by email' };
 
     case 'SUPPORT_REPLIED':
       // details = "status → IN_PROGRESS"
@@ -136,8 +143,8 @@ function formatTarget(
       try {
         const d = JSON.parse(details ?? '{}') as { status?: string; priority?: string };
         const parts: string[] = [];
-        if (d.status)   parts.push(`Status: ${d.status}`);
-        if (d.priority) parts.push(`Priority: ${d.priority}`);
+        if (d.status)   parts.push(`Status → ${d.status}`);
+        if (d.priority) parts.push(`Priority → ${d.priority}`);
         return { primary: parts.join(' · ') || 'Ticket updated' };
       } catch {
         return { primary: details ?? 'Ticket updated' };
@@ -146,27 +153,31 @@ function formatTarget(
 
     case 'DISCOUNT_CREATED':
       // details = "code: SAVE20"
-      return { primary: details ?? 'Discount code created' };
+      return { primary: details ?? 'Discount code created', secondary: 'New code is active' };
 
     case 'DISCOUNT_UPDATED': {
       try {
         const d = JSON.parse(details ?? '{}') as Record<string, unknown>;
         const keys = Object.keys(d);
-        return { primary: keys.length ? `Updated: ${keys.join(', ')}` : 'Discount updated' };
+        const vals = keys.map((k) => `${k}: ${String(d[k])}`).join(' · ');
+        return {
+          primary: keys.length ? `Updated: ${keys.join(', ')}` : 'Discount updated',
+          secondary: vals || undefined,
+        };
       } catch {
         return { primary: details ?? 'Discount updated' };
       }
     }
 
     case 'DISCOUNT_DELETED':
-      return { primary: 'Discount code deleted' };
+      return { primary: 'Discount code deleted permanently' };
 
     case 'NOTIFICATIONS_BROADCAST': {
       try {
         const d = JSON.parse(details ?? '{}') as { title?: string; plans?: string[] };
         return {
-          primary: d.title ? `"${d.title}"` : 'Broadcast sent',
-          secondary: d.plans?.length ? `Plans: ${d.plans.join(', ')}` : 'All users',
+          primary: d.title ? `"${d.title}"` : 'Broadcast notification sent',
+          secondary: d.plans?.length ? `Plans: ${d.plans.join(', ')}` : 'Sent to all users',
         };
       } catch {
         return { primary: 'Broadcast sent' };
@@ -175,10 +186,10 @@ function formatTarget(
 
     case 'BLOCKLIST_ADDED':
       // details = "EMAIL: test@example.com"
-      return { primary: details ?? 'Identifier blocked' };
+      return { primary: details ?? 'Identifier blocked', secondary: 'Registration will be rejected' };
 
     case 'BLOCKLIST_REMOVED':
-      return { primary: details ?? 'Identifier unblocked' };
+      return { primary: details ?? 'Identifier unblocked', secondary: 'Registration allowed again' };
 
     default:
       return { primary: details ?? target ?? '—' };
@@ -342,6 +353,9 @@ export default function AuditLogPage() {
                 {l.admin?.fullName && (
                   <p className="text-[11px] text-slate-500 mt-0.5">{l.admin.fullName}</p>
                 )}
+                <p className="text-[10px] font-mono text-slate-700 mt-0.5 select-all" title={l.adminId}>
+                  ID: {l.adminId}
+                </p>
               </td>
 
               {/* Action badge */}
@@ -352,11 +366,16 @@ export default function AuditLogPage() {
               </td>
 
               {/* Target — human readable */}
-              <td className="px-4 py-3 max-w-[240px]">
+              <td className="px-4 py-3 max-w-[260px]">
                 <p className="text-slate-200 truncate" title={tgt.primary}>{tgt.primary}</p>
                 {tgt.secondary && (
                   <p className="text-[11px] text-slate-500 mt-0.5 truncate" title={tgt.secondary}>
                     {tgt.secondary}
+                  </p>
+                )}
+                {l.target && (
+                  <p className="text-[10px] font-mono text-slate-700 mt-0.5 select-all" title={`ref: ${l.target}`}>
+                    ref: {l.target}
                   </p>
                 )}
               </td>

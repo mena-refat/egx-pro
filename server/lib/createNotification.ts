@@ -17,7 +17,7 @@ export type NotificationType =
   | 'support_reply';
 
 export async function createNotification(
-  userId: string,
+  userId: number,
   type: NotificationType,
   title: string,
   body: string,

@@ -19,6 +19,7 @@ import {
 } from '../lib/validations';
 
 const BIOMETRIC_CREDS_KEY = 'borsa_biometric_creds';
+const PIN_KEY = 'borsa_pin';
 
 export function useLogin() {
   const router = useRouter();
@@ -26,10 +27,12 @@ export function useLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [show2FA, setShow2FA] = useState(false);
+  const [showPin, setShowPin] = useState(false);
   const [twoFAToken, setTwoFAToken] = useState('');
   const [twoFACode, setTwoFACode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [biometricAvail, setBiometricAvail] = useState(false);
+  const [pinAvail, setPinAvail] = useState(false);
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -41,6 +44,29 @@ export function useLogin() {
     const enrolled = await LocalAuthentication.isEnrolledAsync();
     const hasCreds = await SecureStore.getItemAsync(BIOMETRIC_CREDS_KEY);
     setBiometricAvail(compatible && enrolled && !!hasCreds);
+    const pin = await SecureStore.getItemAsync(PIN_KEY).catch(() => null);
+    setPinAvail(Boolean(pin));
+  };
+
+  const loginWithPin = async (pin: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const storedPin = await SecureStore.getItemAsync(PIN_KEY).catch(() => null);
+      if (!storedPin || storedPin !== pin) {
+        setError('رمز PIN غير صحيح');
+        setLoading(false);
+        return;
+      }
+      const res = await apiClient.post(ENDPOINTS.auth.refresh, {});
+      const body = res.data as { user: MobileUser; accessToken: string; refreshToken?: string };
+      await setAuth(body.user, body.accessToken, body.refreshToken);
+      router.replace('/');
+    } catch {
+      setError('فشل تسجيل الدخول، حاول إدخال كلمة المرور');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loginWithBiometric = async () => {
@@ -157,13 +183,17 @@ export function useLogin() {
     loading,
     error,
     show2FA,
+    showPin,
+    setShowPin,
     twoFACode,
     setTwoFACode,
     showPassword,
     setShowPassword,
     biometricAvail,
+    pinAvail,
     checkBiometric,
     loginWithBiometric,
+    loginWithPin,
     onSubmit: form.handleSubmit(handleLogin),
     handle2FA,
   };

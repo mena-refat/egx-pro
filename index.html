@@ -38,6 +38,12 @@
     <div id="app-splash"><div class="app-splash-spinner"></div></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      setTimeout(function() {
+        var s = document.getElementById('app-splash');
+        if (s) { s.style.opacity = '0'; s.style.pointerEvents = 'none'; setTimeout(function(){ if (s && s.parentNode) s.parentNode.removeChild(s); }, 300); }
+      }, 8000);
+    </script>
   </body>
 </html>
 

@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma.ts';
 
 export const NotificationsRepository = {
-  findByUser(userId: string, page: number, limit: number) {
+  findByUser(userId: number, page: number, limit: number) {
     const skip = (page - 1) * limit;
     return Promise.all([
       prisma.notification.findMany({
@@ -15,25 +15,25 @@ export const NotificationsRepository = {
     ]);
   },
 
-  markAllRead(userId: string) {
+  markAllRead(userId: number) {
     return prisma.notification.updateMany({
       where: { userId },
       data: { isRead: true },
     });
   },
 
-  markOneRead(userId: string, id: string) {
+  markOneRead(userId: number, id: string) {
     return prisma.notification.updateMany({
       where: { id, userId },
       data: { isRead: true },
     });
   },
 
-  deleteAllByUser(userId: string) {
+  deleteAllByUser(userId: number) {
     return prisma.notification.deleteMany({ where: { userId } });
   },
 
-  deleteOne(userId: string, id: string) {
+  deleteOne(userId: number, id: string) {
     return prisma.notification.deleteMany({ where: { id, userId } });
   },
 };

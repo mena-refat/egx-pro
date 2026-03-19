@@ -9,7 +9,7 @@ function hash(value: string): string {
 export type AuditReq = { ip?: string; headers?: { 'user-agent'?: string } };
 
 export async function auditLog(params: {
-  userId?: string | null;
+  userId?: number | string | null;
   action: string;
   req?: AuditReq;
   result?: 'success' | 'failure';

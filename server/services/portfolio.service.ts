@@ -8,7 +8,7 @@ import { UserRepository } from '../repositories/user.repository.ts';
 import type { AuthUser } from '../routes/types.ts';
 
 export const PortfolioService = {
-  async getPortfolio(userId: string, page?: number, limit?: number) {
+  async getPortfolio(userId: number, page?: number, limit?: number) {
     const user = await UserRepository.getPlanUser(userId);
     void user;
     const pageNum = page != null ? Math.max(1, page) : 1;
@@ -85,7 +85,7 @@ export const PortfolioService = {
     return { holding, newUnseenAchievements };
   },
 
-  async updateHolding(userId: string, id: string, body: { shares?: number; purchasePrice?: number; purchaseDate?: string }): Promise<void> {
+  async updateHolding(userId: number, id: string, body: { shares?: number; purchasePrice?: number; purchaseDate?: string }): Promise<void> {
     const { shares, purchasePrice, purchaseDate } = body;
     const result = await PortfolioRepository.updateMany(userId, id, {
       ...(shares != null && { shares: parseFloat(String(shares)) }),
@@ -95,7 +95,7 @@ export const PortfolioService = {
     if (result.count === 0) throw new AppError('NOT_FOUND', 404);
   },
 
-  async deleteHolding(userId: string, id: string): Promise<void> {
+  async deleteHolding(userId: number, id: string): Promise<void> {
     const result = await PortfolioRepository.deleteMany(userId, id);
     if (result.count === 0) throw new AppError('NOT_FOUND', 404);
   },

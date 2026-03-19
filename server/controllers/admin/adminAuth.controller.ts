@@ -155,7 +155,7 @@ export const AdminAuthController = {
       },
     });
 
-    await adminAudit(existing.id, 'ADMIN_PASSWORD_CHANGED', existing.id, undefined, req);
+    await adminAudit(existing.id, 'ADMIN_PASSWORD_CHANGED', existing.id.toString(), undefined, req);
     sendSuccess(res, { success: true });
   },
 
@@ -201,7 +201,7 @@ export const AdminAuthController = {
     await adminAudit(
       req.admin.id,
       'ADMIN_PROFILE_UPDATED',
-      req.admin.id,
+      req.admin.id.toString(),
       JSON.stringify(data),
       req,
     );
@@ -247,7 +247,7 @@ export const AdminAuthController = {
       where: { id: req.admin.id },
       data: { twoFactorEnabled: true, twoFactorSecret: secret },
     });
-    await adminAudit(req.admin.id, 'ADMIN_2FA_ENABLED', req.admin.id, undefined, req);
+    await adminAudit(req.admin.id, 'ADMIN_2FA_ENABLED', req.admin.id.toString(), undefined, req);
     sendSuccess(res, { success: true });
   },
 
@@ -281,7 +281,7 @@ export const AdminAuthController = {
       where: { id: existing.id },
       data: { twoFactorEnabled: false, twoFactorSecret: null },
     });
-    await adminAudit(req.admin.id, 'ADMIN_2FA_DISABLED', req.admin.id, undefined, req);
+    await adminAudit(req.admin.id, 'ADMIN_2FA_DISABLED', req.admin.id.toString(), undefined, req);
     sendSuccess(res, { success: true });
   },
 };

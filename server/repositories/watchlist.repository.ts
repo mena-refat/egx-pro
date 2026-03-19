@@ -1,24 +1,24 @@
 import { prisma } from '../lib/prisma.ts';
 
 export const WatchlistRepository = {
-  findByUser(userId: string) {
+  findByUser(userId: number) {
     return prisma.watchlist.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
   },
 
-  countByUser(userId: string) {
+  countByUser(userId: number) {
     return prisma.watchlist.count({ where: { userId } });
   },
 
-  findFirstByUserAndTicker(userId: string, ticker: string) {
+  findFirstByUserAndTicker(userId: number, ticker: string) {
     return prisma.watchlist.findFirst({
       where: { userId, ticker },
     });
   },
 
-  findFirstTargetNotNotified(userId: string, ticker: string, targetPrice: number) {
+  findFirstTargetNotNotified(userId: number, ticker: string, targetPrice: number) {
     return prisma.watchlist.findFirst({
       where: {
         userId,
@@ -29,7 +29,7 @@ export const WatchlistRepository = {
     });
   },
 
-  create(data: { userId: string; ticker: string; targetPrice?: number }) {
+  create(data: { userId: number; ticker: string; targetPrice?: number }) {
     return prisma.watchlist.create({
       data: {
         userId: data.userId,
@@ -40,7 +40,7 @@ export const WatchlistRepository = {
   },
 
   updateMany(
-    userId: string,
+    userId: number,
     ticker: string,
     data: { targetPrice?: number | null; targetReachedNotifiedAt?: Date | null }
   ) {
@@ -57,7 +57,7 @@ export const WatchlistRepository = {
     });
   },
 
-  deleteMany(userId: string, ticker: string) {
+  deleteMany(userId: number, ticker: string) {
     return prisma.watchlist.deleteMany({
       where: { userId, ticker: ticker.toUpperCase() },
     });

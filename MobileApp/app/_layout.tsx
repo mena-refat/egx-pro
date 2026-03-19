@@ -9,6 +9,7 @@ import { I18nextProvider } from 'react-i18next';
 import Constants from 'expo-constants';
 import i18n from '../i18n';
 import { useAuthStore } from '../store/authStore';
+import { useTheme } from '../hooks/useTheme';
 import { I18nManager } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
@@ -29,6 +30,7 @@ if (!isExpoGo) {
 
 export default function RootLayout() {
   const { checkAuth, isLoading, isAuthenticated } = useAuthStore();
+  const { colors, isDark } = useTheme();
 
   useEffect(() => {
     checkAuth().finally(() => {
@@ -59,15 +61,15 @@ export default function RootLayout() {
   return (
     <I18nextProvider i18n={i18n}>
       <GestureHandlerRootView
-        style={{ flex: 1, backgroundColor: '#0d1117' }}
+        style={{ flex: 1, backgroundColor: colors.bg }}
       >
         <SafeAreaProvider>
-          <StatusBar style="light" />
+          <StatusBar style={isDark ? 'light' : 'dark'} />
           <Stack
             screenOptions={{
               headerShown: false,
               animation: 'fade',
-              contentStyle: { backgroundColor: '#0d1117' },
+              contentStyle: { backgroundColor: colors.bg },
             }}
           >
             <Stack.Screen name="(auth)" />

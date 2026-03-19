@@ -3,7 +3,7 @@ import { getGeoFromIp } from './geoFromIp.ts';
 
 export type RefreshTokenCreateData = {
   token: string;
-  userId: string;
+  userId: number;
   expiresAt: Date;
   deviceType: string;
   browser: string;
@@ -17,7 +17,7 @@ export type RefreshTokenCreateData = {
  * Build payload for prisma.refreshToken.create. Uses ip and userAgent for device/geo.
  */
 export async function buildRefreshTokenData(
-  userId: string,
+  userId: number,
   refreshHash: string,
   expiresAt: Date,
   ip?: string | null,

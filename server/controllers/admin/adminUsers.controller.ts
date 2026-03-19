@@ -101,7 +101,8 @@ export const AdminUsersController = {
   },
 
   async getOne(req: AdminRequest, res: Response): Promise<void> {
-    const { id } = req.params as { id: string };
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
@@ -127,7 +128,8 @@ export const AdminUsersController = {
   },
 
   async updatePlan(req: AdminRequest, res: Response): Promise<void> {
-    const { id } = req.params as { id: string };
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
     const { plan, planExpiresAt } = req.body as { plan?: string; planExpiresAt?: string };
     if (!plan) {
       sendError(res, 'VALIDATION_ERROR', 400);
@@ -150,13 +152,14 @@ export const AdminUsersController = {
     });
     await deleteCache(`auth:user:${id}`).catch(() => null);
     if (req.admin) {
-      await adminAudit(req.admin.id, 'USER_PLAN_UPDATED', id, `plan → ${plan}`, req);
+      await adminAudit(req.admin.id, 'USER_PLAN_UPDATED', id.toString(), `plan → ${plan}`, req);
     }
     sendSuccess(res, { ok: true });
   },
 
   async toggleDelete(req: AdminRequest, res: Response): Promise<void> {
-    const { id } = req.params as { id: string };
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
     const user = await prisma.user.findUnique({
       where: { id },
       select: { isDeleted: true },
@@ -175,7 +178,7 @@ export const AdminUsersController = {
       await adminAudit(
         req.admin.id,
         newState ? 'USER_DEACTIVATED' : 'USER_REACTIVATED',
-        id,
+        id.toString(),
         undefined,
         req
       );
@@ -255,7 +258,7 @@ export const AdminUsersController = {
     );
 
     if (req.admin) {
-      await adminAudit(req.admin.id, 'USER_INVITED', user.id, `email: ${email}`, req);
+      await adminAudit(req.admin.id, 'USER_INVITED', user.id.toString(), `email: ${email}`, req);
     }
 
     sendSuccess(res, { id: user.id, email: user.email });

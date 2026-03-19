@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma.ts';
 import type { PredictionDir, PredictionTime, PredictionStatus, UserRank } from '@prisma/client';
 
 export type PredictionCreateInput = {
-  userId: string;
+  userId: number;
   ticker: string;
   direction: PredictionDir;
   targetPrice: number;
@@ -40,7 +40,7 @@ export const PredictionRepository = {
     });
   },
 
-  findOwned(id: string, userId: string) {
+  findOwned(id: string, userId: number) {
     return prisma.prediction.findFirst({
       where: { id, userId },
     });
@@ -50,7 +50,7 @@ export const PredictionRepository = {
     return prisma.prediction.delete({ where: { id } });
   },
 
-  countActiveByUserAndTicker(userId: string, ticker: string) {
+  countActiveByUserAndTicker(userId: number, ticker: string) {
     return prisma.prediction.count({
       where: {
         userId,
@@ -61,7 +61,7 @@ export const PredictionRepository = {
   },
 
   async getFeed(params: {
-    viewerId: string;
+    viewerId: number;
     filter: 'all' | 'following' | 'top';
     ticker?: string;
     page: number;
@@ -133,9 +133,9 @@ export const PredictionRepository = {
     };
   },
 
-  getMy(userId: string, status: PredictionStatus | undefined, page: number, limit: number) {
+  getMy(userId: number, status: PredictionStatus | undefined, page: number, limit: number) {
     const skip = (page - 1) * limit;
-    const where: { userId: string; status?: PredictionStatus } = { userId };
+    const where: { userId: number; status?: PredictionStatus } = { userId };
     if (status) where.status = status;
 
     return prisma.prediction.findMany({
@@ -147,8 +147,8 @@ export const PredictionRepository = {
     });
   },
 
-  getMyCount(userId: string, status?: PredictionStatus) {
-    const where: { userId: string; status?: PredictionStatus } = { userId };
+  getMyCount(userId: number, status?: PredictionStatus) {
+    const where: { userId: number; status?: PredictionStatus } = { userId };
     if (status) where.status = status;
     return prisma.prediction.count({ where });
   },
@@ -213,7 +213,7 @@ export const PredictionRepository = {
     });
   },
 
-  getStatsByUserId(userId: string) {
+  getStatsByUserId(userId: number) {
     return prisma.userPredictionStats.findUnique({
       where: { userId },
     });
@@ -237,7 +237,7 @@ export const PredictionRepository = {
     });
   },
 
-  toggleLike(predictionId: string, userId: string): Promise<boolean> {
+  toggleLike(predictionId: string, userId: number): Promise<boolean> {
     return prisma.$transaction(async (tx) => {
       const existing = await tx.predictionLike.findUnique({
         where: { predictionId_userId: { predictionId, userId } },
@@ -259,7 +259,7 @@ export const PredictionRepository = {
     return prisma.predictionLike.count({ where: { predictionId } });
   },
 
-  isLikedBy(predictionId: string, userId: string) {
+  isLikedBy(predictionId: string, userId: number) {
     return prisma.predictionLike
       .findUnique({
         where: { predictionId_userId: { predictionId, userId } },
@@ -267,7 +267,7 @@ export const PredictionRepository = {
       .then((r) => !!r);
   },
 
-  upsertUserStats(userId: string, data: {
+  upsertUserStats(userId: number, data: {
     totalPredictions?: number;
     correctPredictions?: number;
     totalPoints?: number;
@@ -299,7 +299,7 @@ export const PredictionRepository = {
     });
   },
 
-  findLikedPredictionIds(userId: string, predictionIds: string[]) {
+  findLikedPredictionIds(userId: number, predictionIds: string[]) {
     if (predictionIds.length === 0) return Promise.resolve([]);
     return prisma.predictionLike
       .findMany({

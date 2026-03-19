@@ -68,7 +68,8 @@ export const SocialController = {
       sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
-    const followerId = req.params.followerId ?? '';
+    const followerId = parseInt(req.params.followerId ?? '', 10);
+    if (isNaN(followerId)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
     await SocialService.acceptRequest(userId, followerId);
     sendSuccess(res, { success: true });
   }),
@@ -79,7 +80,8 @@ export const SocialController = {
       sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
-    const followerId = req.params.followerId ?? '';
+    const followerId = parseInt(req.params.followerId ?? '', 10);
+    if (isNaN(followerId)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
     await SocialService.declineRequest(userId, followerId);
     sendSuccess(res, { success: true });
   }),

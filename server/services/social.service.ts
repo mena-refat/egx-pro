@@ -7,7 +7,7 @@ import { AppError } from '../lib/errors.ts';
 import { createNotification } from '../lib/createNotification.ts';
 
 export const SocialService = {
-  async follow(currentUserId: string, username: string) {
+  async follow(currentUserId: number, username: string) {
     const target = await UserRepository.findFirst({
       where: { username: username.trim().toLowerCase() },
       select: { id: true, isPrivate: true },
@@ -56,7 +56,7 @@ export const SocialService = {
     return follow;
   },
 
-  async unfollow(currentUserId: string, username: string) {
+  async unfollow(currentUserId: number, username: string) {
     const target = await UserRepository.findFirst({
       where: { username: username.trim().toLowerCase() },
       select: { id: true },
@@ -65,10 +65,10 @@ export const SocialService = {
     await FollowRepository.deleteByPair(currentUserId, target.id);
   },
 
-  async getFollowers(currentUserId: string) {
+  async getFollowers(currentUserId: number) {
     const rows = (await FollowRepository.findFollowers(currentUserId, {
       include: { follower: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } } },
-    } as { include: object })) as unknown as Array<{ follower: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
+    } as { include: object })) as unknown as Array<{ follower: { id: number; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
     return rows.map((row) => ({
       id: row.follower.id,
       username: row.follower.username,
@@ -78,10 +78,10 @@ export const SocialService = {
     }));
   },
 
-  async getFollowing(currentUserId: string) {
+  async getFollowing(currentUserId: number) {
     const rows = (await FollowRepository.findFollowing(currentUserId, {
       include: { following: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } } },
-    } as { include: object })) as unknown as Array<{ following: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
+    } as { include: object })) as unknown as Array<{ following: { id: number; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
     return rows.map((row) => ({
       id: row.following.id,
       username: row.following.username,
@@ -91,7 +91,7 @@ export const SocialService = {
     }));
   },
 
-  async getProfileFollowers(profileUsername: string, viewerId: string, page: number, limit: number) {
+  async getProfileFollowers(profileUsername: string, viewerId: number, page: number, limit: number) {
     const profile = await UserRepository.findFirst({
       where: { username: profileUsername.trim().toLowerCase(), isDeleted: false },
       select: { id: true, isPrivate: true },
@@ -107,12 +107,12 @@ export const SocialService = {
     const rows = (await FollowRepository.findMany(
       { followingId: profile.id, status: 'ACCEPTED' },
       { include: { follower: { select: { id: true, username: true, createdAt: true, isPrivate: true } } }, orderBy: { createdAt: 'desc' }, skip, take }
-    )) as unknown as Array<{ follower: { id: string; username: string | null; createdAt: Date; isPrivate: boolean }; createdAt: Date }>;
+    )) as unknown as Array<{ follower: { id: number; username: string | null; createdAt: Date; isPrivate: boolean }; createdAt: Date }>;
     const followerIds = rows.map((r) => r.follower.id).filter(Boolean);
     const viewerFollows = viewerId
       ? await FollowRepository.findFollowStatuses(viewerId, followerIds)
       : [];
-    const statusByTarget = new Map<string, 'none' | 'pending' | 'following'>(
+    const statusByTarget = new Map<number, 'none' | 'pending' | 'following'>(
       viewerFollows.map((r) => [
         r.followingId,
         r.status === 'ACCEPTED' ? 'following' : 'pending',
@@ -128,7 +128,7 @@ export const SocialService = {
     return { items, hasMore: rows.length > limit, page };
   },
 
-  async getProfileFollowing(profileUsername: string, viewerId: string, page: number, limit: number) {
+  async getProfileFollowing(profileUsername: string, viewerId: number, page: number, limit: number) {
     const profile = await UserRepository.findFirst({
       where: { username: profileUsername.trim().toLowerCase(), isDeleted: false },
       select: { id: true, isPrivate: true },
@@ -144,12 +144,12 @@ export const SocialService = {
     const rows = (await FollowRepository.findMany(
       { followerId: profile.id, status: 'ACCEPTED' },
       { include: { following: { select: { id: true, username: true, createdAt: true, isPrivate: true } } }, orderBy: { createdAt: 'desc' }, skip, take }
-    )) as unknown as Array<{ following: { id: string; username: string | null; createdAt: Date; isPrivate: boolean }; createdAt: Date }>;
+    )) as unknown as Array<{ following: { id: number; username: string | null; createdAt: Date; isPrivate: boolean }; createdAt: Date }>;
     const followingIds = rows.map((r) => r.following.id).filter(Boolean);
     const viewerFollows = viewerId
       ? await FollowRepository.findFollowStatuses(viewerId, followingIds)
       : [];
-    const statusByTarget = new Map<string, 'none' | 'pending' | 'following'>(
+    const statusByTarget = new Map<number, 'none' | 'pending' | 'following'>(
       viewerFollows.map((r) => [
         r.followingId,
         r.status === 'ACCEPTED' ? 'following' : 'pending',
@@ -165,10 +165,10 @@ export const SocialService = {
     return { items, hasMore: rows.length > limit, page };
   },
 
-  async getRequests(currentUserId: string) {
+  async getRequests(currentUserId: number) {
     const rows = (await FollowRepository.findPending(currentUserId, {
       include: { follower: { select: { id: true, username: true, fullName: true, avatarUrl: true, createdAt: true } } },
-    } as { include: object })) as unknown as Array<{ follower: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
+    } as { include: object })) as unknown as Array<{ follower: { id: number; username: string | null; fullName: string | null; avatarUrl: string | null; createdAt: Date }; createdAt: Date }>;
     return rows.map((row) => ({
       id: row.follower.id,
       username: row.follower.username,
@@ -178,7 +178,7 @@ export const SocialService = {
     }));
   },
 
-  async acceptRequest(currentUserId: string, followerId: string) {
+  async acceptRequest(currentUserId: number, followerId: number) {
     const updated = await FollowRepository.acceptPending(followerId, currentUserId);
     if (updated.count === 0) {
       throw new AppError('NOT_FOUND', 404);
@@ -197,7 +197,7 @@ export const SocialService = {
     );
   },
 
-  async declineRequest(currentUserId: string, followerId: string) {
+  async declineRequest(currentUserId: number, followerId: number) {
     await FollowRepository.declinePending(followerId, currentUserId);
   },
 
@@ -282,7 +282,7 @@ export const SocialService = {
 
   /** GET /username-search: prefix autocomplete, min 2 chars, max 5 results, exclude self. */
   async usernameSearch(
-    currentUserId: string,
+    currentUserId: number,
     q: string,
     limit: number = 5
   ): Promise<
@@ -320,7 +320,7 @@ export const SocialService = {
     const sliced = users;
     const ids = sliced.map((u) => u.id).filter(Boolean);
     const followRows = await FollowRepository.findFollowStatuses(currentUserId, ids);
-    const statusByTarget = new Map<string, 'NONE' | 'FOLLOWING' | 'PENDING'>(
+    const statusByTarget = new Map<number, 'NONE' | 'FOLLOWING' | 'PENDING'>(
       followRows.map((r) => [
         r.followingId,
         r.status === 'ACCEPTED' ? 'FOLLOWING' : 'PENDING',
@@ -328,7 +328,7 @@ export const SocialService = {
     );
 
     interface UserWithStats {
-      id: string;
+      id: number;
       username: string | null;
       avatarUrl: string | null;
       isPrivate: boolean;
@@ -350,7 +350,7 @@ export const SocialService = {
     });
   },
 
-  async search(currentUserId: string, q: string) {
+  async search(currentUserId: number, q: string) {
     const term = q.trim().toLowerCase();
     if (!term || term.length < 2) return [];
     const users = await UserRepository.findMany({
@@ -363,12 +363,12 @@ export const SocialService = {
       take: 20,
     });
     if (users.length === 0) return [];
-    const ids = users.map((u) => u.id).filter((id): id is string => Boolean(id));
+    const ids = users.map((u) => u.id).filter((id): id is number => Boolean(id));
     const followersCount = await Promise.all(
       ids.map((id) => FollowRepository.countFollowers(id))
     );
     const followRows = await FollowRepository.findFollowStatuses(currentUserId, ids);
-    const statusByTarget = new Map<string, 'pending' | 'following'>(
+    const statusByTarget = new Map<number, 'pending' | 'following'>(
       followRows.map((r) => [r.followingId, r.status === 'ACCEPTED' ? 'following' : 'pending'])
     );
     return users.map((u, i) => ({
@@ -380,7 +380,7 @@ export const SocialService = {
     }));
   },
 
-  async updateSettings(userId: string, body: { isPrivate?: boolean; showPortfolio?: boolean }) {
+  async updateSettings(userId: number, body: { isPrivate?: boolean; showPortfolio?: boolean }) {
     const current = await UserRepository.findUnique({
       where: { id: userId },
       select: { isPrivate: true },

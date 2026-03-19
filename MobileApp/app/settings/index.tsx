@@ -1,11 +1,17 @@
+import React from 'react';
 import { View, Text, ScrollView, Pressable, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   User, Shield, Bell, CreditCard, Fingerprint,
-  ChevronRight, ChevronLeft, Info, LogOut, Trash2, I18nManager,
+  ChevronRight, ChevronLeft, Info, LogOut, Trash2, Moon, Sun, Monitor,
 } from 'lucide-react-native';
+import { I18nManager } from 'react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
+import { useTheme } from '../../hooks/useTheme';
+import apiClient from '../../lib/api/client';
+
+type ThemeOption = 'dark' | 'light' | 'system';
 
 interface MenuItemProps {
   icon: React.ComponentType<{ size: number; color: string }>;
@@ -13,43 +19,48 @@ interface MenuItemProps {
   sub?: string;
   onPress: () => void;
   danger?: boolean;
-  accent?: string;
   last?: boolean;
 }
 
-function MenuItem({ icon: Icon, label, sub, onPress, danger, accent, last }: MenuItemProps) {
-  const c = danger ? '#f87171' : accent ?? '#8b949e';
+function MenuItem({ icon: Icon, label, sub, onPress, danger, last }: MenuItemProps) {
+  const { colors } = useTheme();
+  const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
+  const iconColor = danger ? '#f87171' : colors.textSub;
+
   return (
     <Pressable
       onPress={onPress}
-      className={`flex-row items-center gap-3 px-4 py-3.5 active:bg-white/[0.03] ${last ? '' : 'border-b border-[#21262d]'}`}
+      style={({ pressed }) => [
+        { borderBottomColor: colors.border2, backgroundColor: pressed ? colors.hover : 'transparent' },
+        !last && { borderBottomWidth: 1 },
+      ]}
+      className="flex-row items-center gap-3 px-4 py-3.5"
     >
       <View
         className="w-9 h-9 rounded-xl items-center justify-center"
-        style={{ backgroundColor: danger ? '#f8717115' : '#ffffff08' }}
+        style={{ backgroundColor: danger ? '#f8717115' : `${colors.textSub}15` }}
       >
-        <Icon size={16} color={c} />
+        <Icon size={16} color={iconColor} />
       </View>
       <View className="flex-1">
-        <Text className={`text-sm font-medium ${danger ? 'text-red-400' : 'text-[#e6edf3]'}`}>{label}</Text>
-        {sub && <Text className="text-xs text-[#656d76] mt-0.5">{sub}</Text>}
+        <Text style={{ color: danger ? '#f87171' : colors.text }} className="text-sm font-medium">{label}</Text>
+        {sub && <Text style={{ color: colors.textMuted }} className="text-xs mt-0.5">{sub}</Text>}
       </View>
-      {!danger && (
-        I18nManager.isRTL
-          ? <ChevronLeft size={14} color="#30363d" />
-          : <ChevronRight size={14} color="#30363d" />
-      )}
+      {!danger && <ChevronIcon size={14} color={colors.textMuted} />}
     </Pressable>
   );
 }
 
 function Section({ title, children }: { title?: string; children: React.ReactNode }) {
+  const { colors } = useTheme();
   return (
     <View className="mx-4 mb-3">
-      {title ? (
-        <Text className="text-xs font-semibold text-[#656d76] uppercase tracking-wider px-1 mb-2">{title}</Text>
-      ) : null}
-      <View className="bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden">
+      {title && (
+        <Text style={{ color: colors.textMuted }} className="text-xs font-semibold uppercase tracking-wider px-1 mb-2">
+          {title}
+        </Text>
+      )}
+      <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl overflow-hidden">
         {children}
       </View>
     </View>
@@ -58,58 +69,72 @@ function Section({ title, children }: { title?: string; children: React.ReactNod
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateUser } = useAuthStore();
+  const { colors } = useTheme();
 
   const handleLogout = async () => {
     await logout();
     router.replace('/(auth)/login');
   };
 
+  const setTheme = async (theme: ThemeOption) => {
+    updateUser({ theme });
+    try { await apiClient.put('/api/user/profile', { theme }); } catch { /* ignore */ }
+  };
+
+  const currentTheme = (user?.theme as ThemeOption | undefined) ?? 'system';
+
+  const THEME_OPTIONS: { id: ThemeOption; label: string; Icon: typeof Moon }[] = [
+    { id: 'dark',   label: 'داكن',   Icon: Moon    },
+    { id: 'system', label: 'تلقائي', Icon: Monitor },
+    { id: 'light',  label: 'فاتح',   Icon: Sun     },
+  ];
+
   return (
     <ScreenWrapper padded={false}>
-      <ScrollView contentContainerClassName="pt-5 pb-10" showsVerticalScrollIndicator={false}>
-        <Text className="text-xl font-bold text-[#e6edf3] px-4 mb-5">الإعدادات</Text>
+      <ScrollView contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        <Text style={{ color: colors.text }} className="text-xl font-bold px-4 mb-5">الإعدادات</Text>
+
+        {/* ─── Theme ─── */}
+        <View className="mx-4 mb-3">
+          <Text style={{ color: colors.textMuted }} className="text-xs font-semibold uppercase tracking-wider px-1 mb-2">
+            المظهر
+          </Text>
+          <View
+            style={{ backgroundColor: colors.card, borderColor: colors.border }}
+            className="border rounded-2xl p-1.5 flex-row gap-1"
+          >
+            {THEME_OPTIONS.map(({ id, label, Icon }) => {
+              const active = currentTheme === id;
+              return (
+                <Pressable
+                  key={id}
+                  onPress={() => setTheme(id)}
+                  className="flex-1 flex-row items-center justify-center gap-1.5 py-2.5 rounded-xl"
+                  style={{ backgroundColor: active ? '#8b5cf6' : 'transparent' }}
+                >
+                  <Icon size={13} color={active ? '#fff' : colors.textMuted} />
+                  <Text className="text-xs font-semibold" style={{ color: active ? '#fff' : colors.textMuted }}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
 
         <Section title="الحساب">
-          <MenuItem
-            icon={User}
-            label="البيانات الشخصية"
-            sub={user?.fullName ?? ''}
-            onPress={() => router.push('/settings/account')}
-          />
-          <MenuItem
-            icon={CreditCard}
-            label="الاشتراك والخطة"
-            sub={(user?.plan ?? 'free').toUpperCase()}
-            onPress={() => router.push('/settings/subscription')}
-            last
-          />
+          <MenuItem icon={User}        label="البيانات الشخصية"  sub={user?.fullName ?? ''}                    onPress={() => router.push('/settings/account')} />
+          <MenuItem icon={CreditCard}  label="الاشتراك والخطة"   sub={(user?.plan ?? 'free').toUpperCase()}    onPress={() => router.push('/settings/subscription')} last />
         </Section>
 
         <Section title="الأمان">
-          <MenuItem
-            icon={Shield}
-            label="الأمان والخصوصية"
-            sub="كلمة المرور و2FA"
-            onPress={() => router.push('/settings/security')}
-          />
-          <MenuItem
-            icon={Fingerprint}
-            label="البصمة / Face ID"
-            sub="تسجيل الدخول البيومتري"
-            onPress={() => router.push('/settings/biometric')}
-            last
-          />
+          <MenuItem icon={Shield}      label="الأمان والخصوصية"  sub="كلمة المرور و2FA"                        onPress={() => router.push('/settings/security')} />
+          <MenuItem icon={Fingerprint} label="البصمة / Face ID"  sub="تسجيل الدخول البيومتري"                 onPress={() => router.push('/settings/biometric')} last />
         </Section>
 
         <Section title="الإشعارات">
-          <MenuItem
-            icon={Bell}
-            label="إعدادات الإشعارات"
-            sub="تخصيص ما تستقبله"
-            onPress={() => router.push('/settings/notifications')}
-            last
-          />
+          <MenuItem icon={Bell}        label="إعدادات الإشعارات" sub="تخصيص ما تستقبله"                        onPress={() => router.push('/settings/notifications')} last />
         </Section>
 
         <Section title="التطبيق">
@@ -120,7 +145,7 @@ export default function SettingsPage() {
             onPress={() =>
               Alert.alert(
                 'عن التطبيق',
-                'Borsa — منصة البورصة المصرية\nالإصدار 1.0.0\n\nتحليلات بالذكاء الاصطناعي وبيانات فورية لمتابعة سوق الأوراق المالية المصري.',
+                'Borsa — منصة البورصة المصرية\nالإصدار 1.0.0\n\nتحليلات بالذكاء الاصطناعي وبيانات فورية.',
                 [{ text: 'حسناً', style: 'cancel' }],
               )
             }
@@ -129,12 +154,7 @@ export default function SettingsPage() {
         </Section>
 
         <Section>
-          <MenuItem
-            icon={LogOut}
-            label="تسجيل الخروج"
-            onPress={handleLogout}
-            danger
-          />
+          <MenuItem icon={LogOut} label="تسجيل الخروج" onPress={handleLogout} danger />
           <MenuItem
             icon={Trash2}
             label="حذف الحساب"

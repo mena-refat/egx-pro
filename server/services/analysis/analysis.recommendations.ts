@@ -22,7 +22,7 @@ import {
 } from './analysis.helpers.ts';
 
 export async function recommendationsAnalysis(
-  userId: string,
+  userId: number,
   _body?: { riskTolerance?: string; investmentHorizon?: number; interestedSectors?: string[] }
 ): Promise<{ recommendations: unknown; id: string }> {
   if (!userId) throw new AppError('UNAUTHORIZED', 401);

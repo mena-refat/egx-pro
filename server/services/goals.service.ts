@@ -11,7 +11,7 @@ type GoalSchema = z.infer<typeof goalSchema>;
 type GoalUpdateSchema = z.infer<typeof goalUpdateSchema>;
 
 export const GoalsService = {
-  async getUserGoals(userId: string, page = 1, limit = 50) {
+  async getUserGoals(userId: number, page = 1, limit = 50) {
     const pageNum = Math.max(1, page);
     const limitNum = Math.min(50, Math.max(1, limit));
     const [items, total] = await GoalsRepository.findByUser(userId, pageNum, limitNum);
@@ -56,7 +56,7 @@ export const GoalsService = {
     return { goal, newUnseenAchievements };
   },
 
-  async update(userId: string, goalId: string, body: unknown) {
+  async update(userId: number, goalId: string, body: unknown) {
     const goal = await GoalsRepository.findOwned(goalId, userId);
     if (!goal) throw new AppError('NOT_FOUND', 404);
     const validated = goalUpdateSchema.parse(body) as GoalUpdateSchema;
@@ -69,7 +69,7 @@ export const GoalsService = {
     return GoalsRepository.update(goalId, updateData);
   },
 
-  async updateAmount(userId: string, goalId: string, body: unknown) {
+  async updateAmount(userId: number, goalId: string, body: unknown) {
     const goal = await GoalsRepository.findOwned(goalId, userId);
     if (!goal) throw new AppError('NOT_FOUND', 404);
     const { currentAmount } = goalAmountSchema.parse(body);
@@ -88,7 +88,7 @@ export const GoalsService = {
     return updated;
   },
 
-  async complete(userId: string, goalId: string): Promise<{ goal: Awaited<ReturnType<typeof GoalsRepository.update>>; newUnseenAchievements: string[] }> {
+  async complete(userId: number, goalId: string): Promise<{ goal: Awaited<ReturnType<typeof GoalsRepository.update>>; newUnseenAchievements: string[] }> {
     const goal = await GoalsRepository.findOwned(goalId, userId);
     if (!goal) throw new AppError('NOT_FOUND', 404);
     const now = new Date();
@@ -102,7 +102,7 @@ export const GoalsService = {
     return { goal: updated, newUnseenAchievements };
   },
 
-  async delete(userId: string, goalId: string): Promise<void> {
+  async delete(userId: number, goalId: string): Promise<void> {
     const goal = await GoalsRepository.findOwned(goalId, userId);
     if (!goal) throw new AppError('NOT_FOUND', 404);
     await GoalsRepository.delete(goalId);

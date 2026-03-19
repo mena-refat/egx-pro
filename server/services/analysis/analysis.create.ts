@@ -25,7 +25,7 @@ import {
 } from './analysis.helpers.ts';
 
 export async function createAnalysis(
-  userId: string,
+  userId: number,
   ticker: string
 ): Promise<{ analysis: unknown; id: string; newUnseenAchievements: string[] }> {
   if (!userId) throw new AppError('UNAUTHORIZED', 401);

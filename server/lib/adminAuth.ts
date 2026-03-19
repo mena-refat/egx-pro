@@ -5,12 +5,12 @@ const ADMIN_JWT_SECRET =
 const ADMIN_TOKEN_EXPIRES = '8h';
 
 export function generateAdminToken(admin: {
-  id: string;
+  id: number;
   role: string;
   permissions: string[];
 }): string {
   return jwt.sign(
-    { sub: admin.id, role: admin.role, permissions: admin.permissions, type: 'admin' },
+    { sub: String(admin.id), role: admin.role, permissions: admin.permissions, type: 'admin' },
     ADMIN_JWT_SECRET,
     { expiresIn: ADMIN_TOKEN_EXPIRES, algorithm: 'HS256' }
   );

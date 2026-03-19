@@ -24,7 +24,7 @@ import {
 } from './analysis.helpers.ts';
 
 export async function compareAnalysis(
-  userId: string,
+  userId: number,
   ticker1: string,
   ticker2: string
 ): Promise<{ comparison: unknown; id: string }> {

@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.ts';
 import { hasPermission, type AdminPermission } from '../lib/adminPermissions.ts';
 
 export interface AdminRequest extends Request {
-  admin?: { id: string; role: string; permissions: string[]; email: string };
+  admin?: { id: number; role: string; permissions: string[]; email: string };
 }
 
 export async function adminAuthenticate(
@@ -20,8 +20,13 @@ export async function adminAuthenticate(
 
   try {
     const payload = verifyAdminToken(token);
+    const adminId = parseInt(payload.sub, 10);
+    if (isNaN(adminId)) {
+      res.status(401).json({ error: 'ADMIN_UNAUTHORIZED' });
+      return;
+    }
     const admin = await prisma.admin.findUnique({
-      where: { id: payload.sub },
+      where: { id: adminId },
       select: {
         id: true,
         email: true,
@@ -61,7 +66,7 @@ export function requirePermission(permission: AdminPermission) {
 }
 
 export async function adminAudit(
-  adminId: string,
+  adminId: number,
   action: string,
   target?: string,
   details?: string,

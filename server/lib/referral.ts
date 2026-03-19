@@ -35,7 +35,7 @@ export async function generateUniqueReferralCode(): Promise<string> {
  * When a referred user activates (first login), check if referrer reached REFERRAL_REQUIRED
  * active referrals and grant 1 free Pro month per REFERRAL_REQUIRED (حالياً 15).
  */
-export async function checkAndRewardReferrer(referrerId: string): Promise<void> {
+export async function checkAndRewardReferrer(referrerId: number): Promise<void> {
   const activeCount = await prisma.referral.count({
     where: { referrerId },
   });

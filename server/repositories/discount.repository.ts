@@ -6,7 +6,7 @@ export const DiscountRepository = {
     return prisma.discountCode.findUnique({ where: { code } });
   },
 
-  findUsage(userId: string, codeId: string) {
+  findUsage(userId: number, codeId: string) {
     return prisma.discountUsage.findUnique({
       where: { userId_codeId: { userId, codeId } },
     });
@@ -14,7 +14,7 @@ export const DiscountRepository = {
 
   /** ترقية مع كود خصم 100% — transaction: تحديث الخطة + تسجيل الاستخدام + تحديث الكود */
   applyFullDiscount(
-    userId: string,
+    userId: number,
     planValue: string,
     planExpiresAt: Date,
     codeId: string,
@@ -41,7 +41,7 @@ export const DiscountRepository = {
 
   /** ترقية مع/بدون خصم جزئي — transaction: تحديث الخطة + (اختياري) تسجيل الاستخدام */
   applyUpgrade(
-    userId: string,
+    userId: number,
     planValue: string,
     planExpiresAt: Date,
     discount?: { id: string; usedCount: number; maxUses: number | null }

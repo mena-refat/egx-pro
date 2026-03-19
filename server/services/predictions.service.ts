@@ -103,14 +103,14 @@ export const PredictionsService = {
     return isPaid(user) ? PREDICTION_LIMITS.proDaily : PREDICTION_LIMITS.freeDaily;
   },
 
-  async getDailyUsed(userId: string): Promise<number> {
+  async getDailyUsed(userId: number): Promise<number> {
     const dateStr = getCairoDateString();
     const key = `${DAILY_KEY_PREFIX}${userId}:${dateStr}`;
     const n = await getCount(key);
     return Math.max(0, n);
   },
 
-  async getLimits(userId: string, user: { plan?: string | null; planExpiresAt?: Date | null; referralProExpiresAt?: Date | null }) {
+  async getLimits(userId: number, user: { plan?: string | null; planExpiresAt?: Date | null; referralProExpiresAt?: Date | null }) {
     const limit = await this.getDailyLimit(user);
     const used = await this.getDailyUsed(userId);
     const midnightSec = getCairoMidnightExpirySeconds();
@@ -119,7 +119,7 @@ export const PredictionsService = {
   },
 
   async create(
-    userId: string,
+    userId: number,
     user: { plan?: string | null; planExpiresAt?: Date | null; referralProExpiresAt?: Date | null; createdAt?: Date },
     body: {
       ticker: string;
@@ -220,7 +220,7 @@ export const PredictionsService = {
     return prediction;
   },
 
-  async delete(userId: string, predictionId: string) {
+  async delete(userId: number, predictionId: string) {
     const prediction = await PredictionRepository.findOwned(predictionId, userId);
     if (!prediction) {
       throw new AppError('NOT_FOUND', 404, 'التوقع غير موجود أو لا تملك صلاحية حذفه');
@@ -239,7 +239,7 @@ export const PredictionsService = {
     await decrCount(dailyKey);
   },
 
-  async getFeed(viewerId: string, filter: 'all' | 'following' | 'top', ticker: string | undefined, page: number, limit: number) {
+  async getFeed(viewerId: number, filter: 'all' | 'following' | 'top', ticker: string | undefined, page: number, limit: number) {
     const data = await PredictionRepository.getFeed({
       viewerId,
       filter,
@@ -257,7 +257,7 @@ export const PredictionsService = {
     return data;
   },
 
-  async getMy(userId: string, status: string | undefined, page: number, limit: number) {
+  async getMy(userId: number, status: string | undefined, page: number, limit: number) {
     const statusVal = status && ['ACTIVE', 'HIT', 'MISSED', 'EXPIRED'].includes(status) ? (status as 'ACTIVE' | 'HIT' | 'MISSED' | 'EXPIRED') : undefined;
     const items = await PredictionRepository.getMy(userId, statusVal, page, limit);
     const total = await PredictionRepository.getMyCount(userId, statusVal);
@@ -277,9 +277,9 @@ export const PredictionsService = {
     return PredictionRepository.getLeaderboard(period, limit);
   },
 
-  async getStatsByUsername(username: string, viewerId: string) {
+  async getStatsByUsername(username: string, viewerId: number) {
     interface StatsUser {
-      id: string;
+      id: number;
       isPrivate: boolean;
       predictionStats: { rank: UserRank; accuracyRate: number; totalPredictions: number } | null;
     }
@@ -309,7 +309,7 @@ export const PredictionsService = {
     };
   },
 
-  async getByTicker(ticker: string, viewerId: string) {
+  async getByTicker(ticker: string, viewerId: number) {
     const list = await PredictionRepository.getByTicker(ticker);
     const likedIds = await PredictionRepository.findLikedPredictionIds(viewerId, list.map((p) => p.id));
     const likedSet = new Set(likedIds);
@@ -331,7 +331,7 @@ export const PredictionsService = {
     };
   },
 
-  async toggleLike(predictionId: string, userId: string) {
+  async toggleLike(predictionId: string, userId: number) {
     const prediction = await PredictionRepository.findById(predictionId);
     if (!prediction) throw new AppError('NOT_FOUND', 404, 'التوقع غير موجود');
     if (prediction.userId === userId) {

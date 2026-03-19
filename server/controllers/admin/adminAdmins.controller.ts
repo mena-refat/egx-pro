@@ -114,7 +114,7 @@ export const AdminAdminsController = {
       await adminAudit(
         req.admin.id,
         'ADMIN_CREATED',
-        admin.id,
+        admin.id.toString(),
         `email: ${admin.email}`,
         req
       );
@@ -133,7 +133,8 @@ export const AdminAdminsController = {
       sendError(res, 'ADMIN_FORBIDDEN', 403);
       return;
     }
-    const { id } = req.params as { id: string };
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
     const { confirmPassword } = req.body as { confirmPassword?: string };
 
     if (!await verifySuperAdminPassword(req, confirmPassword)) {
@@ -157,14 +158,15 @@ export const AdminAdminsController = {
       prisma.admin.delete({ where: { id } }),
     ]);
     if (req.admin) {
-      await adminAudit(req.admin.id, 'ADMIN_DELETED', id, undefined, req);
+      await adminAudit(req.admin.id, 'ADMIN_DELETED', id.toString(), undefined, req);
     }
     sendSuccess(res, { ok: true });
   },
 
   async updateAdminProfile(req: AdminRequest, res: Response): Promise<void> {
     if (req.admin?.role !== 'SUPER_ADMIN') { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
-    const { id } = req.params as { id: string };
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
     if (id === req.admin.id) { sendError(res, 'USE_ACCOUNT_PAGE', 400); return; }
     const { fullName, email } = req.body as { fullName?: string; email?: string };
     if (!fullName?.trim() && !email?.trim()) { sendError(res, 'VALIDATION_ERROR', 400); return; }
@@ -179,13 +181,14 @@ export const AdminAdminsController = {
     }
 
     const updated = await prisma.admin.update({ where: { id }, data, select: { id: true, email: true, fullName: true } });
-    if (req.admin) await adminAudit(req.admin.id, 'ADMIN_PROFILE_UPDATED', id, JSON.stringify(data), req);
+    if (req.admin) await adminAudit(req.admin.id, 'ADMIN_PROFILE_UPDATED', id.toString(), JSON.stringify(data), req);
     sendSuccess(res, updated);
   },
 
   async resetAdminPassword(req: AdminRequest, res: Response): Promise<void> {
     if (req.admin?.role !== 'SUPER_ADMIN') { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
-    const { id } = req.params as { id: string };
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
     if (id === req.admin.id) { sendError(res, 'USE_ACCOUNT_PAGE', 400); return; }
     const { newPassword, confirmPassword } = req.body as { newPassword?: string; confirmPassword?: string };
     if (!newPassword || newPassword.length < 12) { sendError(res, 'PASSWORD_TOO_WEAK', 400); return; }
@@ -196,13 +199,14 @@ export const AdminAdminsController = {
       where: { id },
       data: { passwordHash: hash, salt, mustChangePassword: true },
     });
-    if (req.admin) await adminAudit(req.admin.id, 'ADMIN_RESET_PASSWORD', id, undefined, req);
+    if (req.admin) await adminAudit(req.admin.id, 'ADMIN_RESET_PASSWORD', id.toString(), undefined, req);
     sendSuccess(res, { ok: true });
   },
 
   async resetAdmin2FA(req: AdminRequest, res: Response): Promise<void> {
     if (req.admin?.role !== 'SUPER_ADMIN') { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
-    const { id } = req.params as { id: string };
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
     if (id === req.admin.id) { sendError(res, 'USE_ACCOUNT_PAGE', 400); return; }
     const { confirmPassword } = req.body as { confirmPassword?: string };
     if (!await verifySuperAdminPassword(req, confirmPassword)) { sendError(res, 'INVALID_CREDENTIALS', 401); return; }
@@ -211,7 +215,7 @@ export const AdminAdminsController = {
       where: { id },
       data: { twoFactorEnabled: false, twoFactorSecret: null, mustSetup2FA: true },
     });
-    if (req.admin) await adminAudit(req.admin.id, 'ADMIN_RESET_2FA', id, undefined, req);
+    if (req.admin) await adminAudit(req.admin.id, 'ADMIN_RESET_2FA', id.toString(), undefined, req);
     sendSuccess(res, { ok: true });
   },
 
@@ -220,7 +224,8 @@ export const AdminAdminsController = {
       sendError(res, 'ADMIN_FORBIDDEN', 403);
       return;
     }
-    const { id } = req.params as { id: string };
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
     const { permissions, isActive } = req.body as {
       permissions?: string[];
       isActive?: boolean;
@@ -247,7 +252,7 @@ export const AdminAdminsController = {
       await adminAudit(
         req.admin.id,
         'ADMIN_PERMISSIONS_UPDATED',
-        id,
+        id.toString(),
         JSON.stringify({ permissions, isActive }),
         req
       );

@@ -14,6 +14,7 @@ import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { PriceTag } from '../../components/shared/PriceTag';
 import { MarketStatusBadge } from '../../components/shared/MarketStatusBadge';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useTheme } from '../../hooks/useTheme';
 import { useMarketData } from '../../hooks/useMarketData';
 import { useLivePrices } from '../../hooks/useLivePrices';
 import { getStockName } from '../../lib/egxStocks';
@@ -23,6 +24,7 @@ type Tab = 'gainers' | 'losers' | 'all';
 
 export default function MarketPage() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [tab, setTab] = useState<Tab>('gainers');
   const [search, setSearch] = useState('');
   const { overview, stocks, loadingStocks, loadingOverview, refreshing, refresh } =
@@ -55,16 +57,8 @@ export default function MarketPage() {
           getStockName(s.ticker, 'en').toUpperCase().includes(q),
       );
     }
-    if (tab === 'gainers') {
-      return list
-        .filter((s) => s.changePercent > 0)
-        .sort((a, b) => b.changePercent - a.changePercent);
-    }
-    if (tab === 'losers') {
-      return list
-        .filter((s) => s.changePercent < 0)
-        .sort((a, b) => a.changePercent - b.changePercent);
-    }
+    if (tab === 'gainers') return list.filter((s) => s.changePercent > 0).sort((a, b) => b.changePercent - a.changePercent);
+    if (tab === 'losers')  return list.filter((s) => s.changePercent < 0).sort((a, b) => a.changePercent - b.changePercent);
     return list.sort((a, b) => b.changePercent - a.changePercent);
   }, [enriched, tab, search]);
 
@@ -76,28 +70,26 @@ export default function MarketPage() {
     ({ item: s }: { item: Stock }) => (
       <Pressable
         onPress={() => router.push(`/stocks/${s.ticker}`)}
-        className="flex-row items-center justify-between py-3.5 px-4 border-b border-[#21262d] active:bg-[#1c2128]"
+        style={({ pressed }) => [
+          { borderBottomColor: colors.border2, backgroundColor: pressed ? colors.hover : 'transparent' },
+        ]}
+        className="flex-row items-center justify-between py-3.5 px-4 border-b"
       >
         <View className="flex-1">
-          <Text className="text-sm font-bold text-[#e6edf3]">{s.ticker}</Text>
-          <Text className="text-xs text-[#8b949e] mt-0.5" numberOfLines={1}>
+          <Text style={{ color: colors.text }} className="text-sm font-bold">{s.ticker}</Text>
+          <Text style={{ color: colors.textSub }} className="text-xs mt-0.5" numberOfLines={1}>
             {getStockName(s.ticker, 'ar')}
           </Text>
         </View>
         <View className="items-end gap-1">
-          <Text className="text-sm font-bold text-[#e6edf3] tabular-nums">
+          <Text style={{ color: colors.text }} className="text-sm font-bold tabular-nums">
             {(s.price ?? 0).toFixed(2)}
           </Text>
-          <PriceTag
-            change={s.change}
-            changePercent={s.changePercent}
-            size="sm"
-            showIcon={false}
-          />
+          <PriceTag change={s.change} changePercent={s.changePercent} size="sm" showIcon={false} />
         </View>
       </Pressable>
     ),
-    [router],
+    [router, colors],
   );
 
   return (
@@ -105,75 +97,73 @@ export default function MarketPage() {
       <View className="flex-1">
         <View className="px-4 pt-5 pb-3 gap-3">
           <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold text-[#e6edf3]">السوق</Text>
+            <Text style={{ color: colors.text }} className="text-xl font-bold">الأسواق</Text>
             <MarketStatusBadge />
           </View>
 
           {/* Index Overview */}
           {loadingOverview ? (
             <View className="flex-row gap-2">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} height={52} className="flex-1" />
-              ))}
+              {[1, 2, 3].map((i) => <Skeleton key={i} height={52} className="flex-1" />)}
             </View>
           ) : (
             overview && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                className="-mx-1"
-              >
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">
                 {[
-                  { label: 'EGX30', data: overview.egx30 },
-                  { label: 'EGX70', data: overview.egx70 },
-                  { label: 'EGX100', data: overview.egx100 },
+                  { label: 'EGX 30',  data: overview.egx30  },
+                  { label: 'EGX 70',  data: overview.egx70  },
+                  { label: 'EGX 100', data: overview.egx100 },
                   overview.usdEgp
                     ? { label: 'USD/EGP', data: { value: overview.usdEgp, changePercent: 0 } }
                     : null,
                 ]
                   .filter(Boolean)
-                  .map(
-                    (idx) =>
-                      idx && (
-                        <View
-                          key={idx.label}
-                          className="bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-2.5 mx-1 min-w-[90px]"
+                  .map((idx) => idx && (
+                    <View
+                      key={idx.label}
+                      style={{ backgroundColor: colors.card, borderColor: colors.border }}
+                      className="border rounded-xl px-3 py-2.5 mx-1 min-w-[90px]"
+                    >
+                      <Text style={{ color: colors.textMuted }} className="text-xs mb-1">{idx.label}</Text>
+                      <Text style={{ color: colors.text }} className="text-sm font-bold tabular-nums">
+                        {idx.data?.value.toLocaleString('ar-EG', { maximumFractionDigits: 0 })}
+                      </Text>
+                      {(idx.data?.changePercent ?? 0) !== 0 && (
+                        <Text
+                          className="text-xs font-medium mt-0.5"
+                          style={{ color: (idx.data?.changePercent ?? 0) >= 0 ? '#4ade80' : '#f87171' }}
                         >
-                          <Text className="text-xs text-[#656d76] mb-1">{idx.label}</Text>
-                          <Text className="text-sm font-bold text-[#e6edf3] tabular-nums">
-                            {idx.data?.value.toLocaleString('ar-EG', { maximumFractionDigits: 0 })}
-                          </Text>
-                          {idx.data?.changePercent !== 0 && (
-                            <Text
-                              className={`text-xs font-medium mt-0.5 ${
-                                (idx.data?.changePercent ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'
-                              }`}
-                            >
-                              {(idx.data?.changePercent ?? 0) > 0 ? '+' : ''}
-                              {idx.data?.changePercent?.toFixed(2)}%
-                            </Text>
-                          )}
-                        </View>
-                      ),
-                  )}
+                          {(idx.data?.changePercent ?? 0) > 0 ? '+' : ''}
+                          {idx.data?.changePercent?.toFixed(2)}%
+                        </Text>
+                      )}
+                    </View>
+                  ))}
               </ScrollView>
             )
           )}
 
           {/* Search */}
-          <View className="flex-row items-center bg-[#161b22] border border-[#30363d] rounded-xl px-3 gap-2">
-            <Search size={15} color="#656d76" />
+          <View
+            style={{ backgroundColor: colors.card, borderColor: colors.border }}
+            className="flex-row items-center border rounded-xl px-3 gap-2"
+          >
+            <Search size={15} color={colors.textMuted} />
             <TextInput
               value={search}
               onChangeText={setSearch}
               placeholder="ابحث عن سهم..."
-              placeholderTextColor="#656d76"
-              className="flex-1 py-2.5 text-sm text-[#e6edf3]"
+              placeholderTextColor={colors.textMuted}
+              style={{ color: colors.text }}
+              className="flex-1 py-2.5 text-sm"
             />
           </View>
 
           {/* Tabs */}
-          <View className="flex-row bg-[#161b22] border border-[#30363d] rounded-xl p-1 gap-1">
+          <View
+            style={{ backgroundColor: colors.card, borderColor: colors.border }}
+            className="flex-row border rounded-xl p-1 gap-1"
+          >
             {[
               { id: 'gainers', label: 'الصاعدة', icon: TrendingUp },
               { id: 'losers',  label: 'الهابطة', icon: TrendingDown },
@@ -187,12 +177,11 @@ export default function MarketPage() {
                 }`}
               >
                 {t.icon && (
-                  <t.icon size={12} color={tab === t.id ? '#fff' : '#656d76'} />
+                  <t.icon size={12} color={tab === t.id ? '#fff' : colors.textMuted} />
                 )}
                 <Text
-                  className={`text-xs font-semibold ${
-                    tab === t.id ? 'text-white' : 'text-[#8b949e]'
-                  }`}
+                  className="text-xs font-semibold"
+                  style={{ color: tab === t.id ? '#fff' : colors.textMuted }}
                 >
                   {t.label}
                 </Text>
@@ -203,9 +192,7 @@ export default function MarketPage() {
 
         {loadingStocks ? (
           <View className="px-4 gap-3">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} height={52} />
-            ))}
+            {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} height={52} />)}
           </View>
         ) : (
           <FlatList
@@ -226,7 +213,7 @@ export default function MarketPage() {
             windowSize={10}
             ListEmptyComponent={
               <View className="items-center py-12">
-                <Text className="text-[#656d76] text-sm">لا توجد نتائج</Text>
+                <Text style={{ color: colors.textMuted }} className="text-sm">لا توجد نتائج</Text>
               </View>
             }
           />

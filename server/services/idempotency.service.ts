@@ -6,7 +6,7 @@ import { logger } from '../lib/logger.ts';
 import { IdempotencyRepository } from '../repositories/idempotency.repository.ts';
 
 type BeginParams = {
-  userId: string;
+  userId: number;
   key: string;
   method: string;
   path: string;

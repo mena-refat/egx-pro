@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma.ts';
 
 export const AnalysisRepository = {
   create(data: {
-    userId: string;
+    userId: number;
     ticker: string;
     content: string;
     priceAtAnalysis?: number;
@@ -13,15 +13,15 @@ export const AnalysisRepository = {
     return prisma.analysis.create({ data });
   },
 
-  countByUser(userId: string) {
+  countByUser(userId: number) {
     return prisma.analysis.count({ where: { userId } });
   },
 
-  findFirst(where: { userId: string }, orderBy: { createdAt: 'asc' | 'desc' }) {
+  findFirst(where: { userId: number }, orderBy: { createdAt: 'asc' | 'desc' }) {
     return prisma.analysis.findFirst({ where, orderBy });
   },
 
-  groupBy(args: { by: ['ticker']; where: { userId: string } }) {
+  groupBy(args: { by: ['ticker']; where: { userId: number } }) {
     return prisma.analysis.groupBy(args);
   },
 

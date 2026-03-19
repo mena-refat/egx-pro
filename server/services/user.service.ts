@@ -55,7 +55,7 @@ const profileSelect = {
 } as const;
 
 export const UserService = {
-  async getProfile(userId: string) {
+  async getProfile(userId: number) {
     const user = await UserRepository.findUnique({
       where: { id: userId },
       select: profileSelect,
@@ -75,7 +75,7 @@ export const UserService = {
   },
 
   async updateProfile(
-    userId: string,
+    userId: number,
     body: Record<string, unknown>,
     req?: Request
   ): Promise<{ user: Awaited<ReturnType<typeof UserRepository.update>> }> {
@@ -232,7 +232,7 @@ export const UserService = {
     return { user: responseUser };
   },
 
-  async checkUsername(userId: string, rawUsername: string) {
+  async checkUsername(userId: number, rawUsername: string) {
     const trimmed = rawUsername.trim();
     if (!trimmed) throw new AppError('VALIDATION_ERROR', 400, 'اسم المستخدم مطلوب');
     const username = usernameSchema.parse(trimmed);
@@ -247,7 +247,7 @@ export const UserService = {
     return { available: !existing };
   },
 
-  async getProfileStats(userId: string) {
+  async getProfileStats(userId: number) {
     const [user, analysesCount, watchlistCount, portfolioResult] = await Promise.all([
       UserRepository.findUnique({ where: { id: userId }, select: { createdAt: true } }),
       AnalysisRepository.countByUser(userId),
@@ -271,7 +271,7 @@ export const UserService = {
     };
   },
 
-  async getUnseenAchievements(userId: string) {
+  async getUnseenAchievements(userId: number) {
     const user = await UserRepository.findUnique({
       where: { id: userId },
       select: { unseenAchievements: true },
@@ -286,7 +286,7 @@ export const UserService = {
       .filter(Boolean);
   },
 
-  async markAchievementsSeen(userId: string) {
+  async markAchievementsSeen(userId: number) {
     await UserRepository.update({
       where: { id: userId },
       data: { unseenAchievements: [] },
@@ -294,7 +294,7 @@ export const UserService = {
     return { success: true };
   },
 
-  async getAchievements(userId: string) {
+  async getAchievements(userId: number) {
     const now = new Date();
     const [
       user,
@@ -616,7 +616,7 @@ export const UserService = {
     return achievements.map((a) => ({ ...a, date: a.date?.toISOString() ?? null }));
   },
 
-  async getSecurity(userId: string) {
+  async getSecurity(userId: number) {
     const user = await UserRepository.findUnique({
       where: { id: userId },
       select: {
@@ -639,7 +639,7 @@ export const UserService = {
     };
   },
 
-  async getReferralSummary(userId: string) {
+  async getReferralSummary(userId: number) {
     let user = await UserRepository.findUnique({
       where: { id: userId },
       select: { referralCode: true, freeReferralRewarded: true, totalReferrals: true },
@@ -664,7 +664,7 @@ export const UserService = {
       }),
       ReferralRepository.countActiveByReferrerSince(userId, weekAgo),
     ]);
-    type RefWithUser = { referredUserId: string; User_Referral_referredUserIdToUser?: { fullName: string | null } };
+    type RefWithUser = { referredUserId: number; User_Referral_referredUserIdToUser?: { fullName: string | null } };
     const completedReferrals = completedReferralsRaw as RefWithUser[];
     const friends = completedReferrals.map((ref, index) => ({
       id: ref.referredUserId,
@@ -682,7 +682,7 @@ export const UserService = {
     };
   },
 
-  async redeemReferralReward(userId: string) {
+  async redeemReferralReward(userId: number) {
     const user = await UserRepository.findUnique({
       where: { id: userId },
       select: { freeReferralRewarded: true, plan: true, planExpiresAt: true },
@@ -704,7 +704,7 @@ export const UserService = {
     return { data: updated };
   },
 
-  async applyReferralCode(userId: string, code: string) {
+  async applyReferralCode(userId: number, code: string) {
     const trimmed = (code || '').trim().toUpperCase();
     if (!trimmed) throw new AppError('VALIDATION_ERROR', 400, 'Referral code is required');
     const currentUser = await UserRepository.findUnique({
@@ -731,7 +731,7 @@ export const UserService = {
     return { success: true, referrerName: referrer.fullName || 'صاحب الدعوة' };
   },
 
-  async getSessions(userId: string) {
+  async getSessions(userId: number) {
     const list = await RefreshTokenRepository.findActiveSessions(userId);
     return list.map((s) => ({
       id: s.id,
@@ -747,15 +747,15 @@ export const UserService = {
     }));
   },
 
-  async revokeSession(userId: string, sessionId: string) {
+  async revokeSession(userId: number, sessionId: string) {
     await RefreshTokenRepository.updateMany({ id: sessionId, userId }, { isRevoked: true });
   },
 
-  async revokeAllOtherSessions(userId: string) {
+  async revokeAllOtherSessions(userId: number) {
     await RefreshTokenRepository.revokeAllByUser(userId);
   },
 
-  async uploadAvatar(userId: string, imageBase64: string) {
+  async uploadAvatar(userId: number, imageBase64: string) {
     const matches = imageBase64.match(/^data:(image\/\w+);base64,(.+)$/);
     if (!matches) throw new AppError('INVALID_IMAGE_FORMAT', 400, 'Invalid image format');
     const base64Data = matches[2];
@@ -791,7 +791,7 @@ export const UserService = {
     return { avatarUrl: user.avatarUrl };
   },
 
-  async deleteAccount(userId: string, confirmText: string, password: string, req?: Request) {
+  async deleteAccount(userId: number, confirmText: string, password: string, req?: Request) {
     const normalized = (confirmText || '').trim().toUpperCase();
     if (normalized !== 'حذف' && normalized !== 'DELETE') {
       throw new AppError('INVALID_CONFIRM', 400, 'يرجى كتابة "حذف" أو "DELETE" للتأكيد');

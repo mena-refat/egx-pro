@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { Link } from 'expo-router';
-import { Fingerprint } from 'lucide-react-native';
+import { Fingerprint, Hash } from 'lucide-react-native';
 import { Controller } from 'react-hook-form';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { Input } from '../../components/ui/Input';
@@ -15,11 +15,15 @@ export default function LoginPage() {
     loading,
     error,
     show2FA,
+    showPin,
+    setShowPin,
     twoFACode,
     setTwoFACode,
     biometricAvail,
+    pinAvail,
     checkBiometric,
     loginWithBiometric,
+    loginWithPin,
     onSubmit,
     handle2FA,
   } = useLogin();
@@ -33,6 +37,7 @@ export default function LoginPage() {
     formState: { errors },
   } = form;
 
+  /* ─── 2FA screen ─── */
   if (show2FA) {
     return (
       <ScreenWrapper>
@@ -69,6 +74,42 @@ export default function LoginPage() {
     );
   }
 
+  /* ─── PIN screen ─── */
+  if (showPin) {
+    return (
+      <ScreenWrapper>
+        <View className="flex-1 justify-center items-center gap-6 px-6">
+          <View className="w-16 h-16 rounded-full bg-brand/10 items-center justify-center">
+            <Hash size={32} color="#8b5cf6" />
+          </View>
+          <View className="items-center gap-2">
+            <Text className="text-xl font-bold text-[#e6edf3]">أدخل رمز PIN</Text>
+            <Text className="text-sm text-[#8b949e] text-center">
+              رمزك السري المكون من 4 أرقام
+            </Text>
+          </View>
+          <OTPInput
+            length={4}
+            onComplete={(pin) => void loginWithPin(pin)}
+            error={!!error}
+          />
+          {error && (
+            <Text className="text-sm text-red-400 bg-red-500/10 px-4 py-2.5 rounded-xl">
+              {error}
+            </Text>
+          )}
+          {loading && (
+            <Text className="text-sm text-[#8b949e]">جارٍ تسجيل الدخول...</Text>
+          )}
+          <Pressable onPress={() => setShowPin(false)} className="py-3">
+            <Text className="text-sm text-[#8b949e]">استخدم كلمة المرور</Text>
+          </Pressable>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  /* ─── Main login screen ─── */
   return (
     <ScreenWrapper>
       <KeyboardAvoidingView
@@ -138,14 +179,28 @@ export default function LoginPage() {
               size="lg"
             />
 
-            {biometricAvail && (
-              <Pressable
-                onPress={loginWithBiometric}
-                className="flex-row items-center justify-center gap-2 py-3"
-              >
-                <Fingerprint size={20} color="#8b5cf6" />
-                <Text className="text-sm text-brand font-medium">الدخول بالبصمة / Face ID</Text>
-              </Pressable>
+            {/* Quick login buttons */}
+            {(biometricAvail || pinAvail) && (
+              <View className="flex-row gap-3">
+                {biometricAvail && (
+                  <Pressable
+                    onPress={loginWithBiometric}
+                    className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl bg-brand/10 border border-brand/20"
+                  >
+                    <Fingerprint size={18} color="#8b5cf6" />
+                    <Text className="text-sm text-brand font-medium">البصمة</Text>
+                  </Pressable>
+                )}
+                {pinAvail && (
+                  <Pressable
+                    onPress={() => setShowPin(true)}
+                    className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl bg-brand/10 border border-brand/20"
+                  >
+                    <Hash size={18} color="#8b5cf6" />
+                    <Text className="text-sm text-brand font-medium">رمز PIN</Text>
+                  </Pressable>
+                )}
+              </View>
             )}
           </View>
 

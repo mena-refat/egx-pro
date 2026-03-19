@@ -19,7 +19,7 @@ export interface ReferralData {
 }
 
 export const ReferralService = {
-  async getReferralData(userId: string): Promise<ReferralData> {
+  async getReferralData(userId: number): Promise<ReferralData> {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
 
     const [referrals, user] = await Promise.all([

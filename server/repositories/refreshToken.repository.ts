@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma.ts';
 
 export const RefreshTokenRepository = {
-  create(data: { token: string; userId: string; expiresAt: Date; [key: string]: unknown }) {
+  create(data: { token: string; userId: number; expiresAt: Date; [key: string]: unknown }) {
     return prisma.refreshToken.create({ data: data as Parameters<typeof prisma.refreshToken.create>[0]['data'] });
   },
   findByToken(token: string) {
@@ -13,13 +13,13 @@ export const RefreshTokenRepository = {
   revokeByToken(token: string) {
     return prisma.refreshToken.updateMany({ where: { token }, data: { isRevoked: true } });
   },
-  revokeById(id: string, userId: string) {
+  revokeById(id: string, userId: number) {
     return prisma.refreshToken.updateMany({ where: { id, userId }, data: { isRevoked: true } });
   },
-  revokeAllByUser(userId: string) {
+  revokeAllByUser(userId: number) {
     return prisma.refreshToken.updateMany({ where: { userId }, data: { isRevoked: true } });
   },
-  findActiveSessions(userId: string) {
+  findActiveSessions(userId: number) {
     return prisma.refreshToken.findMany({
       where: { userId, isRevoked: false, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' },
@@ -28,13 +28,13 @@ export const RefreshTokenRepository = {
   deleteExpired() {
     return prisma.refreshToken.deleteMany({ where: { expiresAt: { lt: new Date() } } });
   },
-  deleteManyByUser(userId: string) {
+  deleteManyByUser(userId: number) {
     return prisma.refreshToken.deleteMany({ where: { userId } });
   },
-  updateMany(where: { id?: string; token?: string; userId?: string }, data: { isRevoked: boolean }) {
+  updateMany(where: { id?: string; token?: string; userId?: number }, data: { isRevoked: boolean }) {
     return prisma.refreshToken.updateMany({ where, data });
   },
-  findMany(where: { userId: string; isRevoked?: boolean; expiresAt?: object }, orderBy?: object) {
+  findMany(where: { userId: number; isRevoked?: boolean; expiresAt?: object }, orderBy?: object) {
     return prisma.refreshToken.findMany({ where, orderBy: orderBy ?? { createdAt: 'desc' } });
   },
 };

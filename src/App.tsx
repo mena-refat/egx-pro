@@ -95,15 +95,19 @@ export default function App() {
   }, [user?.language, i18n]);
 
   useEffect(() => {
-    let cancelled = false;
+    // استخدام ref بدل closure flag عشان نحل مشكلة React StrictMode
+    const controller = new AbortController();
     const API = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL?.trim();
     const base = API ? `${API.replace(/\/$/, '')}/api` : '/api';
 
     const checkAuth = async () => {
+      // timeout 6 ثواني - لو السيرفر بطيء مش هنبلوك المستخدم
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
       try {
-        // GET /api/auth/me يقرأ الـ refresh cookie مباشرة ويرجع user + accessToken
-        const res = await fetch(`${base}/auth/me`, { credentials: 'include' });
-        if (cancelled) return;
+        const res = await fetch(`${base}/auth/me`, {
+          credentials: 'include',
+          signal: controller.signal,
+        });
 
         if (res.ok) {
           const data = await res.json();
@@ -112,27 +116,26 @@ export default function App() {
           const accessToken  = (p as { accessToken?: string })?.accessToken ?? (data as { accessToken?: string }).accessToken;
           if (userPayload && typeof accessToken === 'string') {
             useAuthStore.getState().setAuth(userPayload as import('./types').User, accessToken);
-          } else {
-            // رد ناجح لكن البيانات ناقصة → لا تعمل logout (مشكلة في السيرفر)
-            if (import.meta.env.DEV) console.warn('getMe: unexpected response shape', data);
           }
         } else if (res.status === 401) {
-          // الجلسة انتهت فعلاً → logout
           useAuthStore.getState().logout();
         }
-        // أي كود آخر (5xx, 0) → نبقي الجلسة الموجودة، ممكن السيرفر مؤقتاً غير متاح
-      } catch {
-        // Network error (offline) → لا تعمل logout
-        if (import.meta.env.DEV) console.warn('checkAuth: network error, keeping existing session');
+      } catch (err) {
+        // timeout أو network error → نبقي الجلسة الموجودة ولا نعمل logout
+        if (import.meta.env.DEV) {
+          const isTimeout = (err as { name?: string })?.name === 'AbortError';
+          console.warn(isTimeout ? 'checkAuth: timeout, keeping session' : 'checkAuth: network error, keeping session');
+        }
       } finally {
-        if (!cancelled) setAuthChecked(true);
+        clearTimeout(timeoutId);
+        setAuthChecked(true); // دايمًا نـunlock الـ UI
       }
     };
 
     checkAuth();
-    return () => { cancelled = true; };
+    return () => controller.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount only
+  }, []);
 
   useEffect(() => { document.documentElement.dir = i18n.language.startsWith('ar') ? 'rtl' : 'ltr'; document.documentElement.lang = i18n.language; }, [i18n.language]);
 

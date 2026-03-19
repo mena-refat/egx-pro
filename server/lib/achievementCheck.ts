@@ -35,7 +35,7 @@ export type AchievementContext = {
   accountAgeDays: number;
 };
 
-export async function getAchievementContext(userId: string): Promise<AchievementContext> {
+export async function getAchievementContext(userId: number): Promise<AchievementContext> {
   const now = new Date();
   const [
     user,
@@ -239,7 +239,7 @@ function buildOne(
 }
 
 /** يرجع قائمة ids للإنجازات المُكتملة (بما فيها legend لو 39 غيرها مكتملين) */
-export async function getCompletedAchievementIds(userId: string): Promise<string[]> {
+export async function getCompletedAchievementIds(userId: number): Promise<string[]> {
   const ctx = await getAchievementContext(userId);
   const results = ACHIEVEMENT_DEFS.map((def) => ({ id: def.id, ...buildOne(ctx, def) }));
   const othersCompleted = results.filter((r) => r.id !== 'legend' && r.completed).length;
@@ -252,7 +252,7 @@ export async function getCompletedAchievementIds(userId: string): Promise<string
 
 /** يضيف فقط الإنجازات اللي اكتملت في هذه العملية (بعد العملية مش كانت مكتملة قبلها) */
 export async function addNewlyUnlockedAchievements(
-  userId: string,
+  userId: number,
   completedIdsBeforeAction?: string[]
 ): Promise<string[]> {
   const completedIdsAfter = await getCompletedAchievementIds(userId);

@@ -1,7 +1,7 @@
 import { NotificationsRepository } from '../repositories/notifications.repository.ts';
 
 export const NotificationService = {
-  async getList(userId: string, page = 1, limit = 20) {
+  async getList(userId: number, page = 1, limit = 20) {
     const pageNum = Math.max(1, page);
     const limitNum = Math.min(50, Math.max(1, limit));
     const [list, total, unreadCount] = await NotificationsRepository.findByUser(userId, pageNum, limitNum);
@@ -17,19 +17,19 @@ export const NotificationService = {
     };
   },
 
-  async markAllRead(userId: string) {
+  async markAllRead(userId: number) {
     await NotificationsRepository.markAllRead(userId);
   },
 
-  async markOneRead(userId: string, id: string) {
+  async markOneRead(userId: number, id: string) {
     await NotificationsRepository.markOneRead(userId, id);
   },
 
-  async clearAll(userId: string) {
+  async clearAll(userId: number) {
     await NotificationsRepository.deleteAllByUser(userId);
   },
 
-  async deleteOne(userId: string, id: string): Promise<boolean> {
+  async deleteOne(userId: number, id: string): Promise<boolean> {
     const result = await NotificationsRepository.deleteOne(userId, id);
     return result.count > 0;
   },

@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../../src/lib/auth.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
-import { getCache, setCache, deleteCache } from '../lib/redis.ts';
+import { getCache, setCache } from '../lib/redis.ts';
 import type { AuthRequest } from '../routes/types.ts';
 
 export async function authenticate(
@@ -17,9 +17,14 @@ export async function authenticate(
 
   try {
     const payload = verifyAccessToken(token) as { sub: string };
-    const cacheKey = `auth:user:${payload.sub}`;
+    const userId = parseInt(payload.sub, 10);
+    if (isNaN(userId)) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
+    }
+    const cacheKey = `auth:user:${userId}`;
     let user = await getCache<{
-      id: string;
+      id: number;
       email: string | null;
       isDeleted: boolean;
       isEmailVerified: boolean;
@@ -30,7 +35,7 @@ export async function authenticate(
 
     if (!user) {
       user = await UserRepository.findUnique({
-        where: { id: payload.sub },
+        where: { id: userId },
         select: {
           id: true,
           email: true,
@@ -70,9 +75,14 @@ export async function optionalAuth(
   }
   try {
     const payload = verifyAccessToken(token) as { sub: string };
-    const cacheKey = `auth:user:${payload.sub}`;
+    const userId = parseInt(payload.sub, 10);
+    if (isNaN(userId)) {
+      next();
+      return;
+    }
+    const cacheKey = `auth:user:${userId}`;
     let user = await getCache<{
-      id: string;
+      id: number;
       email: string | null;
       isDeleted: boolean;
       isEmailVerified: boolean;
@@ -83,7 +93,7 @@ export async function optionalAuth(
 
     if (!user) {
       user = await UserRepository.findUnique({
-        where: { id: payload.sub },
+        where: { id: userId },
         select: {
           id: true,
           email: true,

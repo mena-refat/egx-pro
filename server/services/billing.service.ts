@@ -30,7 +30,7 @@ function getBasePrice(planValue: 'pro' | 'yearly' | 'ultra' | 'ultra_yearly'): n
 }
 
 export const BillingService = {
-  async getPlan(userId: string) {
+  async getPlan(userId: number) {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
     const user = await UserRepository.getForBillingPlan(userId);
     if (!user) throw new AppError('NOT_FOUND', 404);
@@ -61,7 +61,7 @@ export const BillingService = {
     };
   },
 
-  async validateDiscount(userId: string, code: string, plan?: Plan) {
+  async validateDiscount(userId: number, code: string, plan?: Plan) {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
     if (!code?.trim()) throw new AppError('INVALID_REQUEST', 400);
     const discount = await DiscountRepository.findByCode(code.trim());
@@ -103,7 +103,7 @@ export const BillingService = {
   },
 
   async upgrade(
-    userId: string,
+    userId: number,
     plan: PlanUpgrade,
     options: { discountCode?: string; paymentToken?: string }
   ) {

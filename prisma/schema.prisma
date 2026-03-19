@@ -21,7 +21,7 @@ model Stock {
 }
 
 model User {
-  id                                     String         @id @default(uuid())
+  id                                     Int            @id @default(autoincrement())
   email                                  String?        @unique
   phone                                  String?        @unique
   passwordHash                           String?
@@ -116,7 +116,7 @@ enum AdminRole {
 }
 
 model Admin {
-  id           String    @id @default(uuid())
+  id           Int       @id @default(autoincrement())
   email        String    @unique
   phone        String?   @unique
   passwordHash String
@@ -137,13 +137,13 @@ model Admin {
   lastLoginIp  String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-  createdBy    String?
+  createdBy    Int?
   auditLogs    AdminAuditLog[]
 }
 
 model AdminAuditLog {
   id        String   @id @default(cuid())
-  adminId   String
+  adminId   Int
   action    String
   target    String?
   details   String?
@@ -162,7 +162,7 @@ model BlockedIdentifier {
   type      String   // EMAIL | PHONE | EMAIL_DOMAIN
   value     String
   reason    String?
-  blockedBy String?
+  blockedBy Int?
   createdAt DateTime @default(now())
 
   @@unique([type, value])
@@ -171,15 +171,15 @@ model BlockedIdentifier {
 
 model SupportTicket {
   id          String              @id @default(cuid())
-  userId      String
+  userId      Int
   subject     String
   message     String
   status      SupportTicketStatus @default(OPEN)
   priority    TicketPriority      @default(NORMAL)
-  assignedTo  String?
+  assignedTo  Int?
   reply       String?
   repliedAt   DateTime?
-  repliedBy   String?
+  repliedBy   Int?
   replyRead   Boolean             @default(false)
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
@@ -207,7 +207,7 @@ enum TicketPriority {
 model RefreshToken {
   id         String   @id @default(cuid())
   token      String   @unique
-  userId     String
+  userId     Int
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   deviceInfo String?
@@ -227,7 +227,7 @@ model RefreshToken {
 
 model AuditLog {
   id        String   @id @default(cuid())
-  userId    String?
+  userId    Int?
   action    String
   details   String?
   ipAddress String?
@@ -246,7 +246,7 @@ model AuditLog {
 
 model Portfolio {
   id        String   @id @default(uuid())
-  userId    String
+  userId    Int
   ticker    String
   shares    Float
   avgPrice  Float
@@ -262,7 +262,7 @@ model Portfolio {
 
 model Goal {
   id            String    @id @default(cuid())
-  userId        String
+  userId        Int
   title         String
   targetAmount  Float
   currentAmount Float     @default(0)
@@ -282,7 +282,7 @@ model Goal {
 
 model Watchlist {
   id                      String    @id @default(uuid())
-  userId                  String
+  userId                  Int
   ticker                  String
   targetPrice             Float?
   targetReachedNotifiedAt DateTime?
@@ -296,7 +296,7 @@ model Watchlist {
 
 model Analysis {
   id              String    @id @default(uuid())
-  userId          String
+  userId          Int
   ticker          String
   content         String
   createdAt       DateTime  @default(now())
@@ -320,8 +320,8 @@ model Analysis {
 
 model Referral {
   id                                 String   @id @default(cuid())
-  referrerId                         String
-  referredUserId                     String
+  referrerId                         Int
+  referredUserId                     Int
   status                             String   @default("pending")
   createdAt                          DateTime @default(now())
   User_Referral_referredUserIdToUser User     @relation("Referral_referredUserIdToUser", fields: [referredUserId], references: [id], onDelete: Cascade)
@@ -368,8 +368,8 @@ enum UserRank {
 
 model Follow {
   id          String       @id @default(cuid())
-  followerId  String
-  followingId String
+  followerId  Int
+  followingId Int
   status      FollowStatus @default(PENDING)
   createdAt   DateTime     @default(now())
   follower    User         @relation("FollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
@@ -383,7 +383,7 @@ model Follow {
 
 model Prediction {
   id              String           @id @default(cuid())
-  userId          String
+  userId          Int
   ticker          String
   direction       PredictionDir
   targetPrice     Float
@@ -412,7 +412,7 @@ model Prediction {
 
 model PredictionLike {
   predictionId String
-  userId       String
+  userId       Int
   prediction   Prediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -421,7 +421,7 @@ model PredictionLike {
 }
 
 model UserPredictionStats {
-  userId            String   @id
+  userId            Int      @id
   totalPredictions   Int      @default(0)
   correctPredictions Int     @default(0)
   totalPoints        Int      @default(0)
@@ -433,7 +433,7 @@ model UserPredictionStats {
 }
 
 model DiscountUsage {
-  userId       String
+  userId       Int
   codeId       String
   discountCode DiscountCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -460,7 +460,7 @@ model DiscountCode {
 
 model Notification {
   id        String   @id @default(cuid())
-  userId    String
+  userId    Int
   type      String
   title     String
   body      String
@@ -508,7 +508,7 @@ model NewsTicker {
 
 model IdempotencyKey {
   id             String   @id @default(cuid())
-  userId         String
+  userId         Int
   key            String
   method         String
   path           String

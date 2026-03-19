@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma.ts';
 
 export const GoalsRepository = {
-  findByUser(userId: string, page: number, limit: number) {
+  findByUser(userId: number, page: number, limit: number) {
     const skip = (page - 1) * limit;
     return Promise.all([
       prisma.goal.findMany({
@@ -14,22 +14,22 @@ export const GoalsRepository = {
     ]);
   },
 
-  findOwned(goalId: string, userId: string) {
+  findOwned(goalId: string, userId: number) {
     return prisma.goal.findFirst({
       where: { id: goalId, userId },
     });
   },
 
-  countByUser(userId: string) {
+  countByUser(userId: number) {
     return prisma.goal.count({ where: { userId } });
   },
 
-  countAchievedByUser(userId: string) {
+  countAchievedByUser(userId: number) {
     return prisma.goal.count({ where: { userId, achievedAt: { not: null } } });
   },
 
   create(data: {
-    userId: string;
+    userId: number;
     title: string;
     category: string;
     targetAmount: number;

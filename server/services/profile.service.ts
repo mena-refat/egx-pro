@@ -8,7 +8,7 @@ export type ProfileCompletionResult = {
 };
 
 export const ProfileService = {
-  async getCompletion(userId: string): Promise<ProfileCompletionResult | null> {
+  async getCompletion(userId: number): Promise<ProfileCompletionResult | null> {
     const [user, goalsCount, watchlistCount] = await Promise.all([
       UserRepository.findUnique({
         where: { id: userId },

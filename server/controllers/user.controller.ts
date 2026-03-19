@@ -5,7 +5,7 @@ import { logger } from '../lib/logger.ts';
 import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 import { AppError } from '../lib/errors.ts';
 
-function userId(req: AuthRequest): string | null {
+function userId(req: AuthRequest): number | null {
   return req.user?.id ?? req.userId ?? null;
 }
 
