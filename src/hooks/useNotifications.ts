@@ -41,7 +41,10 @@ export function useNotifications(isAuthenticated: boolean) {
     if (!isAuthenticated) return;
     const controller = new AbortController();
     fetchNotifications(controller.signal);
-    return () => controller.abort();
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchNotifications();
+    }, 30000);
+    return () => { controller.abort(); clearInterval(interval); };
   }, [isAuthenticated, fetchNotifications]);
 
   const markAllRead = useCallback(async () => {

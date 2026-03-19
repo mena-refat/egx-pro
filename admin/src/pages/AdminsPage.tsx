@@ -4,7 +4,7 @@ import { adminApi } from '../lib/adminApi';
 import { useAdminStore } from '../store/adminAuthStore';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
-import { Trash2, ToggleLeft, ToggleRight, Pencil, KeyRound, ShieldOff, Copy, RefreshCw, Check } from 'lucide-react';
+import { Trash2, ToggleLeft, ToggleRight, Pencil, KeyRound, ShieldOff, Copy, RefreshCw, Check, Eye, EyeOff } from 'lucide-react';
 
 const PERMS = [
   'users.view',
@@ -89,6 +89,24 @@ export default function AdminsPage() {
   const [confirmPwdError, setConfirmPwdError] = useState('');
   const [createError, setCreateError]       = useState('');
 
+  // Eye toggle states
+  const [showConfirmPwd, setShowConfirmPwd]       = useState(false);
+  const [showDelPassword, setShowDelPassword]     = useState(false);
+  const [showResetPwdConfirm, setShowResetPwdConfirm] = useState(false);
+  const [showReset2FAPwd, setShowReset2FAPwd]     = useState(false);
+
+  // Step 1 validation errors
+  const [step1EmailError, setStep1EmailError]   = useState('');
+  const [step1PhoneError, setStep1PhoneError]   = useState('');
+  const [step1PwdError, setStep1PwdError]       = useState('');
+
+  // Edit profile validation errors
+  const [editEmailError, setEditEmailError]     = useState('');
+  const [editFullNameError, setEditFullNameError] = useState('');
+
+  // Reset password new value validation
+  const [resetPwdNewError, setResetPwdNewError] = useState('');
+
   // Delete state
   const [delId, setDelId]               = useState<string | null>(null);
   const [delError, setDelError]         = useState('');
@@ -118,6 +136,17 @@ export default function AdminsPage() {
 
   useEffect(() => { void loadAdmins(); }, []); // eslint-disable-line
 
+  /* ── validation helpers ── */
+  const validateEmail = (value: string) => {
+    if (!value.includes('@') || !value.includes('.')) return 'Invalid email address';
+    return '';
+  };
+
+  const validatePhone = (value: string) => {
+    if (value && !/^[+]?[0-9\s\-()]{7,15}$/.test(value)) return 'Invalid phone number';
+    return '';
+  };
+
   /* ── helpers ── */
   const closeCreate = () => {
     setOpen(false);
@@ -126,9 +155,26 @@ export default function AdminsPage() {
     setConfirmPwd('');
     setConfirmPwdError('');
     setCreateError('');
+    setStep1EmailError('');
+    setStep1PhoneError('');
+    setStep1PwdError('');
+    setShowConfirmPwd(false);
   };
 
   const goBack  = () => setStep((s) => Math.max(1, s - 1));
+
+  const goNextFromStep1 = () => {
+    const emailErr = validateEmail(form.email);
+    const phoneErr = validatePhone(form.phone);
+    const pwdErr   = form.password && form.password.length < 18 ? 'Password must be at least 18 characters' : '';
+    setStep1EmailError(emailErr);
+    setStep1PhoneError(phoneErr);
+    setStep1PwdError(pwdErr);
+    if (emailErr || phoneErr || pwdErr) return;
+    if (!form.email.trim() || !form.password.trim()) return;
+    setStep((s) => Math.min(4, s + 1));
+  };
+
   const goNext  = () => setStep((s) => Math.min(4, s + 1));
 
   const togglePermission = (perm: string) =>
@@ -182,6 +228,12 @@ export default function AdminsPage() {
 
   const handleEditProfile = async () => {
     if (!editAdmin) return;
+    const emailErr = validateEmail(editForm.email);
+    const nameErr  = !editForm.fullName.trim() ? 'Full name is required' : '';
+    setEditEmailError(emailErr);
+    setEditFullNameError(nameErr);
+    if (emailErr || nameErr) return;
+
     setEditSaving(true); setEditError('');
     try {
       const res = await adminApi.patch(`/admins/${editAdmin.id}/profile`, editForm);
@@ -252,18 +304,22 @@ export default function AdminsPage() {
               <label className="text-xs text-slate-400 block mb-1.5">{t('admins.email')}</label>
               <input
                 value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
+                onChange={(e) => { setForm((f) => ({ ...f, email: e.target.value })); setStep1EmailError(''); }}
+                onBlur={() => setStep1EmailError(validateEmail(form.email))}
+                className={`w-full px-3 py-2 text-sm bg-[#0d0d14] border rounded-lg text-white focus:outline-none focus:border-emerald-500/50 ${step1EmailError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
               />
+              {step1EmailError && <p className="text-xs text-red-400 mt-1">{step1EmailError}</p>}
             </div>
             <div>
               <label className="text-xs text-slate-400 block mb-1.5">{t('admins.phone')}</label>
               <input
                 value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                onChange={(e) => { setForm((f) => ({ ...f, phone: e.target.value })); setStep1PhoneError(''); }}
+                onBlur={() => setStep1PhoneError(validatePhone(form.phone))}
                 placeholder="+201XXXXXXXXX"
-                className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
+                className={`w-full px-3 py-2 text-sm bg-[#0d0d14] border rounded-lg text-white focus:outline-none focus:border-emerald-500/50 ${step1PhoneError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
               />
+              {step1PhoneError && <p className="text-xs text-red-400 mt-1">{step1PhoneError}</p>}
             </div>
             <div>
               <label className="text-xs text-slate-400 block mb-1.5">{t('admins.fullName')}</label>
@@ -279,17 +335,23 @@ export default function AdminsPage() {
                 <input
                   type="text"
                   value={form.password}
-                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                  className="flex-1 px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500/50"
+                  onChange={(e) => { setForm((f) => ({ ...f, password: e.target.value })); setStep1PwdError(''); }}
+                  onBlur={() => {
+                    if (form.password && form.password.length < 18) {
+                      setStep1PwdError('Password must be at least 18 characters');
+                    }
+                  }}
+                  className={`flex-1 px-3 py-2 text-sm bg-[#0d0d14] border rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500/50 ${step1PwdError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
                 />
                 <button
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, password: buildPassword(f) }))}
+                  onClick={() => { setForm((f) => ({ ...f, password: buildPassword(f) })); setStep1PwdError(''); }}
                   className="px-3 py-2 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors shrink-0"
                 >
                   {t('admins.generatePassword')}
                 </button>
               </div>
+              {step1PwdError && <p className="text-xs text-red-400 mt-1">{step1PwdError}</p>}
             </div>
             {/* password rules (inline preview) */}
             <div className="border-t border-white/[0.06] pt-3">
@@ -318,7 +380,7 @@ export default function AdminsPage() {
               </button>
               <button
                 type="button"
-                onClick={goNext}
+                onClick={goNextFromStep1}
                 disabled={!form.email.trim() || !form.password.trim()}
                 className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all"
               >
@@ -454,15 +516,25 @@ export default function AdminsPage() {
               <p className="text-xs text-amber-400/90">{t('admins.confirmYourPasswordHint')}</p>
               <div>
                 <label className="text-xs text-slate-400 block mb-1.5">{t('admins.confirmYourPassword')}</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPwd}
-                  onChange={(e) => { setConfirmPwd(e.target.value); setConfirmPwdError(''); setCreateError(''); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') void handleCreate(); }}
-                  autoFocus
-                  className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-amber-500/50"
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPwd ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={confirmPwd}
+                    onChange={(e) => { setConfirmPwd(e.target.value); setConfirmPwdError(''); setCreateError(''); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') void handleCreate(); }}
+                    autoFocus
+                    className="w-full pr-9 px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-amber-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPwd((v) => !v)}
+                    className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-500 hover:text-slate-300 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPwd ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
                 {(confirmPwdError || createError) && (
                   <p className="text-xs text-red-400 mt-1">{confirmPwdError || createError}</p>
                 )}
@@ -535,21 +607,21 @@ export default function AdminsPage() {
                       {currentAdmin?.role === 'SUPER_ADMIN' && (
                         <>
                           <button
-                            onClick={() => { setEditAdmin({ id: a.id, fullName: a.fullName, email: a.email }); setEditForm({ fullName: a.fullName ?? '', email: a.email ?? '' }); setEditError(''); }}
+                            onClick={() => { setEditAdmin({ id: a.id, fullName: a.fullName, email: a.email }); setEditForm({ fullName: a.fullName ?? '', email: a.email ?? '' }); setEditError(''); setEditEmailError(''); setEditFullNameError(''); }}
                             title={t('admins.editProfile')}
                             className="text-slate-600 hover:text-blue-400 transition-colors"
                           >
                             <Pencil size={13} />
                           </button>
                           <button
-                            onClick={() => { setResetPwdId(a.id); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); }}
+                            onClick={() => { setResetPwdId(a.id); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); setResetPwdNewError(''); setShowResetPwdConfirm(false); }}
                             title={t('admins.resetPassword')}
                             className="text-slate-600 hover:text-amber-400 transition-colors"
                           >
                             <KeyRound size={13} />
                           </button>
                           <button
-                            onClick={() => { setReset2FAId(a.id); setReset2FAPwd(''); setReset2FAError(''); }}
+                            onClick={() => { setReset2FAId(a.id); setReset2FAPwd(''); setReset2FAError(''); setShowReset2FAPwd(false); }}
                             title={t('admins.reset2FA')}
                             className="text-slate-600 hover:text-violet-400 transition-colors"
                           >
@@ -564,7 +636,7 @@ export default function AdminsPage() {
                       >
                         {a.isActive ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
                       </button>
-                      <button onClick={() => setDelId(a.id)} className="text-slate-600 hover:text-red-400 transition-colors">
+                      <button onClick={() => { setDelId(a.id); setShowDelPassword(false); }} className="text-slate-600 hover:text-red-400 transition-colors">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -579,29 +651,39 @@ export default function AdminsPage() {
       {/* Delete modal */}
       <Modal
         open={!!delId}
-        onClose={() => { setDelId(null); setDelPassword(''); setDelPasswordError(''); setDelError(''); }}
+        onClose={() => { setDelId(null); setDelPassword(''); setDelPasswordError(''); setDelError(''); setShowDelPassword(false); }}
         title={t('admins.deleteTitle')}
         width="max-w-sm"
       >
         <p className="text-sm text-slate-400 mb-4">{t('admins.deleteMsg')}</p>
         <div className="mb-4">
           <label className="text-xs text-slate-400 block mb-1.5">{t('admins.confirmYourPassword')}</label>
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={delPassword}
-            onChange={(e) => { setDelPassword(e.target.value); setDelPasswordError(''); }}
-            onKeyDown={(e) => { if (e.key === 'Enter') void handleDelete(); }}
-            className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-red-500/50"
-            autoFocus
-          />
+          <div className="relative">
+            <input
+              type={showDelPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              value={delPassword}
+              onChange={(e) => { setDelPassword(e.target.value); setDelPasswordError(''); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') void handleDelete(); }}
+              className="w-full pr-9 px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-red-500/50"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setShowDelPassword((v) => !v)}
+              className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-500 hover:text-slate-300 transition-colors"
+              tabIndex={-1}
+            >
+              {showDelPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
           {(delPasswordError || delError) && (
             <p className="text-xs text-red-400 mt-1">{delPasswordError || delError}</p>
           )}
         </div>
         <div className="flex gap-3 justify-end">
           <button
-            onClick={() => { setDelId(null); setDelPassword(''); setDelPasswordError(''); setDelError(''); }}
+            onClick={() => { setDelId(null); setDelPassword(''); setDelPasswordError(''); setDelError(''); setShowDelPassword(false); }}
             className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
           >
             {t('common.cancel')}
@@ -619,7 +701,7 @@ export default function AdminsPage() {
       {/* Edit Profile modal */}
       <Modal
         open={!!editAdmin}
-        onClose={() => setEditAdmin(null)}
+        onClose={() => { setEditAdmin(null); setEditEmailError(''); setEditFullNameError(''); }}
         title={t('admins.editProfile')}
         width="max-w-sm"
       >
@@ -628,21 +710,25 @@ export default function AdminsPage() {
             <label className="text-xs text-slate-400 block mb-1.5">{t('admins.fullName')}</label>
             <input
               value={editForm.fullName}
-              onChange={(e) => setEditForm((f) => ({ ...f, fullName: e.target.value }))}
-              className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
+              onChange={(e) => { setEditForm((f) => ({ ...f, fullName: e.target.value })); setEditFullNameError(''); }}
+              onBlur={() => { if (!editForm.fullName.trim()) setEditFullNameError('Full name is required'); }}
+              className={`w-full px-3 py-2 text-sm bg-[#0d0d14] border rounded-lg text-white focus:outline-none focus:border-emerald-500/50 ${editFullNameError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
             />
+            {editFullNameError && <p className="text-xs text-red-400 mt-1">{editFullNameError}</p>}
           </div>
           <div>
             <label className="text-xs text-slate-400 block mb-1.5">{t('admins.email')}</label>
             <input
               value={editForm.email}
-              onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
-              className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
+              onChange={(e) => { setEditForm((f) => ({ ...f, email: e.target.value })); setEditEmailError(''); }}
+              onBlur={() => setEditEmailError(validateEmail(editForm.email))}
+              className={`w-full px-3 py-2 text-sm bg-[#0d0d14] border rounded-lg text-white focus:outline-none focus:border-emerald-500/50 ${editEmailError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
             />
+            {editEmailError && <p className="text-xs text-red-400 mt-1">{editEmailError}</p>}
           </div>
           {editError && <p className="text-xs text-red-400">{editError}</p>}
           <div className="flex justify-end gap-3 pt-1">
-            <button onClick={() => setEditAdmin(null)} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200">{t('common.cancel')}</button>
+            <button onClick={() => { setEditAdmin(null); setEditEmailError(''); setEditFullNameError(''); }} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200">{t('common.cancel')}</button>
             <button
               onClick={handleEditProfile}
               disabled={editSaving || !editForm.fullName.trim() || !editForm.email.trim()}
@@ -657,7 +743,7 @@ export default function AdminsPage() {
       {/* Reset Password modal */}
       <Modal
         open={!!resetPwdId}
-        onClose={() => { setResetPwdId(null); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); setResetPwdCopied(false); }}
+        onClose={() => { setResetPwdId(null); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); setResetPwdCopied(false); setResetPwdNewError(''); setShowResetPwdConfirm(false); }}
         title={t('admins.resetPassword')}
         width="max-w-sm"
       >
@@ -668,8 +754,13 @@ export default function AdminsPage() {
               <input
                 type="text"
                 value={resetPwdNew}
-                onChange={(e) => { setResetPwdNew(e.target.value); setResetPwdError(''); setResetPwdCopied(false); }}
-                className="flex-1 min-w-0 px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white font-mono focus:outline-none focus:border-amber-500/50"
+                onChange={(e) => { setResetPwdNew(e.target.value); setResetPwdError(''); setResetPwdCopied(false); setResetPwdNewError(''); }}
+                onBlur={() => {
+                  if (resetPwdNew && resetPwdNew.length < 18) {
+                    setResetPwdNewError('Password must be at least 18 characters');
+                  }
+                }}
+                className={`flex-1 min-w-0 px-3 py-2 text-sm bg-[#0d0d14] border rounded-lg text-white font-mono focus:outline-none focus:border-amber-500/50 ${resetPwdNewError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
               />
               {/* Generate */}
               <button
@@ -680,6 +771,7 @@ export default function AdminsPage() {
                   setResetPwdNew(pwd);
                   setResetPwdError('');
                   setResetPwdCopied(false);
+                  setResetPwdNewError('');
                 }}
                 className="flex items-center gap-1 px-2.5 py-2 text-xs font-medium bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-slate-300 rounded-lg transition-colors shrink-0"
               >
@@ -707,25 +799,36 @@ export default function AdminsPage() {
                 {resetPwdCopied ? 'Copied!' : 'Copy'}
               </button>
             </div>
+            {resetPwdNewError && <p className="text-xs text-red-400 mt-1">{resetPwdNewError}</p>}
           </div>
 
           <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3 space-y-2">
             <p className="text-xs text-amber-400/80">{t('admins.confirmYourPasswordHint')}</p>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={resetPwdConfirm}
-              onChange={(e) => { setResetPwdConfirm(e.target.value); setResetPwdError(''); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') void handleResetPassword(); }}
-              className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-amber-500/50"
-            />
+            <div className="relative">
+              <input
+                type={showResetPwdConfirm ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={resetPwdConfirm}
+                onChange={(e) => { setResetPwdConfirm(e.target.value); setResetPwdError(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleResetPassword(); }}
+                className="w-full pr-9 px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-amber-500/50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowResetPwdConfirm((v) => !v)}
+                className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-500 hover:text-slate-300 transition-colors"
+                tabIndex={-1}
+              >
+                {showResetPwdConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
           </div>
 
           {resetPwdError && <p className="text-xs text-red-400">{resetPwdError}</p>}
 
           <div className="flex justify-end gap-3 pt-1">
             <button
-              onClick={() => { setResetPwdId(null); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); setResetPwdCopied(false); }}
+              onClick={() => { setResetPwdId(null); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); setResetPwdCopied(false); setResetPwdNewError(''); setShowResetPwdConfirm(false); }}
               className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200"
             >
               {t('common.cancel')}
@@ -744,7 +847,7 @@ export default function AdminsPage() {
       {/* Reset 2FA modal */}
       <Modal
         open={!!reset2FAId}
-        onClose={() => { setReset2FAId(null); setReset2FAPwd(''); setReset2FAError(''); }}
+        onClose={() => { setReset2FAId(null); setReset2FAPwd(''); setReset2FAError(''); setShowReset2FAPwd(false); }}
         title={t('admins.reset2FA')}
         width="max-w-sm"
       >
@@ -752,19 +855,29 @@ export default function AdminsPage() {
           <p className="text-sm text-slate-400">{t('admins.reset2FAMsg')}</p>
           <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3 space-y-2">
             <p className="text-xs text-amber-400/80">{t('admins.confirmYourPasswordHint')}</p>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={reset2FAPwd}
-              onChange={(e) => { setReset2FAPwd(e.target.value); setReset2FAError(''); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') void handleReset2FA(); }}
-              autoFocus
-              className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-amber-500/50"
-            />
+            <div className="relative">
+              <input
+                type={showReset2FAPwd ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={reset2FAPwd}
+                onChange={(e) => { setReset2FAPwd(e.target.value); setReset2FAError(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleReset2FA(); }}
+                autoFocus
+                className="w-full pr-9 px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-amber-500/50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowReset2FAPwd((v) => !v)}
+                className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-500 hover:text-slate-300 transition-colors"
+                tabIndex={-1}
+              >
+                {showReset2FAPwd ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
           </div>
           {reset2FAError && <p className="text-xs text-red-400">{reset2FAError}</p>}
           <div className="flex justify-end gap-3 pt-1">
-            <button onClick={() => { setReset2FAId(null); setReset2FAPwd(''); setReset2FAError(''); }} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200">{t('common.cancel')}</button>
+            <button onClick={() => { setReset2FAId(null); setReset2FAPwd(''); setReset2FAError(''); setShowReset2FAPwd(false); }} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200">{t('common.cancel')}</button>
             <button
               onClick={handleReset2FA}
               disabled={saving || !reset2FAPwd}

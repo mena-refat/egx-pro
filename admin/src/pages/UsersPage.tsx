@@ -71,6 +71,7 @@ export default function UsersPage() {
   const [addValue, setAddValue]     = useState('');
   const [addReason, setAddReason]   = useState('');
   const [addError, setAddError]     = useState('');
+  const [addValueError, setAddValueError] = useState('');
   const [adding, setAdding]         = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
@@ -85,9 +86,23 @@ export default function UsersPage() {
 
   useEffect(() => { if (tab === 'blocklist') void loadBlocklist(); }, [tab]);
 
+  const validateAddValue = (value: string, type: string): string => {
+    if (!value.trim()) return '';
+    if (type === 'EMAIL') {
+      if (!value.includes('@') || !value.includes('.')) return 'Invalid email address';
+    } else if (type === 'PHONE') {
+      if (!/^[+]?[0-9\s\-()]{7,15}$/.test(value)) return 'Invalid phone number';
+    } else if (type === 'EMAIL_DOMAIN') {
+      if (!value.startsWith('@') && !value.includes('.')) return 'Invalid domain format (e.g. @example.com or example.com)';
+    }
+    return '';
+  };
+
   const handleAdd = async () => {
     setAddError('');
     if (!addValue.trim()) return;
+    const valErr = validateAddValue(addValue, addType);
+    if (valErr) { setAddValueError(valErr); return; }
     setAdding(true);
     try {
       await adminApi.post('/blocklist', { type: addType, value: addValue.trim(), reason: addReason.trim() || undefined });
@@ -246,7 +261,7 @@ export default function UsersPage() {
               {/* Type */}
               <select
                 value={addType}
-                onChange={(e) => { setAddType(e.target.value); setAddValue(''); setAddError(''); }}
+                onChange={(e) => { setAddType(e.target.value); setAddValue(''); setAddError(''); setAddValueError(''); }}
                 className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-emerald-500/40 transition-colors"
               >
                 <option value="EMAIL">{t('blocklist.email')}</option>
@@ -255,14 +270,16 @@ export default function UsersPage() {
               </select>
 
               {/* Value */}
-              <div className="relative flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-[200px] space-y-1">
                 <input
                   value={addValue}
-                  onChange={(e) => { setAddValue(e.target.value); setAddError(''); }}
+                  onChange={(e) => { setAddValue(e.target.value); setAddError(''); setAddValueError(''); }}
+                  onBlur={() => setAddValueError(validateAddValue(addValue, addType))}
                   onKeyDown={(e) => { if (e.key === 'Enter') void handleAdd(); }}
                   placeholder={t('blocklist.valuePlaceholder')}
-                  className="w-full px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40 transition-colors"
+                  className={`w-full px-3 py-2 text-sm bg-[#111118] border rounded-lg text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40 transition-colors ${addValueError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
                 />
+                {addValueError && <p className="text-xs text-red-400">{addValueError}</p>}
               </div>
 
               {/* Reason */}

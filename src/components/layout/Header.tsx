@@ -147,7 +147,7 @@ export function Header({
 
         <div className="flex items-center gap-1 rounded-full bg-[var(--bg-card)] border border-[var(--border)] px-1 py-1 text-[var(--text-muted)] text-xs">
           <Button type="button" variant="ghost" size="sm" onClick={() => onThemeChange('light')} className={`w-8 h-8 min-w-0 p-0 rounded-full ${theme === 'light' ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : ''}`} icon={<Sun className="w-4 h-4" />} aria-label="Light mode"> </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={() => onThemeChange('system')} className={`w-8 h-8 min-w-0 p-0 rounded-full ${theme === 'system' ? 'bg-[var(--text-inverse)] text-[var(--text-primary)]' : ''}`} icon={<Monitor className="w-4 h-4" />} aria-label="System theme"> </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => onThemeChange('system')} className={`w-8 h-8 min-w-0 p-0 rounded-full ${theme === 'system' ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : ''}`} icon={<Monitor className="w-4 h-4" />} aria-label="System theme"> </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => onThemeChange('dark')} className={`w-8 h-8 min-w-0 p-0 rounded-full ${theme === 'dark' ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : ''}`} icon={<Moon className="w-4 h-4" />} aria-label="Dark mode"> </Button>
         </div>
 

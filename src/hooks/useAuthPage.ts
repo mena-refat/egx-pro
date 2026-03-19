@@ -138,11 +138,12 @@ export function useAuthPage(refCode: string) {
         profileData = (payload.user as Record<string, unknown>) ?? profileData;
       }
       const userForAuth = ensureUserShape(profileData ?? (payload.user as Record<string, unknown>));
-      if (userForAuth && payload.accessToken) setAuth(userForAuth, payload.accessToken);
-      setAuthMessage({
-        text: isLogin ? (payload.restored ? t('settings.welcomeBack') : t('auth.loginSuccess')) : t('auth.registerSuccess'),
-        type: 'success',
-      });
+      const successText = isLogin ? (payload.restored ? t('settings.welcomeBack') : t('auth.loginSuccess')) : t('auth.registerSuccess');
+      setAuthMessage({ text: successText, type: 'success' });
+      if (userForAuth && payload.accessToken) {
+        const delay = isLogin ? 0 : 1500;
+        setTimeout(() => setAuth(userForAuth, payload.accessToken!), delay);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Auth failed';
       if (msg === 'Failed to fetch' || msg.includes('NetworkError') || msg.includes('Load failed') || msg.includes('fetch')) {

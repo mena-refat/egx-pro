@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { useAdminStore } from '../store/adminAuthStore';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface AdminMe {
   id: number;
@@ -29,6 +30,17 @@ export default function AdminAccountPage() {
   const [pwdForm, setPwdForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [message, setMessage] = useState<string | null>(null);
 
+  // Eye toggle states
+  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
+  const [showTwoFaPwd, setShowTwoFaPwd] = useState(false);
+
+  // Validation error states
+  const [profileEmailError, setProfileEmailError] = useState('');
+  const [profileFullNameError, setProfileFullNameError] = useState('');
+  const [newPwdError, setNewPwdError] = useState('');
+
   useEffect(() => {
     adminApi
       .get('/auth/me')
@@ -42,8 +54,22 @@ export default function AdminAccountPage() {
       .catch(() => null);
   }, []);
 
+  const validateEmail = (value: string) => {
+    if (!value.includes('@') || !value.includes('.')) {
+      return 'Invalid email address';
+    }
+    return '';
+  };
+
   const handleProfileSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // Run validations before submit
+    const emailErr = validateEmail(profileForm.email);
+    const nameErr = !profileForm.fullName.trim() ? 'Full name is required' : '';
+    setProfileEmailError(emailErr);
+    setProfileFullNameError(nameErr);
+    if (emailErr || nameErr) return;
+
     setProfileSaving(true);
     setMessage(null);
     try {
@@ -160,17 +186,21 @@ export default function AdminAccountPage() {
             <label className="block text-slate-300">{t('account.fullName')}</label>
             <input
               value={profileForm.fullName}
-              onChange={(e) => setProfileForm((f) => ({ ...f, fullName: e.target.value }))}
-              className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-emerald-500/50"
+              onChange={(e) => { setProfileForm((f) => ({ ...f, fullName: e.target.value })); setProfileFullNameError(''); }}
+              onBlur={() => { if (!profileForm.fullName.trim()) setProfileFullNameError('Full name is required'); }}
+              className={`w-full rounded-lg border bg-[#0d0d14] px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-emerald-500/50 ${profileFullNameError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
             />
+            {profileFullNameError && <p className="text-xs text-red-400 mt-1">{profileFullNameError}</p>}
           </div>
           <div className="space-y-1.5 text-sm">
             <label className="block text-slate-300">{t('account.email')}</label>
             <input
               value={profileForm.email}
-              onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))}
-              className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-emerald-500/50"
+              onChange={(e) => { setProfileForm((f) => ({ ...f, email: e.target.value })); setProfileEmailError(''); }}
+              onBlur={() => setProfileEmailError(validateEmail(profileForm.email))}
+              className={`w-full rounded-lg border bg-[#0d0d14] px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-emerald-500/50 ${profileEmailError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
             />
+            {profileEmailError && <p className="text-xs text-red-400 mt-1">{profileEmailError}</p>}
           </div>
           <button
             type="submit"
@@ -186,30 +216,66 @@ export default function AdminAccountPage() {
         <h2 className="text-sm font-semibold text-white mb-1">{t('account.changePassword')}</h2>
         <div className="space-y-1.5 text-sm">
           <label className="block text-slate-300">{t('account.currentPassword')}</label>
-          <input
-            type="password"
-            value={pwdForm.currentPassword}
-            onChange={(e) => setPwdForm((f) => ({ ...f, currentPassword: e.target.value }))}
-            className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white outline-none focus:border-emerald-500/50"
-          />
+          <div className="relative">
+            <input
+              type={showCurrentPwd ? 'text' : 'password'}
+              value={pwdForm.currentPassword}
+              onChange={(e) => setPwdForm((f) => ({ ...f, currentPassword: e.target.value }))}
+              className="w-full pr-9 rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white outline-none focus:border-emerald-500/50"
+            />
+            <button
+              type="button"
+              onClick={() => setShowCurrentPwd((v) => !v)}
+              className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-500 hover:text-slate-300 transition-colors"
+              tabIndex={-1}
+            >
+              {showCurrentPwd ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
         </div>
         <div className="space-y-1.5 text-sm">
           <label className="block text-slate-300">{t('account.newPassword')}</label>
-          <input
-            type="password"
-            value={pwdForm.newPassword}
-            onChange={(e) => setPwdForm((f) => ({ ...f, newPassword: e.target.value }))}
-            className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white outline-none focus:border-emerald-500/50"
-          />
+          <div className="relative">
+            <input
+              type={showNewPwd ? 'text' : 'password'}
+              value={pwdForm.newPassword}
+              onChange={(e) => { setPwdForm((f) => ({ ...f, newPassword: e.target.value })); setNewPwdError(''); }}
+              onBlur={() => {
+                if (pwdForm.newPassword && pwdForm.newPassword.length < 18) {
+                  setNewPwdError('Password must be at least 18 characters');
+                }
+              }}
+              className={`w-full pr-9 rounded-lg border bg-[#0d0d14] px-3 py-2 text-sm text-white outline-none focus:border-emerald-500/50 ${newPwdError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowNewPwd((v) => !v)}
+              className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-500 hover:text-slate-300 transition-colors"
+              tabIndex={-1}
+            >
+              {showNewPwd ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
+          {newPwdError && <p className="text-xs text-red-400 mt-1">{newPwdError}</p>}
         </div>
         <div className="space-y-1.5 text-sm">
           <label className="block text-slate-300">{t('account.confirmPassword')}</label>
-          <input
-            type="password"
-            value={pwdForm.confirmPassword}
-            onChange={(e) => setPwdForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-            className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white outline-none focus:border-emerald-500/50"
-          />
+          <div className="relative">
+            <input
+              type={showConfirmPwd ? 'text' : 'password'}
+              value={pwdForm.confirmPassword}
+              onChange={(e) => setPwdForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+              className="w-full pr-9 rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white outline-none focus:border-emerald-500/50"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPwd((v) => !v)}
+              className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-500 hover:text-slate-300 transition-colors"
+              tabIndex={-1}
+            >
+              {showConfirmPwd ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
         </div>
         <button
           type="submit"
@@ -278,12 +344,22 @@ export default function AdminAccountPage() {
               <p className="text-slate-300">{t('account.disable2faDesc')}</p>
               <div className="space-y-1.5">
                 <label className="block text-slate-300">{t('account.passwordLabel')}</label>
-                <input
-                  type="password"
-                  value={twoFaPassword}
-                  onChange={(e) => setTwoFaPassword(e.target.value)}
-                  className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white outline-none focus:border-emerald-500/50"
-                />
+                <div className="relative">
+                  <input
+                    type={showTwoFaPwd ? 'text' : 'password'}
+                    value={twoFaPassword}
+                    onChange={(e) => setTwoFaPassword(e.target.value)}
+                    className="w-full pr-9 rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white outline-none focus:border-emerald-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowTwoFaPwd((v) => !v)}
+                    className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-500 hover:text-slate-300 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showTwoFaPwd ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
               </div>
               <button
                 type="submit"
