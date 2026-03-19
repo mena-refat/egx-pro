@@ -101,6 +101,7 @@ export const AdminAuthController = {
         role: true,
         permissions: true,
         twoFactorEnabled: true,
+        mustSetup2FA: true,
         lastLoginAt: true,
         createdAt: true,
       },

@@ -4,12 +4,13 @@ import { adminApi } from '../lib/adminApi';
 import { useAdminStore } from '../store/adminAuthStore';
 
 interface AdminMe {
-  id: string;
+  id: number;
   email: string;
   fullName: string;
   role: string;
   permissions: string[];
   twoFactorEnabled?: boolean;
+  mustSetup2FA?: boolean;
 }
 
 export default function AdminAccountPage() {

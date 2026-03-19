@@ -97,12 +97,23 @@ export default function App() {
   useEffect(() => {
     // استخدام ref بدل closure flag عشان نحل مشكلة React StrictMode
     const controller = new AbortController();
+    const timeoutMs = 6000;
+    let unlocked = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const unlockUI = () => {
+      if (unlocked) return;
+      unlocked = true;
+      setAuthChecked(true); // دايمًا نـunlock الـ UI حتى لو الـ fetch اتعلّق
+    };
     const API = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL?.trim();
     const base = API ? `${API.replace(/\/$/, '')}/api` : '/api';
 
     const checkAuth = async () => {
-      // timeout 6 ثواني - لو السيرفر بطيء مش هنبلوك المستخدم
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      // لو السيرفر بطيء/اتعلّق، ما نخليش الصفحة loading للأبد
+      timeoutId = setTimeout(() => {
+        controller.abort();
+        unlockUI();
+      }, timeoutMs);
       try {
         const res = await fetch(`${base}/auth/me`, {
           credentials: 'include',
@@ -127,13 +138,16 @@ export default function App() {
           console.warn(isTimeout ? 'checkAuth: timeout, keeping session' : 'checkAuth: network error, keeping session');
         }
       } finally {
-        clearTimeout(timeoutId);
-        setAuthChecked(true); // دايمًا نـunlock الـ UI
+        if (timeoutId) clearTimeout(timeoutId);
+        unlockUI();
       }
     };
 
     checkAuth();
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

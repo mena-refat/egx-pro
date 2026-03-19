@@ -10,6 +10,9 @@ i18n
   .init({
     fallbackLng: 'ar',
     debug: false,
+    // Avoid suspending the entire UI while loading translation files.
+    // This prevents PageLoader from getting stuck if /locales/*.json is slow/unavailable.
+    react: { useSuspense: false },
     interpolation: {
       escapeValue: false,
     },

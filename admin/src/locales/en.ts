@@ -269,6 +269,7 @@ export const en = {
     disable2faDesc: 'To disable 2FA, confirm your current password.',
     passwordLabel: 'Password',
     disable2fa: 'Disable 2FA',
+    twoFaEnforced: '2FA is enforced by Super Admin. You cannot disable it.',
     profileUpdated: 'Profile updated successfully.',
     passwordChanged: 'Password changed successfully.',
     twoFaEnabled: 'Two-factor authentication enabled.',

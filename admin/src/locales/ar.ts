@@ -269,6 +269,7 @@ export const ar = {
     disable2faDesc: 'لتعطيل التحقق الثنائي، أكّد كلمة مرورك الحالية.',
     passwordLabel: 'كلمة المرور',
     disable2fa: 'تعطيل التحقق الثنائي',
+    twoFaEnforced: 'المصادقة الثنائية مفروضة من السوبر أدمن ولا يمكن تعطيلها.',
     profileUpdated: 'تم تحديث الملف الشخصي بنجاح.',
     passwordChanged: 'تم تغيير كلمة المرور بنجاح.',
     twoFaEnabled: 'تم تفعيل التحقق الثنائي.',
