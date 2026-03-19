@@ -33,7 +33,7 @@ export function AdminLayout() {
     { to: '/discounts', label: t('nav.discounts'), icon: Tag, permission: 'discounts.view' },
     { to: '/support', label: t('nav.support'), icon: Headphones, permission: 'support.view' },
     { to: '/notifications', label: t('nav.broadcast'), icon: Bell, permission: 'notifications.send' },
-    { to: '/audit', label: t('nav.auditLog'), icon: ScrollText, permission: 'audit.view' },
+    ...(admin?.role === 'SUPER_ADMIN' ? [{ to: '/audit', label: t('nav.auditLog'), icon: ScrollText, permission: null }] : []),
     { to: '/account', label: t('nav.accountSecurity'), icon: ShieldCheck, permission: null },
   ];
 

@@ -51,7 +51,9 @@ function App() {
               {admin.role === 'SUPER_ADMIN' && (
                 <Route path="/admins" element={<AdminsPage />} />
               )}
-              <Route path="/audit" element={<AuditLogPage />} />
+              {admin.role === 'SUPER_ADMIN' && (
+                <Route path="/audit" element={<AuditLogPage />} />
+              )}
               <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { adminAuthenticate, requirePermission } from '../middleware/adminAuth.middleware.ts';
+import { adminAuthenticate, requirePermission, requireSuperAdmin } from '../middleware/adminAuth.middleware.ts';
 import { AdminAuthController } from '../controllers/admin/adminAuth.controller.ts';
 import { AdminUsersController } from '../controllers/admin/adminUsers.controller.ts';
 import { AdminDiscountsController } from '../controllers/admin/adminDiscounts.controller.ts';
@@ -51,6 +51,7 @@ router.get(
 router.post(
   '/users/invite',
   adminAuthenticate,
+  requirePermission('users.edit'),
   (req, res, next) => {
     void AdminUsersController.inviteUser(req as any, res).catch(next);
   }
@@ -212,7 +213,7 @@ router.get(
 router.get(
   '/analytics/audit',
   adminAuthenticate,
-  requirePermission('audit.view'),
+  requireSuperAdmin,
   (req, res, next) => {
     void AdminAnalyticsController.auditLogs(req as any, res).catch(next);
   }
@@ -288,13 +289,13 @@ router.post('/admins/:id/reset-2fa', adminAuthenticate, (req, res, next) => {
 });
 
 // Blocklist
-router.get('/blocklist', adminAuthenticate, (req, res, next) => {
+router.get('/blocklist', adminAuthenticate, requirePermission('blocklist.manage'), (req, res, next) => {
   void AdminBlocklistController.list(req as any, res).catch(next);
 });
-router.post('/blocklist', adminAuthenticate, (req, res, next) => {
+router.post('/blocklist', adminAuthenticate, requirePermission('blocklist.manage'), (req, res, next) => {
   void AdminBlocklistController.add(req as any, res).catch(next);
 });
-router.delete('/blocklist/:id', adminAuthenticate, (req, res, next) => {
+router.delete('/blocklist/:id', adminAuthenticate, requirePermission('blocklist.manage'), (req, res, next) => {
   void AdminBlocklistController.remove(req as any, res).catch(next);
 });
 

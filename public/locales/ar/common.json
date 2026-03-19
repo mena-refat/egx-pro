@@ -697,7 +697,9 @@
       "decline": "رفض",
       "feedDirectionUp": "↑ صعود",
       "feedDirectionDown": "↓ هبوط",
-      "feedTarget": "هدف: {{price}}"
+      "feedTarget": "هدف: {{price}}",
+      "followersEmptyAction": "شارك بروفايلك",
+      "followingEmptyAction": "ابحث عن مستخدمين"
     }
   },
   "overview": {
@@ -1145,5 +1147,9 @@
     "research": "بحث وتحليل",
     "planning": "التخطيط",
     "social": "المجتمع"
+  },
+  "discover": {
+    "accuracy": "دقة",
+    "predictions": "توقع"
   }
 }

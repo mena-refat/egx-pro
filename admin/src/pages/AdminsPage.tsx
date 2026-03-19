@@ -17,31 +17,35 @@ const PERMS = [
   'support.assign',
   'support.manage',
   'analytics.view',
-  'audit.view',
+  'blocklist.manage',
   'notifications.send',
 ];
 
-const PERM_LABELS: Record<string, string> = {
-  'users.view':       'View Users',
-  'users.edit':       'Edit Users',
-  'users.delete':     'Delete Users',
-  'discounts.view':   'View Discounts',
-  'discounts.manage': 'Manage Discounts',
-  'support.view':     'View Support',
-  'support.reply':    'Reply to Tickets',
-  'support.assign':   'Assign Tickets',
-  'support.manage':   'Support Manager',
-  'analytics.view':   'View Analytics',
-  'audit.view':       'View Audit Log',
-  'notifications.send': 'Send Notifications',
-};
+function getPermLabels(t: (k: string) => string): Record<string, string> {
+  return {
+    'users.view':         t('admins.permUsersView'),
+    'users.edit':         t('admins.permUsersEdit'),
+    'users.delete':       t('admins.permUsersDelete'),
+    'discounts.view':     t('admins.permDiscountsView'),
+    'discounts.manage':   t('admins.permDiscountsManage'),
+    'support.view':       t('admins.permSupportView'),
+    'support.reply':      t('admins.permSupportReply'),
+    'support.assign':     t('admins.permSupportAssign'),
+    'support.manage':     t('admins.permSupportManage'),
+    'analytics.view':     t('admins.permAnalyticsView'),
+    'blocklist.manage':   t('admins.permBlocklistManage'),
+    'notifications.send': t('admins.permNotificationsSend'),
+  };
+}
 
-const PERM_GROUPS: { label: string; perms: string[] }[] = [
-  { label: 'Users',     perms: ['users.view', 'users.edit', 'users.delete'] },
-  { label: 'Discounts', perms: ['discounts.view', 'discounts.manage'] },
-  { label: 'Support',   perms: ['support.view', 'support.reply', 'support.assign', 'support.manage'] },
-  { label: 'Other',     perms: ['analytics.view', 'audit.view', 'notifications.send'] },
-];
+function getPermGroups(t: (k: string) => string): { label: string; perms: string[] }[] {
+  return [
+    { label: t('admins.permGroupUsers'),     perms: ['users.view', 'users.edit', 'users.delete'] },
+    { label: t('admins.permGroupDiscounts'), perms: ['discounts.view', 'discounts.manage'] },
+    { label: t('admins.permGroupSupport'),   perms: ['support.view', 'support.reply', 'support.assign', 'support.manage'] },
+    { label: t('admins.permGroupOther'),     perms: ['analytics.view', 'blocklist.manage', 'notifications.send'] },
+  ];
+}
 
 // Enabling a permission auto-enables these prerequisites
 const PERM_REQUIRES: Record<string, string[]> = {
@@ -85,44 +89,47 @@ function resolvePermToggle(perm: string, current: string[]): string[] {
 }
 
 // ── Preset roles ────────────────────────────────────────────────
-const PRESET_ROLES: { label: string; color: string; desc: string; permissions: string[] }[] = [
-  {
-    label: 'Support Agent',
-    color: 'blue',
-    desc: 'View & reply to assigned tickets only',
-    permissions: ['support.view', 'support.reply'],
-  },
-  {
-    label: 'Support Manager',
-    color: 'violet',
-    desc: 'Assign tickets, manage team, view all tickets',
-    permissions: ['support.view', 'support.reply', 'support.assign', 'support.manage'],
-  },
-  {
-    label: 'Content Manager',
-    color: 'amber',
-    desc: 'Manage discounts and send notifications',
-    permissions: ['discounts.view', 'discounts.manage', 'notifications.send'],
-  },
-  {
-    label: 'Analyst',
-    color: 'emerald',
-    desc: 'View users and analytics dashboards',
-    permissions: ['users.view', 'analytics.view'],
-  },
-  {
-    label: 'Auditor',
-    color: 'rose',
-    desc: 'Read-only access to analytics and audit logs',
-    permissions: ['users.view', 'analytics.view', 'audit.view'],
-  },
-  {
-    label: 'Moderator',
-    color: 'orange',
-    desc: 'Manage users and handle support tickets',
-    permissions: ['users.view', 'users.edit', 'support.view', 'support.reply'],
-  },
-];
+type PresetRole = { label: string; color: string; desc: string; permissions: string[] };
+function getPresetRoles(t: (k: string) => string): PresetRole[] {
+  return [
+    {
+      label: t('admins.presetSupportAgent'),
+      color: 'blue',
+      desc: t('admins.presetSupportAgentDesc'),
+      permissions: ['support.view', 'support.reply'],
+    },
+    {
+      label: t('admins.presetSupportManager'),
+      color: 'violet',
+      desc: t('admins.presetSupportManagerDesc'),
+      permissions: ['support.view', 'support.reply', 'support.assign', 'support.manage'],
+    },
+    {
+      label: t('admins.presetContentManager'),
+      color: 'amber',
+      desc: t('admins.presetContentManagerDesc'),
+      permissions: ['discounts.view', 'discounts.manage', 'notifications.send'],
+    },
+    {
+      label: t('admins.presetAnalyst'),
+      color: 'emerald',
+      desc: t('admins.presetAnalystDesc'),
+      permissions: ['users.view', 'analytics.view'],
+    },
+    {
+      label: t('admins.presetAuditor'),
+      color: 'rose',
+      desc: t('admins.presetAuditorDesc'),
+      permissions: ['users.view', 'analytics.view'],
+    },
+    {
+      label: t('admins.presetModerator'),
+      color: 'orange',
+      desc: t('admins.presetModeratorDesc'),
+      permissions: ['users.view', 'users.edit', 'support.view', 'support.reply'],
+    },
+  ];
+}
 
 const ROLE_COLORS: Record<string, string> = {
   blue:    'bg-blue-500/10 text-blue-300 border border-blue-500/20 hover:bg-blue-500/20',
@@ -195,6 +202,9 @@ function StepDots({ current, total }: { current: number; total: number }) {
 export default function AdminsPage() {
   const { t } = useTranslation();
   const currentAdmin = useAdminStore((s) => s.admin);
+  const PERM_LABELS = getPermLabels(t);
+  const PERM_GROUPS = getPermGroups(t);
+  const PRESET_ROLES = getPresetRoles(t);
   const [admins, setAdmins] = useState<any[]>([]);
 
   // Create modal state
@@ -575,7 +585,7 @@ export default function AdminsPage() {
           <div className="space-y-3">
             {/* Quick preset roles */}
             <div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-2">Quick Presets</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-2">{t('admins.quickPresets')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {PRESET_ROLES.map((role) => (
                   <button
@@ -1088,7 +1098,7 @@ export default function AdminsPage() {
           <div className="space-y-3">
             {/* Quick preset roles */}
             <div>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-2">Quick Presets</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-2">{t('admins.quickPresets')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {PRESET_ROLES.map((role) => (
                   <button

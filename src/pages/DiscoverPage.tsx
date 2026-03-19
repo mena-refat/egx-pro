@@ -11,6 +11,43 @@ import {
   TrendingUp,
   Bell,
 } from 'lucide-react';
+
+function DiscoverSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Leaderboard skeleton */}
+      <div className="space-y-3">
+        <div className="h-4 w-32 bg-[var(--bg-card-hover)] rounded-full" />
+        {[1,2,3,4,5].map(i => (
+          <div key={i} className="flex items-center gap-3 p-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl">
+            <div className="w-6 h-6 rounded-full bg-[var(--bg-card-hover)] shrink-0" />
+            <div className="w-9 h-9 rounded-full bg-[var(--bg-card-hover)] shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3 w-24 bg-[var(--bg-card-hover)] rounded-full" />
+              <div className="h-2.5 w-32 bg-[var(--bg-card-hover)] rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Feed skeleton */}
+      <div className="space-y-3">
+        <div className="h-4 w-40 bg-[var(--bg-card-hover)] rounded-full" />
+        {[1,2,3].map(i => (
+          <div key={i} className="p-4 bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="h-3 w-20 bg-[var(--bg-card-hover)] rounded-full" />
+              <div className="h-5 w-14 bg-[var(--bg-card-hover)] rounded-full" />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-12 bg-[var(--bg-card-hover)] rounded-full" />
+              <div className="h-3 w-20 bg-[var(--bg-card-hover)] rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 import { useAuthStore } from '../store/authStore';
 import { useDiscoverSearch } from '../hooks/useDiscoverSearch';
 import { useDiscoverAutocomplete } from '../hooks/useDiscoverAutocomplete';
@@ -164,6 +201,8 @@ export default function DiscoverPage() {
     void (async () => {
       if (!mountedRef.current) return;
       setDiscoverLoading(true);
+      // timeout 8s — never hang forever
+      const timeoutId = setTimeout(() => { if (!controller.signal.aborted) setDiscoverLoading(false); }, 8000);
       try {
         const [lb, feed, fwrs, fwng, reqs] = await Promise.allSettled([
           api.get('/predictions/leaderboard?period=month&limit=5', {
@@ -216,8 +255,8 @@ export default function DiscoverPage() {
       } catch (err) {
         if ((err as { code?: string }).code === 'ERR_CANCELED') return;
       } finally {
-        if (!mountedRef.current) return;
-        setDiscoverLoading(false);
+        clearTimeout(timeoutId);
+        if (!controller.signal.aborted) setDiscoverLoading(false);
       }
     })();
 
@@ -384,9 +423,7 @@ export default function DiscoverPage() {
           {activeTab === 'discover' && (
             <div className={styles.discoverContent}>
               {discoverLoading ? (
-                <div className={styles.loader}>
-                  <Loader2 className={styles.spinnerLarge} aria-hidden />
-                </div>
+                <DiscoverSkeleton />
               ) : (
                 <>
                   {/* Leaderboard */}
@@ -431,7 +468,7 @@ export default function DiscoverPage() {
                                 @{user.username}
                               </span>
                               <span className={styles.leaderStats}>
-                                {user.accuracyRate}% دقة · {user.totalPredictions} توقع
+                                {user.accuracyRate}% {t('discover.accuracy')} · {user.totalPredictions} {t('discover.predictions')}
                               </span>
                             </div>
                           </button>
@@ -557,6 +594,8 @@ export default function DiscoverPage() {
                   icon={Users}
                   title={t('social.discoverPage.followersEmptyTitle')}
                   description={t('social.discoverPage.followersEmptyDescription')}
+                  actionLabel={t('social.discoverPage.followersEmptyAction')}
+                  onAction={() => navigate('/profile')}
                 />
               )}
             </div>
@@ -618,6 +657,8 @@ export default function DiscoverPage() {
                   icon={UserPlus}
                   title={t('social.discoverPage.followingEmptyTitle')}
                   description={t('social.discoverPage.followingEmptyDescription')}
+                  actionLabel={t('social.discoverPage.followingEmptyAction')}
+                  onAction={() => { setActiveTab('discover'); setTimeout(() => inputRef.current?.focus(), 100); }}
                 />
               )}
             </div>

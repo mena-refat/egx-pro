@@ -697,7 +697,9 @@
       "decline": "Decline",
       "feedDirectionUp": "↑ Up",
       "feedDirectionDown": "↓ Down",
-      "feedTarget": "Target: {{price}}"
+      "feedTarget": "Target: {{price}}",
+      "followersEmptyAction": "Share your profile",
+      "followingEmptyAction": "Find people to follow"
     }
   },
   "overview": {
@@ -1145,5 +1147,9 @@
     "research": "Research",
     "planning": "Planning",
     "social": "Community"
+  },
+  "discover": {
+    "accuracy": "accuracy",
+    "predictions": "predictions"
   }
 }

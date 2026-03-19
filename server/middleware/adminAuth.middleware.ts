@@ -65,6 +65,18 @@ export function requirePermission(permission: AdminPermission) {
   };
 }
 
+export function requireSuperAdmin(req: AdminRequest, res: Response, next: NextFunction): void {
+  if (!req.admin) {
+    res.status(401).json({ error: 'ADMIN_UNAUTHORIZED' });
+    return;
+  }
+  if (req.admin.role !== 'SUPER_ADMIN') {
+    res.status(403).json({ error: 'ADMIN_FORBIDDEN', required: 'SUPER_ADMIN' });
+    return;
+  }
+  next();
+}
+
 export async function adminAudit(
   adminId: number,
   action: string,
