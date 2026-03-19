@@ -37,6 +37,10 @@ router.get('/auth/me', adminAuthenticate, (req, res, next) => {
   void AdminAuthController.me(req as any, res).catch(next);
 });
 
+router.post('/auth/logout', adminAuthenticate, (req, res, next) => {
+  void AdminAuthController.logout(req as any, res).catch(next);
+});
+
 router.post('/auth/change-password', adminAuthenticate, (req, res, next) => {
   void AdminAuthController.changePassword(req as any, res).catch(next);
 });
@@ -187,6 +191,42 @@ router.post(
   }
 );
 
+router.post(
+  '/support/bulk-status',
+  adminAuthenticate,
+  requirePermission('support.manage'),
+  (req, res, next) => {
+    void AdminSupportController.bulkStatus(req as any, res).catch(next);
+  }
+);
+
+router.get(
+  '/support/quick-replies',
+  adminAuthenticate,
+  requirePermission('support.reply'),
+  (req, res, next) => {
+    void AdminSupportController.listQuickReplies(req as any, res).catch(next);
+  }
+);
+
+router.post(
+  '/support/quick-replies',
+  adminAuthenticate,
+  requirePermission('support.manage'),
+  (req, res, next) => {
+    void AdminSupportController.createQuickReply(req as any, res).catch(next);
+  }
+);
+
+router.delete(
+  '/support/quick-replies/:id',
+  adminAuthenticate,
+  requirePermission('support.manage'),
+  (req, res, next) => {
+    void AdminSupportController.deleteQuickReply(req as any, res).catch(next);
+  }
+);
+
 router.get(
   '/support',
   adminAuthenticate,
@@ -256,6 +296,15 @@ router.get(
   requireSuperAdmin,
   (req, res, next) => {
     void AdminAnalyticsController.auditLogs(req as any, res).catch(next);
+  }
+);
+
+router.get(
+  '/analytics/audit/export',
+  adminAuthenticate,
+  requireSuperAdmin,
+  (req, res, next) => {
+    void AdminAnalyticsController.auditLogsExport(req as any, res).catch(next);
   }
 );
 

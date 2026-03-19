@@ -84,9 +84,13 @@ export const BillingController = {
     const userId = req.user?.id;
     if (!userId) { sendError(res, 'UNAUTHORIZED', 401); return; }
 
-    const { purchaseToken, productId, plan } = req.body as {
-      purchaseToken?: string; productId?: string; plan?: string;
+    const { purchaseToken, productId } = req.body as {
+      purchaseToken?: string; productId?: string;
     };
+
+    if (!purchaseToken || typeof purchaseToken !== 'string' || purchaseToken.trim().length === 0) {
+      sendError(res, 'INVALID_PURCHASE', 400); return;
+    }
 
     const mapping = PRODUCT_PLAN_MAP[productId as GooglePlayProductId];
     if (!mapping) { sendError(res, 'INVALID_PLAN', 400); return; }

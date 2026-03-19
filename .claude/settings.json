@@ -42,7 +42,8 @@
       "Bash(npm run:*)",
       "Bash(find /c/Users/menar/Desktop/egx-pro/server -type f \\\\\\(-name *.ts -o -name *.js \\\\\\))",
       "Bash(grep -r \"raw\\\\|query\\\\|$\\\\|\\\\.sql\\\\|queryRaw\\\\|unsafeRaw\" /c/Users/menar/Desktop/egx-pro/server --include=*.ts)",
-      "Bash(grep -r \"$executeRaw\\\\|$queryRaw\" /c/Users/menar/Desktop/egx-pro/server --include=\"*.ts\")"
+      "Bash(grep -r \"$executeRaw\\\\|$queryRaw\" /c/Users/menar/Desktop/egx-pro/server --include=\"*.ts\")",
+      "Bash(find c:UsersmenarDesktopegx-pro -name index.ts -path */server/* -type f)"
     ]
   }
 }

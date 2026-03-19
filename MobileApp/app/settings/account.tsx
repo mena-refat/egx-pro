@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Check, Pencil, User } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
+import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
 
 interface FieldRowProps {
@@ -17,15 +18,16 @@ interface FieldRowProps {
 }
 
 function FieldRow({ label, value, onEdit, editable = true }: FieldRowProps) {
+  const { colors } = useTheme();
   return (
-    <View className="flex-row items-center justify-between py-3.5 border-b border-[#21262d]">
+    <View style={{ borderBottomColor: colors.border }} className="flex-row items-center justify-between py-3.5 border-b">
       <View className="flex-1">
-        <Text className="text-xs text-[#656d76] mb-0.5">{label}</Text>
-        <Text className="text-sm text-[#e6edf3]">{value || '—'}</Text>
+        <Text style={{ color: colors.textMuted }} className="text-xs mb-0.5">{label}</Text>
+        <Text style={{ color: colors.text }} className="text-sm">{value || '—'}</Text>
       </View>
       {editable && (
         <Pressable onPress={onEdit} className="p-2">
-          <Pencil size={14} color="#8b949e" />
+          <Pencil size={14} color={colors.textSub} />
         </Pressable>
       )}
     </View>
@@ -35,6 +37,7 @@ function FieldRow({ label, value, onEdit, editable = true }: FieldRowProps) {
 export default function AccountPage() {
   const router = useRouter();
   const { user, updateUser } = useAuthStore();
+  const { colors } = useTheme();
   const [editing, setEditing] = useState<'fullName' | 'username' | null>(null);
   const [value, setValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -69,17 +72,21 @@ export default function AccountPage() {
 
   return (
     <ScreenWrapper padded={false}>
-      <View className="flex-row items-center gap-3 px-4 pt-5 pb-4 border-b border-[#30363d]">
+      <View
+        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
+        className="flex-row items-center gap-3 px-4 pt-5 pb-4"
+      >
         <Pressable
           onPress={() => router.back()}
-          className="w-9 h-9 rounded-xl bg-white/[0.04] border border-[#30363d] items-center justify-center"
+          style={{ backgroundColor: colors.hover, borderColor: colors.border }}
+          className="w-9 h-9 rounded-xl border items-center justify-center"
         >
-          {I18nManager.isRTL ? <ArrowRight size={16} color="#8b949e" /> : <ArrowLeft size={16} color="#8b949e" />}
+          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
         <View className="w-8 h-8 rounded-xl bg-brand/15 items-center justify-center">
           <User size={15} color="#8b5cf6" />
         </View>
-        <Text className="text-base font-bold text-[#e6edf3]">البيانات الشخصية</Text>
+        <Text style={{ color: colors.text }} className="text-base font-bold">البيانات الشخصية</Text>
       </View>
 
       <ScrollView contentContainerClassName="px-4 py-5 gap-4" showsVerticalScrollIndicator={false}>
@@ -90,24 +97,30 @@ export default function AccountPage() {
               {user?.fullName?.[0]?.toUpperCase() ?? 'U'}
             </Text>
           </View>
-          <Text className="text-xs text-[#656d76]">تغيير الصورة قريباً</Text>
+          <Text style={{ color: colors.textMuted }} className="text-xs">تغيير الصورة قريباً</Text>
         </View>
 
         {/* Fields */}
-        <View className="bg-[#161b22] border border-[#30363d] rounded-2xl px-4">
+        <View
+          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          className="border rounded-2xl px-4"
+        >
           <FieldRow label="الاسم الكامل" value={user?.fullName ?? ''} onEdit={() => startEdit('fullName')} />
           <FieldRow label="اسم المستخدم" value={user?.username ? `@${user.username}` : ''} onEdit={() => startEdit('username')} />
           <FieldRow label="البريد الإلكتروني" value={user?.email ?? ''} editable={false} onEdit={() => {}} />
           <View className="py-3.5">
-            <Text className="text-xs text-[#656d76] mb-0.5">رقم الموبايل</Text>
-            <Text className="text-sm text-[#e6edf3]">{user?.phone || '—'}</Text>
+            <Text style={{ color: colors.textMuted }} className="text-xs mb-0.5">رقم الموبايل</Text>
+            <Text style={{ color: colors.text }} className="text-sm">{user?.phone || '—'}</Text>
           </View>
         </View>
 
         {/* Edit form */}
         {editing && (
-          <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 gap-3">
-            <Text className="text-sm font-semibold text-[#e6edf3]">
+          <View
+            style={{ backgroundColor: colors.card, borderColor: colors.border }}
+            className="border rounded-2xl p-4 gap-3"
+          >
+            <Text style={{ color: colors.text }} className="text-sm font-semibold">
               تعديل {editing === 'fullName' ? 'الاسم' : 'اسم المستخدم'}
             </Text>
 
@@ -123,16 +136,22 @@ export default function AccountPage() {
               autoCapitalize={editing === 'fullName' ? 'words' : 'none'}
               autoCorrect={false}
               autoFocus
-              placeholderTextColor="#656d76"
-              className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-sm text-[#e6edf3]"
+              placeholderTextColor={colors.textMuted}
+              style={{
+                color: colors.text,
+                borderColor: colors.border,
+                backgroundColor: colors.hover,
+              }}
+              className="border rounded-xl px-4 py-3 text-sm"
             />
 
             <View className="flex-row gap-2">
               <Pressable
                 onPress={() => setEditing(null)}
-                className="flex-1 py-2.5 rounded-xl border border-[#30363d] items-center"
+                style={{ borderColor: colors.border }}
+                className="flex-1 py-2.5 rounded-xl border items-center"
               >
-                <Text className="text-sm text-[#8b949e]">إلغاء</Text>
+                <Text style={{ color: colors.textSub }} className="text-sm">إلغاء</Text>
               </Pressable>
               <Pressable
                 onPress={save}

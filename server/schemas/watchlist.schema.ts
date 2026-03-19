@@ -19,5 +19,5 @@ export const checkTargetsBodySchema = z.object({
       targetPrice: z.number().positive(),
       currentPrice: z.number().nonnegative(),
     })
-  ),
+  ).max(200),
 });

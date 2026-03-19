@@ -182,9 +182,13 @@ export async function refresh(req: Request, res: Response): Promise<void> {
     // Accept refresh token from cookie (web) or Authorization header (mobile)
     const authHeader = req.headers.authorization;
     const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
+    const fromCookie = !!req.cookies?.refreshToken;
     const token = req.cookies?.refreshToken ?? headerToken;
-    const result = await AuthService.refresh(token);
-    sendSuccess(res, { accessToken: result.accessToken });
+    const ctx = authContext(req);
+    const result = await AuthService.refresh(token, { ip: ctx.ip, userAgent: ctx.userAgent });
+    // Rotate cookie for web clients; mobile reads the token from the response body
+    if (fromCookie) setRefreshCookie(res, result.refreshToken);
+    sendSuccess(res, { accessToken: result.accessToken, ...(fromCookie ? {} : { refreshToken: result.refreshToken }) });
   } catch (e) {
     clearRefreshCookie(res);
     if (e instanceof AppError) {

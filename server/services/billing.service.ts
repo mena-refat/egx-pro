@@ -116,7 +116,7 @@ export const BillingService = {
     const planExpiresAt = new Date(Date.now() + durationMs);
 
     let discountPercent = 0;
-    let discount: { id: string; type: string; value: number; maxUses: number | null; usedCount: number } | null = null;
+    let discount: { id: string; type: string; value: number; maxUses: number | null } | null = null;
 
     if (options.discountCode?.trim()) {
       const code = await DiscountRepository.findByCode(options.discountCode.trim());
@@ -131,7 +131,7 @@ export const BillingService = {
       const alreadyUsed = await DiscountRepository.findUsage(userId, code.id);
       if (alreadyUsed) throw new AppError('DISCOUNT_ALREADY_USED', 400);
 
-      discount = { id: code.id, type: code.type, value: code.value, maxUses: code.maxUses, usedCount: code.usedCount };
+      discount = { id: code.id, type: code.type, value: code.value, maxUses: code.maxUses };
       const basePrice = getBasePrice(planValue);
       if (code.type === 'percentage') {
         discountPercent = code.value;
@@ -145,7 +145,6 @@ export const BillingService = {
           planValue,
           planExpiresAt,
           code.id,
-          code.usedCount,
           code.maxUses
         );
         return { success: true };
@@ -161,7 +160,7 @@ export const BillingService = {
     void finalPrice;
     // TODO: verify payment with Paymob using options.paymentToken and finalPrice
 
-    await DiscountRepository.applyUpgrade(userId, planValue, planExpiresAt, discount ? { id: discount.id, usedCount: discount.usedCount, maxUses: discount.maxUses } : undefined);
+    await DiscountRepository.applyUpgrade(userId, planValue, planExpiresAt, discount ? { id: discount.id, maxUses: discount.maxUses } : undefined);
 
     return { success: true };
   },

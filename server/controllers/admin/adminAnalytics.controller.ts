@@ -267,34 +267,34 @@ export const AdminAnalyticsController = {
       ultra_yearly: PLAN_PRICES.ultra_yearly / 12,
     };
 
-    const months: { month: string; newSubs: number; estimatedRevenue: number }[] = [];
+    const d = new Date();
+    const ranges = Array.from({ length: 12 }, (_, i) => {
+      const offset = 11 - i;
+      const start = new Date(d.getFullYear(), d.getMonth() - offset, 1);
+      const end = new Date(d.getFullYear(), d.getMonth() - offset + 1, 0, 23, 59, 59);
+      return { start, end, month: start.toISOString().slice(0, 7) };
+    });
 
-    for (let i = 11; i >= 0; i -= 1) {
-      const d = new Date();
-      const start = new Date(d.getFullYear(), d.getMonth() - i, 1);
-      const end = new Date(d.getFullYear(), d.getMonth() - i + 1, 0, 23, 59, 59);
+    // All 12 months in parallel instead of sequential awaits
+    const results = await Promise.all(
+      ranges.map(({ start, end }) =>
+        prisma.user.findMany({
+          where: {
+            isDeleted: false,
+            plan: { in: ['pro', 'yearly', 'ultra', 'ultra_yearly'] },
+            planSetByAdmin: false,
+            updatedAt: { gte: start, lte: end },
+          },
+          select: { plan: true },
+        })
+      )
+    );
 
-      const newSubs = await prisma.user.findMany({
-        where: {
-          isDeleted: false,
-          plan: { in: ['pro', 'yearly', 'ultra', 'ultra_yearly'] },
-          planSetByAdmin: false,
-          updatedAt: { gte: start, lte: end },
-        },
-        select: { plan: true },
-      });
-
-      const revenue = newSubs.reduce(
-        (acc, u) => acc + (monthlyPrices[u.plan] ?? 0),
-        0,
-      );
-
-      months.push({
-        month: start.toISOString().slice(0, 7),
-        newSubs: newSubs.length,
-        estimatedRevenue: Math.round(revenue),
-      });
-    }
+    const months = ranges.map(({ month }, idx) => {
+      const newSubs = results[idx];
+      const revenue = newSubs.reduce((acc, u) => acc + (monthlyPrices[u.plan] ?? 0), 0);
+      return { month, newSubs: newSubs.length, estimatedRevenue: Math.round(revenue) };
+    });
 
     sendSuccess(res, months);
   },
@@ -387,18 +387,77 @@ export const AdminAnalyticsController = {
     });
   },
 
-  async userGrowth(_req: AdminRequest, res: Response): Promise<void> {
-    const results: { date: string; count: number }[] = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date();
-      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - i);
-      const end = new Date(d.getFullYear(), d.getMonth(), d.getDate() - i + 1);
-      const count = await prisma.user.count({
-        where: { isDeleted: false, createdAt: { gte: start, lt: end } },
-      });
-      results.push({ date: start.toISOString().slice(0, 10), count });
+  async auditLogsExport(req: AdminRequest, res: Response): Promise<void> {
+    const { admin = '', action = '', from = '', to = '' } = req.query as Record<string, string>;
+
+    const where: Record<string, unknown> = {};
+    if (admin.trim()) where.admin = { email: { contains: admin.trim(), mode: 'insensitive' } };
+    if (action.trim()) where.action = action.trim().slice(0, 100);
+    if (from || to) {
+      const fromDate = from ? new Date(from) : null;
+      const toDate   = to   ? new Date(to)   : null;
+      if ((fromDate && isNaN(fromDate.getTime())) || (toDate && isNaN(toDate.getTime()))) {
+        res.status(400).json({ error: 'INVALID_DATE_RANGE' }); return;
+      }
+      if (fromDate && toDate && fromDate > toDate) {
+        res.status(400).json({ error: 'INVALID_DATE_RANGE' }); return;
+      }
+      if (fromDate && toDate && (toDate.getTime() - fromDate.getTime()) / 86_400_000 > 365) {
+        res.status(400).json({ error: 'DATE_RANGE_TOO_LARGE' }); return;
+      }
+      const dateFilter: Record<string, Date> = {};
+      if (fromDate) dateFilter.gte = fromDate;
+      if (toDate) { toDate.setHours(23, 59, 59, 999); dateFilter.lte = toDate; }
+      where.createdAt = dateFilter;
     }
-    sendSuccess(res, results);
+
+    const logs = await prisma.adminAuditLog.findMany({
+      where,
+      include: { admin: { select: { email: true, fullName: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 10_000,
+    });
+
+    const escape = (s: string | null | undefined) =>
+      `"${(s ?? '').replace(/"/g, '""')}"`;
+
+    const header = 'Date,Admin Email,Admin Name,Action,Target,Details,IP';
+    const rows = logs.map((l) =>
+      [
+        escape(new Date(l.createdAt).toISOString()),
+        escape(l.admin?.email),
+        escape(l.admin?.fullName),
+        escape(l.action),
+        escape(l.target),
+        escape(l.details),
+        escape(l.ipAddress),
+      ].join(',')
+    );
+
+    const csv = [header, ...rows].join('\n');
+    const filename = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv); // BOM for Excel compatibility
+  },
+
+  async userGrowth(_req: AdminRequest, res: Response): Promise<void> {
+    const d = new Date();
+    const days = Array.from({ length: 30 }, (_, i) => {
+      const offset = 29 - i;
+      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - offset);
+      const end   = new Date(d.getFullYear(), d.getMonth(), d.getDate() - offset + 1);
+      return { start, end, date: start.toISOString().slice(0, 10) };
+    });
+
+    // All 30 days in parallel instead of sequential awaits
+    const counts = await Promise.all(
+      days.map(({ start, end }) =>
+        prisma.user.count({ where: { isDeleted: false, createdAt: { gte: start, lt: end } } })
+      )
+    );
+
+    sendSuccess(res, days.map(({ date }, i) => ({ date, count: counts[i] })));
   },
 
   async platformHealth(_req: AdminRequest, res: Response): Promise<void> {

@@ -147,8 +147,9 @@ export const SocialController = {
       sendError(res, 'UNAUTHORIZED', 401);
       return;
     }
-    const { q, limit } = req.query as { q?: string; limit?: number };
-    const list = await SocialService.usernameSearch(userId, q ?? '', limit ?? 5);
+    const { q, limit: limitRaw } = req.query as { q?: string; limit?: string };
+    const limit = Math.min(20, Math.max(1, parseInt(String(limitRaw ?? '5'), 10) || 5));
+    const list = await SocialService.usernameSearch(userId, q ?? '', limit);
     sendSuccess(res, list);
   }),
 };

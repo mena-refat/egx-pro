@@ -450,7 +450,10 @@ export async function twoFaDisable(
   return { success: true };
 }
 
-export async function refresh(refreshTokenCookie: string | undefined): Promise<{ accessToken: string }> {
+export async function refresh(
+  refreshTokenCookie: string | undefined,
+  ctx?: { ip?: string; userAgent?: string }
+): Promise<{ accessToken: string; refreshToken: string }> {
   if (!refreshTokenCookie) throw new AppError('UNAUTHORIZED', 401);
   const refreshHash = hashRefreshToken(refreshTokenCookie);
   const rt = await RefreshTokenRepository.findByToken(refreshHash);
@@ -459,9 +462,20 @@ export async function refresh(refreshTokenCookie: string | undefined): Promise<{
     if (rt?.id) await RefreshTokenRepository.updateMany({ id: rt.id }, { isRevoked: true });
     throw new AppError('UNAUTHORIZED', 401);
   }
+
+  // Rotate: revoke old token and issue a new one
+  const newRefreshToken = generateRefreshToken();
+  const newRefreshHash = hashRefreshToken(newRefreshToken);
+  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
+  await RefreshTokenRepository.updateMany({ id: rt.id }, { isRevoked: true });
+  const refreshData = await buildRefreshTokenData(rt.user.id, newRefreshHash, expiresAt, ctx?.ip ?? null, ctx?.userAgent).catch(() =>
+    buildRefreshTokenData(rt.user.id, newRefreshHash, expiresAt, null, ctx?.userAgent)
+  );
+  await RefreshTokenRepository.create(refreshData);
+
   const loginId = rt.user.email ?? rt.user.phone ?? '';
   const accessToken = generateAccessToken({ id: rt.user.id, email: loginId });
-  return { accessToken };
+  return { accessToken, refreshToken: newRefreshToken };
 }
 
 export async function logout(

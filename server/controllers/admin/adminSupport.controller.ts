@@ -502,22 +502,85 @@ export const AdminSupportController = {
     const agent = await prisma.admin.findUnique({ where: { id: req.admin!.id }, select: { managerId: true } });
     if (!agent?.managerId) { sendError(res, 'NO_MANAGER_ASSIGNED', 400); return; }
 
-    const updated = await prisma.supportTicket.update({
-      where: { id },
-      data: {
-        escalatedAt: new Date(),
-        escalatedBy: req.admin!.id,
-        escalationNote: note?.trim() || null,
-        escalatedToManager: agent.managerId,
-        priority: 'HIGH',
-      },
+    const [updated] = await Promise.all([
+      prisma.supportTicket.update({
+        where: { id },
+        data: {
+          escalatedAt: new Date(),
+          escalatedBy: req.admin!.id,
+          escalationNote: note?.trim() || null,
+          escalatedToManager: agent.managerId,
+          priority: 'HIGH',
+        },
+      }),
+      // Notify the manager in-app
+      createNotification(
+        // AdminNotification: reuse user notification for manager (managerId maps to a User id only if same table — if separated, skip gracefully)
+        agent.managerId,
+        'support_escalated',
+        'تيكت دعم تم تصعيده',
+        `تيكت #${id} تم إرساله إليك من قِبل أحد الأعضاء${note?.trim() ? ` — ${note.trim().slice(0, 80)}` : ''}`,
+        { route: '/support' }
+      ).catch(() => null),
+      req.admin ? adminAudit(req.admin.id, 'SUPPORT_ESCALATED', id, note?.trim() || '', req) : null,
+    ]);
+
+    sendSuccess(res, updated);
+  },
+
+  async bulkStatus(req: AdminRequest, res: Response): Promise<void> {
+    if (!isManager(req.admin)) { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
+    const { ticketIds, status } = req.body as { ticketIds: string[]; status: string };
+
+    const VALID_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const;
+    if (!Array.isArray(ticketIds) || ticketIds.length === 0 || ticketIds.length > 200) {
+      sendError(res, 'VALIDATION_ERROR', 400); return;
+    }
+    if (ticketIds.some((id) => typeof id !== 'string' || id.trim().length === 0)) {
+      sendError(res, 'VALIDATION_ERROR', 400); return;
+    }
+    if (!(VALID_STATUSES as readonly string[]).includes(status)) {
+      sendError(res, 'INVALID_STATUS', 400); return;
+    }
+
+    const { count } = await prisma.supportTicket.updateMany({
+      where: { id: { in: ticketIds } },
+      data: { status: status as 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' },
     });
 
     if (req.admin) {
-      await adminAudit(req.admin.id, 'SUPPORT_ESCALATED', id, note?.trim() || '', req);
+      await adminAudit(req.admin.id, 'SUPPORT_BULK_STATUS', undefined, `${count} tickets → ${status}`, req);
     }
 
-    sendSuccess(res, updated);
+    sendSuccess(res, { updated: count });
+  },
+
+  async listQuickReplies(_req: AdminRequest, res: Response): Promise<void> {
+    const replies = await prisma.quickReply.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, title: true, content: true, createdAt: true },
+    });
+    sendSuccess(res, replies);
+  },
+
+  async createQuickReply(req: AdminRequest, res: Response): Promise<void> {
+    const { title, content } = req.body as { title?: string; content?: string };
+    if (!title?.trim() || !content?.trim()) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+    if (title.trim().length > 100) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+    if (content.trim().length > 2000) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+
+    const reply = await prisma.quickReply.create({
+      data: { title: title.trim(), content: content.trim(), createdBy: req.admin!.id },
+      select: { id: true, title: true, content: true, createdAt: true },
+    });
+    sendSuccess(res, reply, 201);
+  },
+
+  async deleteQuickReply(req: AdminRequest, res: Response): Promise<void> {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+    await prisma.quickReply.delete({ where: { id } }).catch(() => null);
+    sendSuccess(res, { ok: true });
   },
 
   async stats(_req: AdminRequest, res: Response): Promise<void> {

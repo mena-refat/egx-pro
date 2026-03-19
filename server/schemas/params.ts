@@ -34,6 +34,7 @@ export const notificationIdParamSchema = z.object({
   id: z.string().min(1).max(100),
 });
 
+// 50 tickers × 10 chars + 49 commas = 549; cap at 600 to allow some padding
 export const marketDataQuotesQuerySchema = z.object({
-  symbols: z.string().min(1),
+  symbols: z.string().min(1).max(600),
 });

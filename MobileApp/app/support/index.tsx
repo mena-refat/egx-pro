@@ -142,6 +142,13 @@ function TicketDetail({ ticket, onBack, onRated }: { ticket: SupportTicket; onBa
   const cfg = STATUS_CFG[ticket.status];
   const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
 
+  // Mark reply as read when user opens the ticket
+  useEffect(() => {
+    if (ticket.reply && !ticket.replyRead) {
+      void apiClient.patch(`/api/support/${ticket.id}/read-reply`).catch(() => {});
+    }
+  }, [ticket.id, ticket.reply, ticket.replyRead]);
+
   const submitRating = async (stars: number) => {
     if (ticket.rating) return;
     setRating(stars);

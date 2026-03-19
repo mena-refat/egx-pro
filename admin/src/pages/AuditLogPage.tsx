@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { DataTable } from '../components/DataTable';
 import { Pagination } from '../components/Pagination';
-import { Search, RefreshCw, X, Monitor } from 'lucide-react';
+import { Search, RefreshCw, X, Monitor, Download } from 'lucide-react';
 
 const AUDIT_ACTIONS: { value: string; label: string }[] = [
   { value: 'ADMIN_LOGIN',               label: 'Admin Login' },
@@ -203,6 +203,7 @@ export default function AuditLogPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage]   = useState(1);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const today     = new Date().toISOString().slice(0, 10);
   const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
@@ -247,6 +248,28 @@ export default function AuditLogPage() {
     setAction(''); setFrom(yesterday); setTo(today);
   };
 
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      const params: Record<string, string> = {};
+      if (adminDebounced) params.admin  = adminDebounced;
+      if (action)         params.action = action;
+      if (from)           params.from   = from;
+      if (to)             params.to     = to;
+      const res = await adminApi.get('/analytics/audit/export', {
+        params,
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(new Blob([res.data as BlobPart], { type: 'text/csv;charset=utf-8;' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
+    finally { setExporting(false); }
+  };
+
   const hasFilters  = adminSearch || action || from || to;
   const totalPages  = Math.ceil(total / 50) || 1;
 
@@ -265,6 +288,13 @@ export default function AuditLogPage() {
               <X size={12} /> {t('audit.clearFilters')}
             </button>
           )}
+          <button
+            onClick={() => void handleExportCsv()}
+            disabled={exporting}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 hover:border-emerald-500/40 rounded-lg transition-all disabled:opacity-50"
+          >
+            <Download size={12} /> {exporting ? '...' : t('audit.exportCsv')}
+          </button>
           <div className="p-2 rounded-lg border border-white/[0.08] text-slate-400">
             <RefreshCw size={14} className={loading ? 'animate-spin text-emerald-400' : ''} />
           </div>

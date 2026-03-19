@@ -309,6 +309,15 @@ export const ar = {
     escalatedNote: 'ملاحظة التصعيد',
     escalateNoManager: 'لا يوجد مدير مُعين لك. تواصل مع المشرف الرئيسي.',
     alreadyEscalated: 'هذه التذكرة مُصعَّدة بالفعل.',
+    overdue: 'متأخرة',
+    bulkResolve: 'حل الكل',
+    bulkClose: 'إغلاق الكل',
+    quickReplies: 'ردود سريعة',
+    addQuickReply: 'إضافة رد سريع',
+    quickReplyTitle: 'العنوان',
+    quickReplyContent: 'المحتوى',
+    noQuickReplies: 'لا توجد ردود سريعة. أضف واحدة أدناه.',
+    manageQuickReplies: 'إدارة الردود السريعة',
   },
 
   account: {
@@ -440,6 +449,7 @@ export const ar = {
     from: 'من',
     to: 'إلى',
     clearFilters: 'مسح الفلاتر',
+    exportCsv: 'تصدير CSV',
   },
 
   notifications: {

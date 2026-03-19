@@ -9,7 +9,7 @@ if (__DEV__ && BASE_URL.startsWith('http://') && !BASE_URL.includes('localhost')
   console.warn('[security] API base URL is http:// — set EXPO_PUBLIC_API_URL to https://');
 }
 if (!__DEV__ && BASE_URL.startsWith('http://')) {
-  console.error('[security] EXPO_PUBLIC_API_URL must use https:// in production builds.');
+  throw new Error('[security] EXPO_PUBLIC_API_URL must use https:// in production builds. Set the env var correctly.');
 }
 
 export const apiClient = axios.create({

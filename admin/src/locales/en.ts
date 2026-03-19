@@ -309,6 +309,15 @@ export const en = {
     escalatedNote: 'Escalation note',
     escalateNoManager: 'You do not have a manager assigned. Contact Super Admin.',
     alreadyEscalated: 'This ticket has already been escalated.',
+    overdue: 'Overdue',
+    bulkResolve: 'Resolve All',
+    bulkClose: 'Close All',
+    quickReplies: 'Quick Replies',
+    addQuickReply: 'Add Quick Reply',
+    quickReplyTitle: 'Title',
+    quickReplyContent: 'Content',
+    noQuickReplies: 'No quick replies yet. Add one below.',
+    manageQuickReplies: 'Manage Quick Replies',
   },
 
   account: {
@@ -440,6 +449,7 @@ export const en = {
     from: 'From',
     to: 'To',
     clearFilters: 'Clear filters',
+    exportCsv: 'Export CSV',
   },
 
   notifications: {

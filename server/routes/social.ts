@@ -15,6 +15,14 @@ const USERNAME_SEARCH_RATE = 30;
 
 /** Rate limit: 30 req/min per user for username-search (Redis; in-memory fallback). */
 const usernameSearchMemory = new Map<string, { count: number; resetAt: number }>();
+
+function pruneSearchMemory() {
+  const now = Date.now();
+  for (const [key, entry] of usernameSearchMemory) {
+    if (now >= entry.resetAt) usernameSearchMemory.delete(key);
+  }
+}
+
 const usernameSearchRateLimit = async (req: Request, res: Response, next: NextFunction) => {
   const userId = (req as AuthRequest).user?.id ?? (req as AuthRequest).userId;
   if (!userId) return next();
@@ -24,6 +32,7 @@ const usernameSearchRateLimit = async (req: Request, res: Response, next: NextFu
   const count = await incrWithExpire(redisKey, expireAt);
   let effectiveCount = count;
   if (count <= 0) {
+    pruneSearchMemory();
     const now = Date.now();
     const windowStart = Math.floor(now / (USERNAME_SEARCH_WINDOW_S * 1000)) * (USERNAME_SEARCH_WINDOW_S * 1000);
     const memKey = `${userId}:${windowStart}`;

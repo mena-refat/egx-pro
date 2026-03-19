@@ -7,7 +7,7 @@ import { Pagination } from '../components/Pagination';
 import {
   RefreshCw, Users, Star, UserCheck,
   CheckSquare, ArrowUpDown, TrendingUp, ChevronRight, AlertTriangle,
-  Inbox, Send, X, Filter, ArrowUpCircle,
+  Inbox, Send, X, Filter, ArrowUpCircle, Zap, Clock, Plus, Trash2,
 } from 'lucide-react';
 import { useAdminStore } from '../store/adminAuthStore';
 
@@ -37,9 +37,17 @@ type MyStats = {
   avgRating: number | null; ratingCount: number; avgResponseHours: number | null;
 };
 type Agent = { id: number; fullName: string; email: string };
+type QuickReply = { id: number; title: string; content: string };
 
 /* ─── Helpers ────────────────────────────────────────────────── */
 const fmt = (n: number) => Number(n.toFixed(1)).toString();
+
+/** Returns true if a ticket is open/in-progress and older than 24 hours with no reply */
+function isOverdue(tk: Ticket): boolean {
+  if (tk.status !== 'OPEN' && tk.status !== 'IN_PROGRESS') return false;
+  if (tk.reply) return false;
+  return Date.now() - new Date(tk.createdAt).getTime() > 24 * 60 * 60 * 1000;
+}
 
 const STATUS_BAR: Record<string, string> = {
   OPEN: 'bg-blue-500', IN_PROGRESS: 'bg-amber-500',
@@ -228,9 +236,18 @@ export default function SupportPage() {
   const [escalateError, setEscalateError]   = useState('');
 
   /* Bulk */
-  const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set());
-  const [bulkAgentId, setBulkAgentId]     = useState('');
-  const [bulkAssigning, setBulkAssigning] = useState(false);
+  const [selectedIds, setSelectedIds]       = useState<Set<string>>(new Set());
+  const [bulkAgentId, setBulkAgentId]       = useState('');
+  const [bulkAssigning, setBulkAssigning]   = useState(false);
+  const [bulkStatusing, setBulkStatusing]   = useState(false);
+
+  /* Quick replies */
+  const [quickReplies, setQuickReplies]         = useState<QuickReply[]>([]);
+  const [showQRDropdown, setShowQRDropdown]     = useState(false);
+  const [showManageQR, setShowManageQR]         = useState(false);
+  const [newQRTitle, setNewQRTitle]             = useState('');
+  const [newQRContent, setNewQRContent]         = useState('');
+  const [savingQR, setSavingQR]                 = useState(false);
 
   /* Team stats */
   const [agentStats, setAgentStats]         = useState<AgentStat[]>([]);
@@ -264,6 +281,15 @@ export default function SupportPage() {
       adminApi.get('/support/agents').then((r) => setAgents(r.data.data ?? [])).catch(() => null);
     }
   }, [canAssign]);
+
+  /* ── Load quick replies ── */
+  const loadQuickReplies = useCallback(() => {
+    if (canReply) {
+      adminApi.get('/support/quick-replies').then((r) => setQuickReplies(r.data.data ?? [])).catch(() => null);
+    }
+  }, [canReply]);
+
+  useEffect(() => { loadQuickReplies(); }, [loadQuickReplies]);
 
   /* ── Load own stats (agent only) ── */
   useEffect(() => {
@@ -341,6 +367,31 @@ export default function SupportPage() {
     } finally { setBulkAssigning(false); }
   };
 
+  const handleBulkStatus = async (status: 'RESOLVED' | 'CLOSED') => {
+    if (selectedIds.size === 0) return;
+    setBulkStatusing(true);
+    try {
+      await adminApi.post('/support/bulk-status', { ticketIds: [...selectedIds], status });
+      setSelectedIds(new Set());
+      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
+    } finally { setBulkStatusing(false); }
+  };
+
+  const handleAddQuickReply = async () => {
+    if (!newQRTitle.trim() || !newQRContent.trim()) return;
+    setSavingQR(true);
+    try {
+      await adminApi.post('/support/quick-replies', { title: newQRTitle.trim(), content: newQRContent.trim() });
+      setNewQRTitle(''); setNewQRContent('');
+      loadQuickReplies();
+    } finally { setSavingQR(false); }
+  };
+
+  const handleDeleteQuickReply = async (id: number) => {
+    await adminApi.delete(`/support/quick-replies/${id}`).catch(() => null);
+    loadQuickReplies();
+  };
+
   const handleEscalate = async () => {
     if (!escalateTarget) return;
     setEscalating(true);
@@ -396,6 +447,14 @@ export default function SupportPage() {
             ))}
           </div>
 
+          {managerMode && (
+            <button
+              onClick={() => setShowManageQR(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-violet-500/25 text-violet-400 hover:bg-violet-500/10 text-xs font-medium transition-all"
+            >
+              <Zap size={12} /> {t('support.quickReplies')}
+            </button>
+          )}
           <button
             onClick={() => void load(page, statusFilter, priorityFilter, agentFilter, sortOrder)}
             className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-all"
@@ -584,6 +643,11 @@ export default function SupportPage() {
                           <ArrowUpCircle size={8} /> {t('support.escalatedBadge')}
                         </span>
                       )}
+                      {isOverdue(tk) && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-600/15 text-red-400 border border-red-600/20 flex items-center gap-0.5 font-semibold">
+                          <Clock size={8} /> {t('support.overdue')}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -707,13 +771,41 @@ export default function SupportPage() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <textarea
-                          value={reply}
-                          onChange={(e) => setReply(e.target.value)}
-                          rows={3}
-                          placeholder={t('support.yourReply')}
-                          className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50 resize-none placeholder-slate-600"
-                        />
+                        <div className="relative">
+                          <textarea
+                            value={reply}
+                            onChange={(e) => setReply(e.target.value)}
+                            rows={3}
+                            placeholder={t('support.yourReply')}
+                            className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50 resize-none placeholder-slate-600"
+                          />
+                          {quickReplies.length > 0 && (
+                            <div className="absolute bottom-2 end-2">
+                              <button
+                                type="button"
+                                onClick={() => setShowQRDropdown((v) => !v)}
+                                className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-md bg-violet-500/15 border border-violet-500/20 text-violet-400 hover:bg-violet-500/25 transition-all"
+                              >
+                                <Zap size={9} /> {t('support.quickReplies')}
+                              </button>
+                              {showQRDropdown && (
+                                <div className="absolute bottom-7 end-0 w-64 bg-[#1a1a2e] border border-white/[0.1] rounded-xl shadow-2xl z-50 overflow-hidden">
+                                  {quickReplies.map((qr) => (
+                                    <button
+                                      key={qr.id}
+                                      type="button"
+                                      onClick={() => { setReply(qr.content); setShowQRDropdown(false); }}
+                                      className="w-full text-start px-3 py-2 hover:bg-white/[0.05] transition-colors border-b border-white/[0.05] last:border-0"
+                                    >
+                                      <p className="text-[11px] font-medium text-white">{qr.title}</p>
+                                      <p className="text-[10px] text-slate-500 truncate mt-0.5">{qr.content}</p>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
                           <select
                             value={newStatus}
@@ -835,9 +927,9 @@ export default function SupportPage() {
         </div>
       )}
 
-      {/* ── Bulk assign floating bar ── */}
+      {/* ── Bulk action floating bar ── */}
       {managerMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#12121f] border border-blue-500/25 rounded-2xl px-5 py-3 shadow-2xl shadow-black/40 backdrop-blur-sm">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#12121f] border border-blue-500/25 rounded-2xl px-5 py-3 shadow-2xl shadow-black/40 backdrop-blur-sm flex-wrap justify-center">
           <span className="text-sm font-bold text-white">{selectedIds.size}</span>
           <span className="text-sm text-slate-400">{t('support.ticketsSelected')}</span>
           <div className="w-px h-4 bg-white/[0.1]" />
@@ -855,6 +947,21 @@ export default function SupportPage() {
             className="px-4 py-1.5 text-sm font-semibold bg-blue-500 hover:bg-blue-400 text-white rounded-lg disabled:opacity-50 transition-all"
           >
             {bulkAssigning ? t('common.saving') : t('support.confirmAssign')}
+          </button>
+          <div className="w-px h-4 bg-white/[0.1]" />
+          <button
+            onClick={() => void handleBulkStatus('RESOLVED')}
+            disabled={bulkStatusing}
+            className="px-4 py-1.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg disabled:opacity-50 transition-all"
+          >
+            {t('support.bulkResolve')}
+          </button>
+          <button
+            onClick={() => void handleBulkStatus('CLOSED')}
+            disabled={bulkStatusing}
+            className="px-4 py-1.5 text-sm font-semibold bg-slate-700 hover:bg-slate-600 text-white rounded-lg disabled:opacity-50 transition-all"
+          >
+            {t('support.bulkClose')}
           </button>
           <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-600 hover:text-slate-300 transition-colors">✕</button>
         </div>
@@ -948,6 +1055,66 @@ export default function SupportPage() {
           </div>
         )}
       </Modal>
+
+      {/* ── Manage Quick Replies Modal (managers only) ── */}
+      {managerMode && (
+        <Modal
+          open={showManageQR}
+          onClose={() => setShowManageQR(false)}
+          title={t('support.manageQuickReplies')}
+        >
+          <div className="space-y-4">
+            {/* Existing quick replies */}
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {quickReplies.length === 0 && (
+                <p className="text-xs text-slate-500 text-center py-4">{t('support.noQuickReplies')}</p>
+              )}
+              {quickReplies.map((qr) => (
+                <div key={qr.id} className="flex items-start gap-2 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-white">{qr.title}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{qr.content}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteQuickReply(qr.id)}
+                    className="shrink-0 text-slate-600 hover:text-red-400 transition-colors mt-0.5"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add new quick reply */}
+            <div className="border-t border-white/[0.06] pt-4 space-y-2">
+              <input
+                value={newQRTitle}
+                onChange={(e) => setNewQRTitle(e.target.value)}
+                placeholder={t('support.quickReplyTitle')}
+                maxLength={100}
+                className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-violet-500/50 placeholder-slate-600"
+              />
+              <textarea
+                value={newQRContent}
+                onChange={(e) => setNewQRContent(e.target.value)}
+                placeholder={t('support.quickReplyContent')}
+                rows={3}
+                maxLength={2000}
+                className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-violet-500/50 resize-none placeholder-slate-600"
+              />
+              <button
+                type="button"
+                onClick={() => void handleAddQuickReply()}
+                disabled={savingQR || !newQRTitle.trim() || !newQRContent.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white rounded-lg disabled:opacity-50 transition-all"
+              >
+                <Plus size={12} /> {savingQR ? t('common.saving') : t('support.addQuickReply')}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

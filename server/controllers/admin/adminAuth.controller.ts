@@ -253,6 +253,16 @@ export const AdminAuthController = {
     sendSuccess(res, { success: true });
   },
 
+  async logout(req: AdminRequest, res: Response): Promise<void> {
+    if (!req.admin) { sendError(res, 'ADMIN_UNAUTHORIZED', 401); return; }
+    // Invalidate all JWTs issued before now by bumping tokenVersion
+    await prisma.admin.update({
+      where: { id: req.admin.id },
+      data: { tokenVersion: { increment: 1 } },
+    });
+    sendSuccess(res, { ok: true });
+  },
+
   async twoFaDisable(req: AdminRequest, res: Response): Promise<void> {
     if (!req.admin) {
       sendError(res, 'ADMIN_UNAUTHORIZED', 401);

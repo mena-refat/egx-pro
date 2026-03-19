@@ -68,7 +68,12 @@ export function AdminLayout() {
       .catch(() => setOpenTickets(0));
   }, []);
 
-  const handleLogout = () => { logout(); nav('/login'); };
+  const handleLogout = () => {
+    // Invalidate token server-side (fire-and-forget — don't block UX)
+    adminApi.post('/auth/logout').catch(() => null);
+    logout();
+    nav('/login');
+  };
 
   const toggleLang = () => {
     i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar');

@@ -147,9 +147,22 @@ model Admin {
   manager      Admin?  @relation("SupportTeam", fields: [managerId], references: [id])
   managedAgents Admin[] @relation("SupportTeam")
   auditLogs    AdminAuditLog[]
+  quickReplies QuickReply[]
 
   @@index([managerId])
   @@index([isDeleted])
+}
+
+model QuickReply {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  createdBy Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  admin     Admin    @relation(fields: [createdBy], references: [id])
+
+  @@index([createdBy])
 }
 
 model AdminAuditLog {

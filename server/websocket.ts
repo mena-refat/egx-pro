@@ -25,6 +25,7 @@ export function setupWebSocket(server: Server): {
 
   const wss = new WebSocketServer({
     server,
+    maxPayload: 16 * 1024, // 16 KB — reject oversized client messages
     verifyClient: ({ origin }, callback) => {
       // In dev allow all origins; in prod enforce allowlist
       if (process.env.NODE_ENV !== 'production') {
@@ -162,7 +163,9 @@ export function setupWebSocket(server: Server): {
 
         if (msg.type === 'SUBSCRIBE' && Array.isArray(msg.tickers)) {
           extWs.subscribedTickers = new Set(
-            msg.tickers.filter((t): t is string => typeof t === 'string' && t.length > 0)
+            msg.tickers
+              .slice(0, 200) // cap at 200 tickers per subscription
+              .filter((t): t is string => typeof t === 'string' && t.length > 0 && t.length <= 20)
           );
         }
       } catch {

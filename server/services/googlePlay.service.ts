@@ -9,6 +9,9 @@ export const GooglePlayService = {
     const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 
     if (!serviceAccountJson) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('[GooglePlayService] GOOGLE_SERVICE_ACCOUNT_JSON is required in production');
+      }
       console.warn(
         '[GooglePlayService] GOOGLE_SERVICE_ACCOUNT_JSON is not set — using dev fallback'
       );
