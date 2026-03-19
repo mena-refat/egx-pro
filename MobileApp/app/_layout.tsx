@@ -96,6 +96,10 @@ export default function RootLayout() {
               options={{ animation: 'slide_from_right' }}
             />
             <Stack.Screen
+              name="notifications"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
               name="settings/index"
               options={{ animation: 'slide_from_right' }}
             />

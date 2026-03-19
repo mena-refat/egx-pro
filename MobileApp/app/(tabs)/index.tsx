@@ -22,6 +22,23 @@ import { getStockName } from '../../lib/egxStocks';
 import apiClient from '../../lib/api/client';
 import type { Stock } from '../../types/stock';
 
+/* ─── Unread notifications count ─── */
+function useUnreadCount() {
+  const [count, setCount] = useState(0);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+  useEffect(() => {
+    const c = new AbortController();
+    apiClient.get('/api/notifications?limit=1', { signal: c.signal })
+      .then((res) => {
+        const data = res.data as { unreadCount?: number };
+        if (mountedRef.current) setCount(data.unreadCount ?? 0);
+      }).catch(() => null);
+    return () => c.abort();
+  }, []);
+  return count;
+}
+
 /* ─── local hook ─── */
 function useWatchlist() {
   const [items, setItems] = useState<Stock[]>([]);
@@ -352,6 +369,7 @@ export default function HomePage() {
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
 
+  const unreadCount = useUnreadCount();
   const { stocks, loadingStocks, refreshing: mktRefreshing, refresh: refreshMarket } = useMarketData();
   const { holdings, summary, loading: portfolioLoading, refreshing: portRefreshing, refresh: refreshPortfolio } = usePortfolioData();
   const { items: watchlist, loading: watchlistLoading, refetch: refetchWatchlist } = useWatchlist();
@@ -442,12 +460,22 @@ export default function HomePage() {
           <View className="flex-row items-center gap-3">
             <MarketStatusBadge />
             <Pressable
-              onPress={() => router.navigate('/settings/notifications')}
+              onPress={() => router.navigate('/notifications')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={{ backgroundColor: colors.hover, borderColor: colors.border }}
               className="w-9 h-9 rounded-xl border items-center justify-center"
             >
               <Bell size={16} color={colors.textSub} />
+              {unreadCount > 0 && (
+                <View
+                  className="absolute top-0 right-0 w-4 h-4 rounded-full bg-brand items-center justify-center"
+                  style={{ transform: [{ translateX: 4 }, { translateY: -4 }] }}
+                >
+                  <Text className="text-[9px] font-bold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Text>
+                </View>
+              )}
             </Pressable>
           </View>
         </View>

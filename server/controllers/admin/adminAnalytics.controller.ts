@@ -11,7 +11,7 @@ const PLAN_PRICES: Record<string, number> = {
 };
 
 export const AdminAnalyticsController = {
-  async overview(_req: AdminRequest, res: Response): Promise<void> {
+  async overview(req: AdminRequest, res: Response): Promise<void> {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -66,6 +66,22 @@ export const AdminAnalyticsController = {
       prisma.analysis.count({ where: { ticker: { equals: '_recommendations' } } }),
     ]);
 
+    // Admin team stats — only included for Super Admin
+    let adminTeam: { superAdmins: number; managers: number; staff: number } | null = null;
+    if (req.admin?.role === 'SUPER_ADMIN') {
+      const allAdmins = await prisma.admin.findMany({
+        select: { role: true, permissions: true },
+      });
+      const superAdmins = allAdmins.filter((a) => a.role === 'SUPER_ADMIN').length;
+      const managers = allAdmins.filter(
+        (a) => a.role === 'ADMIN' && a.permissions.includes('support.manage'),
+      ).length;
+      const staff = allAdmins.filter(
+        (a) => a.role === 'ADMIN' && !a.permissions.includes('support.manage'),
+      ).length;
+      adminTeam = { superAdmins, managers, staff };
+    }
+
     sendSuccess(res, {
       users: {
         total: totalUsers,
@@ -82,6 +98,7 @@ export const AdminAnalyticsController = {
         byRecommendations: recommendationAnalyses,
       },
       predictions: { total: totalPredictions },
+      adminTeam,
     });
   },
 
