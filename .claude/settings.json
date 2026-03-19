@@ -30,7 +30,12 @@
       "Bash(grep -r \"هل أنت\\\\|تعطيل\\\\|تفعيل\\\\|المصادقة\\\\|إعداد\\\\|تأكيد\" src --include=*.tsx --include=*.ts)",
       "Bash(grep -rn \"🤔\\\\|شراء عقار\\\\|تنمية ثروتي\\\\|التقاعد\\\\|سفر ومغامرات\\\\|أرباح سريعة\\\\|اختر الهدف\\\\|إمتى عايز\\\\|الأفق الزمني\\\\|أقل من سنة\\\\|من فضلك اكتب\\\\|كود غير صحيح\" src --include=*.tsx --include=*.ts)",
       "Bash(grep -r \"جاري التحليل\\\\|التقدّم\\\\|قد يستغرق\\\\|شوية وهنخلص\\\\|جاري جمع\\\\|جاري المقارنة\\\\|خدمة التحليل\" src --include=*.tsx --include=*.ts)",
-      "Bash(grep -rn \"isAr\\\\|isRTL\" src --include=*.tsx --include=*.ts)"
+      "Bash(grep -rn \"isAr\\\\|isRTL\" src --include=*.tsx --include=*.ts)",
+      "Bash(xargs ls:*)",
+      "Bash(xargs grep:*)",
+      "Bash(find /c/Users/menar/Desktop/egx-pro/scripts/ -name *.ts -o -name *.js)",
+      "Bash(curl -s -X POST http://localhost:3000/api/admin/auth/login -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"sgr@gmail.com\"\",\"\"password\"\":\"\"test123\"\"}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/admin/auth/login -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"sgr@gmail.com\"\",\"\"password\"\":\"\"AdminPass@2024!!\"\"}')"
     ]
   }
 }

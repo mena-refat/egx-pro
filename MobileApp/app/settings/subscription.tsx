@@ -28,7 +28,7 @@ const PLANS = [
     yearlyId: 'yearly',
     label: 'Pro',
     monthlyPrice: 189,
-    yearlyPrice: 1690,
+    yearlyPrice: 1890,
     color: '#3b82f6',
     highlight: true,
     features: [
@@ -44,7 +44,7 @@ const PLANS = [
     yearlyId: 'ultra_yearly',
     label: 'Ultra',
     monthlyPrice: 397,
-    yearlyPrice: 3564,
+    yearlyPrice: 3970,
     color: '#f59e0b',
     features: [
       '60 تحليل AI شهرياً',
@@ -150,7 +150,7 @@ export default function SubscriptionPage() {
                 </Text>
                 {b === 'yearly' && !active && (
                   <View className="bg-emerald-500/20 px-1.5 py-0.5 rounded-md">
-                    <Text className="text-[10px] font-bold text-emerald-400">وفّر 25%</Text>
+                    <Text className="text-[10px] font-bold text-emerald-400">شهرين مجاناً</Text>
                   </View>
                 )}
               </Pressable>

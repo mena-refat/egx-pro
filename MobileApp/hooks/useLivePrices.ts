@@ -20,6 +20,8 @@ export function useLivePrices(tickers: string[] = []) {
   const subscribeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const delayRef = useRef(1000);
   const tickersRef = useRef(tickers);
+  // Prevents reconnect scheduling after the component unmounts
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     tickersRef.current = tickers;
@@ -58,9 +60,11 @@ export function useLivePrices(tickers: string[] = []) {
     ws.onclose = () => {
       setIsConnected(false);
       wsRef.current = null;
+      // Don't schedule reconnect if the hook has been unmounted
+      if (!mountedRef.current) return;
       reconnectRef.current = setTimeout(() => {
         delayRef.current = Math.min(delayRef.current * 2, 30_000);
-        connect();
+        void connect();
       }, delayRef.current);
     };
 
@@ -80,6 +84,7 @@ export function useLivePrices(tickers: string[] = []) {
     });
 
     return () => {
+      mountedRef.current = false;
       sub.remove();
       if (reconnectRef.current) clearTimeout(reconnectRef.current);
       if (subscribeRef.current) clearTimeout(subscribeRef.current);

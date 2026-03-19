@@ -3,6 +3,15 @@ import { getAccessToken, setAccessToken, clearTokens, getRefreshToken } from '..
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
+// Guard: ensure EXPO_PUBLIC_API_URL is set and uses HTTPS in production builds.
+// Plain http:// exposes all traffic (tokens, PII) to network observers.
+if (__DEV__ && BASE_URL.startsWith('http://') && !BASE_URL.includes('localhost')) {
+  console.warn('[security] API base URL is http:// — set EXPO_PUBLIC_API_URL to https://');
+}
+if (!__DEV__ && BASE_URL.startsWith('http://')) {
+  console.error('[security] EXPO_PUBLIC_API_URL must use https:// in production builds.');
+}
+
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 15_000,

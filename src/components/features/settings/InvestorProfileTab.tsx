@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Target, Clock, AlertTriangle, Wallet, Moon, TrendingUp,
+  Target, Clock, AlertTriangle, Wallet, TrendingUp,
   Home, Umbrella, Compass, Zap, Plus, Check, Save, Loader2,
 } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
@@ -69,7 +69,6 @@ interface InvestorFormState {
   timeline: string;
   reaction30: string;
   budgetBand: string;
-  shariaMode: boolean;
   sectors: string[];
   level: string;
 }
@@ -155,13 +154,12 @@ export function InvestorProfileTab() {
   const rawProfile = user?.investorProfile as Record<string, unknown> | null | undefined;
 
   const [form, setForm] = useState<InvestorFormState>({
-    goal:        (rawProfile?.goal as string)      || '',
-    timeline:    (rawProfile?.timeline as string)  || invertHorizonToBand(user?.investmentHorizon),
-    reaction30:  (rawProfile?.reaction30 as string) || invertRiskToReaction(user?.riskTolerance),
-    budgetBand:  (rawProfile?.budgetBand as string) || invertBudgetToBand(user?.monthlyBudget),
-    shariaMode:  user?.shariaMode ?? false,
-    sectors:     (rawProfile?.sectors as string[]) || user?.interestedSectors || [],
-    level:       (rawProfile?.level as string)     || '',
+    goal:       (rawProfile?.goal as string)       || '',
+    timeline:   (rawProfile?.timeline as string)   || invertHorizonToBand(user?.investmentHorizon),
+    reaction30: (rawProfile?.reaction30 as string) || invertRiskToReaction(user?.riskTolerance),
+    budgetBand: (rawProfile?.budgetBand as string) || invertBudgetToBand(user?.monthlyBudget),
+    sectors:    (rawProfile?.sectors as string[])  || user?.interestedSectors || [],
+    level:      (rawProfile?.level as string)      || '',
   });
 
   const [saving, setSaving] = useState(false);
@@ -203,7 +201,6 @@ export function InvestorProfileTab() {
         riskTolerance:     riskMap[form.reaction30] ?? 'moderate',
         investmentHorizon: timelineYears[form.timeline] ?? 5,
         monthlyBudget:     budgetAmount[form.budgetBand] ?? 0,
-        shariaMode:        form.shariaMode,
         interestedSectors: form.sectors,
         investorProfile: {
           ...(rawProfile ?? {}),
@@ -211,13 +208,11 @@ export function InvestorProfileTab() {
           timeline:   form.timeline,
           reaction30: form.reaction30,
           budgetBand: form.budgetBand,
-          shariaMode: form.shariaMode,
           sectors:    form.sectors,
           level:      form.level,
         },
       });
       updateUser({
-        shariaMode:        form.shariaMode,
         interestedSectors: form.sectors,
         riskTolerance:     riskMap[form.reaction30] ?? 'moderate',
         investmentHorizon: timelineYears[form.timeline] ?? 5,
@@ -225,8 +220,7 @@ export function InvestorProfileTab() {
         investorProfile: {
           ...(rawProfile ?? {}),
           goal: form.goal, timeline: form.timeline, reaction30: form.reaction30,
-          budgetBand: form.budgetBand, shariaMode: form.shariaMode,
-          sectors: form.sectors, level: form.level,
+          budgetBand: form.budgetBand, sectors: form.sectors, level: form.level,
         },
       });
       setStatus({ type: 'success', msg: 'تم حفظ تفضيلاتك بنجاح ✓' });
@@ -240,42 +234,6 @@ export function InvestorProfileTab() {
 
   return (
     <div className="space-y-5 max-w-2xl">
-
-      {/* Sharia Mode — prominent at top */}
-      <div
-        className={`rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer
-          ${form.shariaMode
-            ? 'border-[var(--brand)] bg-[var(--brand)]/8'
-            : 'border-[var(--border)] bg-[var(--bg-card)]'
-          }`}
-        onClick={() => update({ shariaMode: !form.shariaMode })}
-      >
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${form.shariaMode ? 'bg-[var(--brand)]/15' : 'bg-[var(--bg-secondary)]'}`}>
-              <Moon className={`w-5 h-5 ${form.shariaMode ? 'text-[var(--brand)]' : 'text-[var(--text-muted)]'}`} />
-            </div>
-            <div>
-              <p className="font-bold text-sm text-[var(--text-primary)]">استثمار متوافق مع الشريعة الإسلامية</p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                {form.shariaMode
-                  ? 'مفعّل — ستظهر تنبيهات للأسهم غير المتوافقة مع أحكام الشريعة'
-                  : 'غير مفعّل — ستظهر جميع الأسهم بدون قيود'}
-              </p>
-            </div>
-          </div>
-          {/* Toggle */}
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); update({ shariaMode: !form.shariaMode }); }}
-            className={`relative w-12 h-6 rounded-full px-1 transition-colors flex items-center shrink-0 ${form.shariaMode ? 'bg-[var(--brand)]' : 'bg-[var(--border-strong)]'}`}
-            aria-checked={form.shariaMode}
-            role="switch"
-          >
-            <span className={`absolute w-4 h-4 rounded-full bg-white shadow transition-transform ${form.shariaMode ? 'translate-x-6 rtl:-translate-x-6' : 'translate-x-1 rtl:-translate-x-1'}`} />
-          </button>
-        </div>
-      </div>
 
       {/* Goal */}
       <Section icon={Target} title="هدف الاستثمار">

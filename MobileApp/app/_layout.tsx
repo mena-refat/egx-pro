@@ -10,6 +10,7 @@ import Constants from 'expo-constants';
 import i18n from '../i18n';
 import { useAuthStore } from '../store/authStore';
 import { useTheme } from '../hooks/useTheme';
+import { ErrorBoundary } from '../components/layout/ErrorBoundary';
 import { I18nManager } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
@@ -59,6 +60,7 @@ export default function RootLayout() {
   if (isLoading) return null;
 
   return (
+    <ErrorBoundary>
     <I18nextProvider i18n={i18n}>
       <GestureHandlerRootView
         style={{ flex: 1, backgroundColor: colors.bg }}
@@ -143,6 +145,7 @@ export default function RootLayout() {
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </I18nextProvider>
+    </ErrorBoundary>
   );
 }
 

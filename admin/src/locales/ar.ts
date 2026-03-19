@@ -48,6 +48,9 @@ export const ar = {
     signingIn: 'جار تسجيل الدخول...',
     invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
     loginFailed: 'فشل تسجيل الدخول. حاول مرة أخرى.',
+    twoFaPrompt: 'أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة.',
+    twoFaCode: 'رمز المصادقة',
+    verify: 'تحقق',
   },
 
   dashboard: {

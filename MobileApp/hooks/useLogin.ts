@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -29,6 +29,7 @@ export function useLogin() {
   const [show2FA, setShow2FA] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [twoFAToken, setTwoFAToken] = useState('');
+  const twoFAExpiryRef = useRef<number>(0);
   const [twoFACode, setTwoFACode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [biometricAvail, setBiometricAvail] = useState(false);
@@ -137,6 +138,8 @@ export function useLogin() {
 
       if (body.requires2FA && body.tempToken) {
         setTwoFAToken(body.tempToken);
+        // 2FA token expires in 5 minutes — track on client to reject stale attempts
+        twoFAExpiryRef.current = Date.now() + 5 * 60 * 1000;
         setShow2FA(true);
         setLoading(false);
         return;
@@ -149,10 +152,10 @@ export function useLogin() {
       }
     } catch (err: unknown) {
       const code = (err as { error?: string })?.error;
-      const msg = (err as { message?: string })?.message;
       if (code === 'INVALID_CREDENTIALS') setError('البريد أو كلمة المرور غير صحيحة');
       else if (code === 'ACCOUNT_LOCKED') setError('الحساب محجوب مؤقتاً — حاول بعد 30 دقيقة');
-      else setError(msg ?? 'حدث خطأ، حاول مرة أخرى');
+      // Never expose raw backend messages — they may leak implementation details
+      else setError('حدث خطأ، حاول مرة أخرى');
     } finally {
       setLoading(false);
     }
@@ -161,6 +164,14 @@ export function useLogin() {
   const handle2FA = async (codeOverride?: string) => {
     const code = codeOverride ?? twoFACode;
     if (code.length !== 6) return;
+    // Reject if 2FA session has expired client-side (server also enforces this)
+    if (twoFAExpiryRef.current && Date.now() > twoFAExpiryRef.current) {
+      setShow2FA(false);
+      setTwoFAToken('');
+      twoFAExpiryRef.current = 0;
+      setError('انتهت صلاحية رمز التحقق — سجّل دخولك مرة أخرى');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

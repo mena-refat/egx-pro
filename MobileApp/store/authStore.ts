@@ -59,10 +59,17 @@ export const useAuthStore = create<AuthState>()(
         try {
           await apiClient.post(ENDPOINTS.auth.logout);
         } catch {
-          // ignore
+          // ignore — always clear local state even if the server call fails
         }
         await clearTokens();
         set({ user: null, isAuthenticated: false });
+        // Belt-and-suspenders: wipe the persisted AsyncStorage entry so no
+        // stale isAuthenticated=true can survive a crash mid-logout.
+        try {
+          await AsyncStorage.removeItem('borsa-mobile-auth');
+        } catch {
+          // non-critical
+        }
       },
 
       checkAuth: async () => {
@@ -93,31 +100,11 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'borsa-mobile-auth',
       storage: createJSONStorage(() => AsyncStorage),
+      // Only persist the auth flag — never store PII (email, phone, tokens) in
+      // unencrypted AsyncStorage (OWASP M9 – Insecure Data Storage).
+      // The full user object is always loaded fresh from /api/auth/me on app start.
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
-        user: state.user
-          ? {
-              id: state.user.id,
-              email: state.user.email,
-              phone: state.user.phone,
-              fullName: state.user.fullName,
-              username: state.user.username,
-              avatarUrl: state.user.avatarUrl,
-              plan: state.user.plan,
-              planExpiresAt: state.user.planExpiresAt,
-              language: state.user.language,
-              theme: state.user.theme,
-              shariaMode: state.user.shariaMode,
-              onboardingCompleted: state.user.onboardingCompleted,
-              isFirstLogin: state.user.isFirstLogin,
-              aiAnalysisUsedThisMonth: state.user.aiAnalysisUsedThisMonth,
-              notifySignals: state.user.notifySignals,
-              notifyPortfolio: state.user.notifyPortfolio,
-              notifyNews: state.user.notifyNews,
-              notifyAchievements: state.user.notifyAchievements,
-              notifyGoals: state.user.notifyGoals,
-            }
-          : null,
       }),
     },
   ),

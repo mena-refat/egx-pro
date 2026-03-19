@@ -5,10 +5,10 @@ import type { Stock, MarketOverview } from '../types/stock';
 
 const CACHE: Record<string, { data: unknown; ts: number }> = {};
 
-async function cachedGet<T>(url: string, ttl = 30_000): Promise<T> {
+async function cachedGet<T>(url: string, ttl = 30_000, signal?: AbortSignal): Promise<T> {
   const hit = CACHE[url];
   if (hit && Date.now() - hit.ts < ttl) return hit.data as T;
-  const res = await apiClient.get<T>(url);
+  const res = await apiClient.get<T>(url, { signal });
   const data = (res.data as { data?: T })?.data ?? res.data;
   CACHE[url] = { data, ts: Date.now() };
   return data as T;
@@ -32,33 +32,33 @@ export function useMarketData() {
     [],
   );
 
-  const fetchOverview = useCallback(async () => {
+  const fetchOverview = useCallback(async (signal?: AbortSignal) => {
     try {
-      const data = await cachedGet<MarketOverview>('/api/stocks/market/overview', 30_000);
-      if (mountedRef.current) setOverview(data);
+      const data = await cachedGet<MarketOverview>('/api/stocks/market/overview', 30_000, signal);
+      if (!signal?.aborted && mountedRef.current) setOverview(data);
     } catch {
-      // silent
+      // silent — cancelled requests throw but we don't surface that
     } finally {
-      if (mountedRef.current) setLoadingOverview(false);
+      if (!signal?.aborted && mountedRef.current) setLoadingOverview(false);
     }
   }, []);
 
-  const fetchStocks = useCallback(async () => {
+  const fetchStocks = useCallback(async (signal?: AbortSignal) => {
     try {
-      const raw = await cachedGet<Stock[]>('/api/stocks/prices', 60_000);
+      const raw = await cachedGet<Stock[]>('/api/stocks/prices', 60_000, signal);
       const list = Array.isArray(raw) ? raw : [];
-      if (mountedRef.current) setStocks(list);
+      if (!signal?.aborted && mountedRef.current) setStocks(list);
     } catch {
       // silent
     } finally {
-      if (mountedRef.current) setLoadingStocks(false);
+      if (!signal?.aborted && mountedRef.current) setLoadingStocks(false);
     }
   }, []);
 
-  const fetchNews = useCallback(async () => {
+  const fetchNews = useCallback(async (signal?: AbortSignal) => {
     try {
-      const raw = await cachedGet<unknown[]>('/api/news/market', 120_000);
-      if (mountedRef.current) setNews(Array.isArray(raw) ? (raw as typeof news) : []);
+      const raw = await cachedGet<unknown[]>('/api/news/market', 120_000, signal);
+      if (!signal?.aborted && mountedRef.current) setNews(Array.isArray(raw) ? (raw as typeof news) : []);
     } catch {
       // silent
     }
@@ -74,12 +74,17 @@ export function useMarketData() {
   }, [fetchOverview, fetchStocks, fetchNews]);
 
   useEffect(() => {
-    void Promise.all([fetchOverview(), fetchStocks(), fetchNews()]);
+    const ctrl = new AbortController();
+    void Promise.all([fetchOverview(ctrl.signal), fetchStocks(ctrl.signal), fetchNews(ctrl.signal)]);
 
     const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
+      // AppState-triggered refreshes don't need cancellation (fire-and-forget)
       if (state === 'active') void Promise.all([fetchOverview(), fetchStocks()]);
     });
-    return () => sub.remove();
+    return () => {
+      ctrl.abort();
+      sub.remove();
+    };
   }, [fetchOverview, fetchStocks, fetchNews]);
 
   return { overview, stocks, news, loadingStocks, loadingOverview, refreshing, refresh };

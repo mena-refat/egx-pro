@@ -12,6 +12,8 @@ export default function LoginPage() {
   const [showPw, setShowPw]     = useState(false);
   const [error, setError]       = useState<string | null>(null);
   const [loading, setLoading]   = useState(false);
+  const [needs2FA, setNeeds2FA] = useState(false);
+  const [twoFaCode, setTwoFaCode] = useState('');
   const setAuth = useAdminStore((s) => s.setAuth);
   const nav     = useNavigate();
 
@@ -20,13 +22,23 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await adminApi.post('/auth/login', { email, password });
+      const body: Record<string, string> = { email, password };
+      if (needs2FA) body.code = twoFaCode;
+      const res = await adminApi.post('/auth/login', body);
       const { token, admin } = res.data.data;
       setAuth(token, admin);
       nav('/');
     } catch (err: any) {
       const code = err?.response?.data?.error;
-      setError(code === 'INVALID_CREDENTIALS' ? t('login.invalidCredentials') : t('login.loginFailed'));
+      if (code === 'ADMIN_2FA_REQUIRED') {
+        setNeeds2FA(true);
+        setTwoFaCode('');
+      } else if (code === 'INVALID_CREDENTIALS') {
+        setError(t('login.invalidCredentials'));
+        if (needs2FA) { setNeeds2FA(false); setTwoFaCode(''); }
+      } else {
+        setError(t('login.loginFailed'));
+      }
     } finally {
       setLoading(false);
     }
@@ -61,38 +73,73 @@ export default function LoginPage() {
           )}
 
           {/* Email */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-slate-400">{t('login.email')}</label>
-            <div className="relative">
-              <Mail size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                className="w-full ps-9 pe-4 py-2.5 bg-[#0d0d14] border border-white/[0.08] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-                placeholder="admin@borsa.app"
-              />
+          {!needs2FA && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-slate-400">{t('login.email')}</label>
+              <div className="relative">
+                <Mail size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                  className="w-full ps-9 pe-4 py-2.5 bg-[#0d0d14] border border-white/[0.08] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                  placeholder="admin@borsa.app"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Password */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-slate-400">{t('login.password')}</label>
-            <div className="relative">
-              <Lock size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                type={showPw ? 'text' : 'password'} value={password}
-                onChange={(e) => setPassword(e.target.value)} required
-                className="w-full ps-9 pe-10 py-2.5 bg-[#0d0d14] border border-white/[0.08] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-                placeholder="••••••••••••"
-              />
-              <button type="button" onClick={() => setShowPw((v) => !v)}
-                className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
-                {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+          {!needs2FA && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-slate-400">{t('login.password')}</label>
+              <div className="relative">
+                <Lock size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type={showPw ? 'text' : 'password'} value={password}
+                  onChange={(e) => setPassword(e.target.value)} required
+                  className="w-full ps-9 pe-10 py-2.5 bg-[#0d0d14] border border-white/[0.08] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                  placeholder="••••••••••••"
+                />
+                <button type="button" onClick={() => setShowPw((v) => !v)}
+                  className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+                  {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 2FA Step */}
+          {needs2FA && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2.5">
+                <span className="text-base">🔐</span>
+                <span>{t('login.twoFaPrompt')}</span>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-slate-400">{t('login.twoFaCode')}</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={twoFaCode}
+                  onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  autoFocus
+                  className="w-full py-3 bg-[#0d0d14] border border-white/[0.08] rounded-lg text-lg text-white text-center font-mono tracking-[0.5em] placeholder-slate-700 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                  placeholder="● ● ● ● ● ●"
+                  maxLength={6}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => { setNeeds2FA(false); setTwoFaCode(''); setError(null); }}
+                className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                ← {t('common.back')}
               </button>
             </div>
-          </div>
+          )}
 
           <button
-            type="submit" disabled={loading}
+            type="submit" disabled={loading || (needs2FA && twoFaCode.length < 6)}
             className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-semibold text-sm rounded-lg transition-all disabled:opacity-50 mt-2"
           >
             {loading ? (
@@ -100,7 +147,7 @@ export default function LoginPage() {
                 <span className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
                 {t('login.signingIn')}
               </span>
-            ) : t('login.signIn')}
+            ) : needs2FA ? t('login.verify') : t('login.signIn')}
           </button>
         </form>
 

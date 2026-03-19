@@ -48,6 +48,9 @@ export const en = {
     signingIn: 'Signing in...',
     invalidCredentials: 'Invalid email or password',
     loginFailed: 'Login failed. Try again.',
+    twoFaPrompt: 'Enter the 6-digit code from your authenticator app.',
+    twoFaCode: 'Authentication Code',
+    verify: 'Verify',
   },
 
   dashboard: {

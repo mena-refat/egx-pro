@@ -145,7 +145,8 @@ export default function DiscoverPage() {
   // Discover feed
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [communityFeed, setCommunityFeed] = useState<FeedPrediction[]>([]);
-  const [discoverLoading, setDiscoverLoading] = useState(true);
+  const [discoverLoading, setDiscoverLoading] = useState(false);
+  const [discoverLoaded, setDiscoverLoaded] = useState(false);
 
   // Load followers/following on tab switch
   const loadList = useCallback(
@@ -178,11 +179,11 @@ export default function DiscoverPage() {
           setRequests(list);
           setRequestsCount(list.length);
         }
-      } catch (err) {
-        if ((err as { code?: string }).code === 'ERR_CANCELED') return;
+      } catch {
+        // ignore — cancelled or network error, just show empty state
+      } finally {
+        if (!signal?.aborted && mountedRef.current) setListLoading(false);
       }
-      if (!mountedRef.current) return;
-      setListLoading(false);
     },
     [accessToken]
   );
@@ -201,6 +202,7 @@ export default function DiscoverPage() {
     void (async () => {
       if (!mountedRef.current) return;
       setDiscoverLoading(true);
+      setDiscoverLoaded(false);
       // timeout 8s — never hang forever
       const timeoutId = setTimeout(() => { if (!controller.signal.aborted) setDiscoverLoading(false); }, 8000);
       try {
@@ -256,7 +258,10 @@ export default function DiscoverPage() {
         if ((err as { code?: string }).code === 'ERR_CANCELED') return;
       } finally {
         clearTimeout(timeoutId);
-        if (!controller.signal.aborted) setDiscoverLoading(false);
+        if (!controller.signal.aborted) {
+          setDiscoverLoading(false);
+          setDiscoverLoaded(true);
+        }
       }
     })();
 
@@ -424,7 +429,7 @@ export default function DiscoverPage() {
             <div className={styles.discoverContent}>
               {discoverLoading ? (
                 <DiscoverSkeleton />
-              ) : (
+              ) : discoverLoaded ? (
                 <>
                   {/* Leaderboard */}
                   {leaderboard.length > 0 && (
@@ -534,7 +539,7 @@ export default function DiscoverPage() {
                     />
                   )}
                 </>
-              )}
+              ) : null}
             </div>
           )}
 
