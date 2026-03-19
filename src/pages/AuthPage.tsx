@@ -32,7 +32,7 @@ export default function AuthPage() {
     clearTwoFactor,
   } = useAuthPage(refCode);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = form;
+  const { register, control, handleSubmit, formState: { errors, isSubmitting } } = form;
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-4 font-sans text-[var(--text-primary)]">
@@ -54,6 +54,7 @@ export default function AuthPage() {
             <AuthFormBlock
               isLogin={isLogin}
               register={register}
+              control={control}
               errors={errors}
               isSubmitting={isSubmitting}
               showPassword={showPassword}

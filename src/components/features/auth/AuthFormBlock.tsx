@@ -1,15 +1,47 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { LogIn, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { LogIn, UserPlus, Eye, EyeOff, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useWatch } from 'react-hook-form';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
-import type { UseFormRegister, FieldErrors } from 'react-hook-form';
+import type { UseFormRegister, FieldErrors, Control } from 'react-hook-form';
 import type { AuthFormData } from '../../../hooks/useAuthPage';
+
+const PASSWORD_RULES = [
+  { key: 'len',   test: (p: string) => p.length >= 8,      labelKey: 'auth.ruleLength' },
+  { key: 'upper', test: (p: string) => /[A-Z]/.test(p),    labelKey: 'auth.ruleUppercase' },
+  { key: 'num',   test: (p: string) => /[0-9]/.test(p),    labelKey: 'auth.ruleNumber' },
+];
+
+function PasswordRules({ control }: { control: Control<AuthFormData> }) {
+  const { t } = useTranslation('common');
+  const password = useWatch({ control, name: 'password' }) ?? '';
+  if (!password) return null;
+  return (
+    <ul className="mt-2 space-y-1.5 px-1">
+      {PASSWORD_RULES.map(({ key, test, labelKey }) => {
+        const ok = test(password);
+        return (
+          <li key={key} className={`flex items-center gap-2 text-xs font-medium transition-colors duration-200 ${ok ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}`}>
+            <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-all duration-200 ${ok ? 'bg-[var(--success)]/15' : 'bg-[var(--bg-secondary)]'}`}>
+              {ok
+                ? <Check className="w-2.5 h-2.5" strokeWidth={3} />
+                : <span className="w-1.5 h-1.5 rounded-full bg-[var(--border-strong)]" />
+              }
+            </span>
+            {t(labelKey as 'auth.ruleLength')}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 type Props = {
   isLogin: boolean;
   register: UseFormRegister<AuthFormData>;
+  control: Control<AuthFormData>;
   errors: FieldErrors<AuthFormData>;
   isSubmitting: boolean;
   showPassword: boolean;
@@ -23,6 +55,7 @@ type Props = {
 export function AuthFormBlock({
   isLogin,
   register,
+  control,
   errors,
   isSubmitting,
   showPassword,
@@ -84,6 +117,7 @@ export function AuthFormBlock({
           {showPassword ? <EyeOff className="w-5 h-5" aria-hidden /> : <Eye className="w-5 h-5" aria-hidden />}
         </Button>
       </div>
+      {!isLogin && <PasswordRules control={control} />}
       {authMessage && (
         <p
           role="alert"

@@ -88,7 +88,7 @@ export const ar = {
   users: {
     title: 'المستخدمون',
     total: 'إجمالي',
-    searchPlaceholder: 'بحث بالبريد، الاسم، اسم المستخدم...',
+    searchPlaceholder: 'بحث بالبريد، الاسم، اسم المستخدم، رقم الموبيل...',
     allPlans: 'كل الخطط',
     exportCsv: 'تصدير CSV',
     user: 'المستخدم',
@@ -353,6 +353,8 @@ export const ar = {
     newPasswordLabel: 'كلمة المرور الجديدة لهذا المسؤول',
     reset2FAMsg: 'سيؤدي هذا إلى تعطيل المصادقة الثنائية لهذا المسؤول. سيحتاج إلى إعدادها مجددًا عند تسجيل الدخول التالي.',
     emailExists: 'هذا البريد الإلكتروني مستخدم بالفعل.',
+    emailInvalid: 'البريد الإلكتروني غير صحيح.',
+    emailDomainBlocked: 'يُسمح فقط بمزودي البريد الموثوقين (Gmail، Outlook، iCloud…).',
     permSupportManage: 'مدير الدعم الفني',
     permUsersView: 'عرض المستخدمين',
     permUsersEdit: 'تعديل المستخدمين',

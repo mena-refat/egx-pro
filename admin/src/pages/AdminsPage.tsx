@@ -303,7 +303,28 @@ export default function AdminsPage() {
 
   /* ── validation helpers ── */
   const validateEmail = (value: string) => {
-    if (!value.includes('@') || !value.includes('.')) return 'Invalid email address';
+    if (!value.includes('@') || !value.includes('.')) return t('admins.emailInvalid');
+    const domain = value.split('@')[1]?.toLowerCase() ?? '';
+    const ALLOWED_DOMAINS = [
+      // Google
+      'gmail.com', 'googlemail.com',
+      // Microsoft
+      'outlook.com', 'hotmail.com', 'hotmail.co.uk', 'hotmail.fr',
+      'live.com', 'live.co.uk', 'msn.com',
+      // Apple
+      'icloud.com', 'me.com', 'mac.com',
+      // Yahoo
+      'yahoo.com', 'yahoo.co.uk', 'yahoo.fr', 'yahoo.de', 'ymail.com',
+      // ProtonMail
+      'proton.me', 'protonmail.com',
+      // Zoho
+      'zoho.com', 'zohomail.com',
+      // AOL
+      'aol.com',
+      // Arabic/regional
+      'mail.ru', 'yandex.com', 'yandex.ru',
+    ];
+    if (!ALLOWED_DOMAINS.includes(domain)) return t('admins.emailDomainBlocked');
     return '';
   };
 

@@ -88,7 +88,7 @@ export const en = {
   users: {
     title: 'Users',
     total: 'total',
-    searchPlaceholder: 'Search email, name, username...',
+    searchPlaceholder: 'Search email, name, username, phone...',
     allPlans: 'All Plans',
     exportCsv: 'Export CSV',
     user: 'User',
@@ -353,6 +353,8 @@ export const en = {
     newPasswordLabel: 'New password for this admin',
     reset2FAMsg: 'This will disable 2FA for this admin. They will need to set it up again on next login.',
     emailExists: 'This email is already in use.',
+    emailInvalid: 'Invalid email address.',
+    emailDomainBlocked: 'Only trusted email providers are allowed (Gmail, Outlook, iCloud…).',
     permSupportManage: 'Support Manager',
     permUsersView: 'View Users',
     permUsersEdit: 'Edit Users',
