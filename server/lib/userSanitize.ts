@@ -8,6 +8,7 @@ const SAFE_USER_KEYS = [
   'onboardingCompleted', 'interestedSectors', 'language', 'theme', 'plan', 'planExpiresAt',
   'aiAnalysisUsedThisMonth', 'aiAnalysisResetDate', 'referralCode', 'referredBy', 'totalReferrals',
   'referralProDaysRemaining', 'referralProExpiresAt', 'notifySignals', 'notifyPortfolio', 'notifyNews',
+  'notifyAchievements', 'notifyGoals',
   'lastLoginAt', 'loginStreak', 'lastPasswordChangeAt', 'lastUsernameChangeAt', 'usernameChangeCount',
   'isFirstLogin', 'hearAboutUs', 'investorProfile', 'userTitle', 'createdAt', 'updatedAt',
 ] as const;

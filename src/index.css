@@ -122,6 +122,7 @@ html {
 body {
   overflow-x: hidden;
   min-height: 100vh;
+  background-color: var(--bg-primary);
 }
 
 /* Main content area: allow shrink and prevent flex overflow on small screens */

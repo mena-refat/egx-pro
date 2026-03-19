@@ -20,6 +20,11 @@ export interface MobileUser {
   onboardingCompleted: boolean;
   isFirstLogin: boolean;
   aiAnalysisUsedThisMonth: number;
+  notifySignals: boolean;
+  notifyPortfolio: boolean;
+  notifyNews: boolean;
+  notifyAchievements: boolean;
+  notifyGoals: boolean;
 }
 
 interface AuthState {
@@ -106,6 +111,11 @@ export const useAuthStore = create<AuthState>()(
               onboardingCompleted: state.user.onboardingCompleted,
               isFirstLogin: state.user.isFirstLogin,
               aiAnalysisUsedThisMonth: state.user.aiAnalysisUsedThisMonth,
+              notifySignals: state.user.notifySignals,
+              notifyPortfolio: state.user.notifyPortfolio,
+              notifyNews: state.user.notifyNews,
+              notifyAchievements: state.user.notifyAchievements,
+              notifyGoals: state.user.notifyGoals,
             }
           : null,
       }),

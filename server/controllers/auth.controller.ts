@@ -281,7 +281,8 @@ export async function getMe(req: Request, res: Response): Promise<void> {
         isEmailVerified: true, twoFactorEnabled: true,
         riskTolerance: true, investmentHorizon: true, monthlyBudget: true,
         interestedSectors: true, notifySignals: true, notifyPortfolio: true,
-        notifyNews: true, loginStreak: true, userTitle: true, isDeleted: true,
+        notifyNews: true, notifyAchievements: true, notifyGoals: true,
+        loginStreak: true, userTitle: true, isDeleted: true,
       },
     });
     if (!user || (user as { isDeleted?: boolean }).isDeleted) {

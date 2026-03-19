@@ -24,6 +24,14 @@ if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
   });
 }
 
+// إخفاء الـ splash screen لما React يتحمل
+const splash = document.getElementById('app-splash');
+if (splash) {
+  splash.style.opacity = '0';
+  splash.style.pointerEvents = 'none';
+  setTimeout(() => splash.remove(), 300);
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

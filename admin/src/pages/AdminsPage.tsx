@@ -4,7 +4,7 @@ import { adminApi } from '../lib/adminApi';
 import { useAdminStore } from '../store/adminAuthStore';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
-import { Trash2, ToggleLeft, ToggleRight, Pencil, KeyRound, ShieldOff } from 'lucide-react';
+import { Trash2, ToggleLeft, ToggleRight, Pencil, KeyRound, ShieldOff, Copy, RefreshCw, Check } from 'lucide-react';
 
 const PERMS = [
   'users.view',
@@ -106,6 +106,7 @@ export default function AdminsPage() {
   const [resetPwdNew, setResetPwdNew] = useState('');
   const [resetPwdConfirm, setResetPwdConfirm] = useState('');
   const [resetPwdError, setResetPwdError] = useState('');
+  const [resetPwdCopied, setResetPwdCopied] = useState(false);
 
   // Reset 2FA state
   const [reset2FAId, setReset2FAId]   = useState<string | null>(null);
@@ -547,15 +548,13 @@ export default function AdminsPage() {
                           >
                             <KeyRound size={13} />
                           </button>
-                          {a.twoFactorEnabled && (
-                            <button
-                              onClick={() => { setReset2FAId(a.id); setReset2FAPwd(''); setReset2FAError(''); }}
-                              title={t('admins.reset2FA')}
-                              className="text-slate-600 hover:text-violet-400 transition-colors"
-                            >
-                              <ShieldOff size={13} />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => { setReset2FAId(a.id); setReset2FAPwd(''); setReset2FAError(''); }}
+                            title={t('admins.reset2FA')}
+                            className="text-slate-600 hover:text-violet-400 transition-colors"
+                          >
+                            <ShieldOff size={13} />
+                          </button>
                         </>
                       )}
                       <button
@@ -658,20 +657,58 @@ export default function AdminsPage() {
       {/* Reset Password modal */}
       <Modal
         open={!!resetPwdId}
-        onClose={() => { setResetPwdId(null); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); }}
+        onClose={() => { setResetPwdId(null); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); setResetPwdCopied(false); }}
         title={t('admins.resetPassword')}
         width="max-w-sm"
       >
         <div className="space-y-3">
           <div>
             <label className="text-xs text-slate-400 block mb-1.5">{t('admins.newPasswordLabel')}</label>
-            <input
-              type="text"
-              value={resetPwdNew}
-              onChange={(e) => { setResetPwdNew(e.target.value); setResetPwdError(''); }}
-              className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white font-mono focus:outline-none focus:border-amber-500/50"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={resetPwdNew}
+                onChange={(e) => { setResetPwdNew(e.target.value); setResetPwdError(''); setResetPwdCopied(false); }}
+                className="flex-1 min-w-0 px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white font-mono focus:outline-none focus:border-amber-500/50"
+              />
+              {/* Generate */}
+              <button
+                type="button"
+                title="Generate password"
+                onClick={() => {
+                  const pwd = buildPassword({ pwdUppercase: true, pwdLowercase: true, pwdSymbols: true });
+                  setResetPwdNew(pwd);
+                  setResetPwdError('');
+                  setResetPwdCopied(false);
+                }}
+                className="flex items-center gap-1 px-2.5 py-2 text-xs font-medium bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-slate-300 rounded-lg transition-colors shrink-0"
+              >
+                <RefreshCw size={12} /> {t('admins.generatePassword')}
+              </button>
+              {/* Copy */}
+              <button
+                type="button"
+                title="Copy password"
+                disabled={!resetPwdNew}
+                onClick={() => {
+                  if (!resetPwdNew) return;
+                  void navigator.clipboard.writeText(resetPwdNew).then(() => {
+                    setResetPwdCopied(true);
+                    setTimeout(() => setResetPwdCopied(false), 2000);
+                  });
+                }}
+                className={`flex items-center gap-1 px-2.5 py-2 text-xs font-medium border rounded-lg transition-all shrink-0 disabled:opacity-40 ${
+                  resetPwdCopied
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                    : 'bg-white/[0.06] hover:bg-white/[0.1] border-white/[0.08] text-slate-300'
+                }`}
+              >
+                {resetPwdCopied ? <Check size={12} /> : <Copy size={12} />}
+                {resetPwdCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
           </div>
+
           <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3 space-y-2">
             <p className="text-xs text-amber-400/80">{t('admins.confirmYourPasswordHint')}</p>
             <input
@@ -683,9 +720,16 @@ export default function AdminsPage() {
               className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-amber-500/50"
             />
           </div>
+
           {resetPwdError && <p className="text-xs text-red-400">{resetPwdError}</p>}
+
           <div className="flex justify-end gap-3 pt-1">
-            <button onClick={() => { setResetPwdId(null); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); }} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200">{t('common.cancel')}</button>
+            <button
+              onClick={() => { setResetPwdId(null); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); setResetPwdCopied(false); }}
+              className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200"
+            >
+              {t('common.cancel')}
+            </button>
             <button
               onClick={handleResetPassword}
               disabled={saving || !resetPwdNew || !resetPwdConfirm}

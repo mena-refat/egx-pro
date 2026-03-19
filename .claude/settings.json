@@ -9,7 +9,14 @@
       "Bash(npx expo:*)",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\(''''scripts'''',{}\\)\\)\")",
       "Bash(ipconfig)",
-      "Bash(findstr /i \"IPv4\")"
+      "Bash(findstr /i \"IPv4\")",
+      "Bash(node -e \"try { require\\(''''./src/lib/auth.ts''''\\) } catch\\(e\\) { console.log\\(''''Error:'''', e.message\\) }\")",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(curl -s http://localhost:3000/src/main.tsx)",
+      "Bash(curl -s \"http://localhost:3000/src/App.tsx\")",
+      "Bash(curl -s \"http://localhost:3000/src/store/authStore.ts\")",
+      "Bash(curl -s \"http://localhost:3000/src/components/skeletons/index.ts\")",
+      "Bash(curl -s \"http://localhost:3000/src/pages/DashboardPage.tsx\")"
     ]
   }
 }

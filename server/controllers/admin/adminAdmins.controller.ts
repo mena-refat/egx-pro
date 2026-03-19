@@ -209,7 +209,7 @@ export const AdminAdminsController = {
 
     await prisma.admin.update({
       where: { id },
-      data: { twoFactorEnabled: false, twoFactorSecret: null },
+      data: { twoFactorEnabled: false, twoFactorSecret: null, mustSetup2FA: true },
     });
     if (req.admin) await adminAudit(req.admin.id, 'ADMIN_RESET_2FA', id, undefined, req);
     sendSuccess(res, { ok: true });
