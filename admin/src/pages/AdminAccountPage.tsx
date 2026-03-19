@@ -158,6 +158,10 @@ export default function AdminAccountPage() {
       setTwoFaSetup(null);
       setTwoFaCode('');
       setMessage(t('account.twoFaEnabled'));
+      // Clear the mustSetup2FA flag from the store so the banner disappears
+      if (storeToken && storeAdmin) {
+        setAuth(storeToken, { ...storeAdmin, mustSetup2FA: false });
+      }
     } catch (err: any) {
       setMessage(err?.response?.data?.error ?? 'Failed to enable 2FA');
     } finally {

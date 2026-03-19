@@ -451,30 +451,41 @@ export default function StockDetailPage() {
                 <Text style={{ color: colors.textMuted }} className="text-sm">لا توجد أخبار حالياً</Text>
               </View>
             ) : (
-              news.map((item, i) => (
+              <>
+                {news.slice(0, 5).map((item, i) => (
+                  <Pressable
+                    key={i}
+                    onPress={() => Linking.openURL(item.url).catch(() => null)}
+                    style={{ backgroundColor: colors.card, borderColor: colors.border }}
+                    className="border rounded-2xl p-4 gap-2 active:opacity-70"
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <Text style={{ color: colors.textMuted }} className="text-xs">
+                        {item.source}
+                      </Text>
+                      <Text style={{ color: colors.textMuted }} className="text-xs">
+                        {new Date(item.publishedAt).toLocaleDateString('ar-EG')}
+                      </Text>
+                    </View>
+                    <Text style={{ color: colors.text }} className="text-sm font-semibold leading-5">
+                      {item.title}
+                    </Text>
+                    <View className="flex-row items-center gap-1">
+                      <Text className="text-xs text-brand font-medium">اقرأ المزيد</Text>
+                      <ExternalLink size={11} color="#8b5cf6" />
+                    </View>
+                  </Pressable>
+                ))}
                 <Pressable
-                  key={i}
-                  onPress={() => Linking.openURL(item.url).catch(() => null)}
+                  onPress={() => router.push(`/news?ticker=${ticker}` as never)}
                   style={{ backgroundColor: colors.card, borderColor: colors.border }}
-                  className="border rounded-2xl p-4 gap-2 active:opacity-70"
+                  className="border rounded-2xl py-3.5 items-center"
                 >
-                  <View className="flex-row items-center justify-between">
-                    <Text style={{ color: colors.textMuted }} className="text-xs">
-                      {item.source}
-                    </Text>
-                    <Text style={{ color: colors.textMuted }} className="text-xs">
-                      {new Date(item.publishedAt).toLocaleDateString('ar-EG')}
-                    </Text>
-                  </View>
-                  <Text style={{ color: colors.text }} className="text-sm font-semibold leading-5">
-                    {item.title}
+                  <Text style={{ color: colors.text }} className="text-sm font-semibold">
+                    عرض كل الأخبار
                   </Text>
-                  <View className="flex-row items-center gap-1">
-                    <Text className="text-xs text-brand font-medium">اقرأ المزيد</Text>
-                    <ExternalLink size={11} color="#8b5cf6" />
-                  </View>
                 </Pressable>
-              ))
+              </>
             )}
           </>
         )}

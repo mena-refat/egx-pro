@@ -694,35 +694,42 @@ export default function SupportPage() {
                     </div>
                   )}
 
-                  {/* Reply form */}
+                  {/* Reply form — only when ticket is open/in-progress */}
                   {canReply && (
-                    <div className="space-y-2">
-                      <textarea
-                        value={reply}
-                        onChange={(e) => setReply(e.target.value)}
-                        rows={3}
-                        placeholder={t('support.yourReply')}
-                        className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50 resize-none placeholder-slate-600"
-                      />
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={newStatus}
-                          onChange={(e) => setNewStatus(e.target.value)}
-                          className="flex-1 px-2 py-1.5 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none"
-                        >
-                          <option value="IN_PROGRESS">{t('support.inProgress')}</option>
-                          <option value="RESOLVED">{t('support.resolved')}</option>
-                          <option value="CLOSED">{t('support.closed')}</option>
-                        </select>
-                        <button
-                          onClick={() => void handleReply()}
-                          disabled={saving || !reply.trim()}
-                          className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all whitespace-nowrap"
-                        >
-                          <Send size={11} /> {saving ? t('common.sending') : t('support.sendReply')}
-                        </button>
+                    selected.status === 'RESOLVED' || selected.status === 'CLOSED' ? (
+                      <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-slate-800/50 border border-white/[0.06] text-xs text-slate-500">
+                        <X size={12} className="shrink-0" />
+                        {t('support.ticketClosed')}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <textarea
+                          value={reply}
+                          onChange={(e) => setReply(e.target.value)}
+                          rows={3}
+                          placeholder={t('support.yourReply')}
+                          className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50 resize-none placeholder-slate-600"
+                        />
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={newStatus}
+                            onChange={(e) => setNewStatus(e.target.value)}
+                            className="flex-1 px-2 py-1.5 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none"
+                          >
+                            <option value="IN_PROGRESS">{t('support.inProgress')}</option>
+                            <option value="RESOLVED">{t('support.resolved')}</option>
+                            <option value="CLOSED">{t('support.closed')}</option>
+                          </select>
+                          <button
+                            onClick={() => void handleReply()}
+                            disabled={saving || !reply.trim()}
+                            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all whitespace-nowrap"
+                          >
+                            <Send size={11} /> {saving ? t('common.sending') : t('support.sendReply')}
+                          </button>
+                        </div>
+                      </div>
+                    )
                   )}
                 </div>
               </div>

@@ -153,6 +153,10 @@ export default function RootLayout() {
               name="achievements/index"
               options={{ animation: 'slide_from_right' }}
             />
+            <Stack.Screen
+              name="news/index"
+              options={{ animation: 'slide_from_right' }}
+            />
           </Stack>
         </SafeAreaProvider>
       </GestureHandlerRootView>

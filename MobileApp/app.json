@@ -56,7 +56,8 @@
         {
           "cameraPermission": "$(PRODUCT_NAME) يحتاج الكاميرا لتحميل صورة ملفك الشخصي."
         }
-      ]
+      ],
+      "react-native-iap"
     ],
     "experiments": {
       "typedRoutes": true

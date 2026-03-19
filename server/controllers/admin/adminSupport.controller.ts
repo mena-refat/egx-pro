@@ -88,12 +88,17 @@ export const AdminSupportController = {
       return;
     }
 
-    if (!isManager(req.admin)) {
-      const ticket = await prisma.supportTicket.findUnique({ where: { id }, select: { assignedTo: true } });
-      if (!ticket || ticket.assignedTo !== req.admin!.id) {
-        sendError(res, 'ADMIN_FORBIDDEN', 403);
-        return;
-      }
+    const existing = await prisma.supportTicket.findUnique({ where: { id }, select: { assignedTo: true, status: true } });
+    if (!existing) { sendError(res, 'NOT_FOUND', 404); return; }
+
+    if (existing.status === 'RESOLVED' || existing.status === 'CLOSED') {
+      sendError(res, 'TICKET_ALREADY_CLOSED', 400);
+      return;
+    }
+
+    if (!isManager(req.admin) && existing.assignedTo !== req.admin!.id) {
+      sendError(res, 'ADMIN_FORBIDDEN', 403);
+      return;
     }
 
     const ticket = await prisma.supportTicket.update({

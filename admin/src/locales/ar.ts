@@ -296,6 +296,7 @@ export const ar = {
     originalMessage: 'الرسالة الأصلية',
     agentFilter: 'تصفية حسب الموظف',
     priorityFilter: 'الأولوية',
+    ticketClosed: 'هذه التذكرة محلولة أو مغلقة. لا يمكن إرسال مزيد من الردود.',
     escalate: 'تصعيد للمدير',
     escalateTitle: 'تصعيد التذكرة',
     escalateDesc: 'أبلغ مديرك بتذكرة صعبة تحتاج مساعدته.',

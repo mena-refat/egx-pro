@@ -190,6 +190,7 @@ export function AdminLayout() {
               </span>
             </div>
             <button
+              type="button"
               onClick={() => nav('/account')}
               className="text-xs font-semibold text-amber-400 hover:text-amber-300 underline shrink-0"
             >

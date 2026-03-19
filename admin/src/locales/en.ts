@@ -296,6 +296,7 @@ export const en = {
     originalMessage: 'Original Message',
     agentFilter: 'Filter by Agent',
     priorityFilter: 'Priority',
+    ticketClosed: 'This ticket is resolved or closed. No further replies can be sent.',
     escalate: 'Escalate to Manager',
     escalateTitle: 'Escalate Ticket',
     escalateDesc: 'Flag this ticket as difficult and send it to your manager for help.',
