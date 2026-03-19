@@ -103,8 +103,10 @@ model User {
   supportTickets                         SupportTicket[]
   pushToken                              String?
   pushPlatform                           String?
+  googlePlayToken                        String?   /// Latest Google Play purchaseToken for RTDN webhook lookup
 
   @@index([isDeleted, deletionScheduledFor])
+  @@index([googlePlayToken])
   @@index([plan, planExpiresAt])
   @@index([username])
   @@index([createdAt])

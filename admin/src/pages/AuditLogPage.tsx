@@ -204,11 +204,14 @@ export default function AuditLogPage() {
   const [page, setPage]   = useState(1);
   const [loading, setLoading] = useState(false);
 
+  const today     = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+
   const [adminSearch, setAdminSearch]       = useState('');
   const [adminDebounced, setAdminDebounced] = useState('');
   const [action, setAction] = useState('');
-  const [from, setFrom]     = useState('');
-  const [to, setTo]         = useState('');
+  const [from, setFrom]     = useState(yesterday);
+  const [to, setTo]         = useState(today);
 
   useEffect(() => {
     const timer = setTimeout(() => setAdminDebounced(adminSearch), 400);
@@ -241,7 +244,7 @@ export default function AuditLogPage() {
 
   const clearFilters = () => {
     setAdminSearch(''); setAdminDebounced('');
-    setAction(''); setFrom(''); setTo('');
+    setAction(''); setFrom(yesterday); setTo(today);
   };
 
   const hasFilters  = adminSearch || action || from || to;

@@ -12,5 +12,7 @@ router.post('/discount/validate', authenticate, idempotencyMiddleware, validate(
 router.post('/validate-discount', authenticate, idempotencyMiddleware, validate(validateDiscountBodySchema, 'body'), BillingController.validateDiscount);
 router.post('/upgrade', authenticate, idempotencyMiddleware, validate(upgradeBodySchema, 'body'), BillingController.upgrade);
 router.post('/google-play/verify', authenticate, idempotencyMiddleware, validate(googlePlayVerifySchema, 'body'), BillingController.verifyGooglePlayPurchase);
+// Pub/Sub push endpoint — called by Google, no user auth
+router.post('/google-play/webhook', BillingController.googlePlayWebhook);
 
 export default router;

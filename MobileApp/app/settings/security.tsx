@@ -1,6 +1,6 @@
 import { View, Text, Pressable, ScrollView, I18nManager } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight, Fingerprint, ChevronRight, ChevronLeft } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Fingerprint, Shield, ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 
 export default function SecurityPage() {

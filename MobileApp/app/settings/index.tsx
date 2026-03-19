@@ -132,7 +132,7 @@ export default function SettingsPage() {
         </Section>
 
         <Section title="الأمان">
-          <MenuItem icon={Shield}      label="الأمان والخصوصية"  sub="كلمة المرور و2FA"                        onPress={() => router.push('/settings/security')} />
+          <MenuItem icon={Shield}      label="الأمان والخصوصية"  sub="البصمة والـ PIN"                        onPress={() => router.push('/settings/security')} />
           <MenuItem icon={Fingerprint} label="البصمة والـ PIN"    sub="ادخل بسرعة بالبصمة أو PIN"             onPress={() => router.push('/settings/biometric')} last />
         </Section>
 

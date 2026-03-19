@@ -39,7 +39,9 @@
       "Bash(node_modules/.bin/tsc --noEmit --project tsconfig.json)",
       "Bash(node_modules/.bin/tsc --noEmit --rootDir admin/src --target ESNext --moduleResolution bundler --jsx react-jsx --strict false --allowImportingTsExtensions false)",
       "Bash(find /c/Users/menar/Desktop/egx-pro/MobileApp -name *support* -type f)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(find /c/Users/menar/Desktop/egx-pro/server -type f \\\\\\(-name *.ts -o -name *.js \\\\\\))",
+      "Bash(grep -r \"raw\\\\|query\\\\|$\\\\|\\\\.sql\\\\|queryRaw\\\\|unsafeRaw\" /c/Users/menar/Desktop/egx-pro/server --include=*.ts)"
     ]
   }
 }
