@@ -17,6 +17,7 @@ export function useLivePrices(tickers: string[] = []) {
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const subscribeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const delayRef = useRef(1000);
   const tickersRef = useRef(tickers);
 
@@ -37,7 +38,7 @@ export function useLivePrices(tickers: string[] = []) {
       delayRef.current = 1000;
       ws.send(JSON.stringify({ type: 'AUTH', token }));
       if (tickersRef.current.length > 0) {
-        setTimeout(() => {
+        subscribeRef.current = setTimeout(() => {
           ws.send(JSON.stringify({ type: 'SUBSCRIBE', tickers: tickersRef.current }));
         }, 500);
       }
@@ -81,6 +82,7 @@ export function useLivePrices(tickers: string[] = []) {
     return () => {
       sub.remove();
       if (reconnectRef.current) clearTimeout(reconnectRef.current);
+      if (subscribeRef.current) clearTimeout(subscribeRef.current);
       wsRef.current?.close();
     };
   }, [connect]);

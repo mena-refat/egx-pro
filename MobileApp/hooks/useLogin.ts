@@ -42,7 +42,7 @@ export function useLogin() {
   const checkBiometric = async () => {
     const compatible = await LocalAuthentication.hasHardwareAsync();
     const enrolled = await LocalAuthentication.isEnrolledAsync();
-    const hasCreds = await SecureStore.getItemAsync(BIOMETRIC_CREDS_KEY);
+    const hasCreds = await SecureStore.getItemAsync(BIOMETRIC_CREDS_KEY).catch(() => null);
     setBiometricAvail(compatible && enrolled && !!hasCreds);
     const pin = await SecureStore.getItemAsync(PIN_KEY).catch(() => null);
     setPinAvail(Boolean(pin));

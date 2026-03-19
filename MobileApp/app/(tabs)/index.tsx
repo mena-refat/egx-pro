@@ -263,7 +263,7 @@ export default function HomePage() {
           <View>
             <Text style={{ color: colors.textMuted }} className="text-xs">أهلاً بك،</Text>
             <Text style={{ color: colors.text }} className="text-lg font-bold mt-0.5">
-              {user?.fullName?.split(' ')[0] ?? 'مستثمر'}
+              {user?.fullName?.split(' ')[0] || 'مستثمر'}
             </Text>
           </View>
           <View className="flex-row items-center gap-3">

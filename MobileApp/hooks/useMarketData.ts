@@ -70,7 +70,7 @@ export function useMarketData() {
     delete CACHE['/api/stocks/market/overview'];
     delete CACHE['/api/news/market'];
     await Promise.all([fetchOverview(), fetchStocks(), fetchNews()]);
-    setRefreshing(false);
+    if (mountedRef.current) setRefreshing(false);
   }, [fetchOverview, fetchStocks, fetchNews]);
 
   useEffect(() => {
@@ -143,7 +143,7 @@ export function usePortfolioData() {
   const refresh = useCallback(async () => {
     setRefreshing(true);
     await fetch();
-    setRefreshing(false);
+    if (mountedRef.current) setRefreshing(false);
   }, [fetch]);
 
   useEffect(() => {

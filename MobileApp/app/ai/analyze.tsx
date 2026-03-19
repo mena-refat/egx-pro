@@ -110,11 +110,7 @@ export default function AnalyzePage() {
     setLoading(true);
     try {
       const res = await apiClient.post(`/api/analysis/${t}`, undefined, { timeout: 120_000 });
-      const data =
-        (res.data as { data?: { analysis?: AnalysisResult }; analysis?: AnalysisResult })
-          ?.data?.analysis ??
-        (res.data as { analysis?: AnalysisResult })?.analysis ??
-        res.data;
+      const data = (res.data as { analysis?: AnalysisResult })?.analysis ?? res.data;
       if (data) setResult(data as AnalysisResult);
       else setError('لم يتم استلام نتيجة التحليل');
     } catch (err: unknown) {
