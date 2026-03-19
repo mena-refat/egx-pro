@@ -78,6 +78,9 @@ export const en = {
     superAdmins: 'Super Admins',
     managers: 'Managers',
     staff: 'Staff',
+    superAdminsDesc: 'Full access to all system sections',
+    managersDesc: 'Manage support team and assign tickets',
+    staffDesc: 'Limited custom permissions per role',
     newDiscount: 'New Discount',
     broadcastMessage: 'Broadcast Message',
     viewSubscribers: 'View Subscribers',
@@ -310,6 +313,12 @@ export const en = {
     twoFaDisabled: 'Two-factor authentication disabled.',
     passwordsMismatch: 'New password and confirmation do not match.',
     passwordTooWeak: 'Password must be 18–64 characters and include uppercase, lowercase, and symbols.',
+    step1Desc: 'Download Google Authenticator, Authy, or any TOTP app on your phone.',
+    step2Desc: 'Scan the QR code with your authenticator app.',
+    step3Desc: 'Enter the 6-digit code from your app to confirm.',
+    copySecret: 'Copy',
+    copied: 'Copied!',
+    manualEntry: "Can't scan? Enter this key manually in your app.",
   },
 
   admins: {

@@ -31,7 +31,7 @@ import {
   CalculatorSkeleton,
   UsernameSetupSkeleton,
 } from './components/skeletons';
-import { SubscriptionTab, ReferralTab, AchievementsTab, AccountOverviewTab } from './components/features/settings';
+import { SubscriptionTab, ReferralTab, AchievementsTab, AccountOverviewTab, InvestorProfileTab } from './components/features/settings';
 import SettingsLayout from './components/layout/SettingsLayout';
 
 const PortfolioTracker = lazy(() => import('./components/PortfolioTracker'));
@@ -216,6 +216,7 @@ export default function App() {
                 <Route path="/settings" element={<ErrorBoundary><SettingsLayout /></ErrorBoundary>}>
                   <Route index element={<Navigate to="/settings/account" replace />} />
                   <Route path="account" element={<AccountOverviewTab />} />
+                  <Route path="investor" element={<InvestorProfileTab />} />
                   <Route path="subscription" element={<SubscriptionTab />} />
                   <Route path="referrals" element={<ReferralTab />} />
                   <Route path="achievements" element={<AchievementsTab />} />

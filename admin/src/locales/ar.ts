@@ -78,6 +78,9 @@ export const ar = {
     superAdmins: 'مشرفون رئيسيون',
     managers: 'مديرون',
     staff: 'موظفون',
+    superAdminsDesc: 'وصول كامل لجميع أقسام النظام',
+    managersDesc: 'يديرون فريق الدعم وتوزيع التذاكر',
+    staffDesc: 'صلاحيات مخصصة محدودة لكل دور',
     newDiscount: 'كود خصم جديد',
     broadcastMessage: 'إشعار جماعي',
     viewSubscribers: 'عرض المشتركين',
@@ -310,6 +313,12 @@ export const ar = {
     twoFaDisabled: 'تم تعطيل التحقق الثنائي.',
     passwordsMismatch: 'كلمة المرور الجديدة وتأكيدها غير متطابقتين.',
     passwordTooWeak: 'كلمة المرور يجب أن تكون 18–64 حرفاً وتحتوي على أحرف كبيرة وصغيرة ورموز.',
+    step1Desc: 'حمّل تطبيق Google Authenticator أو Authy أو أي تطبيق TOTP على هاتفك.',
+    step2Desc: 'امسح رمز QR باستخدام تطبيق المصادقة.',
+    step3Desc: 'أدخل الرمز المكون من 6 أرقام من التطبيق للتأكيد.',
+    copySecret: 'نسخ',
+    copied: 'تم النسخ!',
+    manualEntry: 'لا يمكنك المسح؟ أدخل هذا المفتاح يدوياً في التطبيق.',
   },
 
   admins: {

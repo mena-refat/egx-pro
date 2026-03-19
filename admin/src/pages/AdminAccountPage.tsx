@@ -1,8 +1,9 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { useAdminStore } from '../store/adminAuthStore';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Copy, Check, Shield, Smartphone, KeyRound } from 'lucide-react';
+import * as QRCode from 'qrcode';
 
 interface AdminMe {
   id: number;
@@ -35,6 +36,9 @@ export default function AdminAccountPage() {
   const [showNewPwd, setShowNewPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   const [showTwoFaPwd, setShowTwoFaPwd] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Validation error states
   const [profileEmailError, setProfileEmailError] = useState('');
@@ -53,6 +57,25 @@ export default function AdminAccountPage() {
       })
       .catch(() => null);
   }, []);
+
+  useEffect(() => {
+    if (twoFaSetup?.otpauthUrl) {
+      QRCode.toDataURL(twoFaSetup.otpauthUrl, { width: 200, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
+        .then(setQrDataUrl)
+        .catch(() => setQrDataUrl(null));
+    } else {
+      setQrDataUrl(null);
+    }
+  }, [twoFaSetup]);
+
+  const copySecret = () => {
+    if (!twoFaSetup?.secret) return;
+    navigator.clipboard.writeText(twoFaSetup.secret).then(() => {
+      setCopied(true);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   const validateEmail = (value: string) => {
     if (!value.includes('@') || !value.includes('.')) {
@@ -305,29 +328,87 @@ export default function AdminAccountPage() {
         )}
 
         {!me?.twoFactorEnabled && twoFaSetup && (
-          <form onSubmit={handleEnableTwoFa} className="space-y-2 text-xs mt-2">
-            <p className="text-slate-300">{t('account.scanSecret')}</p>
-            {twoFaSetup.otpauthUrl && (
-              <p className="text-[11px] text-slate-500 break-all">
-                {t('account.otpUrl')}: {twoFaSetup.otpauthUrl}
-              </p>
-            )}
-            <p className="text-[11px] text-slate-500 break-all">
-              {t('account.secretLabel')}: <span className="font-mono">{twoFaSetup.secret}</span>
-            </p>
-            <div className="space-y-1.5">
-              <label className="block text-slate-300">{t('account.authCode')}</label>
-              <input
-                value={twoFaCode}
-                onChange={(e) => setTwoFaCode(e.target.value)}
-                className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2 text-sm text-white outline-none focus:border-emerald-500/50"
-                placeholder="123456"
-              />
+          <form onSubmit={handleEnableTwoFa} className="mt-4 space-y-5">
+            {/* Step 1 */}
+            <div className="flex gap-3 items-start">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold flex items-center justify-center">1</span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <Smartphone size={12} className="text-emerald-400" />
+                  <p className="text-xs font-medium text-white">Authenticator App</p>
+                </div>
+                <p className="text-[11px] text-slate-400">{t('account.step1Desc')}</p>
+              </div>
             </div>
+
+            {/* Step 2 – QR Code */}
+            <div className="flex gap-3 items-start">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold flex items-center justify-center">2</span>
+              <div className="space-y-3 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <Shield size={12} className="text-emerald-400" />
+                  <p className="text-xs font-medium text-white">Scan QR Code</p>
+                </div>
+                <p className="text-[11px] text-slate-400">{t('account.step2Desc')}</p>
+                {qrDataUrl ? (
+                  <div className="flex justify-center">
+                    <div className="bg-white p-3 rounded-xl shadow-lg shadow-black/40 inline-block">
+                      <img src={qrDataUrl} alt="2FA QR Code" className="w-44 h-44 block" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-44 h-44 mx-auto rounded-xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center text-slate-600 text-xs">
+                    Generating...
+                  </div>
+                )}
+
+                {/* Manual entry */}
+                <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2.5 space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <KeyRound size={10} className="text-slate-500" />
+                    <p className="text-[10px] text-slate-500">{t('account.manualEntry')}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-slate-200 flex-1 break-all tracking-wider">
+                      {twoFaSetup.secret}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={copySecret}
+                      className="flex-shrink-0 flex items-center gap-1 rounded-md bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.08] px-2 py-1 text-[10px] font-medium text-slate-300 transition-colors"
+                    >
+                      {copied ? (
+                        <><Check size={10} className="text-emerald-400" /> {t('account.copied')}</>
+                      ) : (
+                        <><Copy size={10} /> {t('account.copySecret')}</>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3 – Enter code */}
+            <div className="flex gap-3 items-start">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold flex items-center justify-center">3</span>
+              <div className="flex-1 space-y-2">
+                <p className="text-xs font-medium text-white">{t('account.step3Desc')}</p>
+                <input
+                  value={twoFaCode}
+                  onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="w-full rounded-lg border border-white/[0.08] bg-[#0d0d14] px-3 py-2.5 text-base text-white outline-none focus:border-emerald-500/50 font-mono tracking-[0.4em] text-center"
+                  placeholder="• • • • • •"
+                  maxLength={6}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                />
+              </div>
+            </div>
+
             <button
               type="submit"
-              disabled={twoFaSaving}
-              className="mt-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-semibold px-3 py-1.5 disabled:opacity-60"
+              disabled={twoFaSaving || twoFaCode.length < 6}
+              className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold px-4 py-2.5 disabled:opacity-50 transition-colors"
             >
               {twoFaSaving ? t('common.enabling') : t('account.enable2fa')}
             </button>

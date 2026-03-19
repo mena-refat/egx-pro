@@ -5,12 +5,14 @@ import {
   CreditCard,
   Gift,
   Trophy,
+  BarChart2,
 } from 'lucide-react';
 
 const SETTINGS_TABS = [
-  { id: 'account', path: '/settings/account', labelKey: 'settings.account', icon: User },
+  { id: 'account',   path: '/settings/account',   labelKey: 'settings.account',         icon: User },
+  { id: 'investor',  path: '/settings/investor',  labelKey: 'settings.investorProfile',  icon: BarChart2 },
   { id: 'subscription', path: '/settings/subscription', labelKey: 'settings.subscription', icon: CreditCard },
-  { id: 'referrals', path: '/settings/referrals', labelKey: 'settings.referrals', icon: Gift },
+  { id: 'referrals', path: '/settings/referrals', labelKey: 'settings.referrals',        icon: Gift },
   { id: 'achievements', path: '/settings/achievements', labelKey: 'settings.achievements', icon: Trophy },
 ];
 
