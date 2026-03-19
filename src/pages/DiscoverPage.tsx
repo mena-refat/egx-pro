@@ -145,8 +145,7 @@ export default function DiscoverPage() {
   // Discover feed
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [communityFeed, setCommunityFeed] = useState<FeedPrediction[]>([]);
-  const [discoverLoading, setDiscoverLoading] = useState(false);
-  const [discoverLoaded, setDiscoverLoaded] = useState(false);
+  const [discoverLoading, setDiscoverLoading] = useState(true);
 
   // Load followers/following on tab switch
   const loadList = useCallback(
@@ -182,7 +181,7 @@ export default function DiscoverPage() {
       } catch {
         // ignore — cancelled or network error, just show empty state
       } finally {
-        if (!signal?.aborted && mountedRef.current) setListLoading(false);
+        if (mountedRef.current) setListLoading(false);
       }
     },
     [accessToken]
@@ -202,9 +201,8 @@ export default function DiscoverPage() {
     void (async () => {
       if (!mountedRef.current) return;
       setDiscoverLoading(true);
-      setDiscoverLoaded(false);
       // timeout 8s — never hang forever
-      const timeoutId = setTimeout(() => { if (!controller.signal.aborted) setDiscoverLoading(false); }, 8000);
+      const timeoutId = setTimeout(() => { if (mountedRef.current) setDiscoverLoading(false); }, 8000);
       try {
         const [lb, feed, fwrs, fwng, reqs] = await Promise.allSettled([
           api.get('/predictions/leaderboard?period=month&limit=5', {
@@ -254,14 +252,11 @@ export default function DiscoverPage() {
             : (d as { requests?: PendingRequest[] })?.requests ?? [];
           setRequestsCount(list.length);
         }
-      } catch (err) {
-        if ((err as { code?: string }).code === 'ERR_CANCELED') return;
+      } catch {
+        // ignore — allSettled handles individual failures
       } finally {
         clearTimeout(timeoutId);
-        if (!controller.signal.aborted) {
-          setDiscoverLoading(false);
-          setDiscoverLoaded(true);
-        }
+        if (mountedRef.current) setDiscoverLoading(false);
       }
     })();
 
@@ -273,9 +268,7 @@ export default function DiscoverPage() {
   useEffect(() => {
     if (activeTab === 'discover') return;
     const controller = new AbortController();
-    queueMicrotask(() => {
-      void loadList(activeTab, controller.signal);
-    });
+    void loadList(activeTab, controller.signal);
     return () => controller.abort();
   }, [activeTab, loadList]);
 
@@ -429,7 +422,7 @@ export default function DiscoverPage() {
             <div className={styles.discoverContent}>
               {discoverLoading ? (
                 <DiscoverSkeleton />
-              ) : discoverLoaded ? (
+              ) : (
                 <>
                   {/* Leaderboard */}
                   {leaderboard.length > 0 && (
@@ -539,7 +532,7 @@ export default function DiscoverPage() {
                     />
                   )}
                 </>
-              ) : null}
+              )}
             </div>
           )}
 

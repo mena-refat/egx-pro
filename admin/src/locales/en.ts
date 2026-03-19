@@ -296,6 +296,18 @@ export const en = {
     originalMessage: 'Original Message',
     agentFilter: 'Filter by Agent',
     priorityFilter: 'Priority',
+    escalate: 'Escalate to Manager',
+    escalateTitle: 'Escalate Ticket',
+    escalateDesc: 'Flag this ticket as difficult and send it to your manager for help.',
+    escalateNote: 'Comment (optional)',
+    escalateNotePlaceholder: 'Describe what you need help with...',
+    escalateConfirm: 'Escalate',
+    escalating: 'Escalating...',
+    escalated: 'Escalated',
+    escalatedBadge: 'Escalated',
+    escalatedNote: 'Escalation note',
+    escalateNoManager: 'You do not have a manager assigned. Contact Super Admin.',
+    alreadyEscalated: 'This ticket has already been escalated.',
   },
 
   account: {

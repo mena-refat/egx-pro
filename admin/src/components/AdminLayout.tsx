@@ -27,7 +27,7 @@ export function AdminLayout() {
   const [openTickets, setOpenTickets] = useState(0);
 
   const NAV = [
-    { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard, permission: null, end: true },
+    { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard, permission: 'analytics.view', end: true },
     { to: '/users', label: t('nav.users'), icon: Users, permission: 'users.view' },
     { to: '/revenue', label: t('nav.revenue'), icon: DollarSign, permission: 'analytics.view' },
     { to: '/discounts', label: t('nav.discounts'), icon: Tag, permission: 'discounts.view' },

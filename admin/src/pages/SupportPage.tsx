@@ -7,7 +7,7 @@ import { Pagination } from '../components/Pagination';
 import {
   RefreshCw, Users, Star, UserCheck,
   CheckSquare, ArrowUpDown, TrendingUp, ChevronRight, AlertTriangle,
-  Inbox, Send, X, Filter,
+  Inbox, Send, X, Filter, ArrowUpCircle,
 } from 'lucide-react';
 import { useAdminStore } from '../store/adminAuthStore';
 
@@ -17,6 +17,8 @@ type Ticket = {
   assignedTo: number | null; assignedAt: string | null;
   assignedAgent: { fullName: string; email: string } | null;
   reply: string | null; repliedAt: string | null; rating: number | null;
+  escalatedAt: string | null; escalatedBy: number | null; escalationNote: string | null;
+  escalatedToManager: number | null;
   createdAt: string;
   user: { id: number; email: string | null; username: string | null; fullName: string | null; plan: string };
 };
@@ -216,6 +218,12 @@ export default function SupportPage() {
   const [assigning, setAssigning]       = useState(false);
   const [agents, setAgents]             = useState<Agent[]>([]);
 
+  /* Escalate */
+  const [escalateTarget, setEscalateTarget] = useState<Ticket | null>(null);
+  const [escalateNote, setEscalateNote]     = useState('');
+  const [escalating, setEscalating]         = useState(false);
+  const [escalateError, setEscalateError]   = useState('');
+
   /* Bulk */
   const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set());
   const [bulkAgentId, setBulkAgentId]     = useState('');
@@ -328,6 +336,26 @@ export default function SupportPage() {
       setSelectedIds(new Set()); setBulkAgentId('');
       void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
     } finally { setBulkAssigning(false); }
+  };
+
+  const handleEscalate = async () => {
+    if (!escalateTarget) return;
+    setEscalating(true);
+    setEscalateError('');
+    try {
+      await adminApi.post(`/support/${escalateTarget.id}/escalate`, { note: escalateNote });
+      setEscalateTarget(null);
+      setEscalateNote('');
+      setSelected(null);
+      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
+    } catch (err: any) {
+      const code = err?.response?.data?.error;
+      if (code === 'NO_MANAGER_ASSIGNED') setEscalateError(t('support.escalateNoManager'));
+      else if (code === 'ALREADY_ESCALATED') setEscalateError(t('support.alreadyEscalated'));
+      else setEscalateError(t('login.loginFailed'));
+    } finally {
+      setEscalating(false);
+    }
   };
 
   const applyFilter = (s: string, pr: string, a: string, srt: string) => {
@@ -548,6 +576,11 @@ export default function SupportPage() {
                           <Star size={9} fill="currentColor" /> {tk.rating}
                         </span>
                       )}
+                      {tk.escalatedAt && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/15 flex items-center gap-0.5">
+                          <ArrowUpCircle size={8} /> {t('support.escalatedBadge')}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -617,6 +650,20 @@ export default function SupportPage() {
                       )}
                     </div>
                   )}
+                  {/* Escalation note (visible to managers) */}
+                  {selected.escalatedAt && managerMode && (
+                    <div className="rounded-lg bg-orange-500/5 border border-orange-500/20 px-3 py-2.5">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-[10px] text-orange-400 font-medium flex items-center gap-1">
+                          <ArrowUpCircle size={9} /> {t('support.escalatedBadge')}
+                        </p>
+                        <p className="text-[10px] text-slate-600">{timeAgo(selected.escalatedAt)}</p>
+                      </div>
+                      {selected.escalationNote && (
+                        <p className="text-xs text-slate-300 leading-relaxed">{selected.escalationNote}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}
@@ -629,6 +676,22 @@ export default function SupportPage() {
                     >
                       <UserCheck size={12} /> {t('support.assign')}
                     </button>
+                  )}
+
+                  {/* Escalate button — agents only, assigned to current agent, not yet escalated */}
+                  {!managerMode && canReply && selected.assignedTo === currentAdmin?.id && !selected.escalatedAt && (
+                    <button
+                      onClick={() => { setEscalateTarget(selected); setEscalateNote(''); setEscalateError(''); }}
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-orange-500/25 text-orange-400 hover:bg-orange-500/10 transition-all"
+                    >
+                      <ArrowUpCircle size={12} /> {t('support.escalate')}
+                    </button>
+                  )}
+                  {/* Escalated label */}
+                  {!managerMode && selected.escalatedAt && (
+                    <div className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs rounded-lg border border-orange-500/15 bg-orange-500/5 text-orange-400">
+                      <ArrowUpCircle size={12} /> {t('support.escalated')} · {timeAgo(selected.escalatedAt)}
+                    </div>
                   )}
 
                   {/* Reply form */}
@@ -785,6 +848,55 @@ export default function SupportPage() {
           <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-600 hover:text-slate-300 transition-colors">✕</button>
         </div>
       )}
+
+      {/* ── Escalate Modal ── */}
+      <Modal
+        open={!!escalateTarget}
+        onClose={() => { setEscalateTarget(null); setEscalateNote(''); setEscalateError(''); }}
+        title={t('support.escalateTitle')}
+      >
+        {escalateTarget && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-2.5 rounded-lg bg-orange-500/5 border border-orange-500/20 px-3 py-3">
+              <ArrowUpCircle size={14} className="text-orange-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-slate-400 leading-relaxed">{t('support.escalateDesc')}</p>
+            </div>
+            <div className="bg-[#0d0d14] rounded-lg p-3 border border-white/[0.06]">
+              <p className="text-sm font-semibold text-white">{escalateTarget.subject}</p>
+              <p className="text-xs text-slate-500 mt-1 truncate">{escalateTarget.message}</p>
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 block mb-1.5">{t('support.escalateNote')}</label>
+              <textarea
+                value={escalateNote}
+                onChange={(e) => setEscalateNote(e.target.value)}
+                rows={3}
+                placeholder={t('support.escalateNotePlaceholder')}
+                className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-orange-500/50 resize-none placeholder-slate-600"
+              />
+            </div>
+            {escalateError && (
+              <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{escalateError}</p>
+            )}
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => { setEscalateTarget(null); setEscalateNote(''); setEscalateError(''); }}
+                className="px-4 py-2 text-sm text-slate-400"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={() => void handleEscalate()}
+                disabled={escalating}
+                className="px-4 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-400 text-white rounded-lg disabled:opacity-50 transition-all flex items-center gap-1.5"
+              >
+                <ArrowUpCircle size={13} />
+                {escalating ? t('support.escalating') : t('support.escalateConfirm')}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* ── Assign Modal ── */}
       <Modal open={!!assignTarget} onClose={() => setAssignTarget(null)} title={t('support.assignTicket')}>

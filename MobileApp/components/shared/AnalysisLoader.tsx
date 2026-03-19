@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, Animated, Easing } from 'react-native';
+import { View, Text, Animated, Easing, StyleSheet } from 'react-native';
 import { Sparkles, Brain, GitCompare, Star } from 'lucide-react-native';
 
 const PROGRESS_DURATION_MS = 70_000; // يصل لـ 90% في ~70 ثانية
@@ -46,9 +46,12 @@ export function AnalysisLoader({ variant }: Props) {
   const [progress, setProgress] = useState(0);
   const [msgIndex, setMsgIndex] = useState(0);
   const startRef = useRef(Date.now());
-  const sparkleAnim = useRef(new Animated.Value(0)).current;
+  const sparkleAnim = useRef(new Animated.Value(0.4)).current;
+  // Animated.Value for the progress bar width (0 → 1) so we never pass a
+  // string percentage to Animated.View — which causes a render crash.
+  const progressAnim = useRef(new Animated.Value(0)).current;
 
-  // Sparkle pulse animation
+  // Sparkle pulse animation (opacity only — useNativeDriver safe)
   useEffect(() => {
     const pulse = Animated.loop(
       Animated.sequence([
@@ -60,17 +63,26 @@ export function AnalysisLoader({ variant }: Props) {
     return () => pulse.stop();
   }, [sparkleAnim]);
 
-  // Progress bar
+  // Progress bar — drive state AND the Animated.Value in sync
   useEffect(() => {
     startRef.current = Date.now();
     setProgress(0);
+    progressAnim.setValue(0);
     const timer = setInterval(() => {
       const elapsed = Date.now() - startRef.current;
       const p = Math.min(PROGRESS_CAP, (elapsed / PROGRESS_DURATION_MS) * PROGRESS_CAP);
-      setProgress(Math.round(p));
+      const rounded = Math.round(p);
+      setProgress(rounded);
+      // Drive the Animated.Value as a fraction (0–1) — avoids string-percentage crashes
+      Animated.timing(progressAnim, {
+        toValue: rounded / 100,
+        duration: 350,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false, // width layout animation requires JS driver
+      }).start();
     }, 400);
     return () => clearInterval(timer);
-  }, []);
+  }, [progressAnim]);
 
   // Rotating messages
   useEffect(() => {
@@ -82,8 +94,8 @@ export function AnalysisLoader({ variant }: Props) {
     return () => clearInterval(timer);
   }, [variant]);
 
-  const messages = MESSAGES[variant];
-  const { Icon, color, bg } = ICONS[variant];
+  const messages = MESSAGES[variant] ?? MESSAGES.analyze;
+  const { Icon, color, bg } = ICONS[variant] ?? ICONS.analyze;
   const progressColor = progress < 30 ? '#8b5cf6' : progress < 65 ? '#3b82f6' : '#4ade80';
 
   return (
@@ -112,10 +124,17 @@ export function AnalysisLoader({ variant }: Props) {
 
       {/* Progress bar */}
       <View className="gap-1.5">
-        <View className="h-2 bg-[#21262d] rounded-full overflow-hidden">
+        <View style={styles.track}>
           <Animated.View
-            className="h-full rounded-full"
-            style={{ width: `${progress}%`, backgroundColor: progressColor }}
+            style={[
+              styles.fill,
+              {
+                // Use Animated.Value as a multiplier of the container width
+                // Never pass a template-string percentage to Animated.View
+                width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+                backgroundColor: progressColor,
+              },
+            ]}
           />
         </View>
         <Text className="text-xs text-[#656d76] text-center">
@@ -147,3 +166,16 @@ export function AnalysisLoader({ variant }: Props) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  track: {
+    height: 8,
+    backgroundColor: '#21262d',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+});

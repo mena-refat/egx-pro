@@ -296,6 +296,18 @@ export const ar = {
     originalMessage: 'الرسالة الأصلية',
     agentFilter: 'تصفية حسب الموظف',
     priorityFilter: 'الأولوية',
+    escalate: 'تصعيد للمدير',
+    escalateTitle: 'تصعيد التذكرة',
+    escalateDesc: 'أبلغ مديرك بتذكرة صعبة تحتاج مساعدته.',
+    escalateNote: 'تعليق (اختياري)',
+    escalateNotePlaceholder: 'اشرح ما تحتاج مساعدة فيه...',
+    escalateConfirm: 'تصعيد',
+    escalating: 'جار التصعيد...',
+    escalated: 'مُصعَّد',
+    escalatedBadge: 'مُصعَّد',
+    escalatedNote: 'ملاحظة التصعيد',
+    escalateNoManager: 'لا يوجد مدير مُعين لك. تواصل مع المشرف الرئيسي.',
+    alreadyEscalated: 'هذه التذكرة مُصعَّدة بالفعل.',
   },
 
   account: {

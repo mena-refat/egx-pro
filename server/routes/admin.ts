@@ -196,6 +196,15 @@ router.patch(
   }
 );
 
+router.post(
+  '/support/:id/escalate',
+  adminAuthenticate,
+  requirePermission('support.reply'),
+  (req, res, next) => {
+    void AdminSupportController.escalate(req as any, res).catch(next);
+  }
+);
+
 router.patch(
   '/support/:id/status',
   adminAuthenticate,

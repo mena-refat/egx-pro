@@ -35,28 +35,40 @@ function App() {
     );
   }
 
+  const perms = admin.permissions ?? [];
+  const isSuperAdmin = admin.role === 'SUPER_ADMIN';
+  const canSeeDashboard = isSuperAdmin || perms.includes('analytics.view');
+
+  // First accessible page for redirect
+  const defaultRoute = canSeeDashboard ? '/'
+    : perms.some((p) => ['support.view', 'support.manage', 'support.reply'].includes(p)) ? '/support'
+    : perms.includes('users.view') ? '/users'
+    : perms.some((p) => ['discounts.view', 'discounts.manage'].includes(p)) ? '/discounts'
+    : perms.includes('notifications.send') ? '/notifications'
+    : '/account';
+
   return (
     <BrowserRouter basename="/admin">
       <ErrorBoundary>
         <Suspense fallback={<div />}>
           <Routes>
             <Route element={<AdminLayout />}>
-              <Route path="/" element={<DashboardPage />} />
+              <Route path="/" element={canSeeDashboard ? <DashboardPage /> : <Navigate to={defaultRoute} replace />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/users/:id" element={<UserDetailPage />} />
               <Route path="/revenue" element={<RevenuePage />} />
               <Route path="/discounts" element={<DiscountsPage />} />
               <Route path="/support" element={<SupportPage />} />
               <Route path="/account" element={<AdminAccountPage />} />
-              {admin.role === 'SUPER_ADMIN' && (
+              {isSuperAdmin && (
                 <Route path="/admins" element={<AdminsPage />} />
               )}
-              {admin.role === 'SUPER_ADMIN' && (
+              {isSuperAdmin && (
                 <Route path="/audit" element={<AuditLogPage />} />
               )}
               <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to={defaultRoute} replace />} />
           </Routes>
         </Suspense>
       </ErrorBoundary>

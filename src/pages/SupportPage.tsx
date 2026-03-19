@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import {
   LifeBuoy, Plus, Clock, CheckCircle2, XCircle,
   Send, AlertCircle, ArrowLeft, Inbox, MessageSquare,
-  RefreshCw, Star,
+  RefreshCw, Star, Ban,
 } from 'lucide-react';
 import api from '../lib/api';
 
-type TicketStatus   = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+type TicketStatus   = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'CANCELLED';
 type TicketPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 
 interface SupportTicket {
@@ -30,7 +30,8 @@ const STATUS_CFG: Record<TicketStatus, { label_en: string; label_ar: string; col
   OPEN:        { label_en: 'Open',        label_ar: 'مفتوحة',        color: 'text-blue-500   bg-blue-500/10',   icon: Clock        },
   IN_PROGRESS: { label_en: 'In Progress', label_ar: 'قيد المعالجة', color: 'text-yellow-500 bg-yellow-500/10', icon: AlertCircle  },
   RESOLVED:    { label_en: 'Resolved',    label_ar: 'محلولة',        color: 'text-green-500  bg-green-500/10',  icon: CheckCircle2 },
-  CLOSED:      { label_en: 'Closed',      label_ar: 'مغلقة',         color: 'text-[var(--text-muted)] bg-[var(--bg-card-hover)]', icon: XCircle },
+  CLOSED:      { label_en: 'Closed',      label_ar: 'مغلقة',         color: 'text-[var(--text-muted)] bg-[var(--bg-card-hover)]', icon: XCircle     },
+  CANCELLED:   { label_en: 'Cancelled',   label_ar: 'ملغية',         color: 'text-red-400    bg-red-400/10',    icon: Ban          },
 };
 
 function relativeTime(dateStr: string, isAr: boolean): string {
@@ -149,12 +150,30 @@ function TicketDetail({
   isAr,
   onBack,
   onRated,
+  onCancelled,
 }: {
   ticket: SupportTicket;
   isAr: boolean;
   onBack: () => void;
   onRated: (rating: number) => void;
+  onCancelled: () => void;
 }) {
+  const [cancelling, setCancelling] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      await api.patch(`/support/${ticket.id}/cancel`);
+      onCancelled();
+    } catch { /* silent */ } finally {
+      setCancelling(false);
+      setConfirmCancel(false);
+    }
+  };
+
+  const canCancel = ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS';
+
   return (
     <div className="flex flex-col gap-4">
       {/* Back + header */}
@@ -230,6 +249,45 @@ function TicketDetail({
       {/* Rating — show only when resolved/closed */}
       {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && (
         <RatingWidget ticket={ticket} isAr={isAr} onRated={onRated} />
+      )}
+
+      {/* Cancel ticket — only when open/in-progress */}
+      {canCancel && (
+        <div className="border border-[var(--border)] rounded-2xl p-4">
+          {!confirmCancel ? (
+            <button
+              onClick={() => setConfirmCancel(true)}
+              className="flex items-center gap-2 text-sm text-red-400 hover:text-red-500 transition-colors"
+            >
+              <Ban className="w-4 h-4" />
+              {isAr ? 'إلغاء الطلب' : 'Cancel request'}
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-[var(--text-secondary)]">
+                {isAr ? 'هل أنت متأكد أنك تريد إلغاء هذا الطلب؟' : 'Are you sure you want to cancel this request?'}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCancel}
+                  disabled={cancelling}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 text-red-500 text-sm font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                >
+                  <Ban className="w-3.5 h-3.5" />
+                  {cancelling
+                    ? (isAr ? 'جاري الإلغاء...' : 'Cancelling...')
+                    : (isAr ? 'نعم، ألغِ الطلب' : 'Yes, cancel')}
+                </button>
+                <button
+                  onClick={() => setConfirmCancel(false)}
+                  className="px-4 py-2 rounded-xl text-sm text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                >
+                  {isAr ? 'لا، ارجع' : 'No, go back'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -392,9 +450,10 @@ function StatsBar({ tickets, isAr }: { tickets: SupportTicket[]; isAr: boolean }
   const inProgress = tickets.filter(t => t.status === 'IN_PROGRESS').length;
   const resolved   = tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length;
   const unread     = tickets.filter(t => t.reply && !t.replyRead).length;
+  const active     = tickets.filter(t => t.status !== 'CANCELLED').length;
 
   const items = [
-    { label: isAr ? 'الكل' : 'Total',       value: tickets.length, color: 'text-[var(--text-primary)]' },
+    { label: isAr ? 'الكل' : 'Total',       value: active,         color: 'text-[var(--text-primary)]' },
     { label: isAr ? 'مفتوحة' : 'Open',      value: open,           color: 'text-blue-500'              },
     { label: isAr ? 'معالجة' : 'Active',    value: inProgress,     color: 'text-yellow-500'            },
     { label: isAr ? 'محلولة' : 'Resolved',  value: resolved,       color: 'text-green-500'             },
@@ -597,6 +656,10 @@ export default function SupportPage() {
           onRated={(rating) => {
             setSelected(prev => prev ? { ...prev, rating } : prev);
             setTickets(prev => prev.map(t => t.id === selected.id ? { ...t, rating } : t));
+          }}
+          onCancelled={() => {
+            setTickets(prev => prev.map(t => t.id === selected.id ? { ...t, status: 'CANCELLED' as TicketStatus } : t));
+            setSelected(prev => prev ? { ...prev, status: 'CANCELLED' as TicketStatus } : prev);
           }}
         />
       </div>

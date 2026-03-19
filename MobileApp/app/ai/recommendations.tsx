@@ -67,18 +67,14 @@ function RecommendationCard({ stock, rank }: { stock: RecommendedStock; rank: nu
       ) : null}
 
       <View className="gap-1.5">
-        {stock.strengths?.slice(0, 2).map((s, i) => (
-          <View key={i} className="flex-row gap-2 items-start">
-            <CheckCircle size={12} color="#4ade80" style={{ marginTop: 2 }} />
-            <Text className="flex-1 text-xs text-[#e6edf3] leading-4">{s}</Text>
-          </View>
-        ))}
-        {stock.risks?.slice(0, 1).map((r, i) => (
-          <View key={i} className="flex-row gap-2 items-start">
-            <AlertTriangle size={12} color="#fbbf24" style={{ marginTop: 2 }} />
-            <Text className="flex-1 text-xs text-[#e6edf3] leading-4">{r}</Text>
-          </View>
-        ))}
+        {stock.strengths?.slice(0, 2).map((s, i) => {
+          const t = typeof s === 'string' ? s : String(s ?? ''); if (!t) return null;
+          return (<View key={i} className="flex-row gap-2 items-start"><CheckCircle size={12} color="#4ade80" style={{ marginTop: 2 }} /><Text className="flex-1 text-xs text-[#e6edf3] leading-4">{t}</Text></View>);
+        })}
+        {stock.risks?.slice(0, 1).map((r, i) => {
+          const t = typeof r === 'string' ? r : String(r ?? ''); if (!t) return null;
+          return (<View key={i} className="flex-row gap-2 items-start"><AlertTriangle size={12} color="#fbbf24" style={{ marginTop: 2 }} /><Text className="flex-1 text-xs text-[#e6edf3] leading-4">{t}</Text></View>);
+        })}
       </View>
     </View>
   );

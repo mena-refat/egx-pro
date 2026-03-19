@@ -417,6 +417,43 @@ export const AdminSupportController = {
     sendSuccess(res, { managers: result, globalUnassigned: unassignedOpen });
   },
 
+  async escalate(req: AdminRequest, res: Response): Promise<void> {
+    const { id } = req.params as { id: string };
+    const { note } = req.body as { note?: string };
+
+    // Only agents (non-managers) with support.reply can escalate
+    if (isManager(req.admin)) {
+      sendError(res, 'ADMIN_FORBIDDEN', 403);
+      return;
+    }
+
+    const ticket = await prisma.supportTicket.findUnique({ where: { id }, select: { assignedTo: true, escalatedAt: true } });
+    if (!ticket) { sendError(res, 'NOT_FOUND', 404); return; }
+    if (ticket.assignedTo !== req.admin!.id) { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
+    if (ticket.escalatedAt) { sendError(res, 'ALREADY_ESCALATED', 400); return; }
+
+    // Get the agent's manager
+    const agent = await prisma.admin.findUnique({ where: { id: req.admin!.id }, select: { managerId: true } });
+    if (!agent?.managerId) { sendError(res, 'NO_MANAGER_ASSIGNED', 400); return; }
+
+    const updated = await prisma.supportTicket.update({
+      where: { id },
+      data: {
+        escalatedAt: new Date(),
+        escalatedBy: req.admin!.id,
+        escalationNote: note?.trim() || null,
+        escalatedToManager: agent.managerId,
+        priority: 'HIGH',
+      },
+    });
+
+    if (req.admin) {
+      await adminAudit(req.admin.id, 'SUPPORT_ESCALATED', id, note?.trim() || '', req);
+    }
+
+    sendSuccess(res, updated);
+  },
+
   async stats(_req: AdminRequest, res: Response): Promise<void> {
     const [open, inProgress, resolved, closed] = await Promise.all([
       prisma.supportTicket.count({ where: { status: 'OPEN' } }),

@@ -197,7 +197,7 @@ export default function AnalyzePage() {
         )}
 
         {/* Result */}
-        {result && !loading && (
+        {result && !loading && typeof result === 'object' && (
           <View className="gap-4">
             {/* Score + Verdict */}
             <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-5 flex-row items-center gap-4">
@@ -248,24 +248,36 @@ export default function AnalyzePage() {
             {/* Strengths / Weaknesses / Risks */}
             {(result.strengths?.length || result.weaknesses?.length || result.risks?.length) ? (
               <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 gap-3">
-                {result.strengths?.map((s, i) => (
-                  <View key={i} className="flex-row gap-2 items-start">
-                    <CheckCircle size={14} color="#4ade80" style={{ marginTop: 2 }} />
-                    <Text className="flex-1 text-sm text-[#e6edf3] leading-5">{s}</Text>
-                  </View>
-                ))}
-                {result.weaknesses?.map((w, i) => (
-                  <View key={i} className="flex-row gap-2 items-start">
-                    <XCircle size={14} color="#f87171" style={{ marginTop: 2 }} />
-                    <Text className="flex-1 text-sm text-[#e6edf3] leading-5">{w}</Text>
-                  </View>
-                ))}
-                {result.risks?.map((r, i) => (
-                  <View key={i} className="flex-row gap-2 items-start">
-                    <AlertTriangle size={14} color="#fbbf24" style={{ marginTop: 2 }} />
-                    <Text className="flex-1 text-sm text-[#e6edf3] leading-5">{r}</Text>
-                  </View>
-                ))}
+                {result.strengths?.map((s, i) => {
+                  const text = typeof s === 'string' ? s : String(s ?? '');
+                  if (!text) return null;
+                  return (
+                    <View key={i} className="flex-row gap-2 items-start">
+                      <CheckCircle size={14} color="#4ade80" style={{ marginTop: 2 }} />
+                      <Text className="flex-1 text-sm text-[#e6edf3] leading-5">{text}</Text>
+                    </View>
+                  );
+                })}
+                {result.weaknesses?.map((w, i) => {
+                  const text = typeof w === 'string' ? w : String(w ?? '');
+                  if (!text) return null;
+                  return (
+                    <View key={i} className="flex-row gap-2 items-start">
+                      <XCircle size={14} color="#f87171" style={{ marginTop: 2 }} />
+                      <Text className="flex-1 text-sm text-[#e6edf3] leading-5">{text}</Text>
+                    </View>
+                  );
+                })}
+                {result.risks?.map((r, i) => {
+                  const text = typeof r === 'string' ? r : String(r ?? '');
+                  if (!text) return null;
+                  return (
+                    <View key={i} className="flex-row gap-2 items-start">
+                      <AlertTriangle size={14} color="#fbbf24" style={{ marginTop: 2 }} />
+                      <Text className="flex-1 text-sm text-[#e6edf3] leading-5">{text}</Text>
+                    </View>
+                  );
+                })}
               </View>
             ) : null}
 

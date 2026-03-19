@@ -123,24 +123,18 @@ function StockCard({ side, label, isWinner }: { side: StockSide; label: string; 
         <Text className="text-xs text-[#8b949e] leading-5" numberOfLines={3}>{str(side.fundamental)}</Text>
       ) : null}
       <View className="gap-1">
-        {side.strengths?.slice(0, 2).map((s, i) => (
-          <View key={i} className="flex-row gap-1.5 items-start">
-            <CheckCircle size={11} color="#4ade80" style={{ marginTop: 2 }} />
-            <Text className="flex-1 text-xs text-[#e6edf3] leading-4">{s}</Text>
-          </View>
-        ))}
-        {side.weaknesses?.slice(0, 2).map((w, i) => (
-          <View key={i} className="flex-row gap-1.5 items-start">
-            <XCircle size={11} color="#f87171" style={{ marginTop: 2 }} />
-            <Text className="flex-1 text-xs text-[#e6edf3] leading-4">{w}</Text>
-          </View>
-        ))}
-        {side.risks?.slice(0, 1).map((r, i) => (
-          <View key={i} className="flex-row gap-1.5 items-start">
-            <AlertTriangle size={11} color="#fbbf24" style={{ marginTop: 2 }} />
-            <Text className="flex-1 text-xs text-[#e6edf3] leading-4">{r}</Text>
-          </View>
-        ))}
+        {side.strengths?.slice(0, 2).map((s, i) => {
+          const t = typeof s === 'string' ? s : String(s ?? ''); if (!t) return null;
+          return (<View key={i} className="flex-row gap-1.5 items-start"><CheckCircle size={11} color="#4ade80" style={{ marginTop: 2 }} /><Text className="flex-1 text-xs text-[#e6edf3] leading-4">{t}</Text></View>);
+        })}
+        {side.weaknesses?.slice(0, 2).map((w, i) => {
+          const t = typeof w === 'string' ? w : String(w ?? ''); if (!t) return null;
+          return (<View key={i} className="flex-row gap-1.5 items-start"><XCircle size={11} color="#f87171" style={{ marginTop: 2 }} /><Text className="flex-1 text-xs text-[#e6edf3] leading-4">{t}</Text></View>);
+        })}
+        {side.risks?.slice(0, 1).map((r, i) => {
+          const t = typeof r === 'string' ? r : String(r ?? ''); if (!t) return null;
+          return (<View key={i} className="flex-row gap-1.5 items-start"><AlertTriangle size={11} color="#fbbf24" style={{ marginTop: 2 }} /><Text className="flex-1 text-xs text-[#e6edf3] leading-4">{t}</Text></View>);
+        })}
       </View>
     </View>
   );

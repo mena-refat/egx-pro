@@ -65,6 +65,25 @@ router.patch('/:id/rate', authenticate, async (req, res) => {
   sendSuccess(res, { ok: true });
 });
 
+router.patch('/:id/cancel', authenticate, async (req, res) => {
+  const userId = (req as AuthRequest).user?.id;
+  const { id } = req.params as { id: string };
+  if (!userId) { sendError(res, 'UNAUTHORIZED', 401); return; }
+
+  const ticket = await prisma.supportTicket.findUnique({ where: { id } });
+  if (!ticket || ticket.userId !== userId) { sendError(res, 'NOT_FOUND', 404); return; }
+  if (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' || ticket.status === 'CANCELLED') {
+    sendError(res, 'TICKET_ALREADY_CLOSED', 400); return;
+  }
+
+  await prisma.supportTicket.update({
+    where: { id },
+    data: { status: 'CANCELLED' as never },
+  });
+
+  sendSuccess(res, { ok: true });
+});
+
 router.patch('/:id/read-reply', authenticate, async (req, res) => {
   const userId = (req as AuthRequest).user?.id;
   const { id } = req.params as { id: string };
