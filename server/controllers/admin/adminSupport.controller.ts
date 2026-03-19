@@ -12,7 +12,7 @@ function isManager(admin: AdminRequest['admin']): boolean {
 
 export const AdminSupportController = {
   async list(req: AdminRequest, res: Response): Promise<void> {
-    const { page = '1', status = '', priority = '', agentId = '' } = req.query as Record<string, string>;
+    const { page = '1', status = '', priority = '', agentId = '', sort = '' } = req.query as Record<string, string>;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const manager = isManager(req.admin);
 
@@ -28,13 +28,27 @@ export const AdminSupportController = {
       where.assignedTo = parseInt(agentId, 10);
     }
 
+    // Sort order — agents default to oldest first so they answer longest-waiting users
+    let orderBy: object[];
+    if (sort === 'newest') {
+      orderBy = [{ createdAt: 'desc' }];
+    } else if (sort === 'priority') {
+      orderBy = [{ priority: 'desc' }, { createdAt: 'asc' }];
+    } else if (sort === 'oldest' || !manager) {
+      // Explicit oldest, or agent default
+      orderBy = [{ createdAt: 'asc' }];
+    } else {
+      // Manager default: priority first, then newest
+      orderBy = [{ priority: 'desc' }, { createdAt: 'desc' }];
+    }
+
     const [tickets, total] = await Promise.all([
       prisma.supportTicket.findMany({
         where,
         include: {
           user: { select: { id: true, email: true, username: true, fullName: true, plan: true } },
         },
-        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
+        orderBy,
         skip: (pageNum - 1) * 20,
         take: 20,
       }),
@@ -163,11 +177,9 @@ export const AdminSupportController = {
       isActive: true,
       permissions: { has: 'support.reply' },
     };
-    // Non-super-admin managers see only their team
-    if (!isManager(req.admin) || req.admin!.role !== 'SUPER_ADMIN') {
-      if (req.admin!.role !== 'SUPER_ADMIN') {
-        where.managerId = req.admin!.id;
-      }
+    // Managers (non-super-admin) see only agents assigned to them
+    if (req.admin!.role !== 'SUPER_ADMIN') {
+      where.managerId = req.admin!.id;
     }
     const agents = await prisma.admin.findMany({
       where,

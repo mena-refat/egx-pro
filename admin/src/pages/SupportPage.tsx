@@ -5,7 +5,7 @@ import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { Pagination } from '../components/Pagination';
-import { MessageSquare, RefreshCw, Users, Clock, Star, UserCheck, UserPlus, CheckSquare } from 'lucide-react';
+import { MessageSquare, RefreshCw, Users, Clock, Star, UserCheck, UserPlus, CheckSquare, ArrowUpDown } from 'lucide-react';
 
 type Ticket = {
   id: string;
@@ -53,6 +53,7 @@ export default function SupportPage() {
   const [page, setPage]       = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [agentFilter, setAgentFilter]   = useState('');
+  const [sortOrder, setSortOrder]       = useState('oldest'); // agents default: oldest first
   const [loading, setLoading]           = useState(false);
 
   const [selected, setSelected]   = useState<Ticket | null>(null);
@@ -89,11 +90,12 @@ export default function SupportPage() {
   }, [managerMode]);
 
   /* ── Load tickets ── */
-  const load = useCallback(async (p: number, s: string, a: string, currentTab: typeof tab) => {
+  const load = useCallback(async (p: number, s: string, a: string, currentTab: typeof tab, sort: string) => {
     setLoading(true);
     try {
       const params: Record<string, string> = { page: String(p) };
       if (s) params.status = s;
+      if (sort) params.sort = sort;
       if (currentTab === 'unassigned') params.agentId = 'unassigned';
       else if (a) params.agentId = a;
       const r = await adminApi.get('/support', { params });
@@ -113,13 +115,13 @@ export default function SupportPage() {
     setSelectedIds(new Set());
     setStatusFilter('');
     setAgentFilter('');
-    void load(1, '', '', tab);
+    void load(1, '', '', tab, sortOrder);
   }, [tab]); // eslint-disable-line
 
   // Page change → load (skip if triggered by tab reset)
   useEffect(() => {
     if (skipNextPageLoad.current) { skipNextPageLoad.current = false; return; }
-    void load(page, statusFilter, agentFilter, tab);
+    void load(page, statusFilter, agentFilter, tab, sortOrder);
   }, [page]); // eslint-disable-line
 
   /* ── Team stats ── */
@@ -143,7 +145,7 @@ export default function SupportPage() {
     try {
       await adminApi.patch(`/support/${selected.id}/reply`, { reply, status: newStatus });
       setSelected(null); setReply('');
-      void load(page, statusFilter, agentFilter, tab);
+      void load(page, statusFilter, agentFilter, tab, sortOrder);
     } finally { setSaving(false); }
   };
 
@@ -155,7 +157,7 @@ export default function SupportPage() {
         agentId: assignTo ? parseInt(assignTo, 10) : null,
       });
       setAssignTarget(null); setAssignTo('');
-      void load(page, statusFilter, agentFilter, tab);
+      void load(page, statusFilter, agentFilter, tab, sortOrder);
     } finally { setAssigning(false); }
   };
 
@@ -168,7 +170,7 @@ export default function SupportPage() {
         agentId: parseInt(bulkAgentId, 10),
       });
       setSelectedIds(new Set()); setBulkAgentId('');
-      void load(page, statusFilter, agentFilter, tab);
+      void load(page, statusFilter, agentFilter, tab, sortOrder);
     } finally { setBulkAssigning(false); }
   };
 
@@ -192,28 +194,47 @@ export default function SupportPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => void load(page, statusFilter, agentFilter, tab)}
+            onClick={() => void load(page, statusFilter, agentFilter, tab, sortOrder)}
             className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-all"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
           {tab !== 'team' && (
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); void load(1, e.target.value, agentFilter, tab); }}
-              className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
-            >
-              <option value="">{t('support.all')}</option>
-              <option value="OPEN">{t('support.open')}</option>
-              <option value="IN_PROGRESS">{t('support.inProgress')}</option>
-              <option value="RESOLVED">{t('support.resolved')}</option>
-              <option value="CLOSED">{t('support.closed')}</option>
-            </select>
+            <>
+              <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); void load(1, e.target.value, agentFilter, tab, sortOrder); }}
+                className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
+              >
+                <option value="">{t('support.all')}</option>
+                <option value="OPEN">{t('support.open')}</option>
+                <option value="IN_PROGRESS">{t('support.inProgress')}</option>
+                <option value="RESOLVED">{t('support.resolved')}</option>
+                <option value="CLOSED">{t('support.closed')}</option>
+              </select>
+              <div className="flex items-center gap-1.5 px-3 py-2 bg-[#111118] border border-white/[0.08] rounded-lg">
+                <ArrowUpDown size={13} className="text-slate-500 shrink-0" />
+                <select
+                  value={sortOrder}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSortOrder(v);
+                    setPage(1);
+                    void load(1, statusFilter, agentFilter, tab, v);
+                  }}
+                  className="text-sm bg-transparent text-slate-300 focus:outline-none"
+                >
+                  <option value="oldest">{t('support.sortOldest')}</option>
+                  <option value="newest">{t('support.sortNewest')}</option>
+                  <option value="priority">{t('support.sortPriority')}</option>
+                </select>
+              </div>
+            </>
           )}
           {managerMode && tab === 'all' && (
             <select
               value={agentFilter}
-              onChange={(e) => { setAgentFilter(e.target.value); setPage(1); void load(1, statusFilter, e.target.value, tab); }}
+              onChange={(e) => { setAgentFilter(e.target.value); setPage(1); void load(1, statusFilter, e.target.value, tab, sortOrder); }}
               className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
             >
               <option value="">{t('support.allAgents')}</option>

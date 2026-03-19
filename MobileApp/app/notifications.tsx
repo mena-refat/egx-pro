@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
-  ArrowLeft, ArrowRight, Bell, TrendingUp, Briefcase,
+  ArrowLeft, ArrowRight, ChevronLeft, ChevronRight,
+  Bell, TrendingUp, Briefcase,
   Newspaper, Trophy, Target, Settings, CheckCheck, Trash2,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../components/layout/ScreenWrapper';
@@ -232,56 +233,70 @@ export default function NotificationsPage() {
             style={{ backgroundColor: colors.card, borderColor: colors.border }}
             className="mx-4 mt-4 border rounded-2xl overflow-hidden"
           >
-            {items.map((notif, i) => (
-              <Pressable
-                key={notif.id}
-                onPress={() => markOneRead(notif)}
-                style={({ pressed }) => [
-                  {
-                    backgroundColor: pressed
-                      ? colors.hover
-                      : notif.isRead
-                      ? 'transparent'
-                      : `${colors.border}60`,
-                    borderBottomColor: colors.border2,
-                  },
-                  i < items.length - 1 && { borderBottomWidth: 1 },
-                ]}
-                className="flex-row items-start gap-3 px-4 py-3.5"
-              >
-                {/* Icon */}
-                <View
-                  className="w-9 h-9 rounded-full items-center justify-center mt-0.5 shrink-0"
-                  style={{ backgroundColor: iconBg(notif.type) }}
+            {items.map((notif, i) => {
+              const hasRoute = !!notif.route;
+              const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
+              return (
+                <Pressable
+                  key={notif.id}
+                  onPress={() => markOneRead(notif)}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: pressed
+                        ? colors.hover
+                        : notif.isRead
+                        ? 'transparent'
+                        : `${colors.border}55`,
+                      borderBottomColor: colors.border2,
+                    },
+                    i < items.length - 1 && { borderBottomWidth: 1 },
+                  ]}
+                  className="flex-row items-center gap-3 px-4 py-3.5"
                 >
-                  <NotifIcon type={notif.type} />
-                </View>
+                  {/* Unread indicator bar */}
+                  {!notif.isRead && (
+                    <View className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-brand" />
+                  )}
 
-                {/* Content */}
-                <View className="flex-1 gap-0.5">
-                  <View className="flex-row items-center justify-between gap-2">
-                    <Text
-                      style={{ color: colors.text }}
-                      className={`text-sm flex-1 ${notif.isRead ? '' : 'font-semibold'}`}
-                      numberOfLines={1}
-                    >
-                      {notif.title}
-                    </Text>
-                    <Text style={{ color: colors.textMuted }} className="text-[10px] shrink-0">
-                      {timeAgo(notif.createdAt)}
-                    </Text>
+                  {/* Icon */}
+                  <View
+                    className="w-9 h-9 rounded-full items-center justify-center shrink-0"
+                    style={{ backgroundColor: iconBg(notif.type) }}
+                  >
+                    <NotifIcon type={notif.type} />
                   </View>
-                  <Text style={{ color: colors.textSub }} className="text-xs leading-5" numberOfLines={2}>
-                    {notif.body}
-                  </Text>
-                </View>
 
-                {/* Unread dot */}
-                {!notif.isRead && (
-                  <View className="w-2 h-2 rounded-full bg-brand mt-1.5 shrink-0" />
-                )}
-              </Pressable>
-            ))}
+                  {/* Content */}
+                  <View className="flex-1 gap-0.5">
+                    <View className="flex-row items-center gap-2">
+                      <Text
+                        style={{ color: colors.text }}
+                        className={`text-sm flex-1 ${notif.isRead ? '' : 'font-semibold'}`}
+                        numberOfLines={1}
+                      >
+                        {notif.title}
+                      </Text>
+                      <Text style={{ color: colors.textMuted }} className="text-[10px] shrink-0">
+                        {timeAgo(notif.createdAt)}
+                      </Text>
+                    </View>
+                    <Text style={{ color: colors.textSub }} className="text-xs leading-5" numberOfLines={2}>
+                      {notif.body}
+                    </Text>
+                    {hasRoute && (
+                      <Text className="text-[10px] text-brand mt-0.5">اضغط للانتقال ←</Text>
+                    )}
+                  </View>
+
+                  {/* Right: chevron if navigable, else unread dot */}
+                  {hasRoute ? (
+                    <ChevronIcon size={14} color={colors.textMuted} />
+                  ) : !notif.isRead ? (
+                    <View className="w-2 h-2 rounded-full bg-brand shrink-0" />
+                  ) : null}
+                </Pressable>
+              );
+            })}
           </View>
         )}
       </ScrollView>

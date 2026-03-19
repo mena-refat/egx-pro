@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View, Text, ScrollView, RefreshControl, Pressable, ActivityIndicator,
 } from 'react-native';
@@ -27,7 +28,8 @@ function useUnreadCount() {
   const [count, setCount] = useState(0);
   const mountedRef = useRef(true);
   useEffect(() => () => { mountedRef.current = false; }, []);
-  useEffect(() => {
+
+  const fetchCount = useCallback(() => {
     const c = new AbortController();
     apiClient.get('/api/notifications?limit=1', { signal: c.signal })
       .then((res) => {
@@ -36,6 +38,16 @@ function useUnreadCount() {
       }).catch(() => null);
     return () => c.abort();
   }, []);
+
+  // Initial fetch
+  useEffect(() => fetchCount(), [fetchCount]);
+
+  // Refresh every time the home tab is focused (e.g. returning from notifications page)
+  useFocusEffect(useCallback(() => {
+    const cleanup = fetchCount();
+    return cleanup;
+  }, [fetchCount]));
+
   return count;
 }
 
@@ -74,6 +86,10 @@ function fmtNum(n: number) {
   return n.toLocaleString('ar-EG', { maximumFractionDigits: 0 });
 }
 
+function fmtMoney(n: number) {
+  return Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 /* ─── Portfolio Summary Card ─── */
 function PortfolioSummaryCard({
   totalValue, totalCost, totalGainLoss, totalGainLossPercent, loading, onPress,
@@ -89,26 +105,31 @@ function PortfolioSummaryCard({
   const isUp = totalGainLoss > 0;
   const isDown = totalGainLoss < 0;
   const gainColor = isUp ? '#4ade80' : isDown ? '#f87171' : colors.textSub;
+  const gainBg   = isUp ? '#4ade8018' : isDown ? '#f8717118' : `${colors.border}`;
 
   if (loading) {
     return (
       <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="mx-4 border rounded-2xl overflow-hidden">
-        <View className="px-5 pt-4 pb-3 gap-2">
-          <Skeleton height={10} className="w-28" />
-          <Skeleton height={36} className="w-48" />
-          <Skeleton height={18} className="w-32" />
+        <View className="px-5 pt-6 pb-5 items-center gap-3">
+          <Skeleton height={10} className="w-32" />
+          <Skeleton height={52} className="w-56" />
+          <Skeleton height={22} className="w-44" />
         </View>
-        <View className="flex-row border-t" style={{ borderTopColor: colors.border }}>
+        <View className="flex-row" style={{ borderTopColor: colors.border2, borderTopWidth: 1 }}>
           {[1, 2].map((i) => (
-            <View key={i} className="flex-1 px-5 py-3 gap-1.5">
+            <View key={i} className="flex-1 px-5 py-3 items-center gap-1.5">
               <Skeleton height={10} className="w-20" />
-              <Skeleton height={18} />
+              <Skeleton height={16} className="w-28" />
             </View>
           ))}
         </View>
       </View>
     );
   }
+
+  // Split value: "44,470" + ".18"
+  const [whole, dec] = fmtMoney(totalValue).split('.');
+  const sign = isUp ? '+' : isDown ? '-' : '';
 
   return (
     <Pressable
@@ -118,43 +139,59 @@ function PortfolioSummaryCard({
       ]}
       className="mx-4 border rounded-2xl overflow-hidden"
     >
-      {/* Top: current value */}
-      <View className="px-5 pt-4 pb-3" style={{ borderBottomColor: colors.border2, borderBottomWidth: 1 }}>
-        <Text style={{ color: colors.textMuted }} className="text-xs uppercase tracking-wider mb-1">
-          القيمة الحالية
+      {/* ── Main value ── */}
+      <View className="px-5 pt-6 pb-5 items-center">
+        {/* Label */}
+        <Text style={{ color: colors.textMuted }} className="text-xs tracking-widest uppercase mb-4">
+          قيمة محفظتي
         </Text>
-        <View className="flex-row items-baseline gap-2">
-          <Text style={{ color: colors.text }} className="text-3xl font-bold tabular-nums">
-            {fmtNum(totalValue)}
+
+        {/* Big number: EGP 44,470 .18 */}
+        <View className="flex-row items-baseline justify-center gap-1 mb-3">
+          <Text style={{ color: colors.textMuted }} className="text-xl font-medium mb-1">EGP</Text>
+          <Text style={{ color: colors.text }} className="text-5xl font-bold tabular-nums tracking-tight">
+            {whole}
           </Text>
-          <Text style={{ color: colors.textMuted }} className="text-base">EGP</Text>
+          <Text style={{ color: colors.text }} className="text-2xl font-semibold tabular-nums">
+            .{dec}
+          </Text>
         </View>
-        <View className="flex-row items-center gap-2 mt-2">
-          {isUp ? <TrendingUp size={13} color={gainColor} /> : isDown ? <TrendingDown size={13} color={gainColor} /> : null}
+
+        {/* Gain row */}
+        <View className="flex-row items-center gap-2.5">
+          <Text style={{ color: gainColor }} className="text-sm font-semibold tabular-nums">
+            {sign}EGP {fmtMoney(totalGainLoss)}
+          </Text>
           <View
-            className="flex-row items-center gap-1.5 px-2 py-0.5 rounded-lg"
-            style={{ backgroundColor: isUp ? '#4ade8015' : isDown ? '#f8717115' : `${colors.textMuted}15` }}
+            className="flex-row items-center gap-1 px-2.5 py-1 rounded-xl"
+            style={{ backgroundColor: gainBg }}
           >
-            <Text className="text-sm font-bold tabular-nums" style={{ color: gainColor }}>
-              {isUp ? '+' : ''}{totalGainLossPercent.toFixed(2)}%
+            <Text style={{ color: gainColor }} className="text-xs font-black">
+              {isUp ? '▲' : isDown ? '▼' : '●'}
+            </Text>
+            <Text style={{ color: gainColor }} className="text-sm font-bold tabular-nums">
+              {Math.abs(totalGainLossPercent).toFixed(2)}%
             </Text>
           </View>
-          <Text style={{ color: colors.textMuted }} className="text-xs">منذ الشراء</Text>
         </View>
       </View>
 
-      {/* Bottom: cost / gain */}
-      <View className="flex-row">
-        <View className="flex-1 px-5 py-3" style={{ borderRightColor: colors.border2, borderRightWidth: 1 }}>
-          <Text style={{ color: colors.textMuted }} className="text-xs mb-1">قيمة الشراء</Text>
+      {/* ── Bottom stats ── */}
+      <View className="flex-row" style={{ borderTopColor: colors.border2, borderTopWidth: 1 }}>
+        <View className="flex-1 px-4 py-3 items-center" style={{ borderRightColor: colors.border2, borderRightWidth: 1 }}>
+          <Text style={{ color: colors.textMuted }} className="text-[10px] uppercase tracking-wider mb-1">
+            قيمة الشراء
+          </Text>
           <Text style={{ color: colors.text }} className="text-sm font-semibold tabular-nums">
-            {fmtNum(totalCost)} EGP
+            {totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })} EGP
           </Text>
         </View>
-        <View className="flex-1 px-5 py-3">
-          <Text style={{ color: colors.textMuted }} className="text-xs mb-1">الربح / الخسارة</Text>
-          <Text className="text-sm font-semibold tabular-nums" style={{ color: gainColor }}>
-            {isUp ? '+' : ''}{totalGainLossPercent.toFixed(2)}%
+        <View className="flex-1 px-4 py-3 items-center">
+          <Text style={{ color: colors.textMuted }} className="text-[10px] uppercase tracking-wider mb-1">
+            الربح / الخسارة
+          </Text>
+          <Text style={{ color: gainColor }} className="text-sm font-semibold tabular-nums">
+            {sign}{fmtMoney(totalGainLoss)} EGP
           </Text>
         </View>
       </View>

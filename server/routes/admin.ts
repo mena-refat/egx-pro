@@ -105,7 +105,7 @@ router.get(
 router.post(
   '/discounts',
   adminAuthenticate,
-  requirePermission('discounts.create'),
+  requirePermission('discounts.manage'),
   (req, res, next) => {
     void AdminDiscountsController.create(req as any, res).catch(next);
   }
@@ -114,7 +114,7 @@ router.post(
 router.patch(
   '/discounts/:id',
   adminAuthenticate,
-  requirePermission('discounts.edit'),
+  requirePermission('discounts.manage'),
   (req, res, next) => {
     void AdminDiscountsController.update(req as any, res).catch(next);
   }
@@ -123,7 +123,7 @@ router.patch(
 router.delete(
   '/discounts/:id',
   adminAuthenticate,
-  requirePermission('discounts.delete'),
+  requirePermission('discounts.manage'),
   (req, res, next) => {
     void AdminDiscountsController.remove(req as any, res).catch(next);
   }
@@ -264,27 +264,27 @@ router.get(
   }
 );
 
-router.get('/admins', adminAuthenticate, (req, res, next) => {
+router.get('/admins', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
   void AdminAdminsController.list(req as any, res).catch(next);
 });
 
-router.post('/admins', adminAuthenticate, (req, res, next) => {
+router.post('/admins', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
   void AdminAdminsController.create(req as any, res).catch(next);
 });
 
-router.patch('/admins/:id/permissions', adminAuthenticate, (req, res, next) => {
+router.patch('/admins/:id/permissions', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
   void AdminAdminsController.updatePermissions(req as any, res).catch(next);
 });
 
-router.patch('/admins/:id/profile', adminAuthenticate, (req, res, next) => {
+router.patch('/admins/:id/profile', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
   void AdminAdminsController.updateAdminProfile(req as any, res).catch(next);
 });
 
-router.post('/admins/:id/reset-password', adminAuthenticate, (req, res, next) => {
+router.post('/admins/:id/reset-password', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
   void AdminAdminsController.resetAdminPassword(req as any, res).catch(next);
 });
 
-router.post('/admins/:id/reset-2fa', adminAuthenticate, (req, res, next) => {
+router.post('/admins/:id/reset-2fa', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
   void AdminAdminsController.resetAdmin2FA(req as any, res).catch(next);
 });
 
@@ -299,7 +299,7 @@ router.delete('/blocklist/:id', adminAuthenticate, requirePermission('blocklist.
   void AdminBlocklistController.remove(req as any, res).catch(next);
 });
 
-router.delete('/admins/:id', adminAuthenticate, (req, res, next) => {
+router.delete('/admins/:id', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
   void AdminAdminsController.deleteAdmin(req as any, res).catch(next);
 });
 

@@ -263,6 +263,9 @@ export default function AdminsPage() {
   const [editPermissions, setEditPermissions] = useState<string[]>([]);
   const [editPermManagerId, setEditPermManagerId] = useState<string>('');
   const [editPermSaving, setEditPermSaving] = useState(false);
+
+  // Team group modal
+  const [teamGroup, setTeamGroup] = useState<{ label: string; color: string; members: any[] } | null>(null);
   const [supportManagers, setSupportManagers] = useState<{ id: number; fullName: string; email: string }[]>([]);
 
   const loadAdmins = () =>
@@ -764,24 +767,79 @@ export default function AdminsPage() {
 
       {/* Team stats */}
       {admins.length > 0 && (() => {
-        const superAdmins = admins.filter((a) => a.role === 'SUPER_ADMIN').length;
-        const managers    = admins.filter((a) => a.role === 'ADMIN' && a.permissions?.includes('support.manage')).length;
-        const staff       = admins.filter((a) => a.role === 'ADMIN' && !a.permissions?.includes('support.manage')).length;
+        const groups = [
+          {
+            label:   t('dashboard.superAdmins'),
+            color:   'text-amber-400',
+            border:  'border-amber-500/15',
+            hover:   'hover:border-amber-500/40',
+            members: admins.filter((a) => a.role === 'SUPER_ADMIN'),
+          },
+          {
+            label:   t('dashboard.managers'),
+            color:   'text-violet-400',
+            border:  'border-violet-500/15',
+            hover:   'hover:border-violet-500/40',
+            members: admins.filter((a) => a.role === 'ADMIN' && a.permissions?.includes('support.manage')),
+          },
+          {
+            label:   t('dashboard.staff'),
+            color:   'text-blue-400',
+            border:  'border-blue-500/15',
+            hover:   'hover:border-blue-500/40',
+            members: admins.filter((a) => a.role === 'ADMIN' && !a.permissions?.includes('support.manage')),
+          },
+        ];
         return (
           <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: t('dashboard.superAdmins'), value: superAdmins, color: 'text-amber-400',  border: 'border-amber-500/15'  },
-              { label: t('dashboard.managers'),    value: managers,    color: 'text-violet-400', border: 'border-violet-500/15' },
-              { label: t('dashboard.staff'),       value: staff,       color: 'text-blue-400',   border: 'border-blue-500/15'   },
-            ].map((item) => (
-              <div key={item.label} className={`rounded-xl border ${item.border} bg-[#111118] py-4 flex flex-col items-center gap-1`}>
-                <span className={`text-2xl font-bold tabular-nums ${item.color}`}>{item.value}</span>
-                <span className="text-[11px] text-slate-500">{item.label}</span>
-              </div>
+            {groups.map((g) => (
+              <button
+                key={g.label}
+                onClick={() => setTeamGroup(g)}
+                className={`rounded-xl border ${g.border} ${g.hover} bg-[#111118] py-4 flex flex-col items-center gap-1 transition-all cursor-pointer w-full`}
+              >
+                <span className={`text-2xl font-bold tabular-nums ${g.color}`}>{g.members.length}</span>
+                <span className="text-[11px] text-slate-500">{g.label}</span>
+              </button>
             ))}
           </div>
         );
       })()}
+
+      {/* Team group modal */}
+      <Modal
+        open={!!teamGroup}
+        title={teamGroup?.label ?? ''}
+        onClose={() => setTeamGroup(null)}
+      >
+        {teamGroup?.members.length === 0 ? (
+          <p className="text-sm text-slate-500 text-center py-6">لا يوجد أحد في هذه المجموعة</p>
+        ) : (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {(teamGroup?.members ?? []).map((a) => (
+              <div key={a.id} className="flex items-center gap-3 rounded-lg bg-white/[0.03] border border-white/[0.05] px-3 py-2.5">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-xs font-bold text-slate-300 shrink-0">
+                  {(a.fullName?.[0] ?? a.email?.[0] ?? '?').toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-slate-200 truncate">{a.fullName || '—'}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{a.email}</p>
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${a.isActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                    {a.isActive ? t('admins.active') : t('admins.deactivate')}
+                  </span>
+                  {a.lastLoginAt && (
+                    <span className="text-[10px] text-slate-600">
+                      {new Date(a.lastLoginAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
 
       <div className="overflow-x-auto rounded-xl border border-white/[0.07] bg-[#111118]">
         <table className="min-w-full text-sm">

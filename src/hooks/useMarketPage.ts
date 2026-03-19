@@ -12,7 +12,7 @@ export function useMarketPage() {
   const [overview, setOverview] = useState<MarketOverview | null>(null);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [news, setNews] = useState<MarketNewsItem[]>([]);
-  const [newsFilter, setNewsFilter] = useState<'all' | 'interests'>('all');
+  const [newsFilter, setNewsFilter] = useState<'all' | 'interests'>('interests');
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [loadingStocks, setLoadingStocks] = useState(true);
   const [loadingNews, setLoadingNews] = useState(true);
