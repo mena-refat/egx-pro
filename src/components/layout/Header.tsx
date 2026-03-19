@@ -145,11 +145,31 @@ export function Header({
           </div>
         )}
 
-        <div className="flex items-center gap-1 rounded-full bg-[var(--bg-card)] border border-[var(--border)] px-1 py-1 text-[var(--text-muted)] text-xs">
-          <Button type="button" variant="ghost" size="sm" onClick={() => onThemeChange('light')} className={`w-8 h-8 min-w-0 p-0 rounded-full ${theme === 'light' ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : ''}`} icon={<Sun className="w-4 h-4" />} aria-label="Light mode"> </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={() => onThemeChange('system')} className={`w-8 h-8 min-w-0 p-0 rounded-full ${theme === 'system' ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : ''}`} icon={<Monitor className="w-4 h-4" />} aria-label="System theme"> </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={() => onThemeChange('dark')} className={`w-8 h-8 min-w-0 p-0 rounded-full ${theme === 'dark' ? 'bg-[var(--brand)] text-[var(--text-inverse)]' : ''}`} icon={<Moon className="w-4 h-4" />} aria-label="Dark mode"> </Button>
+        {/* Theme switcher — macOS-style segmented control */}
+        <div className="flex items-center gap-0.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--border)] p-1">
+          {([
+            { value: 'light',  Icon: Sun,     label: 'Light',  activeClass: 'text-amber-400' },
+            { value: 'system', Icon: Monitor, label: 'System', activeClass: 'text-violet-400' },
+            { value: 'dark',   Icon: Moon,    label: 'Dark',   activeClass: 'text-sky-400'   },
+          ] as const).map(({ value, Icon, label, activeClass }) => (
+            <button
+              key={value}
+              type="button"
+              title={label}
+              aria-label={label}
+              aria-pressed={theme === value}
+              onClick={() => onThemeChange(value)}
+              className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200
+                ${theme === value
+                  ? 'bg-[var(--bg-card)] shadow-md ring-1 ring-[var(--border-strong)] scale-105'
+                  : 'hover:bg-[var(--bg-card-hover)]'
+                }`}
+            >
+              <Icon className={`w-4 h-4 transition-colors duration-200 ${theme === value ? activeClass : 'text-[var(--text-muted)]'}`} />
+            </button>
+          ))}
         </div>
+
 
         <div className="relative" ref={notificationsRef}>
           <Button type="button" variant="ghost" size="sm" onClick={() => { setNotificationsOpen((o) => !o); if (!notificationsOpen) fetchNotifications(); }} className="relative p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)]" icon={<Bell className="w-5 h-5" />} aria-label={t('settings.notifications')}>

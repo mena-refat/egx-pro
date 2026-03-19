@@ -68,6 +68,10 @@ export default function SupportPage() {
   const [agentStats, setAgentStats] = useState<AgentStat[]>([]);
   const [statsLoading, setStatsLoading] = useState(false);
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAgentId, setBulkAgentId] = useState('');
+  const [bulkAssigning, setBulkAssigning] = useState(false);
+
   useEffect(() => {
     adminApi
       .get('/auth/me')
@@ -110,6 +114,7 @@ export default function SupportPage() {
   useEffect(() => {
     void load(1, statusFilter, agentFilter, tab);
     setPage(1);
+    setSelectedIds(new Set());
   }, [tab]); // eslint-disable-line
 
   useEffect(() => {
@@ -142,6 +147,22 @@ export default function SupportPage() {
       void load();
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleBulkAssign = async () => {
+    if (selectedIds.size === 0 || !bulkAgentId) return;
+    setBulkAssigning(true);
+    try {
+      await adminApi.post('/support/bulk-assign', {
+        ticketIds: [...selectedIds],
+        agentId: parseInt(bulkAgentId, 10),
+      });
+      setSelectedIds(new Set());
+      setBulkAgentId('');
+      void load();
+    } finally {
+      setBulkAssigning(false);
     }
   };
 
@@ -333,6 +354,7 @@ export default function SupportPage() {
         <>
           <DataTable
             headers={[
+              ...(managerMode ? [''] : []),
               t('support.subject'),
               t('support.user'),
               t('support.status'),
@@ -350,6 +372,22 @@ export default function SupportPage() {
                 key={tk.id}
                 className="hover:bg-white/[0.02] transition-colors border-b border-white/[0.04] last:border-0"
               >
+                {managerMode && (
+                  <td className="px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(tk.id)}
+                      onChange={(e) => {
+                        setSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(tk.id); else next.delete(tk.id);
+                          return next;
+                        });
+                      }}
+                      className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer"
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <p className="text-sm text-white font-medium">{tk.subject}</p>
                   <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{tk.message}</p>
@@ -420,6 +458,39 @@ export default function SupportPage() {
             onChange={setPage}
           />
         </>
+      )}
+
+      {/* Bulk assign bar */}
+      {managerMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#1a1a2e] border border-blue-500/30 rounded-xl px-5 py-3 shadow-2xl shadow-blue-500/10">
+          <span className="text-sm font-semibold text-white">{selectedIds.size} {t('support.ticketsSelected')}</span>
+          <span className="text-slate-600">·</span>
+          <select
+            value={bulkAgentId}
+            onChange={(e) => setBulkAgentId(e.target.value)}
+            className="px-3 py-1.5 text-sm bg-[#111118] border border-white/[0.1] rounded-lg text-slate-300 focus:outline-none"
+          >
+            <option value="">{t('support.assignTo')}</option>
+            {agents.map((a) => (
+              <option key={a.id} value={String(a.id)}>
+                {a.fullName || a.email}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => void handleBulkAssign()}
+            disabled={bulkAssigning || !bulkAgentId}
+            className="px-4 py-1.5 text-sm font-semibold bg-blue-500 hover:bg-blue-400 text-white rounded-lg disabled:opacity-50 transition-all"
+          >
+            {bulkAssigning ? t('common.saving') : t('support.confirmAssign')}
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            {t('common.cancel')}
+          </button>
+        </div>
       )}
 
       {/* Reply Modal */}

@@ -260,6 +260,7 @@ export const en = {
     resolveRate: 'Resolve rate',
     noAgents: 'No support agents found. Assign support.reply permission to admins.',
     previousReply: 'Previous reply',
+    ticketsSelected: 'tickets selected',
   },
 
   account: {

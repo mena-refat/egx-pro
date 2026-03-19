@@ -29,6 +29,7 @@ export const AdminAdminsController = {
         role: true,
         permissions: true,
         isActive: true,
+        managerId: true,
         lastLoginAt: true,
         createdAt: true,
       },
@@ -226,9 +227,10 @@ export const AdminAdminsController = {
     }
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
-    const { permissions, isActive } = req.body as {
+    const { permissions, isActive, managerId } = req.body as {
       permissions?: string[];
       isActive?: boolean;
+      managerId?: number | null;
     };
 
     const target = await prisma.admin.findUnique({
@@ -245,6 +247,7 @@ export const AdminAdminsController = {
       data: {
         ...(permissions && { permissions }),
         ...(isActive != null && { isActive }),
+        ...(managerId !== undefined && { managerId }),
       },
     });
 

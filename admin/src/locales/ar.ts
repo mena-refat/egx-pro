@@ -260,6 +260,7 @@ export const ar = {
     resolveRate: 'معدل الحل',
     noAgents: 'لا يوجد وكلاء دعم. قم بتعيين صلاحية support.reply للإداريين.',
     previousReply: 'الرد السابق',
+    ticketsSelected: 'تذاكر محددة',
   },
 
   account: {

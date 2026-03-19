@@ -81,6 +81,18 @@ export default function App() {
     }
   };
 
+  const handleLanguageChange = async (lng: 'ar' | 'en') => {
+    i18n.changeLanguage(lng);
+    if (!isAuthenticated) return;
+    try {
+      const res = await api.put('/user/profile', { language: lng });
+      const body = res.data;
+      if (body) updateUser((body as { data?: Record<string, unknown> }).data ?? body);
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('Failed to update language from header', err);
+    }
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (user?.language === 'ar' || user?.language === 'en') {

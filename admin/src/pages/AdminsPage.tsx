@@ -4,18 +4,84 @@ import { adminApi } from '../lib/adminApi';
 import { useAdminStore } from '../store/adminAuthStore';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
-import { Trash2, ToggleLeft, ToggleRight, Pencil, KeyRound, ShieldOff, Copy, RefreshCw, Check, Eye, EyeOff } from 'lucide-react';
+import { Trash2, ToggleLeft, ToggleRight, Pencil, KeyRound, ShieldOff, Copy, RefreshCw, Check, Eye, EyeOff, Sliders } from 'lucide-react';
 
 const PERMS = [
   'users.view',
+  'users.edit',
+  'users.delete',
   'discounts.view',
   'discounts.manage',
   'support.view',
   'support.reply',
+  'support.assign',
   'support.manage',
-  'notifications.send',
+  'analytics.view',
   'audit.view',
+  'notifications.send',
 ];
+
+const PERM_LABELS: Record<string, string> = {
+  'users.view':       'View Users',
+  'users.edit':       'Edit Users',
+  'users.delete':     'Delete Users',
+  'discounts.view':   'View Discounts',
+  'discounts.manage': 'Manage Discounts',
+  'support.view':     'View Support',
+  'support.reply':    'Reply to Tickets',
+  'support.assign':   'Assign Tickets',
+  'support.manage':   'Support Manager',
+  'analytics.view':   'View Analytics',
+  'audit.view':       'View Audit Log',
+  'notifications.send': 'Send Notifications',
+};
+
+const PERM_GROUPS: { label: string; perms: string[] }[] = [
+  { label: 'Users',     perms: ['users.view', 'users.edit', 'users.delete'] },
+  { label: 'Discounts', perms: ['discounts.view', 'discounts.manage'] },
+  { label: 'Support',   perms: ['support.view', 'support.reply', 'support.assign', 'support.manage'] },
+  { label: 'Other',     perms: ['analytics.view', 'audit.view', 'notifications.send'] },
+];
+
+// Enabling a permission auto-enables these prerequisites
+const PERM_REQUIRES: Record<string, string[]> = {
+  'users.edit':       ['users.view'],
+  'users.delete':     ['users.view', 'users.edit'],
+  'discounts.manage': ['discounts.view'],
+  'support.reply':    ['support.view'],
+  'support.assign':   ['support.view'],
+  'support.manage':   ['support.view', 'support.reply', 'support.assign'],
+};
+
+// Disabling a permission auto-disables permissions that need it
+const PERM_BLOCKS: Record<string, string[]> = {
+  'users.view':     ['users.edit', 'users.delete'],
+  'users.edit':     ['users.delete'],
+  'discounts.view': ['discounts.manage'],
+  'support.view':   ['support.reply', 'support.assign', 'support.manage'],
+  'support.reply':  ['support.manage'],
+  'support.assign': ['support.manage'],
+};
+
+function resolvePermToggle(perm: string, current: string[]): string[] {
+  if (current.includes(perm)) {
+    // Disabling: remove this perm and any that require it
+    let result = current.filter((p) => p !== perm);
+    for (const blocked of PERM_BLOCKS[perm] ?? []) {
+      result = resolvePermToggle(blocked, result);
+    }
+    return result;
+  } else {
+    // Enabling: add this perm and all prerequisites
+    let result = [...current];
+    for (const req of PERM_REQUIRES[perm] ?? []) {
+      if (!result.includes(req)) {
+        result = resolvePermToggle(req, result);
+      }
+    }
+    return [...new Set([...result, perm])];
+  }
+}
 
 const EMPTY_FORM = {
   email: '',
@@ -132,8 +198,43 @@ export default function AdminsPage() {
   const [reset2FAPwd, setReset2FAPwd] = useState('');
   const [reset2FAError, setReset2FAError] = useState('');
 
+  // Edit permissions state
+  const [editPermAdmin, setEditPermAdmin] = useState<{ id: number; email: string; fullName: string; permissions: string[]; managerId: number | null } | null>(null);
+  const [editPermissions, setEditPermissions] = useState<string[]>([]);
+  const [editPermManagerId, setEditPermManagerId] = useState<string>('');
+  const [editPermSaving, setEditPermSaving] = useState(false);
+  const [supportManagers, setSupportManagers] = useState<{ id: number; fullName: string; email: string }[]>([]);
+
   const loadAdmins = () =>
     adminApi.get('/admins').then((r) => setAdmins(r.data.data)).catch(() => setAdmins([]));
+
+  const loadSupportManagers = () =>
+    adminApi.get('/admins')
+      .then((r) => setSupportManagers((r.data.data ?? []).filter((a: any) => (a.permissions ?? []).includes('support.manage'))))
+      .catch(() => null);
+
+  const handleSavePermissions = async () => {
+    if (!editPermAdmin) return;
+    setEditPermSaving(true);
+    try {
+      await adminApi.patch(`/admins/${editPermAdmin.id}/permissions`, {
+        permissions: editPermissions,
+        managerId: editPermManagerId ? parseInt(editPermManagerId, 10) : null,
+      });
+      setAdmins((prev) =>
+        prev.map((a) =>
+          a.id === editPermAdmin.id
+            ? { ...a, permissions: editPermissions, managerId: editPermManagerId ? parseInt(editPermManagerId, 10) : null }
+            : a
+        )
+      );
+      setEditPermAdmin(null);
+    } catch { /* ignore */ }
+    finally { setEditPermSaving(false); }
+  };
+
+  const toggleEditPermission = (perm: string) =>
+    setEditPermissions((prev) => resolvePermToggle(perm, prev));
 
   useEffect(() => { void loadAdmins(); }, []); // eslint-disable-line
 
@@ -179,12 +280,7 @@ export default function AdminsPage() {
   const goNext  = () => setStep((s) => Math.min(4, s + 1));
 
   const togglePermission = (perm: string) =>
-    setForm((f) => ({
-      ...f,
-      permissions: f.permissions.includes(perm)
-        ? f.permissions.filter((p) => p !== perm)
-        : [...f.permissions, perm],
-    }));
+    setForm((f) => ({ ...f, permissions: resolvePermToggle(perm, f.permissions) }));
 
   const handleCreate = async () => {
     if (!confirmPwd) { setConfirmPwdError(t('admins.confirmPasswordRequired')); return; }
@@ -429,17 +525,44 @@ export default function AdminsPage() {
           <div className="space-y-4">
             <div>
               <label className="text-xs text-slate-400 block mb-2">{t('admins.permissions')}</label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {PERMS.map((p) => (
-                  <label key={p} className="flex items-center gap-2 cursor-pointer group rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2 hover:bg-white/[0.04] transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={form.permissions.includes(p)}
-                      onChange={() => togglePermission(p)}
-                      className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer"
-                    />
-                    <span className="text-xs text-slate-300 group-hover:text-white transition-colors">{p}</span>
-                  </label>
+              <div className="space-y-3">
+                {PERM_GROUPS.map((group) => (
+                  <div key={group.label}>
+                    <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1.5">{group.label}</p>
+                    <div className="space-y-1">
+                      {group.perms.map((p, idx) => {
+                        const isRequired = Object.entries(PERM_REQUIRES).some(([higher, deps]) =>
+                          deps.includes(p) && form.permissions.includes(higher)
+                        );
+                        return (
+                          <label
+                            key={p}
+                            className="flex items-center gap-2.5 cursor-pointer group rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 hover:bg-white/[0.04] transition-colors"
+                            style={{ marginLeft: `${idx * 12}px` }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={form.permissions.includes(p)}
+                              onChange={() => togglePermission(p)}
+                              disabled={isRequired}
+                              className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer disabled:opacity-50"
+                            />
+                            <span className="flex-1 text-xs text-slate-300 group-hover:text-white transition-colors">
+                              {PERM_LABELS[p] ?? p}
+                            </span>
+                            {isRequired && (
+                              <span className="text-[10px] text-emerald-600">required</span>
+                            )}
+                            {(PERM_REQUIRES[p] ?? []).length > 0 && (
+                              <span className="text-[10px] text-slate-700">
+                                needs: {(PERM_REQUIRES[p] ?? []).map(r => PERM_LABELS[r] ?? r).join(', ')}
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -627,6 +750,18 @@ export default function AdminsPage() {
                             className="text-slate-600 hover:text-violet-400 transition-colors"
                           >
                             <ShieldOff size={13} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditPermAdmin({ id: a.id, email: a.email, fullName: a.fullName, permissions: a.permissions ?? [], managerId: a.managerId ?? null });
+                              setEditPermissions(a.permissions ?? []);
+                              setEditPermManagerId(a.managerId ? String(a.managerId) : '');
+                              void loadSupportManagers();
+                            }}
+                            title="Edit Permissions"
+                            className="text-slate-600 hover:text-emerald-400 transition-colors"
+                          >
+                            <Sliders size={13} />
                           </button>
                         </>
                       )}
@@ -888,6 +1023,85 @@ export default function AdminsPage() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Edit Permissions Modal */}
+      <Modal
+        open={!!editPermAdmin}
+        onClose={() => setEditPermAdmin(null)}
+        title={`Permissions — ${editPermAdmin?.fullName || editPermAdmin?.email}`}
+      >
+        {editPermAdmin && (
+          <div className="space-y-4">
+            <div className="space-y-3">
+              {PERM_GROUPS.map((group) => (
+                <div key={group.label}>
+                  <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1.5">{group.label}</p>
+                  <div className="space-y-1">
+                    {group.perms.map((p, idx) => {
+                      const isRequired = Object.entries(PERM_REQUIRES).some(
+                        ([higher, deps]) => deps.includes(p) && editPermissions.includes(higher)
+                      );
+                      return (
+                        <label
+                          key={p}
+                          className="flex items-center gap-2.5 cursor-pointer group rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 hover:bg-white/[0.04] transition-colors"
+                          style={{ marginLeft: `${idx * 12}px` }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={editPermissions.includes(p)}
+                            onChange={() => toggleEditPermission(p)}
+                            disabled={isRequired}
+                            className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer disabled:opacity-50"
+                          />
+                          <span className="flex-1 text-xs text-slate-300 group-hover:text-white transition-colors">
+                            {PERM_LABELS[p] ?? p}
+                          </span>
+                          {isRequired && (
+                            <span className="text-[10px] text-emerald-600">required</span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Manager assignment — shown when admin has support.reply but not support.manage */}
+            {editPermissions.includes('support.reply') && !editPermissions.includes('support.manage') && (
+              <div className="border-t border-white/[0.06] pt-3">
+                <label className="text-xs text-slate-400 block mb-1.5">Reports to Support Manager</label>
+                <select
+                  value={editPermManagerId}
+                  onChange={(e) => setEditPermManagerId(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-emerald-500/40"
+                >
+                  <option value="">— No manager assigned —</option>
+                  {supportManagers.map((m) => (
+                    <option key={m.id} value={String(m.id)}>
+                      {m.fullName || m.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end pt-1">
+              <button onClick={() => setEditPermAdmin(null)} className="px-4 py-2 text-sm text-slate-400">
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={() => void handleSavePermissions()}
+                disabled={editPermSaving}
+                className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all"
+              >
+                {editPermSaving ? t('common.saving') : t('common.save')}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Create modal — 4 steps */}

@@ -158,24 +158,36 @@ export const AdminSupportController = {
     sendSuccess(res, ticket);
   },
 
-  async getAgents(_req: AdminRequest, res: Response): Promise<void> {
+  async getAgents(req: AdminRequest, res: Response): Promise<void> {
+    const where: Record<string, unknown> = {
+      isActive: true,
+      permissions: { has: 'support.reply' },
+    };
+    // Non-super-admin managers see only their team
+    if (!isManager(req.admin) || req.admin!.role !== 'SUPER_ADMIN') {
+      if (req.admin!.role !== 'SUPER_ADMIN') {
+        where.managerId = req.admin!.id;
+      }
+    }
     const agents = await prisma.admin.findMany({
-      where: {
-        isActive: true,
-        permissions: { has: 'support.reply' },
-      },
+      where,
       select: { id: true, fullName: true, email: true },
       orderBy: { fullName: 'asc' },
     });
     sendSuccess(res, agents);
   },
 
-  async agentStats(_req: AdminRequest, res: Response): Promise<void> {
+  async agentStats(req: AdminRequest, res: Response): Promise<void> {
+    const where: Record<string, unknown> = {
+      isActive: true,
+      permissions: { has: 'support.reply' },
+    };
+    if (req.admin!.role !== 'SUPER_ADMIN') {
+      where.managerId = req.admin!.id;
+    }
+
     const agents = await prisma.admin.findMany({
-      where: {
-        isActive: true,
-        permissions: { has: 'support.reply' },
-      },
+      where,
       select: { id: true, fullName: true, email: true },
       orderBy: { fullName: 'asc' },
     });
@@ -224,6 +236,35 @@ export const AdminSupportController = {
     );
 
     sendSuccess(res, stats);
+  },
+
+  async bulkAssign(req: AdminRequest, res: Response): Promise<void> {
+    const { ticketIds, agentId } = req.body as { ticketIds: string[]; agentId: number | null };
+
+    if (!Array.isArray(ticketIds) || ticketIds.length === 0) {
+      sendError(res, 'VALIDATION_ERROR', 400);
+      return;
+    }
+
+    if (agentId) {
+      const agent = await prisma.admin.findUnique({ where: { id: agentId, isActive: true }, select: { id: true } });
+      if (!agent) { sendError(res, 'AGENT_NOT_FOUND', 404); return; }
+    }
+
+    await prisma.supportTicket.updateMany({
+      where: { id: { in: ticketIds } },
+      data: {
+        assignedTo: agentId ?? null,
+        assignedAt: agentId ? new Date() : null,
+        status: agentId ? 'IN_PROGRESS' : 'OPEN',
+      },
+    });
+
+    if (req.admin) {
+      await adminAudit(req.admin.id, 'SUPPORT_BULK_ASSIGNED', undefined, `${ticketIds.length} tickets → agent:${agentId ?? 'unassigned'}`, req);
+    }
+
+    sendSuccess(res, { updated: ticketIds.length });
   },
 
   async stats(_req: AdminRequest, res: Response): Promise<void> {

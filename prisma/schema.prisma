@@ -138,7 +138,12 @@ model Admin {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   createdBy    Int?
+  managerId    Int?
+  manager      Admin?  @relation("SupportTeam", fields: [managerId], references: [id])
+  managedAgents Admin[] @relation("SupportTeam")
   auditLogs    AdminAuditLog[]
+
+  @@index([managerId])
 }
 
 model AdminAuditLog {

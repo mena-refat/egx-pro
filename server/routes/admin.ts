@@ -146,6 +146,15 @@ router.get(
   }
 );
 
+router.post(
+  '/support/bulk-assign',
+  adminAuthenticate,
+  requirePermission('support.manage'),
+  (req, res, next) => {
+    void AdminSupportController.bulkAssign(req as any, res).catch(next);
+  }
+);
+
 router.get(
   '/support',
   adminAuthenticate,
