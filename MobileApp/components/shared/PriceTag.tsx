@@ -1,5 +1,6 @@
 import { View, Text } from 'react-native';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react-native';
+import { useTheme } from '../../hooks/useTheme';
 
 interface Props {
   change: number;
@@ -37,10 +38,11 @@ export function PriceTag({ change, changePercent, size = 'md', showIcon = true }
 }
 
 export function StockPrice({ price, size = 'md' }: { price: number; size?: 'sm' | 'md' | 'lg' }) {
+  const { colors } = useTheme();
   const sizes = { sm: 'text-sm', md: 'text-base', lg: 'text-xl' } as const;
   const safePrice = isFinite(price) ? price : 0;
   return (
-    <Text className={`${sizes[size]} font-bold text-[#e6edf3] tabular-nums`}>
+    <Text style={{ color: colors.text }} className={`${sizes[size]} font-bold tabular-nums`}>
       {safePrice.toFixed(2)}
     </Text>
   );

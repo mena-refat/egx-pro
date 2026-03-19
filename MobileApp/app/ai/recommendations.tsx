@@ -4,8 +4,9 @@ import {
   ActivityIndicator, I18nManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, XCircle, AlertTriangle, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
+import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
 import { AnalysisLoader } from '../../components/shared/AnalysisLoader';
 
@@ -31,6 +32,7 @@ function scoreColor(s: number) {
 }
 
 function RecommendationCard({ stock, rank }: { stock: RecommendedStock; rank: number }) {
+  const { colors } = useTheme();
   const score = stock.score ?? 0;
   const verdict = stock.verdictBadge ?? stock.verdict ?? '';
   const isBuy = verdict.includes('شراء');
@@ -38,14 +40,17 @@ function RecommendationCard({ stock, rank }: { stock: RecommendedStock; rank: nu
   const verdictColor = isBuy ? '#4ade80' : isSell ? '#f87171' : '#fbbf24';
 
   return (
-    <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 gap-3">
+    <View
+      style={{ backgroundColor: colors.card, borderColor: colors.border }}
+      className="border rounded-2xl p-4 gap-3"
+    >
       <View className="flex-row items-center gap-3">
         <View className="w-8 h-8 rounded-xl bg-brand/15 items-center justify-center">
           <Text className="text-sm font-bold text-brand">#{rank}</Text>
         </View>
         <View className="flex-1">
-          <Text className="text-base font-bold text-[#e6edf3]">{stock.ticker ?? ''}</Text>
-          {stock.name ? <Text className="text-xs text-[#8b949e]">{stock.name}</Text> : null}
+          <Text style={{ color: colors.text }} className="text-base font-bold">{stock.ticker ?? ''}</Text>
+          {stock.name ? <Text style={{ color: colors.textSub }} className="text-xs">{stock.name}</Text> : null}
         </View>
         {typeof stock.score === 'number' && (
           <View
@@ -63,17 +68,27 @@ function RecommendationCard({ stock, rank }: { stock: RecommendedStock; rank: nu
       </View>
 
       {stock.reason ? (
-        <Text className="text-sm text-[#8b949e] leading-5">{stock.reason}</Text>
+        <Text style={{ color: colors.textSub }} className="text-sm leading-5">{stock.reason}</Text>
       ) : null}
 
       <View className="gap-1.5">
         {stock.strengths?.slice(0, 2).map((s, i) => {
           const t = typeof s === 'string' ? s : String(s ?? ''); if (!t) return null;
-          return (<View key={i} className="flex-row gap-2 items-start"><CheckCircle size={12} color="#4ade80" style={{ marginTop: 2 }} /><Text className="flex-1 text-xs text-[#e6edf3] leading-4">{t}</Text></View>);
+          return (
+            <View key={i} className="flex-row gap-2 items-start">
+              <CheckCircle size={12} color="#4ade80" style={{ marginTop: 2 }} />
+              <Text style={{ color: colors.text }} className="flex-1 text-xs leading-4">{t}</Text>
+            </View>
+          );
         })}
         {stock.risks?.slice(0, 1).map((r, i) => {
           const t = typeof r === 'string' ? r : String(r ?? ''); if (!t) return null;
-          return (<View key={i} className="flex-row gap-2 items-start"><AlertTriangle size={12} color="#fbbf24" style={{ marginTop: 2 }} /><Text className="flex-1 text-xs text-[#e6edf3] leading-4">{t}</Text></View>);
+          return (
+            <View key={i} className="flex-row gap-2 items-start">
+              <AlertTriangle size={12} color="#fbbf24" style={{ marginTop: 2 }} />
+              <Text style={{ color: colors.text }} className="flex-1 text-xs leading-4">{t}</Text>
+            </View>
+          );
         })}
       </View>
     </View>
@@ -82,6 +97,7 @@ function RecommendationCard({ stock, rank }: { stock: RecommendedStock; rank: nu
 
 export default function RecommendationsPage() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RecommendationsResult | null>(null);
@@ -113,26 +129,33 @@ export default function RecommendationsPage() {
 
   return (
     <ScreenWrapper padded={false}>
-      <View className="flex-row items-center gap-3 px-4 pt-5 pb-4 border-b border-[#30363d]">
+      <View
+        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
+        className="flex-row items-center gap-3 px-4 pt-5 pb-4"
+      >
         <Pressable
           onPress={() => router.back()}
-          className="w-9 h-9 rounded-xl bg-white/[0.04] border border-[#30363d] items-center justify-center"
+          style={{ backgroundColor: colors.hover, borderColor: colors.border }}
+          className="w-9 h-9 rounded-xl border items-center justify-center"
         >
-          {I18nManager.isRTL ? <ArrowRight size={16} color="#8b949e" /> : <ArrowLeft size={16} color="#8b949e" />}
+          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
         <View className="w-8 h-8 rounded-xl bg-amber-500/15 items-center justify-center">
           <Sparkles size={16} color="#f59e0b" />
         </View>
-        <Text className="text-base font-bold text-[#e6edf3]">توصيات شخصية</Text>
+        <Text style={{ color: colors.text }} className="text-base font-bold">توصيات شخصية</Text>
       </View>
 
       <ScrollView contentContainerClassName="px-4 pt-4 pb-10 gap-4" showsVerticalScrollIndicator={false}>
-        <View className="bg-[#161b22] border border-[#30363d] rounded-2xl px-4 py-4 gap-2">
+        <View
+          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          className="border rounded-2xl px-4 py-4 gap-2"
+        >
           <View className="flex-row items-center gap-2">
             <TrendingUp size={16} color="#f59e0b" />
-            <Text className="text-sm font-bold text-[#e6edf3]">توصيات مخصصة لك</Text>
+            <Text style={{ color: colors.text }} className="text-sm font-bold">توصيات مخصصة لك</Text>
           </View>
-          <Text className="text-xs text-[#8b949e] leading-5">
+          <Text style={{ color: colors.textSub }} className="text-xs leading-5">
             بناءً على محفظتك وقائمة المتابعة وأهدافك الاستثمارية، سيقترح الذكاء الاصطناعي أفضل الأسهم المناسبة لك الآن.
           </Text>
         </View>
@@ -159,8 +182,8 @@ export default function RecommendationsPage() {
         {result && !loading && (
           <View className="gap-4">
             {result.summary ? (
-              <View className="bg-[#161b22] border border-[#30363d] rounded-2xl px-4 py-3">
-                <Text className="text-sm text-[#e6edf3] leading-6">{result.summary}</Text>
+              <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl px-4 py-3">
+                <Text style={{ color: colors.text }} className="text-sm leading-6">{result.summary}</Text>
               </View>
             ) : null}
 
@@ -171,13 +194,13 @@ export default function RecommendationsPage() {
                 ))}
               </View>
             ) : (
-              <View className="bg-[#161b22] border border-[#30363d] rounded-2xl px-4 py-6 items-center">
-                <Text className="text-sm text-[#8b949e] text-center">لا توجد توصيات متاحة حالياً</Text>
+              <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl px-4 py-6 items-center">
+                <Text style={{ color: colors.textSub }} className="text-sm text-center">لا توجد توصيات متاحة حالياً</Text>
               </View>
             )}
 
             {result.disclaimer ? (
-              <Text className="text-xs text-[#656d76] text-center leading-5 px-2">⚖️ {result.disclaimer}</Text>
+              <Text style={{ color: colors.textMuted }} className="text-xs text-center leading-5 px-2">⚖️ {result.disclaimer}</Text>
             ) : null}
           </View>
         )}

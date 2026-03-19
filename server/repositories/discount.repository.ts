@@ -45,38 +45,46 @@ export const DiscountRepository = {
     });
   },
 
-  /** ترقية مع/بدون خصم جزئي — transaction: تحديث الخطة + (اختياري) تسجيل الاستخدام */
+  /** ترقية مع/بدون خصم جزئي — transaction: تحديث الخطة + (اختياري) تسجيل الاستخدام + تسجيل معاملة الدفع */
   async applyUpgrade(
     userId: number,
     planValue: string,
     planExpiresAt: Date,
-    discount?: { id: string; maxUses: number | null }
+    discount?: { id: string; maxUses: number | null },
+    payment?: { paymobId: string; amountEGP: number }
   ) {
-    if (!discount) {
-      await prisma.user.update({ where: { id: userId }, data: { plan: planValue, planExpiresAt } });
-      return;
-    }
-
     return prisma.$transaction(async (tx) => {
-      // Atomic: only increment if still active and below maxUses
-      const codeUpdate = await tx.discountCode.updateMany({
-        where: {
-          id: discount.id,
-          active: true,
-          ...(discount.maxUses !== null ? { usedCount: { lt: discount.maxUses } } : {}),
-        },
-        data: { usedCount: { increment: 1 } },
-      });
-      if (codeUpdate.count === 0) throw new AppError('DISCOUNT_CODE_EXHAUSTED', 409);
-
-      if (discount.maxUses !== null) {
-        await tx.discountCode.updateMany({
-          where: { id: discount.id, usedCount: { gte: discount.maxUses } },
-          data: { active: false },
+      // Guard against payment replay: unique constraint on paymobId prevents double-spend
+      if (payment) {
+        const existing = await tx.paymentTransaction.findUnique({ where: { paymobId: payment.paymobId } });
+        if (existing) throw new AppError('PAYMENT_ALREADY_USED', 409);
+        await tx.paymentTransaction.create({
+          data: { paymobId: payment.paymobId, userId, plan: planValue, amountEGP: payment.amountEGP },
         });
       }
 
-      await tx.discountUsage.create({ data: { userId, codeId: discount.id } });
+      if (discount) {
+        // Atomic: only increment if still active and below maxUses
+        const codeUpdate = await tx.discountCode.updateMany({
+          where: {
+            id: discount.id,
+            active: true,
+            ...(discount.maxUses !== null ? { usedCount: { lt: discount.maxUses } } : {}),
+          },
+          data: { usedCount: { increment: 1 } },
+        });
+        if (codeUpdate.count === 0) throw new AppError('DISCOUNT_CODE_EXHAUSTED', 409);
+
+        if (discount.maxUses !== null) {
+          await tx.discountCode.updateMany({
+            where: { id: discount.id, usedCount: { gte: discount.maxUses } },
+            data: { active: false },
+          });
+        }
+
+        await tx.discountUsage.create({ data: { userId, codeId: discount.id } });
+      }
+
       await tx.user.update({ where: { id: userId }, data: { plan: planValue, planExpiresAt } });
     });
   },

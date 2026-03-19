@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowRight, Brain, Search, CheckCircle, XCircle, AlertTriang
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { AnalysisLoader } from '../../components/shared/AnalysisLoader';
 import { EGX_STOCKS, getStockInfo } from '../../lib/egxStocks';
+import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
 
 // ────────────────── types ──────────────────
@@ -48,6 +49,7 @@ function priceTargetNum(v: AnalysisResult['priceTarget']): number | null {
 function TickerInput({
   value, onChange, placeholder, disabled,
 }: { value: string; onChange: (v: string) => void; placeholder: string; disabled?: boolean }) {
+  const { colors } = useTheme();
   const [open, setOpen] = useState(false);
 
   const suggestions = useMemo(() => {
@@ -60,29 +62,41 @@ function TickerInput({
 
   return (
     <View>
-      <View className="flex-row items-center bg-[#161b22] border border-[#30363d] rounded-xl px-3 gap-2">
-        <Search size={15} color="#656d76" />
+      <View
+        style={{ backgroundColor: colors.card, borderColor: colors.border }}
+        className="flex-row items-center border rounded-xl px-3 gap-2"
+      >
+        <Search size={15} color={colors.textMuted} />
         <TextInput
           value={value}
           onChangeText={(t) => { onChange(t); setOpen(true); }}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
-          placeholderTextColor="#656d76"
-          className="flex-1 py-3 text-sm text-[#e6edf3]"
+          placeholderTextColor={colors.textMuted}
+          style={{ color: colors.text }}
+          className="flex-1 py-3 text-sm"
           autoCapitalize="characters"
           editable={!disabled}
         />
       </View>
       {open && suggestions.length > 0 && (
-        <View className="bg-[#161b22] border border-[#30363d] rounded-xl mt-1 overflow-hidden">
+        <View
+          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          className="border rounded-xl mt-1 overflow-hidden"
+        >
           {suggestions.map((s) => (
             <Pressable
               key={s.ticker}
               onPress={() => { onChange(s.ticker); setOpen(false); }}
-              className="flex-row items-center justify-between px-4 py-3 border-b border-[#21262d] active:bg-[#1c2128]"
+              style={({ pressed }) => ({
+                borderBottomColor: colors.border,
+                borderBottomWidth: 1,
+                backgroundColor: pressed ? colors.hover : 'transparent',
+              })}
+              className="flex-row items-center justify-between px-4 py-3"
             >
-              <Text className="text-sm font-bold text-[#e6edf3]">{s.ticker}</Text>
-              <Text className="text-xs text-[#8b949e]">{s.nameAr}</Text>
+              <Text style={{ color: colors.text }} className="text-sm font-bold">{s.ticker}</Text>
+              <Text style={{ color: colors.textSub }} className="text-xs">{s.nameAr}</Text>
             </Pressable>
           ))}
         </View>
@@ -94,6 +108,7 @@ function TickerInput({
 // ────────────────── main screen ──────────────────
 export default function AnalyzePage() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { ticker: prefill } = useLocalSearchParams<{ ticker?: string }>();
   const [ticker, setTicker] = useState(prefill ?? '');
   const [loading, setLoading] = useState(false);
@@ -144,24 +159,28 @@ export default function AnalyzePage() {
   const isBuy = verdict.includes('شراء');
   const isSell = verdict.includes('بيع');
   const verdictColor = isBuy ? '#4ade80' : isSell ? '#f87171' : '#fbbf24';
-  const verdictBg = isBuy ? 'bg-emerald-500/10' : isSell ? 'bg-red-500/10' : 'bg-amber-500/10';
+  const verdictBg = isBuy ? '#4ade8018' : isSell ? '#f8717118' : '#fbbf2418';
   const score = result?.score ?? 0;
   const target = priceTargetNum(result?.priceTarget);
 
   return (
     <ScreenWrapper padded={false}>
       {/* Header */}
-      <View className="flex-row items-center gap-3 px-4 pt-5 pb-4 border-b border-[#30363d]">
+      <View
+        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
+        className="flex-row items-center gap-3 px-4 pt-5 pb-4"
+      >
         <Pressable
           onPress={() => router.back()}
-          className="w-9 h-9 rounded-xl bg-white/[0.04] border border-[#30363d] items-center justify-center"
+          style={{ backgroundColor: colors.hover, borderColor: colors.border }}
+          className="w-9 h-9 rounded-xl border items-center justify-center"
         >
-          {I18nManager.isRTL ? <ArrowRight size={16} color="#8b949e" /> : <ArrowLeft size={16} color="#8b949e" />}
+          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
         <View className="w-8 h-8 rounded-xl bg-violet-500/15 items-center justify-center">
           <Brain size={16} color="#8b5cf6" />
         </View>
-        <Text className="text-base font-bold text-[#e6edf3]">تحليل سهم</Text>
+        <Text style={{ color: colors.text }} className="text-base font-bold">تحليل سهم</Text>
       </View>
 
       <ScrollView contentContainerClassName="px-4 pt-4 pb-10 gap-4" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -200,7 +219,10 @@ export default function AnalyzePage() {
         {result && !loading && typeof result === 'object' && (
           <View className="gap-4">
             {/* Score + Verdict */}
-            <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-5 flex-row items-center gap-4">
+            <View
+              style={{ backgroundColor: colors.card, borderColor: colors.border }}
+              className="border rounded-2xl p-5 flex-row items-center gap-4"
+            >
               {typeof result.score === 'number' && (
                 <View
                   className="w-16 h-16 rounded-full items-center justify-center border-2"
@@ -212,9 +234,9 @@ export default function AnalyzePage() {
                 </View>
               )}
               <View className="flex-1 gap-2">
-                <Text className="text-lg font-bold text-[#e6edf3]">{ticker.toUpperCase()}</Text>
+                <Text style={{ color: colors.text }} className="text-lg font-bold">{ticker.toUpperCase()}</Text>
                 {verdict ? (
-                  <View className={`self-start px-3 py-1 rounded-lg ${verdictBg}`}>
+                  <View className="self-start px-3 py-1 rounded-lg" style={{ backgroundColor: verdictBg }}>
                     <Text className="text-sm font-bold" style={{ color: verdictColor }}>{verdict}</Text>
                   </View>
                 ) : null}
@@ -223,38 +245,41 @@ export default function AnalyzePage() {
 
             {/* Price Target */}
             {target != null && (
-              <View className="bg-[#161b22] border border-[#30363d] rounded-xl px-4 py-3 flex-row items-center justify-between">
-                <Text className="text-sm text-[#8b949e]">السعر المستهدف</Text>
+              <View
+                style={{ backgroundColor: colors.card, borderColor: colors.border }}
+                className="border rounded-xl px-4 py-3 flex-row items-center justify-between"
+              >
+                <Text style={{ color: colors.textSub }} className="text-sm">السعر المستهدف</Text>
                 <Text className="text-sm font-bold text-emerald-400 tabular-nums">{target} EGP</Text>
               </View>
             )}
 
             {/* Fundamental */}
             {str(result.fundamental) ? (
-              <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 gap-2">
-                <Text className="text-xs text-[#656d76] uppercase tracking-wider">التحليل الأساسي</Text>
-                <Text className="text-sm text-[#e6edf3] leading-6">{str(result.fundamental)}</Text>
+              <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-4 gap-2">
+                <Text style={{ color: colors.textMuted }} className="text-xs uppercase tracking-wider">التحليل الأساسي</Text>
+                <Text style={{ color: colors.text }} className="text-sm leading-6">{str(result.fundamental)}</Text>
               </View>
             ) : null}
 
             {/* Technical */}
             {str(result.technical) ? (
-              <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 gap-2">
-                <Text className="text-xs text-[#656d76] uppercase tracking-wider">التحليل الفني</Text>
-                <Text className="text-sm text-[#e6edf3] leading-6">{str(result.technical)}</Text>
+              <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-4 gap-2">
+                <Text style={{ color: colors.textMuted }} className="text-xs uppercase tracking-wider">التحليل الفني</Text>
+                <Text style={{ color: colors.text }} className="text-sm leading-6">{str(result.technical)}</Text>
               </View>
             ) : null}
 
             {/* Strengths / Weaknesses / Risks */}
             {(result.strengths?.length || result.weaknesses?.length || result.risks?.length) ? (
-              <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 gap-3">
+              <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-4 gap-3">
                 {result.strengths?.map((s, i) => {
                   const text = typeof s === 'string' ? s : String(s ?? '');
                   if (!text) return null;
                   return (
                     <View key={i} className="flex-row gap-2 items-start">
                       <CheckCircle size={14} color="#4ade80" style={{ marginTop: 2 }} />
-                      <Text className="flex-1 text-sm text-[#e6edf3] leading-5">{text}</Text>
+                      <Text style={{ color: colors.text }} className="flex-1 text-sm leading-5">{text}</Text>
                     </View>
                   );
                 })}
@@ -264,7 +289,7 @@ export default function AnalyzePage() {
                   return (
                     <View key={i} className="flex-row gap-2 items-start">
                       <XCircle size={14} color="#f87171" style={{ marginTop: 2 }} />
-                      <Text className="flex-1 text-sm text-[#e6edf3] leading-5">{text}</Text>
+                      <Text style={{ color: colors.text }} className="flex-1 text-sm leading-5">{text}</Text>
                     </View>
                   );
                 })}
@@ -274,7 +299,7 @@ export default function AnalyzePage() {
                   return (
                     <View key={i} className="flex-row gap-2 items-start">
                       <AlertTriangle size={14} color="#fbbf24" style={{ marginTop: 2 }} />
-                      <Text className="flex-1 text-sm text-[#e6edf3] leading-5">{text}</Text>
+                      <Text style={{ color: colors.text }} className="flex-1 text-sm leading-5">{text}</Text>
                     </View>
                   );
                 })}
@@ -285,13 +310,13 @@ export default function AnalyzePage() {
             {result.recommendation ? (
               <View className="bg-brand/10 border border-brand/25 rounded-2xl px-4 py-3">
                 <Text className="text-xs text-[#8b5cf6] font-medium mb-1">التوصية</Text>
-                <Text className="text-sm text-[#e6edf3] leading-5">{result.recommendation}</Text>
+                <Text style={{ color: colors.text }} className="text-sm leading-5">{result.recommendation}</Text>
               </View>
             ) : null}
 
             {/* Disclaimer */}
             {result.disclaimer ? (
-              <Text className="text-xs text-[#656d76] text-center leading-5 px-2">
+              <Text style={{ color: colors.textMuted }} className="text-xs text-center leading-5 px-2">
                 ⚖️ {result.disclaimer}
               </Text>
             ) : null}

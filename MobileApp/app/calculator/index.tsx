@@ -5,9 +5,10 @@ import {
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Calculator, Wallet, TrendingUp, Crown, Trophy } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
+import { useTheme } from '../../hooks/useTheme';
 
 const RETURN_OPTIONS = [
-  { id: 'conservative' as const, label: 'محافظ', rate: 15 },
+  { id: 'conservative' as const, label: 'محافظ',  rate: 15 },
   { id: 'moderate'    as const, label: 'متوازن', rate: 25 },
   { id: 'optimistic'  as const, label: 'متفائل', rate: 40 },
 ];
@@ -38,28 +39,34 @@ function fmtFull(n: number): string {
 function NumInput({
   label, value, onChange, hint,
 }: { label: string; value: string; onChange: (v: string) => void; hint?: string }) {
+  const { colors } = useTheme();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm text-[#8b949e]">{label}</Text>
-      <View className="flex-row items-center bg-[#161b22] border border-[#30363d] rounded-xl px-3 gap-2">
+      <Text style={{ color: colors.textSub }} className="text-sm">{label}</Text>
+      <View
+        style={{ backgroundColor: colors.card, borderColor: colors.border }}
+        className="flex-row items-center border rounded-xl px-3 gap-2"
+      >
         <TextInput
           value={value}
           onChangeText={onChange}
           keyboardType="numeric"
           placeholder="0"
-          placeholderTextColor="#656d76"
-          className="flex-1 py-3 text-sm text-[#e6edf3]"
+          placeholderTextColor={colors.textMuted}
+          style={{ color: colors.text }}
+          className="flex-1 py-3 text-sm"
           textAlign="right"
         />
-        <Text className="text-xs text-[#656d76]">ج.م</Text>
+        <Text style={{ color: colors.textMuted }} className="text-xs">ج.م</Text>
       </View>
-      {hint ? <Text className="text-xs text-[#656d76]">{hint}</Text> : null}
+      {hint ? <Text style={{ color: colors.textMuted }} className="text-xs">{hint}</Text> : null}
     </View>
   );
 }
 
 export default function CalculatorPage() {
   const router = useRouter();
+  const { colors } = useTheme();
 
   const [monthly,  setMonthly ] = useState('5000');
   const [initial,  setInitial ] = useState('0');
@@ -75,25 +82,29 @@ export default function CalculatorPage() {
   const compareGold = useMemo(() => calculate(m, i, years, 12),         [m, i, years]);
 
   const motivational =
-    result.total < 500_000  ? 'كل رحلة تبدأ بخطوة 🌱'
-    : result.total < 2_000_000 ? 'أنت في الطريق الصحيح! 🚀'
+    result.total < 500_000    ? 'كل رحلة تبدأ بخطوة 🌱'
+    : result.total < 2_000_000  ? 'أنت في الطريق الصحيح! 🚀'
     : result.total < 10_000_000 ? 'مليونير قادم 💰'
     : 'ثروة حقيقية تنتظرك 👑';
 
   return (
     <ScreenWrapper padded={false}>
       {/* Header */}
-      <View className="flex-row items-center gap-3 px-4 pt-5 pb-4 border-b border-[#30363d]">
+      <View
+        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
+        className="flex-row items-center gap-3 px-4 pt-5 pb-4"
+      >
         <Pressable
           onPress={() => router.back()}
-          className="w-9 h-9 rounded-xl bg-white/[0.04] border border-[#30363d] items-center justify-center"
+          style={{ backgroundColor: colors.hover, borderColor: colors.border }}
+          className="w-9 h-9 rounded-xl border items-center justify-center"
         >
-          {I18nManager.isRTL ? <ArrowRight size={16} color="#8b949e" /> : <ArrowLeft size={16} color="#8b949e" />}
+          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
         <View className="w-8 h-8 rounded-xl bg-emerald-500/15 items-center justify-center">
           <Calculator size={16} color="#10b981" />
         </View>
-        <Text className="text-base font-bold text-[#e6edf3]">حاسبة الاستثمار</Text>
+        <Text style={{ color: colors.text }} className="text-base font-bold">حاسبة الاستثمار</Text>
       </View>
 
       <ScrollView
@@ -102,46 +113,43 @@ export default function CalculatorPage() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Intro */}
-        <View className="bg-[#161b22] border border-[#30363d] rounded-2xl px-4 py-3 flex-row items-center gap-3">
+        <View
+          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          className="border rounded-2xl px-4 py-3 flex-row items-center gap-3"
+        >
           <TrendingUp size={18} color="#10b981" />
-          <Text className="flex-1 text-xs text-[#8b949e] leading-5">
+          <Text style={{ color: colors.textSub }} className="flex-1 text-xs leading-5">
             احسب كيف ينمو استثمارك في البورصة المصرية مع الوقت — أدخل بياناتك واستكشف السيناريوهات المختلفة.
           </Text>
         </View>
 
         {/* Inputs */}
-        <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 gap-4">
-          <NumInput
-            label="الاستثمار الشهري"
-            value={monthly}
-            onChange={setMonthly}
-            hint="المبلغ الذي تستثمره كل شهر"
-          />
-          <NumInput
-            label="رأس المال الابتدائي"
-            value={initial}
-            onChange={setInitial}
-            hint="المبلغ الذي تبدأ به (اختياري)"
-          />
+        <View
+          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          className="border rounded-2xl p-4 gap-4"
+        >
+          <NumInput label="الاستثمار الشهري" value={monthly} onChange={setMonthly} hint="المبلغ الذي تستثمره كل شهر" />
+          <NumInput label="رأس المال الابتدائي" value={initial} onChange={setInitial} hint="المبلغ الذي تبدأ به (اختياري)" />
 
           {/* Years */}
           <View className="gap-1.5">
-            <Text className="text-sm text-[#8b949e]">مدة الاستثمار</Text>
+            <Text style={{ color: colors.textSub }} className="text-sm">مدة الاستثمار</Text>
             <View className="flex-row gap-2 flex-wrap">
               {YEAR_PRESETS.map((y) => (
                 <Pressable
                   key={y}
                   onPress={() => setYears(y)}
-                  className="flex-1 py-2.5 rounded-xl items-center border"
+                  className="flex-1 py-2.5 rounded-xl items-center"
                   style={{
-                    backgroundColor: years === y ? '#10b981' : '#21262d',
-                    borderColor:     years === y ? '#10b981' : '#30363d',
+                    backgroundColor: years === y ? '#10b981' : colors.hover,
+                    borderWidth: 1,
+                    borderColor: years === y ? '#10b981' : colors.border,
                     minWidth: 60,
                   }}
                 >
                   <Text
                     className="text-sm font-bold"
-                    style={{ color: years === y ? '#fff' : '#8b949e' }}
+                    style={{ color: years === y ? '#fff' : colors.textSub }}
                   >
                     {y} س
                   </Text>
@@ -152,34 +160,35 @@ export default function CalculatorPage() {
 
           {/* Rate scenario */}
           <View className="gap-1.5">
-            <Text className="text-sm text-[#8b949e]">سيناريو العائد السنوي</Text>
+            <Text style={{ color: colors.textSub }} className="text-sm">سيناريو العائد السنوي</Text>
             <View className="flex-row gap-2">
               {RETURN_OPTIONS.map((opt) => (
                 <Pressable
                   key={opt.id}
                   onPress={() => setReturnId(opt.id)}
-                  className="flex-1 py-3 rounded-xl items-center border"
+                  className="flex-1 py-3 rounded-xl items-center"
                   style={{
-                    backgroundColor: returnId === opt.id ? '#8b5cf6' : '#21262d',
-                    borderColor:     returnId === opt.id ? '#8b5cf6' : '#30363d',
+                    backgroundColor: returnId === opt.id ? '#8b5cf6' : colors.hover,
+                    borderWidth: 1,
+                    borderColor: returnId === opt.id ? '#8b5cf6' : colors.border,
                   }}
                 >
                   <Text
                     className="text-xs font-medium"
-                    style={{ color: returnId === opt.id ? '#fff' : '#8b949e' }}
+                    style={{ color: returnId === opt.id ? '#fff' : colors.textSub }}
                   >
                     {opt.label}
                   </Text>
                   <Text
                     className="text-base font-bold"
-                    style={{ color: returnId === opt.id ? '#fff' : '#e6edf3' }}
+                    style={{ color: returnId === opt.id ? '#fff' : colors.text }}
                   >
                     {opt.rate}%
                   </Text>
                 </Pressable>
               ))}
             </View>
-            <Text className="text-xs text-[#656d76]">
+            <Text style={{ color: colors.textMuted }} className="text-xs">
               متوسطات تاريخية تقريبية — ليست ضماناً للعوائد المستقبلية
             </Text>
           </View>
@@ -187,18 +196,19 @@ export default function CalculatorPage() {
 
         {/* Results */}
         <View className="gap-3">
-          {/* Motivational */}
-          <Text className="text-sm text-[#8b949e] text-center">{motivational}</Text>
+          <Text style={{ color: colors.textSub }} className="text-sm text-center">{motivational}</Text>
 
-          {/* 3 result cards */}
           <View className="flex-row gap-3">
             {/* Invested */}
-            <View className="flex-1 bg-[#161b22] border border-[#30363d] rounded-2xl p-4 gap-2">
-              <View className="w-9 h-9 rounded-xl bg-white/[0.04] items-center justify-center">
-                <Wallet size={16} color="#8b949e" />
+            <View
+              style={{ backgroundColor: colors.card, borderColor: colors.border, flex: 1 }}
+              className="border rounded-2xl p-4 gap-2"
+            >
+              <View style={{ backgroundColor: colors.hover }} className="w-9 h-9 rounded-xl items-center justify-center">
+                <Wallet size={16} color={colors.textSub} />
               </View>
-              <Text className="text-xs text-[#656d76]">إجمالي ما استثمرته</Text>
-              <Text className="text-sm font-bold text-[#e6edf3]" numberOfLines={1}>
+              <Text style={{ color: colors.textMuted }} className="text-xs">إجمالي ما استثمرته</Text>
+              <Text style={{ color: colors.text }} className="text-sm font-bold" numberOfLines={1}>
                 {fmt(result.invested)} ج.م
               </Text>
             </View>
@@ -208,24 +218,24 @@ export default function CalculatorPage() {
               <View className="w-9 h-9 rounded-xl bg-emerald-500/20 items-center justify-center">
                 <TrendingUp size={16} color="#10b981" />
               </View>
-              <Text className="text-xs text-[#656d76]">الأرباح المتوقعة</Text>
+              <Text style={{ color: colors.textMuted }} className="text-xs">الأرباح المتوقعة</Text>
               <Text className="text-sm font-bold text-emerald-400" numberOfLines={1}>
                 + {fmt(result.profit)} ج.م
               </Text>
             </View>
           </View>
 
-          {/* Final wealth — full width highlighted */}
+          {/* Final wealth */}
           <View className="bg-brand/10 border border-brand/30 rounded-2xl p-5 flex-row items-center gap-4">
             <View className="w-12 h-12 rounded-xl bg-brand/20 items-center justify-center">
               <Crown size={22} color="#8b5cf6" />
             </View>
             <View className="flex-1">
-              <Text className="text-xs text-[#8b949e]">ثروتك بعد {years} سنة</Text>
+              <Text style={{ color: colors.textSub }} className="text-xs">ثروتك بعد {years} سنة</Text>
               <Text className="text-xl font-bold text-brand" numberOfLines={1}>
                 {fmt(result.total)} ج.م
               </Text>
-              <Text className="text-xs text-[#656d76] mt-0.5">
+              <Text style={{ color: colors.textMuted }} className="text-xs mt-0.5">
                 ({fmtFull(result.total)} جنيه)
               </Text>
             </View>
@@ -234,38 +244,35 @@ export default function CalculatorPage() {
 
         {/* Comparison */}
         <View className="gap-2">
-          <Text className="text-sm text-[#8b949e] font-medium">مقارنة مع بدائل الاستثمار</Text>
+          <Text style={{ color: colors.textSub }} className="text-sm font-medium">مقارنة مع بدائل الاستثمار</Text>
           <View className="flex-row gap-2">
-            {/* Bank */}
-            <View className="flex-1 bg-[#161b22] border border-[#30363d] rounded-2xl p-3 items-center gap-1">
-              <Text className="text-xs text-[#656d76]">البنك</Text>
-              <Text className="text-xs text-[#8b949e]">~8%</Text>
-              <Text className="text-sm font-bold text-[#e6edf3]" numberOfLines={1}>
-                {fmt(compareBank.total)}
-              </Text>
-              <Text className="text-xs text-[#656d76]">ج.م</Text>
+            <View
+              style={{ backgroundColor: colors.card, borderColor: colors.border, flex: 1 }}
+              className="border rounded-2xl p-3 items-center gap-1"
+            >
+              <Text style={{ color: colors.textMuted }} className="text-xs">البنك</Text>
+              <Text style={{ color: colors.textSub }} className="text-xs">~8%</Text>
+              <Text style={{ color: colors.text }} className="text-sm font-bold" numberOfLines={1}>{fmt(compareBank.total)}</Text>
+              <Text style={{ color: colors.textMuted }} className="text-xs">ج.م</Text>
             </View>
 
-            {/* Gold */}
-            <View className="flex-1 bg-[#161b22] border border-[#30363d] rounded-2xl p-3 items-center gap-1">
-              <Text className="text-xs text-[#656d76]">الذهب</Text>
-              <Text className="text-xs text-[#8b949e]">~12%</Text>
-              <Text className="text-sm font-bold text-[#e6edf3]" numberOfLines={1}>
-                {fmt(compareGold.total)}
-              </Text>
-              <Text className="text-xs text-[#656d76]">ج.م</Text>
+            <View
+              style={{ backgroundColor: colors.card, borderColor: colors.border, flex: 1 }}
+              className="border rounded-2xl p-3 items-center gap-1"
+            >
+              <Text style={{ color: colors.textMuted }} className="text-xs">الذهب</Text>
+              <Text style={{ color: colors.textSub }} className="text-xs">~12%</Text>
+              <Text style={{ color: colors.text }} className="text-sm font-bold" numberOfLines={1}>{fmt(compareGold.total)}</Text>
+              <Text style={{ color: colors.textMuted }} className="text-xs">ج.م</Text>
             </View>
 
-            {/* EGX (highlighted best) */}
             <View className="flex-1 bg-brand/15 border border-brand/40 rounded-2xl p-3 items-center gap-1">
               <View className="flex-row items-center gap-1">
                 <Trophy size={10} color="#8b5cf6" />
                 <Text className="text-xs text-brand font-bold">الأفضل</Text>
               </View>
               <Text className="text-xs text-brand">~{annualRate}%</Text>
-              <Text className="text-sm font-bold text-brand" numberOfLines={1}>
-                {fmt(result.total)}
-              </Text>
+              <Text className="text-sm font-bold text-brand" numberOfLines={1}>{fmt(result.total)}</Text>
               <Text className="text-xs text-[#8b5cf6]/70">ج.م</Text>
             </View>
           </View>
@@ -273,25 +280,27 @@ export default function CalculatorPage() {
 
         {/* Breakdown */}
         {(m > 0 || i > 0) && (
-          <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 gap-2">
-            <Text className="text-xs text-[#656d76] font-medium mb-1">تفاصيل الحساب</Text>
+          <View
+            style={{ backgroundColor: colors.card, borderColor: colors.border }}
+            className="border rounded-2xl p-4 gap-2"
+          >
+            <Text style={{ color: colors.textMuted }} className="text-xs font-medium mb-1">تفاصيل الحساب</Text>
             {[
-              { label: 'رأس المال الابتدائي', value: fmtFull(i) + ' ج.م' },
-              { label: 'إجمالي الإيداعات الشهرية', value: fmtFull(m * years * 12) + ' ج.م' },
-              { label: 'إجمالي ما استثمرته', value: fmtFull(result.invested) + ' ج.م' },
-              { label: 'العائد السنوي المختار', value: annualRate + '%' },
-              { label: 'مدة الاستثمار', value: years + ' سنة' },
+              { label: 'رأس المال الابتدائي',         value: fmtFull(i) + ' ج.م' },
+              { label: 'إجمالي الإيداعات الشهرية',    value: fmtFull(m * years * 12) + ' ج.م' },
+              { label: 'إجمالي ما استثمرته',           value: fmtFull(result.invested) + ' ج.م' },
+              { label: 'العائد السنوي المختار',         value: annualRate + '%' },
+              { label: 'مدة الاستثمار',                value: years + ' سنة' },
             ].map(({ label, value }) => (
               <View key={label} className="flex-row justify-between items-center">
-                <Text className="text-xs text-[#8b949e]">{label}</Text>
-                <Text className="text-xs font-medium text-[#e6edf3]">{value}</Text>
+                <Text style={{ color: colors.textSub }} className="text-xs">{label}</Text>
+                <Text style={{ color: colors.text }} className="text-xs font-medium">{value}</Text>
               </View>
             ))}
           </View>
         )}
 
-        {/* Disclaimer */}
-        <Text className="text-xs text-[#656d76] text-center leading-5 px-2">
+        <Text style={{ color: colors.textMuted }} className="text-xs text-center leading-5 px-2">
           ⚖️ هذه الحاسبة للأغراض التعليمية فقط. العوائد الفعلية تختلف حسب ظروف السوق. تحقق دائماً من مصادر متعددة قبل الاستثمار.
         </Text>
       </ScrollView>

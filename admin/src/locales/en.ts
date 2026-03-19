@@ -321,6 +321,13 @@ export const en = {
     actionFailed: 'Action failed. Please try again.',
     replyForbidden: 'You are not assigned to this ticket.',
     searchPlaceholder: 'Search by subject or user...',
+    from: 'From',
+    agent: 'Agent',
+    ratingOutOf5: '/5',
+    priorityUrgent: 'Urgent',
+    priorityHigh: 'High',
+    priorityNormal: 'Normal',
+    priorityLow: 'Low',
   },
 
   account: {

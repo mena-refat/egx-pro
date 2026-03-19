@@ -34,13 +34,14 @@ function timeAgo(dateStr: string): string {
 }
 
 function NotifIcon({ type }: { type: string }) {
+  const { colors } = useTheme();
   const t = type.toLowerCase();
   if (t.includes('signal') || t.includes('price')) return <TrendingUp size={16} color="#8b5cf6" />;
   if (t.includes('portfolio') || t.includes('holding')) return <Briefcase size={16} color="#38bdf8" />;
   if (t.includes('news') || t.includes('market')) return <Newspaper size={16} color="#fbbf24" />;
   if (t.includes('achievement')) return <Trophy size={16} color="#f59e0b" />;
   if (t.includes('goal')) return <Target size={16} color="#4ade80" />;
-  return <Bell size={16} color="#8b949e" />;
+  return <Bell size={16} color={colors.textSub} />;
 }
 
 function iconBg(type: string): string {

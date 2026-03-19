@@ -7,9 +7,11 @@ import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { OTPInput } from '../../components/ui/OTPInput';
+import { useTheme } from '../../hooks/useTheme';
 import { useLogin } from '../../hooks/useLogin';
 
 export default function LoginPage() {
+  const { colors } = useTheme();
   const {
     form,
     loading,
@@ -46,8 +48,8 @@ export default function LoginPage() {
             <Fingerprint size={32} color="#8b5cf6" />
           </View>
           <View className="items-center gap-2">
-            <Text className="text-xl font-bold text-[#e6edf3]">التحقق بخطوتين</Text>
-            <Text className="text-sm text-[#8b949e] text-center">
+            <Text style={{ color: colors.text }} className="text-xl font-bold">التحقق بخطوتين</Text>
+            <Text style={{ color: colors.textSub }} className="text-sm text-center">
               أدخل الكود من تطبيق المصادقة
             </Text>
           </View>
@@ -83,8 +85,8 @@ export default function LoginPage() {
             <Hash size={32} color="#8b5cf6" />
           </View>
           <View className="items-center gap-2">
-            <Text className="text-xl font-bold text-[#e6edf3]">أدخل رمز PIN</Text>
-            <Text className="text-sm text-[#8b949e] text-center">
+            <Text style={{ color: colors.text }} className="text-xl font-bold">أدخل رمز PIN</Text>
+            <Text style={{ color: colors.textSub }} className="text-sm text-center">
               رمزك السري المكون من 4 أرقام
             </Text>
           </View>
@@ -99,10 +101,10 @@ export default function LoginPage() {
             </Text>
           )}
           {loading && (
-            <Text className="text-sm text-[#8b949e]">جارٍ تسجيل الدخول...</Text>
+            <Text style={{ color: colors.textSub }} className="text-sm">جارٍ تسجيل الدخول...</Text>
           )}
           <Pressable onPress={() => setShowPin(false)} className="py-3">
-            <Text className="text-sm text-[#8b949e]">استخدم كلمة المرور</Text>
+            <Text style={{ color: colors.textSub }} className="text-sm">استخدم كلمة المرور</Text>
           </Pressable>
         </View>
       </ScreenWrapper>
@@ -126,12 +128,12 @@ export default function LoginPage() {
             <View className="w-14 h-14 rounded-2xl bg-brand items-center justify-center mb-4">
               <Text className="text-2xl font-bold text-white">B</Text>
             </View>
-            <Text className="text-2xl font-bold text-[#e6edf3]">Borsa</Text>
-            <Text className="text-sm text-[#8b949e] mt-1">بورصة مصر في يدك</Text>
+            <Text style={{ color: colors.text }} className="text-2xl font-bold">Borsa</Text>
+            <Text style={{ color: colors.textSub }} className="text-sm mt-1">بورصة مصر في يدك</Text>
           </View>
 
           {/* Form */}
-          <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 gap-5">
+          <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-6 gap-5">
             {error && (
               <View className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                 <Text className="text-sm text-red-400 text-center">{error}</Text>
@@ -205,7 +207,7 @@ export default function LoginPage() {
           </View>
 
           <View className="flex-row justify-center gap-1 mt-6">
-            <Text className="text-sm text-[#8b949e]">مش عندك حساب؟</Text>
+            <Text style={{ color: colors.textSub }} className="text-sm">مش عندك حساب؟</Text>
             <Link href="/(auth)/register" asChild>
               <Pressable>
                 <Text className="text-sm text-brand font-semibold">سجّل الآن</Text>

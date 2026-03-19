@@ -9,6 +9,7 @@ import {
   Home, Car, Briefcase, Globe, Wallet, MoreHorizontal,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
+import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
 
 type Category = 'home' | 'car' | 'retirement' | 'wealth' | 'travel' | 'other';
@@ -25,19 +26,20 @@ interface Goal {
 }
 
 const CATEGORIES: Record<Category, { icon: typeof Home; label: string; color: string }> = {
-  home:       { icon: Home,         label: 'منزل',        color: '#3b82f6' },
-  car:        { icon: Car,          label: 'سيارة',       color: '#f59e0b' },
-  retirement: { icon: Briefcase,    label: 'تقاعد',       color: '#8b5cf6' },
-  wealth:     { icon: Wallet,       label: 'ثروة',        color: '#4ade80' },
-  travel:     { icon: Globe,        label: 'سفر',         color: '#06b6d4' },
-  other:      { icon: MoreHorizontal,label: 'أخرى',      color: '#94a3b8' },
+  home:       { icon: Home,          label: 'منزل',  color: '#3b82f6' },
+  car:        { icon: Car,           label: 'سيارة', color: '#f59e0b' },
+  retirement: { icon: Briefcase,     label: 'تقاعد', color: '#8b5cf6' },
+  wealth:     { icon: Wallet,        label: 'ثروة',  color: '#4ade80' },
+  travel:     { icon: Globe,         label: 'سفر',   color: '#06b6d4' },
+  other:      { icon: MoreHorizontal,label: 'أخرى',  color: '#94a3b8' },
 };
 
 function ProgressBar({ value, max }: { value: number; max: number }) {
+  const { colors } = useTheme();
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   const color = pct >= 100 ? '#4ade80' : pct >= 60 ? '#8b5cf6' : '#f59e0b';
   return (
-    <View className="h-2 bg-[#21262d] rounded-full overflow-hidden">
+    <View style={{ backgroundColor: colors.hover }} className="h-2 rounded-full overflow-hidden">
       <View className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
     </View>
   );
@@ -49,19 +51,26 @@ function GoalCard({ goal, onDelete, onAddAmount, onComplete }: {
   onAddAmount: () => void;
   onComplete: () => void;
 }) {
+  const { colors } = useTheme();
   const cat = CATEGORIES[goal.category] ?? CATEGORIES.other;
   const CatIcon = cat.icon;
   const pct = goal.targetAmount > 0 ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) : 0;
 
   return (
-    <View className={`bg-[#161b22] border rounded-2xl p-4 gap-3 ${goal.isCompleted ? 'border-emerald-500/30' : 'border-[#30363d]'}`}>
+    <View
+      style={{
+        backgroundColor: colors.card,
+        borderColor: goal.isCompleted ? '#4ade8030' : colors.border,
+      }}
+      className="border rounded-2xl p-4 gap-3"
+    >
       <View className="flex-row items-start gap-3">
         <View className="w-10 h-10 rounded-xl items-center justify-center" style={{ backgroundColor: `${cat.color}18` }}>
           <CatIcon size={18} color={cat.color} />
         </View>
         <View className="flex-1">
-          <Text className="text-sm font-bold text-[#e6edf3]" numberOfLines={1}>{goal.title}</Text>
-          <Text className="text-xs text-[#8b949e] mt-0.5">{cat.label}</Text>
+          <Text style={{ color: colors.text }} className="text-sm font-bold" numberOfLines={1}>{goal.title}</Text>
+          <Text style={{ color: colors.textSub }} className="text-xs mt-0.5">{cat.label}</Text>
         </View>
         {goal.isCompleted && (
           <View className="bg-emerald-500/15 px-2 py-0.5 rounded-lg">
@@ -72,16 +81,16 @@ function GoalCard({ goal, onDelete, onAddAmount, onComplete }: {
 
       <View className="gap-1.5">
         <View className="flex-row justify-between items-center">
-          <Text className="text-xs text-[#8b949e]">التقدم</Text>
-          <Text className="text-xs font-bold text-[#e6edf3]">{pct.toFixed(0)}%</Text>
+          <Text style={{ color: colors.textSub }} className="text-xs">التقدم</Text>
+          <Text style={{ color: colors.text }} className="text-xs font-bold">{pct.toFixed(0)}%</Text>
         </View>
         <ProgressBar value={goal.currentAmount} max={goal.targetAmount} />
         <View className="flex-row justify-between items-center">
-          <Text className="text-xs text-[#8b949e]">
+          <Text style={{ color: colors.textSub }} className="text-xs">
             {goal.currentAmount.toLocaleString()} / {goal.targetAmount.toLocaleString()} {goal.currency}
           </Text>
           {goal.deadline && (
-            <Text className="text-xs text-[#656d76]">
+            <Text style={{ color: colors.textMuted }} className="text-xs">
               {new Date(goal.deadline).toLocaleDateString('ar-EG')}
             </Text>
           )}
@@ -125,6 +134,7 @@ function GoalCard({ goal, onDelete, onAddAmount, onComplete }: {
 
 export default function GoalsPage() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -240,18 +250,22 @@ export default function GoalsPage() {
   return (
     <ScreenWrapper padded={false}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 pt-5 pb-4 border-b border-[#30363d]">
+      <View
+        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
+        className="flex-row items-center justify-between px-4 pt-5 pb-4"
+      >
         <View className="flex-row items-center gap-3">
           <Pressable
             onPress={() => router.back()}
-            className="w-9 h-9 rounded-xl bg-white/[0.04] border border-[#30363d] items-center justify-center"
+            style={{ backgroundColor: colors.hover, borderColor: colors.border }}
+            className="w-9 h-9 rounded-xl border items-center justify-center"
           >
-            {I18nManager.isRTL ? <ArrowRight size={16} color="#8b949e" /> : <ArrowLeft size={16} color="#8b949e" />}
+            {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
           </Pressable>
           <View className="w-8 h-8 rounded-xl bg-emerald-500/15 items-center justify-center">
             <Target size={16} color="#4ade80" />
           </View>
-          <Text className="text-base font-bold text-[#e6edf3]">الأهداف المالية</Text>
+          <Text style={{ color: colors.text }} className="text-base font-bold">الأهداف المالية</Text>
         </View>
         <Pressable
           onPress={() => { setShowCreate(true); setCreateError(null); }}
@@ -272,8 +286,8 @@ export default function GoalsPage() {
               <View className="w-16 h-16 rounded-2xl bg-brand/10 items-center justify-center">
                 <Target size={28} color="#8b5cf6" />
               </View>
-              <Text className="text-base font-bold text-[#e6edf3]">لا توجد أهداف بعد</Text>
-              <Text className="text-sm text-[#8b949e] text-center">أضف هدفاً مالياً وتابع تقدمك</Text>
+              <Text style={{ color: colors.text }} className="text-base font-bold">لا توجد أهداف بعد</Text>
+              <Text style={{ color: colors.textSub }} className="text-sm text-center">أضف هدفاً مالياً وتابع تقدمك</Text>
               <Pressable
                 onPress={() => setShowCreate(true)}
                 className="bg-brand rounded-xl px-5 py-2.5 mt-2"
@@ -285,7 +299,7 @@ export default function GoalsPage() {
 
           {active.length > 0 && (
             <View className="gap-3">
-              <Text className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider">قيد التنفيذ</Text>
+              <Text style={{ color: colors.textSub }} className="text-xs font-semibold uppercase tracking-wider">قيد التنفيذ</Text>
               {active.map((g) => (
                 <GoalCard
                   key={g.id}
@@ -300,7 +314,7 @@ export default function GoalsPage() {
 
           {completed.length > 0 && (
             <View className="gap-3">
-              <Text className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider">مكتملة</Text>
+              <Text style={{ color: colors.textSub }} className="text-xs font-semibold uppercase tracking-wider">مكتملة</Text>
               {completed.map((g) => (
                 <GoalCard
                   key={g.id}
@@ -318,11 +332,14 @@ export default function GoalsPage() {
       {/* Create Goal Modal */}
       <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
         <Pressable className="flex-1 bg-black/60" onPress={() => setShowCreate(false)} />
-        <View className="bg-[#161b22] border-t border-[#30363d] rounded-t-3xl px-4 pt-5 pb-10 gap-4">
+        <View
+          style={{ backgroundColor: colors.card, borderTopColor: colors.border }}
+          className="border-t rounded-t-3xl px-4 pt-5 pb-10 gap-4"
+        >
           <View className="flex-row items-center justify-between mb-1">
-            <Text className="text-base font-bold text-[#e6edf3]">هدف مالي جديد</Text>
+            <Text style={{ color: colors.text }} className="text-base font-bold">هدف مالي جديد</Text>
             <Pressable onPress={() => setShowCreate(false)} className="p-1">
-              <Text className="text-[#8b949e]">✕</Text>
+              <Text style={{ color: colors.textSub }}>✕</Text>
             </Pressable>
           </View>
 
@@ -333,33 +350,35 @@ export default function GoalsPage() {
           )}
 
           <View className="gap-1">
-            <Text className="text-xs text-[#8b949e]">العنوان</Text>
+            <Text style={{ color: colors.textSub }} className="text-xs">العنوان</Text>
             <TextInput
               value={title}
               onChangeText={setTitle}
               placeholder="مثال: شراء سيارة"
-              placeholderTextColor="#656d76"
-              className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-sm text-[#e6edf3]"
+              placeholderTextColor={colors.textMuted}
+              style={{ color: colors.text, backgroundColor: colors.bg, borderColor: colors.border }}
+              className="border rounded-xl px-4 py-3 text-sm"
             />
           </View>
 
           <View className="gap-1">
-            <Text className="text-xs text-[#8b949e]">الفئة</Text>
+            <Text style={{ color: colors.textSub }} className="text-xs">الفئة</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="flex-row gap-2">
               {(Object.entries(CATEGORIES) as [Category, typeof CATEGORIES.home][]).map(([key, val]) => {
                 const CatIcon = val.icon;
+                const isSelected = category === key;
                 return (
                   <Pressable
                     key={key}
                     onPress={() => setCategory(key)}
                     className="flex-row items-center gap-1.5 px-3 py-2 rounded-xl border"
                     style={{
-                      backgroundColor: category === key ? `${val.color}18` : '#0d1117',
-                      borderColor: category === key ? val.color : '#30363d',
+                      backgroundColor: isSelected ? `${val.color}18` : colors.bg,
+                      borderColor: isSelected ? val.color : colors.border,
                     }}
                   >
                     <CatIcon size={13} color={val.color} />
-                    <Text className="text-xs font-medium" style={{ color: category === key ? val.color : '#8b949e' }}>{val.label}</Text>
+                    <Text className="text-xs font-medium" style={{ color: isSelected ? val.color : colors.textSub }}>{val.label}</Text>
                   </Pressable>
                 );
               })}
@@ -368,37 +387,40 @@ export default function GoalsPage() {
 
           <View className="flex-row gap-3">
             <View className="flex-1 gap-1">
-              <Text className="text-xs text-[#8b949e]">المبلغ المستهدف (EGP)</Text>
+              <Text style={{ color: colors.textSub }} className="text-xs">المبلغ المستهدف (EGP)</Text>
               <TextInput
                 value={targetAmount}
                 onChangeText={setTargetAmount}
                 placeholder="0"
-                placeholderTextColor="#656d76"
+                placeholderTextColor={colors.textMuted}
                 keyboardType="numeric"
-                className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-sm text-[#e6edf3]"
+                style={{ color: colors.text, backgroundColor: colors.bg, borderColor: colors.border }}
+                className="border rounded-xl px-4 py-3 text-sm"
               />
             </View>
             <View className="flex-1 gap-1">
-              <Text className="text-xs text-[#8b949e]">المبلغ الحالي (EGP)</Text>
+              <Text style={{ color: colors.textSub }} className="text-xs">المبلغ الحالي (EGP)</Text>
               <TextInput
                 value={currentAmount}
                 onChangeText={setCurrentAmount}
                 placeholder="0"
-                placeholderTextColor="#656d76"
+                placeholderTextColor={colors.textMuted}
                 keyboardType="numeric"
-                className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-sm text-[#e6edf3]"
+                style={{ color: colors.text, backgroundColor: colors.bg, borderColor: colors.border }}
+                className="border rounded-xl px-4 py-3 text-sm"
               />
             </View>
           </View>
 
           <View className="gap-1">
-            <Text className="text-xs text-[#8b949e]">الموعد النهائي (اختياري — YYYY-MM-DD)</Text>
+            <Text style={{ color: colors.textSub }} className="text-xs">الموعد النهائي (اختياري — YYYY-MM-DD)</Text>
             <TextInput
               value={deadline}
               onChangeText={setDeadline}
               placeholder="2026-12-31"
-              placeholderTextColor="#656d76"
-              className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-sm text-[#e6edf3]"
+              placeholderTextColor={colors.textMuted}
+              style={{ color: colors.text, backgroundColor: colors.bg, borderColor: colors.border }}
+              className="border rounded-xl px-4 py-3 text-sm"
             />
           </View>
 
@@ -418,17 +440,21 @@ export default function GoalsPage() {
       {/* Add Amount Modal */}
       <Modal visible={!!showAddAmount} transparent animationType="slide" onRequestClose={() => setShowAddAmount(null)}>
         <Pressable className="flex-1 bg-black/60" onPress={() => setShowAddAmount(null)} />
-        <View className="bg-[#161b22] border-t border-[#30363d] rounded-t-3xl px-4 pt-5 pb-10 gap-4">
-          <Text className="text-base font-bold text-[#e6edf3]">إضافة مبلغ</Text>
-          <Text className="text-sm text-[#8b949e]">الهدف: {showAddAmount?.title}</Text>
+        <View
+          style={{ backgroundColor: colors.card, borderTopColor: colors.border }}
+          className="border-t rounded-t-3xl px-4 pt-5 pb-10 gap-4"
+        >
+          <Text style={{ color: colors.text }} className="text-base font-bold">إضافة مبلغ</Text>
+          <Text style={{ color: colors.textSub }} className="text-sm">الهدف: {showAddAmount?.title}</Text>
           <TextInput
             value={addAmount}
             onChangeText={setAddAmount}
             placeholder="المبلغ المضاف بالجنيه"
-            placeholderTextColor="#656d76"
+            placeholderTextColor={colors.textMuted}
             keyboardType="numeric"
             autoFocus
-            className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-sm text-[#e6edf3]"
+            style={{ color: colors.text, backgroundColor: colors.bg, borderColor: colors.border }}
+            className="border rounded-xl px-4 py-3 text-sm"
           />
           <Pressable
             onPress={handleAddAmount}

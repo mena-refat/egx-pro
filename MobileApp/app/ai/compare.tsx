@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowRight, GitCompare, Search, Trophy, CheckCircle, XCircle
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { AnalysisLoader } from '../../components/shared/AnalysisLoader';
 import { EGX_STOCKS, getStockInfo } from '../../lib/egxStocks';
+import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
 
 interface StockSide {
@@ -49,6 +50,7 @@ function str(v: string | { summary?: string } | undefined) {
 function TickerInput({
   value, onChange, placeholder, disabled,
 }: { value: string; onChange: (v: string) => void; placeholder: string; disabled?: boolean }) {
+  const { colors } = useTheme();
   const [open, setOpen] = useState(false);
   const suggestions = useMemo(() => {
     const q = value.trim().toUpperCase();
@@ -60,29 +62,41 @@ function TickerInput({
 
   return (
     <View>
-      <View className="flex-row items-center bg-[#161b22] border border-[#30363d] rounded-xl px-3 gap-2">
-        <Search size={15} color="#656d76" />
+      <View
+        style={{ backgroundColor: colors.card, borderColor: colors.border }}
+        className="flex-row items-center border rounded-xl px-3 gap-2"
+      >
+        <Search size={15} color={colors.textMuted} />
         <TextInput
           value={value}
           onChangeText={(t) => { onChange(t); setOpen(true); }}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
-          placeholderTextColor="#656d76"
-          className="flex-1 py-3 text-sm text-[#e6edf3]"
+          placeholderTextColor={colors.textMuted}
+          style={{ color: colors.text }}
+          className="flex-1 py-3 text-sm"
           autoCapitalize="characters"
           editable={!disabled}
         />
       </View>
       {open && suggestions.length > 0 && (
-        <View className="bg-[#161b22] border border-[#30363d] rounded-xl mt-1 overflow-hidden">
+        <View
+          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          className="border rounded-xl mt-1 overflow-hidden"
+        >
           {suggestions.map((s) => (
             <Pressable
               key={s.ticker}
               onPress={() => { onChange(s.ticker); setOpen(false); }}
-              className="flex-row items-center justify-between px-4 py-3 border-b border-[#21262d] active:bg-[#1c2128]"
+              style={({ pressed }) => ({
+                borderBottomColor: colors.border,
+                borderBottomWidth: 1,
+                backgroundColor: pressed ? colors.hover : 'transparent',
+              })}
+              className="flex-row items-center justify-between px-4 py-3"
             >
-              <Text className="text-sm font-bold text-[#e6edf3]">{s.ticker}</Text>
-              <Text className="text-xs text-[#8b949e]">{s.nameAr}</Text>
+              <Text style={{ color: colors.text }} className="text-sm font-bold">{s.ticker}</Text>
+              <Text style={{ color: colors.textSub }} className="text-xs">{s.nameAr}</Text>
             </Pressable>
           ))}
         </View>
@@ -92,6 +106,7 @@ function TickerInput({
 }
 
 function StockCard({ side, label, isWinner }: { side: StockSide; label: string; isWinner: boolean }) {
+  const { colors } = useTheme();
   const score = side.score ?? 0;
   const verdict = side.verdictBadge ?? side.verdict ?? '';
   const isBuy = verdict.includes('شراء');
@@ -99,7 +114,14 @@ function StockCard({ side, label, isWinner }: { side: StockSide; label: string; 
   const verdictColor = isBuy ? '#4ade80' : isSell ? '#f87171' : '#fbbf24';
 
   return (
-    <View className={`flex-1 bg-[#161b22] rounded-2xl p-4 gap-3 border ${isWinner ? 'border-brand/40' : 'border-[#30363d]'}`}>
+    <View
+      style={{
+        backgroundColor: colors.card,
+        borderColor: isWinner ? '#8b5cf640' : colors.border,
+        flex: 1,
+      }}
+      className="rounded-2xl p-4 gap-3 border"
+    >
       {isWinner && (
         <View className="bg-brand/15 rounded-lg px-2 py-1 self-start flex-row items-center gap-1">
           <Trophy size={11} color="#8b5cf6" />
@@ -107,7 +129,7 @@ function StockCard({ side, label, isWinner }: { side: StockSide; label: string; 
         </View>
       )}
       <View className="items-center gap-2">
-        <Text className="text-base font-bold text-[#e6edf3]">{label}</Text>
+        <Text style={{ color: colors.text }} className="text-base font-bold">{label}</Text>
         {typeof side.score === 'number' && (
           <View className="w-12 h-12 rounded-full items-center justify-center border-2" style={{ borderColor: scoreColor(score) }}>
             <Text className="text-base font-bold" style={{ color: scoreColor(score) }}>{score}</Text>
@@ -120,20 +142,20 @@ function StockCard({ side, label, isWinner }: { side: StockSide; label: string; 
         ) : null}
       </View>
       {str(side.fundamental) ? (
-        <Text className="text-xs text-[#8b949e] leading-5" numberOfLines={3}>{str(side.fundamental)}</Text>
+        <Text style={{ color: colors.textSub }} className="text-xs leading-5" numberOfLines={3}>{str(side.fundamental)}</Text>
       ) : null}
       <View className="gap-1">
         {side.strengths?.slice(0, 2).map((s, i) => {
           const t = typeof s === 'string' ? s : String(s ?? ''); if (!t) return null;
-          return (<View key={i} className="flex-row gap-1.5 items-start"><CheckCircle size={11} color="#4ade80" style={{ marginTop: 2 }} /><Text className="flex-1 text-xs text-[#e6edf3] leading-4">{t}</Text></View>);
+          return (<View key={i} className="flex-row gap-1.5 items-start"><CheckCircle size={11} color="#4ade80" style={{ marginTop: 2 }} /><Text style={{ color: colors.text }} className="flex-1 text-xs leading-4">{t}</Text></View>);
         })}
         {side.weaknesses?.slice(0, 2).map((w, i) => {
           const t = typeof w === 'string' ? w : String(w ?? ''); if (!t) return null;
-          return (<View key={i} className="flex-row gap-1.5 items-start"><XCircle size={11} color="#f87171" style={{ marginTop: 2 }} /><Text className="flex-1 text-xs text-[#e6edf3] leading-4">{t}</Text></View>);
+          return (<View key={i} className="flex-row gap-1.5 items-start"><XCircle size={11} color="#f87171" style={{ marginTop: 2 }} /><Text style={{ color: colors.text }} className="flex-1 text-xs leading-4">{t}</Text></View>);
         })}
         {side.risks?.slice(0, 1).map((r, i) => {
           const t = typeof r === 'string' ? r : String(r ?? ''); if (!t) return null;
-          return (<View key={i} className="flex-row gap-1.5 items-start"><AlertTriangle size={11} color="#fbbf24" style={{ marginTop: 2 }} /><Text className="flex-1 text-xs text-[#e6edf3] leading-4">{t}</Text></View>);
+          return (<View key={i} className="flex-row gap-1.5 items-start"><AlertTriangle size={11} color="#fbbf24" style={{ marginTop: 2 }} /><Text style={{ color: colors.text }} className="flex-1 text-xs leading-4">{t}</Text></View>);
         })}
       </View>
     </View>
@@ -142,6 +164,7 @@ function StockCard({ side, label, isWinner }: { side: StockSide; label: string; 
 
 export default function ComparePage() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [t1, setT1] = useState('');
   const [t2, setT2] = useState('');
   const [loading, setLoading] = useState(false);
@@ -186,14 +209,21 @@ export default function ComparePage() {
 
   return (
     <ScreenWrapper padded={false}>
-      <View className="flex-row items-center gap-3 px-4 pt-5 pb-4 border-b border-[#30363d]">
-        <Pressable onPress={() => router.back()} className="w-9 h-9 rounded-xl bg-white/[0.04] border border-[#30363d] items-center justify-center">
-          {I18nManager.isRTL ? <ArrowRight size={16} color="#8b949e" /> : <ArrowLeft size={16} color="#8b949e" />}
+      <View
+        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
+        className="flex-row items-center gap-3 px-4 pt-5 pb-4"
+      >
+        <Pressable
+          onPress={() => router.back()}
+          style={{ backgroundColor: colors.hover, borderColor: colors.border }}
+          className="w-9 h-9 rounded-xl border items-center justify-center"
+        >
+          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
         <View className="w-8 h-8 rounded-xl bg-blue-500/15 items-center justify-center">
           <GitCompare size={16} color="#3b82f6" />
         </View>
-        <Text className="text-base font-bold text-[#e6edf3]">مقارنة سهمين</Text>
+        <Text style={{ color: colors.text }} className="text-base font-bold">مقارنة سهمين</Text>
       </View>
 
       <ScrollView contentContainerClassName="px-4 pt-4 pb-10 gap-4" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -226,7 +256,7 @@ export default function ComparePage() {
                 <View className="flex-1">
                   <Text className="text-sm font-bold text-brand">الفائز: {result.winner}</Text>
                   {(result.winnerReason ?? result.reason) ? (
-                    <Text className="text-xs text-[#8b949e] mt-0.5 leading-4">{result.winnerReason ?? result.reason}</Text>
+                    <Text style={{ color: colors.textSub }} className="text-xs mt-0.5 leading-4">{result.winnerReason ?? result.reason}</Text>
                   ) : null}
                 </View>
               </View>
@@ -234,16 +264,16 @@ export default function ComparePage() {
 
             {/* Summary */}
             {result.summary ? (
-              <View className="bg-[#161b22] border border-[#30363d] rounded-2xl px-4 py-3">
-                <Text className="text-sm text-[#e6edf3] leading-6">{result.summary}</Text>
+              <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl px-4 py-3">
+                <Text style={{ color: colors.text }} className="text-sm leading-6">{result.summary}</Text>
               </View>
             ) : null}
 
             {/* Recommendation */}
             {result.recommendation ? (
-              <View className="bg-[#161b22] border border-[#30363d] rounded-2xl px-4 py-3">
-                <Text className="text-xs text-[#656d76] mb-1">💡 التوصية</Text>
-                <Text className="text-sm text-[#e6edf3] leading-5">{result.recommendation}</Text>
+              <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl px-4 py-3">
+                <Text style={{ color: colors.textMuted }} className="text-xs mb-1">💡 التوصية</Text>
+                <Text style={{ color: colors.text }} className="text-sm leading-5">{result.recommendation}</Text>
               </View>
             ) : null}
 
@@ -256,7 +286,7 @@ export default function ComparePage() {
             )}
 
             {result.disclaimer ? (
-              <Text className="text-xs text-[#656d76] text-center leading-5 px-2">⚖️ {result.disclaimer}</Text>
+              <Text style={{ color: colors.textMuted }} className="text-xs text-center leading-5 px-2">⚖️ {result.disclaimer}</Text>
             ) : null}
           </View>
         )}

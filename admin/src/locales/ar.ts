@@ -155,9 +155,9 @@ export const ar = {
     title: 'الإيرادات والاشتراكات',
     subtitle: 'نظرة مالية شاملة وتفاصيل المشتركين',
     mrr: 'الإيراد الشهري',
-    mrrSub: 'Monthly Recurring Revenue',
+    mrrSub: 'الإيراد الشهري المتكرر',
     arr: 'الإيراد السنوي',
-    arrSub: 'Annual Run Rate',
+    arrSub: 'معدل الإيراد السنوي',
     paidUsers: 'المشتركون المدفوعون',
     freeUpgrades: 'ترقيات مجانية',
     freeUpgradesSub: 'مستخدمون رُقّوا بكود خصم',
@@ -235,7 +235,7 @@ export const ar = {
 
   support: {
     title: 'تذاكر الدعم الفني',
-    tickets: 'تذكرة',
+    tickets: 'تذاكر',
     all: 'الكل',
     open: 'مفتوحة',
     inProgress: 'قيد المعالجة',
@@ -283,7 +283,7 @@ export const ar = {
     quickSelect: 'اختيار سريع',
     chooseAgent: 'اختر موظف...',
     managers: 'المديرون',
-    viewTeam: 'عرض الفريق →',
+    viewTeam: 'عرض الفريق ←',
     backToManagers: '→ جميع المديرين',
     teamSize: 'حجم الفريق',
     noManagers: 'لا يوجد مديرون',
@@ -321,6 +321,13 @@ export const ar = {
     actionFailed: 'فشلت العملية. يرجى المحاولة مجددًا.',
     replyForbidden: 'لست مسندًا إلى هذه التذكرة.',
     searchPlaceholder: 'ابحث بالموضوع أو المستخدم...',
+    from: 'من',
+    agent: 'الموظف',
+    ratingOutOf5: '/5',
+    priorityUrgent: 'عاجل',
+    priorityHigh: 'عالية',
+    priorityNormal: 'عادية',
+    priorityLow: 'منخفضة',
   },
 
   account: {

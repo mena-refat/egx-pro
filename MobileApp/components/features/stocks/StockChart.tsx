@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import apiClient from '../../../lib/api/client';
+import { useTheme } from '../../../hooks/useTheme';
 
 interface DataPoint {
   date: string;
@@ -60,6 +61,7 @@ function buildPaths(
 }
 
 export function StockChart({ ticker, lineColor }: Props) {
+  const { colors } = useTheme();
   const [range, setRange] = useState<Range>('1mo');
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,21 +112,19 @@ export function StockChart({ ticker, lineColor }: Props) {
       : { linePath: '', areaPath: '' };
 
   return (
-    <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4">
+    <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-4">
       {/* Range selector */}
       <View className="flex-row gap-1 mb-4">
         {RANGES.map((r) => (
           <Pressable
             key={r.id}
             onPress={() => setRange(r.id)}
-            className={`flex-1 py-1.5 rounded-lg items-center ${
-              range === r.id ? 'bg-brand' : 'bg-white/[0.04]'
-            }`}
+            style={range === r.id ? {} : { backgroundColor: colors.hover }}
+            className={`flex-1 py-1.5 rounded-lg items-center ${range === r.id ? 'bg-brand' : ''}`}
           >
             <Text
-              className={`text-xs font-semibold ${
-                range === r.id ? 'text-white' : 'text-[#8b949e]'
-              }`}
+              style={{ color: range === r.id ? '#fff' : colors.textSub }}
+              className="text-xs font-semibold"
             >
               {r.label}
             </Text>
@@ -138,7 +138,7 @@ export function StockChart({ ticker, lineColor }: Props) {
         </View>
       ) : data.length === 0 ? (
         <View style={{ height: CHART_HEIGHT }} className="items-center justify-center">
-          <Text className="text-[#656d76] text-sm">لا توجد بيانات</Text>
+          <Text style={{ color: colors.textMuted }} className="text-sm">لا توجد بيانات</Text>
         </View>
       ) : (
         <View

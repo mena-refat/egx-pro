@@ -1,5 +1,6 @@
 import { ActivityIndicator, Pressable, Text, type PressableProps } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useTheme } from '../../hooks/useTheme';
 
 interface Props extends PressableProps {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -8,13 +9,6 @@ interface Props extends PressableProps {
   fullWidth?: boolean;
   label: string;
 }
-
-const variants = {
-  primary:   'bg-brand',
-  secondary: 'bg-white/[0.06] border border-[#30363d]',
-  ghost:     'bg-transparent',
-  danger:    'bg-red-500/90',
-} as const;
 
 const sizes = {
   sm: { px: 'px-3', py: 'py-1.5', text: 'text-sm' },
@@ -32,9 +26,22 @@ export function Button({
   disabled,
   ...rest
 }: Props) {
-  const v = variants[variant];
+  const { colors } = useTheme();
   const s = sizes[size];
   const isDisabled = disabled || loading;
+
+  const variantStyle =
+    variant === 'primary'   ? { backgroundColor: '#8b5cf6' } :
+    variant === 'secondary' ? { backgroundColor: colors.hover, borderWidth: 1, borderColor: colors.border } :
+    variant === 'danger'    ? { backgroundColor: '#ef444480' } :
+    {};
+
+  const variantClass =
+    variant === 'primary'   ? 'bg-brand' :
+    variant === 'secondary' ? '' :
+    variant === 'ghost'     ? 'bg-transparent' :
+    variant === 'danger'    ? '' :
+    '';
 
   const handlePress: NonNullable<PressableProps['onPress']> = async (e) => {
     try {
@@ -50,8 +57,9 @@ export function Button({
       {...rest}
       onPress={handlePress}
       disabled={isDisabled}
+      style={variantStyle}
       className={`
-        ${v} ${s.px} ${s.py} rounded-xl flex-row items-center justify-center gap-2
+        ${variantClass} ${s.px} ${s.py} rounded-xl flex-row items-center justify-center gap-2
         ${fullWidth ? 'w-full' : ''}
         ${isDisabled ? 'opacity-50' : 'active:opacity-80'}
       `}

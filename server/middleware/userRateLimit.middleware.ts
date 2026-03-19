@@ -1,5 +1,5 @@
 import { rateLimit } from 'express-rate-limit';
-import { verifyAccessToken } from '../lib/auth.ts';
+import { verifyAccessToken } from '../../src/lib/auth.ts';
 
 const ipKey = (req: { ip?: string }) => (req.ip ?? 'unknown').replace(/^::ffff:/, '');
 

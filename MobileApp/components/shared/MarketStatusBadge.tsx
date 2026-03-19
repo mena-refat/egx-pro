@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import { isEgyptMarketOpen } from '../../lib/cairoTime';
+import { useTheme } from '../../hooks/useTheme';
 
 export function MarketStatusBadge() {
+  const { colors } = useTheme();
   const [isOpen, setIsOpen] = useState(() => isEgyptMarketOpen());
 
   useEffect(() => {
@@ -12,19 +14,16 @@ export function MarketStatusBadge() {
 
   return (
     <View
-      className={`flex-row items-center gap-1.5 px-2.5 py-1 rounded-full ${
-        isOpen ? 'bg-emerald-500/10' : 'bg-white/[0.04]'
-      }`}
+      style={{ backgroundColor: isOpen ? '#4ade8018' : colors.hover }}
+      className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-full"
     >
       <View
-        className={`w-1.5 h-1.5 rounded-full ${
-          isOpen ? 'bg-emerald-400' : 'bg-[#656d76]'
-        }`}
+        className="w-1.5 h-1.5 rounded-full"
+        style={{ backgroundColor: isOpen ? '#4ade80' : colors.textMuted }}
       />
       <Text
-        className={`text-xs font-medium ${
-          isOpen ? 'text-emerald-400' : 'text-[#8b949e]'
-        }`}
+        style={{ color: isOpen ? '#4ade80' : colors.textSub }}
+        className="text-xs font-medium"
       >
         {isOpen ? 'السوق مفتوح' : 'السوق مغلق'}
       </Text>

@@ -9,6 +9,7 @@ import {
   Plus, Clock, CheckCircle, XCircle, Search,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
+import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
 import { EGX_STOCKS } from '../../lib/egxStocks';
 
@@ -41,22 +42,26 @@ const TIMEFRAME_LABELS: Record<Timeframe, string> = {
 };
 
 const STATUS_CONFIG: Record<PredStatus, { label: string; color: string; icon: typeof Clock }> = {
-  PENDING:  { label: 'جارية',   color: '#f59e0b', icon: Clock },
-  CORRECT:  { label: 'صحيحة',   color: '#4ade80', icon: CheckCircle },
-  WRONG:    { label: 'خاطئة',   color: '#f87171', icon: XCircle },
-  EXPIRED:  { label: 'منتهية',  color: '#656d76', icon: Clock },
+  PENDING:  { label: 'جارية',  color: '#f59e0b', icon: Clock },
+  CORRECT:  { label: 'صحيحة',  color: '#4ade80', icon: CheckCircle },
+  WRONG:    { label: 'خاطئة',  color: '#f87171', icon: XCircle },
+  EXPIRED:  { label: 'منتهية', color: '#9ca3af', icon: Clock },
 };
 
 function PredictionCard({ pred }: { pred: Prediction }) {
+  const { colors } = useTheme();
   const isUp = pred.direction === 'UP';
   const st = STATUS_CONFIG[pred.status] ?? STATUS_CONFIG.PENDING;
   const StatusIcon = st.icon;
 
   return (
-    <View className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 gap-3">
+    <View
+      style={{ backgroundColor: colors.card, borderColor: colors.border }}
+      className="border rounded-2xl p-4 gap-3"
+    >
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-2">
-          <Text className="text-base font-bold text-[#e6edf3]">{pred.ticker}</Text>
+          <Text style={{ color: colors.text }} className="text-base font-bold">{pred.ticker}</Text>
           <View
             className="flex-row items-center gap-1 px-2 py-0.5 rounded-lg"
             style={{ backgroundColor: isUp ? '#4ade8018' : '#f8717118' }}
@@ -77,26 +82,26 @@ function PredictionCard({ pred }: { pred: Prediction }) {
 
       <View className="flex-row gap-4">
         <View className="gap-0.5">
-          <Text className="text-xs text-[#656d76]">السعر المستهدف</Text>
-          <Text className="text-sm font-bold text-[#e6edf3]">{pred.targetPrice} EGP</Text>
+          <Text style={{ color: colors.textMuted }} className="text-xs">السعر المستهدف</Text>
+          <Text style={{ color: colors.text }} className="text-sm font-bold">{pred.targetPrice} EGP</Text>
         </View>
         {pred.priceAtCreation != null && (
           <View className="gap-0.5">
-            <Text className="text-xs text-[#656d76]">عند الإنشاء</Text>
-            <Text className="text-sm font-medium text-[#8b949e]">{pred.priceAtCreation} EGP</Text>
+            <Text style={{ color: colors.textMuted }} className="text-xs">عند الإنشاء</Text>
+            <Text style={{ color: colors.textSub }} className="text-sm font-medium">{pred.priceAtCreation} EGP</Text>
           </View>
         )}
         <View className="gap-0.5">
-          <Text className="text-xs text-[#656d76]">المدة</Text>
-          <Text className="text-sm font-medium text-[#8b949e]">{TIMEFRAME_LABELS[pred.timeframe]}</Text>
+          <Text style={{ color: colors.textMuted }} className="text-xs">المدة</Text>
+          <Text style={{ color: colors.textSub }} className="text-sm font-medium">{TIMEFRAME_LABELS[pred.timeframe]}</Text>
         </View>
       </View>
 
       {pred.reason ? (
-        <Text className="text-xs text-[#8b949e] leading-5" numberOfLines={2}>{pred.reason}</Text>
+        <Text style={{ color: colors.textSub }} className="text-xs leading-5" numberOfLines={2}>{pred.reason}</Text>
       ) : null}
 
-      <Text className="text-xs text-[#656d76]">
+      <Text style={{ color: colors.textMuted }} className="text-xs">
         {new Date(pred.createdAt).toLocaleDateString('ar-EG')}
       </Text>
     </View>
@@ -105,13 +110,13 @@ function PredictionCard({ pred }: { pred: Prediction }) {
 
 export default function PredictionsPage() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [tab, setTab] = useState<'my' | 'feed'>('my');
   const [myPreds, setMyPreds] = useState<Prediction[]>([]);
   const [feedPreds, setFeedPreds] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
 
-  // Create form
   const [ticker, setTicker] = useState('');
   const [tickerOpen, setTickerOpen] = useState(false);
   const [direction, setDirection] = useState<Direction>('UP');
@@ -158,12 +163,8 @@ export default function PredictionsPage() {
     setCreateError(null);
     try {
       const res = await apiClient.post('/api/predictions', {
-        ticker: t,
-        direction,
-        timeframe,
-        targetPrice: price,
-        reason: reason.trim(),
-        isPublic: true,
+        ticker: t, direction, timeframe,
+        targetPrice: price, reason: reason.trim(), isPublic: true,
       });
       const newPred = res.data as Prediction;
       setMyPreds((prev) => [newPred, ...prev]);
@@ -185,18 +186,22 @@ export default function PredictionsPage() {
   return (
     <ScreenWrapper padded={false}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 pt-5 pb-4 border-b border-[#30363d]">
+      <View
+        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
+        className="flex-row items-center justify-between px-4 pt-5 pb-4"
+      >
         <View className="flex-row items-center gap-3">
           <Pressable
             onPress={() => router.back()}
-            className="w-9 h-9 rounded-xl bg-white/[0.04] border border-[#30363d] items-center justify-center"
+            style={{ backgroundColor: colors.hover, borderColor: colors.border }}
+            className="w-9 h-9 rounded-xl border items-center justify-center"
           >
-            {I18nManager.isRTL ? <ArrowRight size={16} color="#8b949e" /> : <ArrowLeft size={16} color="#8b949e" />}
+            {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
           </Pressable>
           <View className="w-8 h-8 rounded-xl bg-blue-500/15 items-center justify-center">
             <TrendingUp size={16} color="#3b82f6" />
           </View>
-          <Text className="text-base font-bold text-[#e6edf3]">التوقعات</Text>
+          <Text style={{ color: colors.text }} className="text-base font-bold">التوقعات</Text>
         </View>
         <Pressable
           onPress={() => { setShowCreate(true); setCreateError(null); }}
@@ -213,9 +218,13 @@ export default function PredictionsPage() {
             key={t}
             onPress={() => setTab(t)}
             className="flex-1 py-2 rounded-xl items-center"
-            style={{ backgroundColor: tab === t ? '#8b5cf615' : '#161b22', borderWidth: 1, borderColor: tab === t ? '#8b5cf640' : '#30363d' }}
+            style={{
+              backgroundColor: tab === t ? '#8b5cf615' : colors.card,
+              borderWidth: 1,
+              borderColor: tab === t ? '#8b5cf640' : colors.border,
+            }}
           >
-            <Text className="text-sm font-medium" style={{ color: tab === t ? '#8b5cf6' : '#8b949e' }}>
+            <Text className="text-sm font-medium" style={{ color: tab === t ? '#8b5cf6' : colors.textSub }}>
               {t === 'my' ? 'توقعاتي' : 'السوق'}
             </Text>
           </Pressable>
@@ -233,7 +242,7 @@ export default function PredictionsPage() {
               <View className="w-16 h-16 rounded-2xl bg-blue-500/10 items-center justify-center">
                 <TrendingUp size={28} color="#3b82f6" />
               </View>
-              <Text className="text-base font-bold text-[#e6edf3]">
+              <Text style={{ color: colors.text }} className="text-base font-bold">
                 {tab === 'my' ? 'لا توجد توقعات بعد' : 'لا توجد توقعات في الفيد'}
               </Text>
               {tab === 'my' && (
@@ -255,14 +264,15 @@ export default function PredictionsPage() {
       <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
         <Pressable className="flex-1 bg-black/60" onPress={() => setShowCreate(false)} />
         <ScrollView
-          className="bg-[#161b22] border-t border-[#30363d] rounded-t-3xl"
+          style={{ backgroundColor: colors.card, borderTopColor: colors.border, borderTopWidth: 1 }}
+          className="rounded-t-3xl"
           contentContainerClassName="px-4 pt-5 pb-12 gap-4"
           keyboardShouldPersistTaps="handled"
         >
           <View className="flex-row items-center justify-between mb-1">
-            <Text className="text-base font-bold text-[#e6edf3]">توقع جديد</Text>
+            <Text style={{ color: colors.text }} className="text-base font-bold">توقع جديد</Text>
             <Pressable onPress={() => setShowCreate(false)} className="p-1">
-              <Text className="text-[#8b949e]">✕</Text>
+              <Text style={{ color: colors.textSub }}>✕</Text>
             </Pressable>
           </View>
 
@@ -274,29 +284,41 @@ export default function PredictionsPage() {
 
           {/* Ticker */}
           <View className="gap-1">
-            <Text className="text-xs text-[#8b949e]">رمز السهم</Text>
-            <View className="flex-row items-center bg-[#0d1117] border border-[#30363d] rounded-xl px-3 gap-2">
-              <Search size={14} color="#656d76" />
+            <Text style={{ color: colors.textSub }} className="text-xs">رمز السهم</Text>
+            <View
+              style={{ backgroundColor: colors.bg, borderColor: colors.border }}
+              className="flex-row items-center border rounded-xl px-3 gap-2"
+            >
+              <Search size={14} color={colors.textMuted} />
               <TextInput
                 value={ticker}
                 onChangeText={(v) => { setTicker(v); setTickerOpen(true); }}
                 onFocus={() => setTickerOpen(true)}
                 placeholder="مثال: COMI"
-                placeholderTextColor="#656d76"
+                placeholderTextColor={colors.textMuted}
                 autoCapitalize="characters"
-                className="flex-1 py-3 text-sm text-[#e6edf3]"
+                style={{ color: colors.text }}
+                className="flex-1 py-3 text-sm"
               />
             </View>
             {tickerOpen && tickerSuggestions.length > 0 && (
-              <View className="bg-[#0d1117] border border-[#30363d] rounded-xl overflow-hidden">
+              <View
+                style={{ backgroundColor: colors.bg, borderColor: colors.border }}
+                className="border rounded-xl overflow-hidden"
+              >
                 {tickerSuggestions.map((s) => (
                   <Pressable
                     key={s.ticker}
                     onPress={() => { setTicker(s.ticker); setTickerOpen(false); }}
-                    className="flex-row items-center justify-between px-4 py-2.5 border-b border-[#21262d] active:bg-[#1c2128]"
+                    style={({ pressed }) => ({
+                      borderBottomColor: colors.border,
+                      borderBottomWidth: 1,
+                      backgroundColor: pressed ? colors.hover : 'transparent',
+                    })}
+                    className="flex-row items-center justify-between px-4 py-2.5"
                   >
-                    <Text className="text-sm font-bold text-[#e6edf3]">{s.ticker}</Text>
-                    <Text className="text-xs text-[#8b949e]">{s.nameAr}</Text>
+                    <Text style={{ color: colors.text }} className="text-sm font-bold">{s.ticker}</Text>
+                    <Text style={{ color: colors.textSub }} className="text-xs">{s.nameAr}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -305,39 +327,48 @@ export default function PredictionsPage() {
 
           {/* Direction */}
           <View className="gap-1">
-            <Text className="text-xs text-[#8b949e]">الاتجاه</Text>
+            <Text style={{ color: colors.textSub }} className="text-xs">الاتجاه</Text>
             <View className="flex-row gap-3">
               <Pressable
                 onPress={() => setDirection('UP')}
                 className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border"
-                style={{ backgroundColor: direction === 'UP' ? '#4ade8018' : '#0d1117', borderColor: direction === 'UP' ? '#4ade80' : '#30363d' }}
+                style={{
+                  backgroundColor: direction === 'UP' ? '#4ade8018' : colors.bg,
+                  borderColor: direction === 'UP' ? '#4ade80' : colors.border,
+                }}
               >
                 <TrendingUp size={16} color="#4ade80" />
-                <Text className="text-sm font-bold" style={{ color: direction === 'UP' ? '#4ade80' : '#8b949e' }}>صعود</Text>
+                <Text className="text-sm font-bold" style={{ color: direction === 'UP' ? '#4ade80' : colors.textSub }}>صعود</Text>
               </Pressable>
               <Pressable
                 onPress={() => setDirection('DOWN')}
                 className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border"
-                style={{ backgroundColor: direction === 'DOWN' ? '#f8717118' : '#0d1117', borderColor: direction === 'DOWN' ? '#f87171' : '#30363d' }}
+                style={{
+                  backgroundColor: direction === 'DOWN' ? '#f8717118' : colors.bg,
+                  borderColor: direction === 'DOWN' ? '#f87171' : colors.border,
+                }}
               >
                 <TrendingDown size={16} color="#f87171" />
-                <Text className="text-sm font-bold" style={{ color: direction === 'DOWN' ? '#f87171' : '#8b949e' }}>هبوط</Text>
+                <Text className="text-sm font-bold" style={{ color: direction === 'DOWN' ? '#f87171' : colors.textSub }}>هبوط</Text>
               </Pressable>
             </View>
           </View>
 
           {/* Timeframe */}
           <View className="gap-1">
-            <Text className="text-xs text-[#8b949e]">المدة</Text>
+            <Text style={{ color: colors.textSub }} className="text-xs">المدة</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="flex-row gap-2">
               {(Object.entries(TIMEFRAME_LABELS) as [Timeframe, string][]).map(([key, label]) => (
                 <Pressable
                   key={key}
                   onPress={() => setTimeframe(key)}
                   className="px-3 py-2 rounded-xl border"
-                  style={{ backgroundColor: timeframe === key ? '#8b5cf615' : '#0d1117', borderColor: timeframe === key ? '#8b5cf6' : '#30363d' }}
+                  style={{
+                    backgroundColor: timeframe === key ? '#8b5cf615' : colors.bg,
+                    borderColor: timeframe === key ? '#8b5cf6' : colors.border,
+                  }}
                 >
-                  <Text className="text-xs font-medium" style={{ color: timeframe === key ? '#8b5cf6' : '#8b949e' }}>{label}</Text>
+                  <Text className="text-xs font-medium" style={{ color: timeframe === key ? '#8b5cf6' : colors.textSub }}>{label}</Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -345,30 +376,40 @@ export default function PredictionsPage() {
 
           {/* Target Price */}
           <View className="gap-1">
-            <Text className="text-xs text-[#8b949e]">السعر المستهدف (EGP)</Text>
+            <Text style={{ color: colors.textSub }} className="text-xs">السعر المستهدف (EGP)</Text>
             <TextInput
               value={targetPrice}
               onChangeText={setTargetPrice}
               placeholder="0.00"
-              placeholderTextColor="#656d76"
+              placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
-              className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-sm text-[#e6edf3]"
+              style={{
+                color: colors.text,
+                backgroundColor: colors.bg,
+                borderColor: colors.border,
+              }}
+              className="border rounded-xl px-4 py-3 text-sm"
             />
           </View>
 
           {/* Reason */}
           <View className="gap-1">
-            <Text className="text-xs text-[#8b949e]">سبب التوقع</Text>
+            <Text style={{ color: colors.textSub }} className="text-xs">سبب التوقع</Text>
             <TextInput
               value={reason}
               onChangeText={setReason}
               placeholder="اشرح لماذا تتوقع هذا الاتجاه..."
-              placeholderTextColor="#656d76"
+              placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={3}
               textAlignVertical="top"
-              className="bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-3 text-sm text-[#e6edf3]"
-              style={{ minHeight: 80 }}
+              style={{
+                color: colors.text,
+                backgroundColor: colors.bg,
+                borderColor: colors.border,
+                minHeight: 80,
+              }}
+              className="border rounded-xl px-4 py-3 text-sm"
             />
           </View>
 
