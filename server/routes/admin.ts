@@ -130,6 +130,15 @@ router.delete(
 );
 
 router.get(
+  '/support/my-stats',
+  adminAuthenticate,
+  requirePermission('support.reply'),
+  (req, res, next) => {
+    void AdminSupportController.myStats(req as any, res).catch(next);
+  }
+);
+
+router.get(
   '/support/agents',
   adminAuthenticate,
   requirePermission('support.manage'),

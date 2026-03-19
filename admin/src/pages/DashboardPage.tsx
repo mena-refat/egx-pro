@@ -41,18 +41,27 @@ export default function DashboardPage() {
   const [health, setHealth] = useState<Health | null>(null);
 
   useEffect(() => {
-    adminApi
-      .get('/analytics/overview')
-      .then((r) => setOverview(r.data.data))
-      .catch(() => null);
-    adminApi
-      .get('/analytics/growth')
-      .then((r) => setGrowth(r.data.data))
-      .catch(() => null);
-    adminApi
-      .get('/analytics/health')
-      .then((r) => setHealth(r.data.data))
-      .catch(() => null);
+    const fetchLive = () => {
+      adminApi.get('/analytics/overview').then((r) => setOverview(r.data.data)).catch(() => null);
+      adminApi.get('/analytics/health').then((r) => setHealth(r.data.data)).catch(() => null);
+    };
+
+    const fetchStatic = () => {
+      adminApi.get('/analytics/growth').then((r) => setGrowth(r.data.data)).catch(() => null);
+    };
+
+    fetchLive();
+    fetchStatic();
+
+    // Live stats refresh every 30 seconds
+    const liveInterval = setInterval(fetchLive, 30_000);
+    // Growth chart refreshes every 5 minutes (changes slowly)
+    const staticInterval = setInterval(fetchStatic, 5 * 60_000);
+
+    return () => {
+      clearInterval(liveInterval);
+      clearInterval(staticInterval);
+    };
   }, []);
 
   const ChartTooltip = ({ active, payload, label }: any) => {

@@ -5,7 +5,8 @@ import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { Pagination } from '../components/Pagination';
-import { MessageSquare, RefreshCw, Users, Clock, Star, UserCheck, UserPlus, CheckSquare, ArrowUpDown } from 'lucide-react';
+import { MessageSquare, RefreshCw, Users, Clock, Star, UserCheck, UserPlus, CheckSquare, ArrowUpDown, TrendingUp } from 'lucide-react';
+import { useAdminStore } from '../store/adminAuthStore';
 
 type Ticket = {
   id: string;
@@ -33,6 +34,26 @@ type AgentStat = {
   avgResponseHours: number | null;
 };
 
+type ManagerStats = {
+  avgAssignmentHours: number | null;
+  unassignedOpen: number;
+  teamTotal: number;
+  teamResolved: number;
+  teamResolveRate: number;
+};
+
+// e.g. 4.8, 5, 3, 4.1 — max 1 decimal, no trailing zero
+const fmt = (n: number) => Number(n.toFixed(1)).toString();
+
+type MyStats = {
+  total: number;
+  resolved: number;
+  active: number;
+  avgRating: number | null;
+  ratingCount: number;
+  avgResponseHours: number | null;
+};
+
 type Agent = { id: number; fullName: string; email: string };
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -44,8 +65,11 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 export default function SupportPage() {
   const { t } = useTranslation();
+  const currentAdmin = useAdminStore((s) => s.admin);
+  const isSuperAdmin = currentAdmin?.role === 'SUPER_ADMIN';
 
   const [managerMode, setManagerMode] = useState(false);
+  const [myStats, setMyStats]         = useState<MyStats | null>(null);
   const [tab, setTab] = useState<'all' | 'unassigned' | 'team'>('all');
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -66,8 +90,9 @@ export default function SupportPage() {
   const [assignTo, setAssignTo]         = useState('');
   const [assigning, setAssigning]       = useState(false);
 
-  const [agentStats, setAgentStats]     = useState<AgentStat[]>([]);
-  const [statsLoading, setStatsLoading] = useState(false);
+  const [agentStats, setAgentStats]       = useState<AgentStat[]>([]);
+  const [managerStats, setManagerStats]   = useState<ManagerStats | null>(null);
+  const [statsLoading, setStatsLoading]   = useState(false);
 
   const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set());
   const [bulkAgentId, setBulkAgentId]   = useState('');
@@ -80,7 +105,14 @@ export default function SupportPage() {
   useEffect(() => {
     adminApi.get('/auth/me').then((r) => {
       const a = r.data.data;
-      setManagerMode(a.role === 'SUPER_ADMIN' || (a.permissions ?? []).includes('support.manage'));
+      const isManager = a.role === 'SUPER_ADMIN' || (a.permissions ?? []).includes('support.manage');
+      setManagerMode(isManager);
+      // Load own performance for agents (not managers)
+      if (!isManager && (a.permissions ?? []).includes('support.reply')) {
+        adminApi.get('/support/my-stats')
+          .then((rs) => setMyStats(rs.data.data))
+          .catch(() => null);
+      }
     }).catch(() => null);
   }, []);
 
@@ -129,8 +161,10 @@ export default function SupportPage() {
     setStatsLoading(true);
     try {
       const r = await adminApi.get('/support/agents/stats');
-      setAgentStats(r.data.data ?? []);
-    } catch { setAgentStats([]); }
+      const data = r.data.data ?? {};
+      setAgentStats(data.agents ?? []);
+      setManagerStats(data.managerStats ?? null);
+    } catch { setAgentStats([]); setManagerStats(null); }
     finally { setStatsLoading(false); }
   }, []);
 
@@ -294,8 +328,97 @@ export default function SupportPage() {
         </div>
       )}
 
+      {/* Agent self-performance card */}
+      {!managerMode && myStats && (
+        <div className="rounded-xl border border-blue-500/20 bg-[#111118] p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp size={14} className="text-blue-400" />
+            <h2 className="text-sm font-semibold text-white">{t('support.myPerformance')}</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { label: t('support.totalTickets'),  value: myStats.total,    color: 'text-white' },
+              { label: t('support.activeTickets'), value: myStats.active,   color: myStats.active > 5 ? 'text-red-400' : myStats.active > 0 ? 'text-amber-400' : 'text-emerald-400' },
+              { label: t('support.resolved'),      value: myStats.resolved, color: 'text-emerald-400' },
+              {
+                label: t('support.resolveRate'),
+                value: myStats.total > 0 ? `${Math.round((myStats.resolved / myStats.total) * 100)}%` : '—',
+                color: myStats.total > 0 && (myStats.resolved / myStats.total) >= 0.8 ? 'text-emerald-400' : 'text-amber-400',
+              },
+              {
+                label: t('support.avgResponse'),
+                value: myStats.avgResponseHours !== null ? `${myStats.avgResponseHours}h` : '—',
+                color: myStats.avgResponseHours !== null && myStats.avgResponseHours <= 2 ? 'text-emerald-400' : myStats.avgResponseHours !== null && myStats.avgResponseHours <= 6 ? 'text-amber-400' : 'text-red-400',
+              },
+              {
+                label: t('support.rating'),
+                value: myStats.avgRating ? `${fmt(myStats.avgRating)}★` : '—',
+                color: 'text-amber-400',
+              },
+            ].map((item) => (
+              <div key={item.label} className="rounded-lg bg-white/[0.03] border border-white/[0.05] px-3 py-3 flex flex-col gap-1">
+                <span className={`text-xl font-bold tabular-nums ${item.color}`}>{item.value}</span>
+                <span className="text-[11px] text-slate-500 leading-tight">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* My Team Tab */}
       {tab === 'team' && managerMode ? (
+        <div className="space-y-5">
+
+        {/* Manager performance card — Super Admin only */}
+        {!statsLoading && managerStats && isSuperAdmin && (
+          <div className="rounded-xl border border-violet-500/20 bg-[#111118] p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <UserCheck size={14} className="text-violet-400" />
+              <h2 className="text-sm font-semibold text-white">{t('support.managerPerformance')}</h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                {
+                  label: t('support.avgAssignmentTime'),
+                  value: managerStats.avgAssignmentHours !== null ? `${managerStats.avgAssignmentHours}h` : '—',
+                  color: managerStats.avgAssignmentHours !== null && managerStats.avgAssignmentHours <= 2
+                    ? 'text-emerald-400' : managerStats.avgAssignmentHours !== null && managerStats.avgAssignmentHours <= 6
+                    ? 'text-amber-400' : 'text-red-400',
+                  hint: '↓ better',
+                },
+                {
+                  label: t('support.unassignedBacklog'),
+                  value: managerStats.unassignedOpen,
+                  color: managerStats.unassignedOpen === 0
+                    ? 'text-emerald-400' : managerStats.unassignedOpen <= 5
+                    ? 'text-amber-400' : 'text-red-400',
+                  hint: managerStats.unassignedOpen > 0 ? '⚠ needs attention' : '✓ clear',
+                },
+                {
+                  label: t('support.teamResolveRate'),
+                  value: `${managerStats.teamResolveRate}%`,
+                  color: managerStats.teamResolveRate >= 80
+                    ? 'text-emerald-400' : managerStats.teamResolveRate >= 50
+                    ? 'text-amber-400' : 'text-red-400',
+                  hint: '↑ better',
+                },
+                {
+                  label: t('support.teamTotal'),
+                  value: managerStats.teamTotal,
+                  color: 'text-blue-400',
+                  hint: '',
+                },
+              ].map((item) => (
+                <div key={item.label} className="rounded-lg bg-white/[0.03] border border-white/[0.05] px-4 py-3 flex flex-col gap-1">
+                  <span className={`text-xl font-bold tabular-nums ${item.color}`}>{item.value}</span>
+                  <span className="text-[11px] text-slate-500 leading-tight">{item.label}</span>
+                  {item.hint && <span className="text-[10px] text-slate-700">{item.hint}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {statsLoading && <p className="text-slate-500 text-sm col-span-3 py-8 text-center">{t('common.loading')}</p>}
           {!statsLoading && agentStats.length === 0 && (
@@ -304,7 +427,7 @@ export default function SupportPage() {
           {agentStats.map((s) => {
             const resolveRate = s.total > 0 ? Math.round((s.resolved / s.total) * 100) : 0;
             return (
-              <div key={s.agent.id} className="bg-[#111118] border border-white/[0.07] rounded-xl p-5 space-y-4 hover:border-white/[0.12] transition-colors">
+              <div key={s.agent.id} className="bg-[#111118] border border-white/[0.07] rounded-xl p-5 space-y-4 hover:border-white/[0.12] transition-colors" >
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm font-semibold text-white">{s.agent.fullName || '—'}</p>
@@ -326,7 +449,7 @@ export default function SupportPage() {
                     <p className="text-xs text-slate-500">{t('support.resolved')}</p>
                   </div>
                   <div>
-                    <p className="text-xl font-bold text-amber-400">{s.avgRating ? `${s.avgRating}★` : '—'}</p>
+                    <p className="text-xl font-bold text-amber-400">{s.avgRating ? `${fmt(s.avgRating)}★` : '—'}</p>
                     <p className="text-xs text-slate-500">{t('support.rating')}</p>
                   </div>
                 </div>
@@ -354,6 +477,7 @@ export default function SupportPage() {
               </div>
             );
           })}
+        </div>
         </div>
       ) : (
         <>

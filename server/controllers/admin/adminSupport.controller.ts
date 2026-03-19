@@ -204,6 +204,8 @@ export const AdminSupportController = {
       orderBy: { fullName: 'asc' },
     });
 
+    const agentIds = agents.map((a) => a.id);
+
     const stats = await Promise.all(
       agents.map(async (agent) => {
         const [total, resolved, active, ratingAgg] = await Promise.all([
@@ -217,6 +219,7 @@ export const AdminSupportController = {
           }),
         ]);
 
+        // Avg response time: from assignedAt → repliedAt
         const respondedTickets = await prisma.supportTicket.findMany({
           where: { assignedTo: agent.id, assignedAt: { not: null }, repliedAt: { not: null } },
           select: { assignedAt: true, repliedAt: true },
@@ -228,10 +231,7 @@ export const AdminSupportController = {
                 (respondedTickets.reduce(
                   (sum, t) => sum + (t.repliedAt!.getTime() - t.assignedAt!.getTime()),
                   0
-                ) /
-                  respondedTickets.length /
-                  3_600_000) *
-                  10
+                ) / respondedTickets.length / 3_600_000) * 10
               ) / 10
             : null;
 
@@ -247,7 +247,44 @@ export const AdminSupportController = {
       })
     );
 
-    sendSuccess(res, stats);
+    // ── Manager performance stats ─────────────────────────────────
+    let assignedTickets: { createdAt: Date; assignedAt: Date | null; status: string }[] = [];
+    if (agentIds.length > 0) {
+      assignedTickets = await prisma.supportTicket.findMany({
+        where: { assignedTo: { in: agentIds }, assignedAt: { not: null } },
+        select: { createdAt: true, assignedAt: true, status: true },
+      });
+    }
+
+    const avgAssignmentHours =
+      assignedTickets.length > 0
+        ? Math.round(
+            (assignedTickets.reduce(
+              (sum, t) => sum + (t.assignedAt!.getTime() - t.createdAt.getTime()),
+              0
+            ) / assignedTickets.length / 3_600_000) * 10
+          ) / 10
+        : null;
+
+    const teamTotal    = assignedTickets.length;
+    const teamResolved = assignedTickets.filter((t) => t.status === 'RESOLVED' || t.status === 'CLOSED').length;
+    const teamResolveRate = teamTotal > 0 ? Math.round((teamResolved / teamTotal) * 100) : 0;
+
+    // Unassigned open tickets (global — helps manager know backlog)
+    const unassignedOpen = await prisma.supportTicket.count({
+      where: { status: 'OPEN', assignedTo: null },
+    });
+
+    sendSuccess(res, {
+      agents: stats,
+      managerStats: {
+        avgAssignmentHours,
+        unassignedOpen,
+        teamTotal,
+        teamResolved,
+        teamResolveRate,
+      },
+    });
   },
 
   async bulkAssign(req: AdminRequest, res: Response): Promise<void> {
@@ -277,6 +314,44 @@ export const AdminSupportController = {
     }
 
     sendSuccess(res, { updated: ticketIds.length });
+  },
+
+  async myStats(req: AdminRequest, res: Response): Promise<void> {
+    const id = req.admin!.id;
+    const [total, resolved, active, ratingAgg] = await Promise.all([
+      prisma.supportTicket.count({ where: { assignedTo: id } }),
+      prisma.supportTicket.count({ where: { assignedTo: id, status: { in: ['RESOLVED', 'CLOSED'] } } }),
+      prisma.supportTicket.count({ where: { assignedTo: id, status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
+      prisma.supportTicket.aggregate({
+        where: { assignedTo: id, rating: { not: null } },
+        _avg: { rating: true },
+        _count: { rating: true },
+      }),
+    ]);
+
+    const respondedTickets = await prisma.supportTicket.findMany({
+      where: { assignedTo: id, assignedAt: { not: null }, repliedAt: { not: null } },
+      select: { assignedAt: true, repliedAt: true },
+    });
+
+    const avgResponseHours =
+      respondedTickets.length > 0
+        ? Math.round(
+            (respondedTickets.reduce(
+              (sum, t) => sum + (t.repliedAt!.getTime() - t.assignedAt!.getTime()),
+              0
+            ) / respondedTickets.length / 3_600_000) * 10
+          ) / 10
+        : null;
+
+    sendSuccess(res, {
+      total,
+      resolved,
+      active,
+      avgRating: ratingAgg._avg.rating ? Math.round(ratingAgg._avg.rating * 10) / 10 : null,
+      ratingCount: ratingAgg._count.rating,
+      avgResponseHours,
+    });
   },
 
   async stats(_req: AdminRequest, res: Response): Promise<void> {
