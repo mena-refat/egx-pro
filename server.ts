@@ -6,7 +6,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
-import { rateLimit } from 'express-rate-limit';
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
@@ -104,8 +104,8 @@ async function startServer() {
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "blob:", ...(Array.isArray(frontendOrigin) ? frontendOrigin : [frontendOrigin])],
-        connectSrc: ["'self'", "https://api.anthropic.com", "https://api.gemini.com", "https://*.run.app", "https://*.vercel.app", "wss://*.run.app", "ws://localhost:3000", "ws://localhost:8080"],
-        frameAncestors: ["'self'", "https://*.google.com", "https://*.aistudio.google", "https://*.run.app", "https://*.vercel.app"],
+        connectSrc: ["'self'", "https://api.anthropic.com", "https://api.gemini.com", "https://*.run.app", "https://*.vercel.app", "wss://*.run.app"],
+        frameAncestors: ["'none'"],
       },
     },
     crossOriginEmbedderPolicy: false,
@@ -149,7 +149,7 @@ async function startServer() {
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
   // Rate Limiting — always respond with JSON so the client never gets "Too many requests" as plain text
-  const ipKey = (req: express.Request) => (req.ip ?? 'unknown').replace(/^::ffff:/, '');
+  const ipKey = (req: express.Request) => ipKeyGenerator(req.ip ?? 'unknown');
   const loginLimiter = rateLimit({
     windowMs: RATE_LIMITS.login.windowMs,
     max: RATE_LIMITS.login.max,

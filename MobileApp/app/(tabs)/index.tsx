@@ -1,14 +1,13 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
-  View, Text, ScrollView, RefreshControl, Pressable, ActivityIndicator,
+  View, Text, ScrollView, RefreshControl, Pressable, ActivityIndicator, I18nManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   Bell, TrendingUp, TrendingDown, ChevronLeft, ChevronRight,
   Briefcase, Star, BarChart2,
 } from 'lucide-react-native';
-import { I18nManager } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { WatchlistRow } from '../../components/features/dashboard/WatchlistRow';
@@ -23,7 +22,7 @@ import { getStockName } from '../../lib/egxStocks';
 import apiClient from '../../lib/api/client';
 import type { Stock } from '../../types/stock';
 
-/* ─── Unread notifications count ─── */
+/* ─── unread count ─── */
 function useUnreadCount() {
   const [count, setCount] = useState(0);
   const mountedRef = useRef(true);
@@ -39,19 +38,12 @@ function useUnreadCount() {
     return () => c.abort();
   }, []);
 
-  // Initial fetch
   useEffect(() => fetchCount(), [fetchCount]);
-
-  // Refresh every time the home tab is focused (e.g. returning from notifications page)
-  useFocusEffect(useCallback(() => {
-    const cleanup = fetchCount();
-    return cleanup;
-  }, [fetchCount]));
-
+  useFocusEffect(useCallback(() => fetchCount(), [fetchCount]));
   return count;
 }
 
-/* ─── local hook ─── */
+/* ─── watchlist ─── */
 function useWatchlist() {
   const [items, setItems] = useState<Stock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,12 +63,7 @@ function useWatchlist() {
     }
   }, []);
 
-  useEffect(() => {
-    const c = new AbortController();
-    void load(c.signal);
-    return () => c.abort();
-  }, [load]);
-
+  useEffect(() => { const c = new AbortController(); void load(c.signal); return () => c.abort(); }, [load]);
   const refetch = useCallback(() => { const c = new AbortController(); return load(c.signal); }, [load]);
   return { items, loading, refetch };
 }
@@ -85,7 +72,6 @@ function useWatchlist() {
 function fmtNum(n: number) {
   return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
-
 function fmtMoney(n: number) {
   return Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -94,32 +80,29 @@ function fmtMoney(n: number) {
 function PortfolioSummaryCard({
   totalValue, totalCost, totalGainLoss, totalGainLossPercent, loading, onPress,
 }: {
-  totalValue: number;
-  totalCost: number;
-  totalGainLoss: number;
-  totalGainLossPercent: number;
-  loading: boolean;
-  onPress: () => void;
+  totalValue: number; totalCost: number;
+  totalGainLoss: number; totalGainLossPercent: number;
+  loading: boolean; onPress: () => void;
 }) {
   const { colors } = useTheme();
   const isUp = totalGainLoss > 0;
   const isDown = totalGainLoss < 0;
   const gainColor = isUp ? '#4ade80' : isDown ? '#f87171' : colors.textSub;
-  const gainBg   = isUp ? '#4ade8018' : isDown ? '#f8717118' : `${colors.border}`;
+  const gainBg = isUp ? '#4ade8018' : isDown ? '#f8717118' : colors.hover;
 
   if (loading) {
     return (
-      <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="mx-4 border rounded-2xl overflow-hidden">
-        <View className="px-5 pt-6 pb-5 items-center gap-3">
+      <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 20, marginHorizontal: 16, overflow: 'hidden' }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 20, alignItems: 'center', gap: 12 }}>
           <Skeleton height={10} className="w-32" />
           <Skeleton height={52} className="w-56" />
           <Skeleton height={22} className="w-44" />
         </View>
-        <View className="flex-row" style={{ borderTopColor: colors.border2, borderTopWidth: 1 }}>
+        <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border }}>
           {[1, 2].map((i) => (
-            <View key={i} className="flex-1 px-5 py-3 items-center gap-1.5">
+            <View key={i} style={{ flex: 1, paddingHorizontal: 20, paddingVertical: 14, alignItems: 'center', gap: 6 }}>
               <Skeleton height={10} className="w-20" />
-              <Skeleton height={16} className="w-28" />
+              <Skeleton height={14} className="w-28" />
             </View>
           ))}
         </View>
@@ -127,70 +110,58 @@ function PortfolioSummaryCard({
     );
   }
 
-  // Split value: "44,470" + ".18"
   const [whole, dec] = fmtMoney(totalValue).split('.');
   const sign = isUp ? '+' : isDown ? '-' : '';
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        { backgroundColor: pressed ? colors.hover : colors.card, borderColor: colors.border },
-      ]}
-      className="mx-4 border rounded-2xl overflow-hidden"
+      style={({ pressed }) => ({
+        backgroundColor: pressed ? colors.hover : colors.card,
+        borderColor: colors.border, borderWidth: 1,
+        borderRadius: 20, marginHorizontal: 16, overflow: 'hidden',
+      })}
     >
-      {/* ── Main value ── */}
-      <View className="px-5 pt-6 pb-5 items-center">
-        {/* Label */}
-        <Text style={{ color: colors.textMuted }} className="text-xs tracking-widest uppercase mb-4">
+      {/* Main value */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 20, alignItems: 'center' }}>
+        <Text style={{ color: colors.textMuted, fontSize: 11, letterSpacing: 1.5, marginBottom: 14 }}>
           قيمة محفظتي
         </Text>
-
-        {/* Big number: EGP 44,470 .18 */}
-        <View className="flex-row items-baseline justify-center gap-1 mb-3">
-          <Text style={{ color: colors.textMuted }} className="text-xl font-medium mb-1">EGP</Text>
-          <Text style={{ color: colors.text }} className="text-5xl font-bold tabular-nums tracking-tight">
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 4, marginBottom: 12 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 18, fontWeight: '500', marginBottom: 4 }}>EGP</Text>
+          <Text style={{ color: colors.text, fontSize: 48, fontWeight: '800', letterSpacing: -1, fontVariant: ['tabular-nums'] }}>
             {whole}
           </Text>
-          <Text style={{ color: colors.text }} className="text-2xl font-semibold tabular-nums">
+          <Text style={{ color: colors.text, fontSize: 24, fontWeight: '600', marginBottom: 6, fontVariant: ['tabular-nums'] }}>
             .{dec}
           </Text>
         </View>
-
-        {/* Gain row */}
-        <View className="flex-row items-center gap-2.5">
-          <Text style={{ color: gainColor }} className="text-sm font-semibold tabular-nums">
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={{ color: gainColor, fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
             {sign}EGP {fmtMoney(totalGainLoss)}
           </Text>
-          <View
-            className="flex-row items-center gap-1 px-2.5 py-1 rounded-xl"
-            style={{ backgroundColor: gainBg }}
-          >
-            <Text style={{ color: gainColor }} className="text-xs font-black">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: gainBg }}>
+            <Text style={{ color: gainColor, fontSize: 12, fontWeight: '800' }}>
               {isUp ? '▲' : isDown ? '▼' : '●'}
             </Text>
-            <Text style={{ color: gainColor }} className="text-sm font-bold tabular-nums">
+            <Text style={{ color: gainColor, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
               {Math.abs(totalGainLossPercent).toFixed(2)}%
             </Text>
           </View>
         </View>
       </View>
 
-      {/* ── Bottom stats ── */}
-      <View className="flex-row" style={{ borderTopColor: colors.border2, borderTopWidth: 1 }}>
-        <View className="flex-1 px-4 py-3 items-center" style={{ borderRightColor: colors.border2, borderRightWidth: 1 }}>
-          <Text style={{ color: colors.textMuted }} className="text-[10px] uppercase tracking-wider mb-1">
-            قيمة الشراء
-          </Text>
-          <Text style={{ color: colors.text }} className="text-sm font-semibold tabular-nums">
+      {/* Bottom stats */}
+      <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border }}>
+        <View style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 14, alignItems: 'center', borderRightWidth: 1, borderRightColor: colors.border }}>
+          <Text style={{ color: colors.textMuted, fontSize: 10, letterSpacing: 0.5, marginBottom: 4 }}>قيمة الشراء</Text>
+          <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
             {totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })} EGP
           </Text>
         </View>
-        <View className="flex-1 px-4 py-3 items-center">
-          <Text style={{ color: colors.textMuted }} className="text-[10px] uppercase tracking-wider mb-1">
-            الربح / الخسارة
-          </Text>
-          <Text style={{ color: gainColor }} className="text-sm font-semibold tabular-nums">
+        <View style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 14, alignItems: 'center' }}>
+          <Text style={{ color: colors.textMuted, fontSize: 10, letterSpacing: 0.5, marginBottom: 4 }}>الربح / الخسارة</Text>
+          <Text style={{ color: gainColor, fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
             {sign}{fmtMoney(totalGainLoss)} EGP
           </Text>
         </View>
@@ -211,17 +182,19 @@ function SectionHeader({
   const { colors } = useTheme();
   const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
   return (
-    <View className="flex-row items-center justify-between mb-3">
-      <View className="flex-row items-center gap-1.5">
-        {Icon && <Icon size={13} color={colors.textMuted} />}
-        <Text style={{ color: colors.textMuted }} className="text-xs font-semibold uppercase tracking-wider">
-          {title}
-        </Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+        {Icon && (
+          <View style={{ width: 24, height: 24, borderRadius: 7, backgroundColor: colors.hover, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon size={13} color={colors.textSub} />
+          </View>
+        )}
+        <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{title}</Text>
       </View>
       {linkLabel && onLink && (
-        <Pressable onPress={onLink} className="flex-row items-center gap-0.5">
-          <Text className="text-xs text-brand">{linkLabel}</Text>
-          <ChevronIcon size={11} color="#8b5cf6" />
+        <Pressable onPress={onLink} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+          <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '600' }}>{linkLabel}</Text>
+          <ChevronIcon size={12} color="#8b5cf6" />
         </Pressable>
       )}
     </View>
@@ -230,18 +203,14 @@ function SectionHeader({
 
 /* ─── Portfolio Chart ─── */
 const CHART_RANGES = [
-  { id: '1w' as const,  label: '١ أ' },
-  { id: '1mo' as const, label: '١ ش' },
-  { id: '3mo' as const, label: '٣ ش' },
+  { id: '1w' as const, label: '1W' },
+  { id: '1mo' as const, label: '1M' },
+  { id: '3mo' as const, label: '3M' },
 ];
 type ChartRange = '1w' | '1mo' | '3mo';
 const CHART_H = 140;
 
-function buildPortfolioPath(
-  data: { value: number }[],
-  width: number,
-  height: number,
-): { linePath: string; areaPath: string } {
+function buildPortfolioPath(data: { value: number }[], width: number, height: number) {
   if (data.length < 2) return { linePath: '', areaPath: '' };
   const pad = { top: 12, bottom: 8 };
   const vals = data.map((d) => d.value);
@@ -263,25 +232,19 @@ function buildPortfolioPath(
   return { linePath, areaPath };
 }
 
-function PortfolioChart({
-  holdings,
-}: {
-  holdings: Array<{ ticker: string; shares: number; avgPrice: number }>;
-}) {
+function PortfolioChart({ holdings }: { holdings: Array<{ ticker: string; shares: number; avgPrice: number }> }) {
   const { colors } = useTheme();
   const [range, setRange] = useState<ChartRange>('1mo');
   const [data, setData] = useState<{ value: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartWidth, setChartWidth] = useState(0);
   const mountedRef = useRef(true);
-
   useEffect(() => () => { mountedRef.current = false; }, []);
 
   useEffect(() => {
     if (holdings.length === 0) { setData([]); setLoading(false); return; }
     const ctrl = new AbortController();
     setLoading(true);
-
     Promise.all(
       holdings.map((h) =>
         apiClient
@@ -311,12 +274,8 @@ function PortfolioChart({
         }))
         .filter((d) => d.value > 0);
       setData(portfolioData);
-    }).catch(() => {
-      if (mountedRef.current) setData([]);
-    }).finally(() => {
-      if (!ctrl.signal.aborted && mountedRef.current) setLoading(false);
-    });
-
+    }).catch(() => { if (mountedRef.current) setData([]); })
+      .finally(() => { if (!ctrl.signal.aborted && mountedRef.current) setLoading(false); });
     return () => ctrl.abort();
   }, [holdings, range]);
 
@@ -331,67 +290,65 @@ function PortfolioChart({
       : { linePath: '', areaPath: '' };
 
   return (
-    <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl overflow-hidden">
+    <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 20, overflow: 'hidden' }}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 pt-3.5 pb-2">
-        <View className="flex-row items-center gap-1.5">
-          <TrendingUp size={12} color={colors.textMuted} />
-          <Text style={{ color: colors.textMuted }} className="text-xs font-semibold uppercase tracking-wider">
-            أداء المحفظة
-          </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+          <View style={{ width: 24, height: 24, borderRadius: 7, backgroundColor: colors.hover, alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingUp size={13} color={colors.textSub} />
+          </View>
+          <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>أداء المحفظة</Text>
         </View>
         {data.length > 1 && (
-          <View
-            className="flex-row items-center px-2 py-0.5 rounded-lg"
-            style={{ backgroundColor: isUp ? '#4ade8018' : '#f8717118' }}
-          >
-            <Text className="text-xs font-bold tabular-nums" style={{ color: lineColor }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: isUp ? '#4ade8018' : '#f8717118' }}>
+            <Text style={{ color: lineColor, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
               {isUp ? '+' : ''}{gain.toFixed(2)}%
             </Text>
           </View>
         )}
       </View>
 
-      {/* Range tabs */}
-      <View className="flex-row gap-1.5 px-4 pb-2">
+      {/* Range pills */}
+      <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 16, paddingBottom: 12 }}>
         {CHART_RANGES.map((r) => (
           <Pressable
             key={r.id}
             onPress={() => setRange(r.id)}
-            className="px-3 py-1 rounded-lg"
-            style={{ backgroundColor: range === r.id ? '#8b5cf6' : colors.border2 }}
+            style={{
+              paddingHorizontal: 14, paddingVertical: 5, borderRadius: 10,
+              backgroundColor: range === r.id ? '#8b5cf6' : colors.hover,
+              borderWidth: 1,
+              borderColor: range === r.id ? '#8b5cf6' : colors.border,
+            }}
           >
-            <Text className="text-xs font-semibold" style={{ color: range === r.id ? '#fff' : colors.textMuted }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: range === r.id ? '#fff' : colors.textSub }}>
               {r.label}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      {/* Chart area */}
+      {/* Chart */}
       {loading ? (
-        <View style={{ height: CHART_H }} className="items-center justify-center">
+        <View style={{ height: CHART_H, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color="#8b5cf6" size="small" />
         </View>
       ) : data.length < 2 ? (
-        <View style={{ height: CHART_H }} className="items-center justify-center">
-          <Text style={{ color: colors.textMuted }} className="text-sm">لا توجد بيانات كافية</Text>
+        <View style={{ height: CHART_H, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: colors.textMuted, fontSize: 13 }}>لا توجد بيانات كافية</Text>
         </View>
       ) : (
-        <View
-          style={{ height: CHART_H }}
-          onLayout={(e) => setChartWidth(e.nativeEvent.layout.width)}
-        >
+        <View style={{ height: CHART_H }} onLayout={(e) => setChartWidth(e.nativeEvent.layout.width)}>
           {chartWidth > 0 && (
             <Svg width={chartWidth} height={CHART_H}>
               <Defs>
-                <LinearGradient id="portGrad" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={lineColor} stopOpacity="0.2" />
+                <LinearGradient id="portGradHome" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={lineColor} stopOpacity="0.22" />
                   <Stop offset="1" stopColor={lineColor} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
-              {areaPath ? <Path d={areaPath} fill="url(#portGrad)" /> : null}
-              {linePath ? <Path d={linePath} stroke={lineColor} strokeWidth={1.8} fill="none" /> : null}
+              {areaPath ? <Path d={areaPath} fill="url(#portGradHome)" /> : null}
+              {linePath ? <Path d={linePath} stroke={lineColor} strokeWidth={2} fill="none" /> : null}
             </Svg>
           )}
         </View>
@@ -405,7 +362,6 @@ export default function HomePage() {
   const router = useRouter();
   const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
-
   const unreadCount = useUnreadCount();
   const { stocks, loadingStocks, refreshing: mktRefreshing, refresh: refreshMarket } = useMarketData();
   const { holdings, summary, loading: portfolioLoading, refreshing: portRefreshing, refresh: refreshPortfolio } = usePortfolioData();
@@ -417,12 +373,10 @@ export default function HomePage() {
   const { prices } = useLivePrices(allTickers);
 
   const refreshing = mktRefreshing || portRefreshing;
-
   const handleRefresh = useCallback(async () => {
     await Promise.all([refreshMarket(), refreshPortfolio(), refetchWatchlist()]);
   }, [refreshMarket, refreshPortfolio, refetchWatchlist]);
 
-  /* Top movers */
   const topGainers = useMemo(
     () => [...stocks].filter((s) => s.changePercent > 0).sort((a, b) => b.changePercent - a.changePercent).slice(0, 5),
     [stocks],
@@ -432,22 +386,19 @@ export default function HomePage() {
     [stocks],
   );
 
-  /* Holdings enriched with live prices */
   const enrichedHoldings = useMemo(() =>
     holdings.map((h) => {
       const live = prices[h.ticker];
       const price = live?.price ?? h.currentPrice ?? h.avgPrice;
       const sessionChange = live?.changePercent ?? 0;
-      const sessionChangeAmt = live?.change ?? 0;
       const currentValue = price * h.shares;
       const totalGain = (price - h.avgPrice) * h.shares;
       const totalGainPct = h.avgPrice > 0 ? ((price - h.avgPrice) / h.avgPrice) * 100 : 0;
-      return { ...h, price, sessionChange, sessionChangeAmt, currentValue, totalGain, totalGainPct };
+      return { ...h, price, sessionChange, currentValue, totalGain, totalGainPct };
     }),
     [holdings, prices],
   );
 
-  /* Portfolio performance best/worst by session */
   const bestToday = useMemo(
     () => [...enrichedHoldings].sort((a, b) => b.sessionChange - a.sessionChange)[0] ?? null,
     [enrichedHoldings],
@@ -457,7 +408,6 @@ export default function HomePage() {
     [enrichedHoldings],
   );
 
-  /* Live-adjusted portfolio totals */
   const liveSummary = useMemo(() => {
     if (enrichedHoldings.length === 0) return summary;
     const totalValue = enrichedHoldings.reduce((s, h) => s + h.currentValue, 0);
@@ -473,42 +423,32 @@ export default function HomePage() {
     <ScreenWrapper padded={false}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 36 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#8b5cf6"
-            colors={['#8b5cf6']}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#8b5cf6" colors={['#8b5cf6']} />
         }
       >
         {/* ─── Header ─── */}
-        <View
-          style={{ borderBottomColor: colors.border, borderBottomWidth: 0.5 }}
-          className="flex-row items-center justify-between px-4 pt-5 pb-4"
-        >
+        <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14 }}>
           <View>
-            <Text style={{ color: colors.textMuted }} className="text-xs">أهلاً بك،</Text>
-            <Text style={{ color: colors.text }} className="text-lg font-bold mt-0.5">
+            <Text style={{ color: colors.textMuted, fontSize: 12 }}>أهلاً بك،</Text>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800', marginTop: 2 }}>
               {user?.fullName?.split(' ')[0] || 'مستثمر'}
             </Text>
           </View>
-          <View className="flex-row items-center gap-3">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <MarketStatusBadge />
             <Pressable
               onPress={() => router.navigate('/notifications')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={{ backgroundColor: colors.hover, borderColor: colors.border }}
-              className="w-9 h-9 rounded-xl border items-center justify-center"
+              style={{ backgroundColor: colors.hover, borderColor: colors.border, borderWidth: 1, width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
             >
               <Bell size={16} color={colors.textSub} />
               {unreadCount > 0 && (
                 <View
-                  className="absolute top-0 right-0 w-4 h-4 rounded-full bg-brand items-center justify-center"
-                  style={{ transform: [{ translateX: 4 }, { translateY: -4 }] }}
+                  style={{ position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 8, backgroundColor: '#8b5cf6', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <Text className="text-[9px] font-bold text-white">
+                  <Text style={{ fontSize: 9, fontWeight: '700', color: '#fff' }}>
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </Text>
                 </View>
@@ -517,7 +457,8 @@ export default function HomePage() {
           </View>
         </View>
 
-        <View className="pt-4 gap-4">
+        <View style={{ paddingTop: 16, gap: 20 }}>
+
           {/* ─── 1. Portfolio Summary ─── */}
           <PortfolioSummaryCard
             totalValue={liveSummary.totalValue}
@@ -529,25 +470,22 @@ export default function HomePage() {
           />
 
           {/* ─── 2. Owned Stocks ─── */}
-          <View className="px-4">
+          <View style={{ paddingHorizontal: 16 }}>
             <SectionHeader
               title="الأسهم المملوكة"
               icon={Briefcase}
               linkLabel={holdings.length > 3 ? `الكل (${holdings.length})` : undefined}
               onLink={() => router.push('/portfolio')}
             />
-            <View
-              style={{ backgroundColor: colors.card, borderColor: colors.border }}
-              className="border rounded-2xl overflow-hidden"
-            >
+            <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 20, overflow: 'hidden' }}>
               {portfolioLoading ? (
-                <View className="gap-1 p-4">
-                  {[1, 2, 3].map((i) => <Skeleton key={i} height={56} />)}
+                <View style={{ gap: 2, padding: 12 }}>
+                  {[1, 2, 3].map((i) => <Skeleton key={i} height={62} className="rounded-xl" />)}
                 </View>
               ) : enrichedHoldings.length === 0 ? (
-                <Pressable onPress={() => router.push('/market')} className="py-10 items-center gap-2">
-                  <Text style={{ color: colors.textMuted }} className="text-sm">محفظتك فارغة</Text>
-                  <Text className="text-xs text-brand">ابدأ بإضافة أسهم من السوق</Text>
+                <Pressable onPress={() => router.push('/market')} style={{ paddingVertical: 36, alignItems: 'center', gap: 8 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 13 }}>محفظتك فارغة</Text>
+                  <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '600' }}>ابدأ بإضافة أسهم من السوق</Text>
                 </Pressable>
               ) : (
                 enrichedHoldings.slice(0, 4).map((h, i) => (
@@ -555,42 +493,35 @@ export default function HomePage() {
                     key={h.id}
                     onPress={() => router.push(`/stocks/${h.ticker}`)}
                     style={({ pressed }) => [
-                      { borderBottomColor: colors.border2, backgroundColor: pressed ? colors.hover : 'transparent' },
+                      { borderBottomColor: colors.border, backgroundColor: pressed ? colors.hover : 'transparent', paddingHorizontal: 16, paddingVertical: 13, flexDirection: 'row', alignItems: 'center' },
                       i < Math.min(enrichedHoldings.length, 4) - 1 && { borderBottomWidth: 1 },
                     ]}
-                    className="flex-row items-center px-4 py-3.5"
                   >
-                    {/* Left: ticker + name */}
-                    <View className="flex-1">
-                      <Text style={{ color: colors.text }} className="text-sm font-bold">{h.ticker}</Text>
-                      <Text style={{ color: colors.textSub }} className="text-xs mt-0.5" numberOfLines={1}>
+                    {/* Ticker badge */}
+                    <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#8b5cf618', borderWidth: 1, borderColor: '#8b5cf628', alignItems: 'center', justifyContent: 'center', marginRight: 12, flexShrink: 0 }}>
+                      <Text style={{ color: '#8b5cf6', fontSize: 8, fontWeight: '800' }} numberOfLines={1}>{h.ticker.slice(0, 4)}</Text>
+                    </View>
+                    {/* Info */}
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{h.ticker}</Text>
+                      <Text style={{ color: colors.textSub, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
                         {getStockName(h.ticker, 'ar')} · {h.shares} سهم
                       </Text>
                     </View>
-                    {/* Center: current value */}
-                    <View className="items-end mx-3">
-                      <Text style={{ color: colors.text }} className="text-sm font-semibold tabular-nums">
+                    {/* Value */}
+                    <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end', marginLeft: 10, flexShrink: 0 }}>
+                      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
                         {fmtNum(h.currentValue)} EGP
                       </Text>
-                      <Text style={{ color: colors.textMuted }} className="text-xs tabular-nums">
-                        {h.price.toFixed(2)} EGP
-                      </Text>
-                    </View>
-                    {/* Right: session change */}
-                    <View
-                      className="px-2 py-1 rounded-lg items-center"
-                      style={{
-                        backgroundColor: h.sessionChange > 0 ? '#4ade8018' : h.sessionChange < 0 ? '#f8717118' : `${colors.textMuted}18`,
-                        minWidth: 58,
-                      }}
-                    >
-                      <Text
-                        className="text-xs font-bold tabular-nums"
-                        style={{ color: h.sessionChange > 0 ? '#4ade80' : h.sessionChange < 0 ? '#f87171' : colors.textMuted }}
-                      >
-                        {h.sessionChange > 0 ? '+' : ''}{h.sessionChange.toFixed(2)}%
-                      </Text>
-                      <Text style={{ color: colors.textMuted }} className="text-[10px]">اليوم</Text>
+                      <View style={{
+                        flexDirection: 'row', alignItems: 'center', marginTop: 3,
+                        paddingHorizontal: 6, paddingVertical: 2, borderRadius: 7,
+                        backgroundColor: h.sessionChange > 0 ? '#4ade8018' : h.sessionChange < 0 ? '#f8717118' : colors.hover,
+                      }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', fontVariant: ['tabular-nums'], color: h.sessionChange > 0 ? '#4ade80' : h.sessionChange < 0 ? '#f87171' : colors.textMuted }}>
+                          {h.sessionChange > 0 ? '+' : ''}{h.sessionChange.toFixed(2)}%
+                        </Text>
+                      </View>
                     </View>
                   </Pressable>
                 ))
@@ -600,48 +531,37 @@ export default function HomePage() {
 
           {/* ─── 3. Portfolio Chart ─── */}
           {!portfolioLoading && enrichedHoldings.length > 0 && (
-            <View className="px-4">
+            <View style={{ paddingHorizontal: 16 }}>
               <PortfolioChart holdings={enrichedHoldings} />
             </View>
           )}
 
           {/* ─── 4. Top Movers ─── */}
           {!loadingStocks && (topGainers.length > 0 || topLosers.length > 0) && (
-            <View className="px-4">
-              <SectionHeader
-                title="الأكثر تحركاً"
-                icon={BarChart2}
-                linkLabel="السوق"
-                onLink={() => router.push('/market')}
-              />
-              <View className="flex-row gap-2.5">
+            <View style={{ paddingHorizontal: 16 }}>
+              <SectionHeader title="الأكثر تحركاً" icon={BarChart2} linkLabel="السوق" onLink={() => router.push('/market')} />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
                 {/* Gainers */}
                 {topGainers.length > 0 && (
-                  <View
-                    style={{ backgroundColor: colors.card, borderColor: '#4ade8020' }}
-                    className="flex-1 border rounded-2xl overflow-hidden"
-                  >
-                    <View className="flex-row items-center gap-1.5 px-3 py-2 bg-emerald-500/5 border-b border-emerald-500/15">
-                      <TrendingUp size={11} color="#4ade80" />
-                      <Text className="text-xs font-semibold text-emerald-400">صاعدة</Text>
+                  <View style={{ flex: 1, backgroundColor: colors.card, borderWidth: 1, borderColor: '#4ade8025', borderRadius: 20, overflow: 'hidden' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#4ade8008', borderBottomWidth: 1, borderBottomColor: '#4ade8018' }}>
+                      <TrendingUp size={12} color="#4ade80" />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#4ade80' }}>صاعدة</Text>
                     </View>
                     {topGainers.map((s, i) => (
                       <Pressable
                         key={s.ticker}
                         onPress={() => router.push(`/stocks/${s.ticker}`)}
                         style={({ pressed }) => [
-                          { borderBottomColor: colors.border2, backgroundColor: pressed ? colors.hover : 'transparent' },
-                          i < topGainers.length - 1 && { borderBottomWidth: 1 },
+                          { backgroundColor: pressed ? colors.hover : 'transparent', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 10 },
+                          i < topGainers.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
                         ]}
-                        className="flex-row items-center justify-between px-3 py-2.5"
                       >
                         <View>
-                          <Text style={{ color: colors.text }} className="text-xs font-bold">{s.ticker}</Text>
-                          <Text style={{ color: colors.textMuted }} className="text-[10px]">
-                            {s.price.toFixed(2)}
-                          </Text>
+                          <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>{s.ticker}</Text>
+                          <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 1 }}>{s.price.toFixed(2)}</Text>
                         </View>
-                        <Text className="text-xs font-semibold text-emerald-400 tabular-nums">
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#4ade80', fontVariant: ['tabular-nums'] }}>
                           +{s.changePercent.toFixed(2)}%
                         </Text>
                       </Pressable>
@@ -650,31 +570,25 @@ export default function HomePage() {
                 )}
                 {/* Losers */}
                 {topLosers.length > 0 && (
-                  <View
-                    style={{ backgroundColor: colors.card, borderColor: '#f8717120' }}
-                    className="flex-1 border rounded-2xl overflow-hidden"
-                  >
-                    <View className="flex-row items-center gap-1.5 px-3 py-2 bg-red-500/5 border-b border-red-500/15">
-                      <TrendingDown size={11} color="#f87171" />
-                      <Text className="text-xs font-semibold text-red-400">هابطة</Text>
+                  <View style={{ flex: 1, backgroundColor: colors.card, borderWidth: 1, borderColor: '#f8717125', borderRadius: 20, overflow: 'hidden' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#f8717108', borderBottomWidth: 1, borderBottomColor: '#f8717118' }}>
+                      <TrendingDown size={12} color="#f87171" />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#f87171' }}>هابطة</Text>
                     </View>
                     {topLosers.map((s, i) => (
                       <Pressable
                         key={s.ticker}
                         onPress={() => router.push(`/stocks/${s.ticker}`)}
                         style={({ pressed }) => [
-                          { borderBottomColor: colors.border2, backgroundColor: pressed ? colors.hover : 'transparent' },
-                          i < topLosers.length - 1 && { borderBottomWidth: 1 },
+                          { backgroundColor: pressed ? colors.hover : 'transparent', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 10 },
+                          i < topLosers.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
                         ]}
-                        className="flex-row items-center justify-between px-3 py-2.5"
                       >
                         <View>
-                          <Text style={{ color: colors.text }} className="text-xs font-bold">{s.ticker}</Text>
-                          <Text style={{ color: colors.textMuted }} className="text-[10px]">
-                            {s.price.toFixed(2)}
-                          </Text>
+                          <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>{s.ticker}</Text>
+                          <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 1 }}>{s.price.toFixed(2)}</Text>
                         </View>
-                        <Text className="text-xs font-semibold text-red-400 tabular-nums">
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#f87171', fontVariant: ['tabular-nums'] }}>
                           {s.changePercent.toFixed(2)}%
                         </Text>
                       </Pressable>
@@ -687,42 +601,38 @@ export default function HomePage() {
 
           {/* ─── 5. Portfolio Performance ─── */}
           {!portfolioLoading && enrichedHoldings.length > 0 && (
-            <View className="px-4">
+            <View style={{ paddingHorizontal: 16 }}>
               <SectionHeader title="أداء المحفظة" icon={TrendingUp} />
-              <View
-                style={{ backgroundColor: colors.card, borderColor: colors.border }}
-                className="border rounded-2xl overflow-hidden"
-              >
+              <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 20, overflow: 'hidden' }}>
                 {/* Stats row */}
-                <View className="flex-row" style={{ borderBottomColor: colors.border2, borderBottomWidth: 1 }}>
-                  <View className="flex-1 px-4 py-3 items-center" style={{ borderRightColor: colors.border2, borderRightWidth: 1 }}>
-                    <Text style={{ color: colors.textMuted }} className="text-[10px] uppercase mb-1">الأسهم</Text>
-                    <Text style={{ color: colors.text }} className="text-lg font-bold">{enrichedHoldings.length}</Text>
+                <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                  <View style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderRightWidth: 1, borderRightColor: colors.border }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 10, marginBottom: 4 }}>الأسهم</Text>
+                    <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{enrichedHoldings.length}</Text>
                   </View>
-                  <View className="flex-1 px-4 py-3 items-center" style={{ borderRightColor: colors.border2, borderRightWidth: 1 }}>
-                    <Text style={{ color: colors.textMuted }} className="text-[10px] uppercase mb-1">أفضل اليوم</Text>
+                  <View style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderRightWidth: 1, borderRightColor: colors.border }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 10, marginBottom: 4 }}>أفضل اليوم</Text>
                     {bestToday ? (
                       <>
-                        <Text style={{ color: '#4ade80' }} className="text-sm font-bold">{bestToday.ticker}</Text>
-                        <Text className="text-[10px] font-semibold text-emerald-400">
+                        <Text style={{ color: '#4ade80', fontSize: 13, fontWeight: '700' }}>{bestToday.ticker}</Text>
+                        <Text style={{ color: '#4ade80', fontSize: 11, fontWeight: '600', marginTop: 1 }}>
                           {bestToday.sessionChange > 0 ? '+' : ''}{bestToday.sessionChange.toFixed(2)}%
                         </Text>
                       </>
-                    ) : <Text style={{ color: colors.textMuted }}>—</Text>}
+                    ) : <Text style={{ color: colors.textMuted, fontSize: 16 }}>—</Text>}
                   </View>
-                  <View className="flex-1 px-4 py-3 items-center">
-                    <Text style={{ color: colors.textMuted }} className="text-[10px] uppercase mb-1">الأسوأ اليوم</Text>
+                  <View style={{ flex: 1, paddingVertical: 14, alignItems: 'center' }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 10, marginBottom: 4 }}>الأسوأ اليوم</Text>
                     {worstToday && worstToday.sessionChange < 0 ? (
                       <>
-                        <Text style={{ color: '#f87171' }} className="text-sm font-bold">{worstToday.ticker}</Text>
-                        <Text className="text-[10px] font-semibold text-red-400">
+                        <Text style={{ color: '#f87171', fontSize: 13, fontWeight: '700' }}>{worstToday.ticker}</Text>
+                        <Text style={{ color: '#f87171', fontSize: 11, fontWeight: '600', marginTop: 1 }}>
                           {worstToday.sessionChange.toFixed(2)}%
                         </Text>
                       </>
-                    ) : <Text style={{ color: colors.textMuted }}>—</Text>}
+                    ) : <Text style={{ color: colors.textMuted, fontSize: 16 }}>—</Text>}
                   </View>
                 </View>
-
                 {/* Holdings performance bars */}
                 {enrichedHoldings.map((h, i) => {
                   const weight = liveSummary.totalValue > 0 ? (h.currentValue / liveSummary.totalValue) * 100 : 0;
@@ -732,31 +642,27 @@ export default function HomePage() {
                       key={h.id}
                       onPress={() => router.push(`/stocks/${h.ticker}`)}
                       style={({ pressed }) => [
-                        { backgroundColor: pressed ? colors.hover : 'transparent', borderBottomColor: colors.border2 },
-                        i < enrichedHoldings.length - 1 && { borderBottomWidth: 1 },
+                        { backgroundColor: pressed ? colors.hover : 'transparent', paddingHorizontal: 16, paddingVertical: 12 },
+                        i < enrichedHoldings.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
                       ]}
-                      className="px-4 py-3"
                     >
-                      <View className="flex-row items-center justify-between mb-2">
-                        <View className="flex-row items-center gap-2">
-                          <Text style={{ color: colors.text }} className="text-sm font-bold">{h.ticker}</Text>
-                          <Text style={{ color: colors.textMuted }} className="text-xs">{weight.toFixed(1)}%</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{h.ticker}</Text>
+                          <Text style={{ color: colors.textMuted, fontSize: 11 }}>{weight.toFixed(1)}%</Text>
                         </View>
-                        <View className="items-end">
-                          <Text className="text-xs font-bold tabular-nums" style={{ color: barColor }}>
+                        <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'], color: barColor }}>
                             {h.totalGainPct >= 0 ? '+' : ''}{h.totalGainPct.toFixed(2)}%
                           </Text>
-                          <Text style={{ color: colors.textMuted }} className="text-[10px] tabular-nums">
+                          <Text style={{ color: colors.textMuted, fontSize: 11, fontVariant: ['tabular-nums'], marginTop: 1 }}>
                             {h.totalGain >= 0 ? '+' : ''}{fmtNum(h.totalGain)} EGP
                           </Text>
                         </View>
                       </View>
                       {/* Weight bar */}
-                      <View style={{ backgroundColor: colors.border2 }} className="h-1 rounded-full overflow-hidden">
-                        <View
-                          className="h-full rounded-full"
-                          style={{ width: `${weight}%`, backgroundColor: barColor }}
-                        />
+                      <View style={{ height: 4, backgroundColor: colors.border, borderRadius: 99, overflow: 'hidden' }}>
+                        <View style={{ height: '100%', width: `${weight}%`, backgroundColor: barColor, borderRadius: 99 }} />
                       </View>
                     </Pressable>
                   );
@@ -766,33 +672,24 @@ export default function HomePage() {
           )}
 
           {/* ─── 6. Watchlist ─── */}
-          <View className="px-4">
-            <SectionHeader
-              title="قائمة المتابعة"
-              icon={Star}
-              linkLabel="إضافة"
-              onLink={() => router.push('/market')}
-            />
-            <View
-              style={{ backgroundColor: colors.card, borderColor: colors.border }}
-              className="border rounded-2xl overflow-hidden"
-            >
+          <View style={{ paddingHorizontal: 16 }}>
+            <SectionHeader title="قائمة المتابعة" icon={Star} linkLabel="إضافة" onLink={() => router.push('/market')} />
+            <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 20, overflow: 'hidden' }}>
               {watchlistLoading ? (
-                <View className="gap-3 p-4">
-                  {[1, 2, 3].map((i) => <Skeleton key={i} height={44} />)}
+                <View style={{ gap: 2, padding: 12 }}>
+                  {[1, 2, 3].map((i) => <Skeleton key={i} height={54} className="rounded-xl" />)}
                 </View>
               ) : watchlist.length === 0 ? (
-                <Pressable onPress={() => router.push('/market')} className="py-9 items-center gap-2">
-                  <Text style={{ color: colors.textMuted }} className="text-sm">قائمة المتابعة فارغة</Text>
-                  <Text className="text-xs text-brand">أضف أسهم من السوق</Text>
+                <Pressable onPress={() => router.push('/market')} style={{ paddingVertical: 36, alignItems: 'center', gap: 8 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 13 }}>قائمة المتابعة فارغة</Text>
+                  <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '600' }}>أضف أسهم من السوق</Text>
                 </Pressable>
               ) : (
                 watchlist.map((stock, i) => (
                   <View
                     key={stock.ticker}
                     style={[
-                      { paddingHorizontal: 16 },
-                      i < watchlist.length - 1 && { borderBottomColor: colors.border2, borderBottomWidth: 1 },
+                      i < watchlist.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
                     ]}
                   >
                     <WatchlistRow stock={stock} livePrice={prices[stock.ticker]} />
@@ -801,6 +698,7 @@ export default function HomePage() {
               )}
             </View>
           </View>
+
         </View>
       </ScrollView>
     </ScreenWrapper>

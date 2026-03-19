@@ -77,7 +77,7 @@ function Section({
   return (
     <View className={`mx-4 ${last ? '' : 'mb-3'}`}>
       {title && (
-        <Text style={{ color: colors.textMuted }} className="text-xs font-semibold uppercase tracking-wider px-1 mb-2">
+        <Text style={{ color: colors.textSub, fontSize: 13, fontWeight: '700', paddingHorizontal: 4, marginBottom: 8 }}>
           {title}
         </Text>
       )}
@@ -118,8 +118,8 @@ export default function ProfilePage() {
       <ScrollView contentContainerStyle={{ paddingBottom: 36 }} showsVerticalScrollIndicator={false}>
 
         {/* ─── Header ─── */}
-        <View style={{ borderBottomColor: colors.border, borderBottomWidth: 0.5 }} className="px-4 pt-5 pb-4">
-          <Text style={{ color: colors.text }} className="text-xl font-bold">حسابي</Text>
+        <View style={{ borderBottomColor: colors.border, borderBottomWidth: 1, paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14 }}>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '800' }}>حسابي</Text>
         </View>
 
         {/* ─── Profile Card ─── */}
@@ -145,7 +145,7 @@ export default function ProfilePage() {
                   <Badge label={user?.plan ?? 'free'} />
                   {user?.planExpiresAt && (
                     <Text style={{ color: colors.textMuted }} className="text-[10px]">
-                      حتى {new Date(user.planExpiresAt).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' })}
+                      حتى {new Date(user.planExpiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </Text>
                   )}
                 </View>
@@ -162,14 +162,14 @@ export default function ProfilePage() {
             </View>
 
             {/* Stats row */}
-            <View style={{ borderTopColor: colors.border, borderTopWidth: 0.5 }} className="flex-row mt-4 pt-3">
+            <View style={{ borderTopColor: colors.border, borderTopWidth: 1, flexDirection: 'row', marginTop: 16, paddingTop: 14 }}>
               {[
                 { label: 'الخطة', value: planLabel, color: isPro ? '#8b5cf6' : colors.textSub },
                 { label: 'التحليلات', value: String(user?.aiAnalysisUsedThisMonth ?? 0), color: colors.text },
               ].map((s, i) => (
                 <View
                   key={s.label}
-                  style={i === 0 ? { borderRightColor: colors.border, borderRightWidth: 0.5 } : undefined}
+                  style={i === 0 ? { borderRightColor: colors.border, borderRightWidth: 1 } : undefined}
                   className="flex-1 items-center"
                 >
                   <Text style={{ color: s.color }} className="text-sm font-bold">{s.value}</Text>
@@ -182,7 +182,7 @@ export default function ProfilePage() {
 
         {/* ─── Theme Switcher ─── */}
         <View className="px-4 mb-3">
-          <Text style={{ color: colors.textMuted }} className="text-xs font-semibold uppercase tracking-wider px-1 mb-2">
+          <Text style={{ color: colors.textSub, fontSize: 13, fontWeight: '700', paddingHorizontal: 4, marginBottom: 8 }}>
             المظهر
           </Text>
           <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-1.5 flex-row gap-1">

@@ -1,41 +1,59 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, type TextInputProps } from 'react-native';
+import { View, Text, TextInput, Pressable, type TextInputProps, type StyleProp, type ViewStyle } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
+import { useTheme } from '../../hooks/useTheme';
 
 interface Props extends TextInputProps {
   label?: string;
   error?: string;
   isPassword?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
-export function Input({ label, error, isPassword, ...rest }: Props) {
+export function Input({ label, error, isPassword, containerStyle, style, ...rest }: Props) {
   const [showPw, setShowPw] = useState(false);
+  const { colors } = useTheme();
 
   return (
-    <View className="gap-1.5">
-      {label && <Text className="text-xs font-medium text-slate-400">{label}</Text>}
-      <View className="relative">
+    <View style={[{ gap: 6 }, containerStyle]}>
+      {label && (
+        <Text style={{ color: colors.textSub, fontSize: 12, fontWeight: '600' }}>{label}</Text>
+      )}
+      <View style={{ position: 'relative' }}>
         <TextInput
           {...rest}
           secureTextEntry={isPassword && !showPw}
-          placeholderTextColor="#64748b"
-          className={`
-            bg-[#0d0d14] border rounded-xl px-4 py-3 text-sm text-white
-            ${error ? 'border-red-500/60' : 'border-white/10'}
-            ${isPassword ? 'pr-12' : ''}
-          `}
+          placeholderTextColor={colors.textMuted}
+          style={[
+            {
+              backgroundColor: colors.bg,
+              borderColor: error ? '#f87171' : colors.border,
+              borderWidth: 1,
+              borderRadius: 12,
+              paddingHorizontal: 14,
+              paddingVertical: 13,
+              fontSize: 14,
+              color: colors.text,
+              paddingRight: isPassword ? 48 : 14,
+            },
+            style,
+          ]}
         />
         {isPassword && (
           <Pressable
             onPress={() => setShowPw((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
+            hitSlop={10}
+            style={{ position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center', padding: 4 }}
           >
-            {showPw ? <EyeOff size={16} color="#64748b" /> : <Eye size={16} color="#64748b" />}
+            {showPw
+              ? <EyeOff size={16} color={colors.textMuted} />
+              : <Eye size={16} color={colors.textMuted} />}
           </Pressable>
         )}
       </View>
-      {error && <Text className="text-xs text-red-400">{error}</Text>}
+      {error && (
+        <Text style={{ color: '#f87171', fontSize: 12 }}>{error}</Text>
+      )}
     </View>
   );
 }
-

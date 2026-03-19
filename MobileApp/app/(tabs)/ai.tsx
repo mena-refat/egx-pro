@@ -97,11 +97,10 @@ export default function AnalyticsPage() {
       >
         {/* ─── Header ─── */}
         <View
-          style={{ borderBottomColor: colors.border, borderBottomWidth: 0.5 }}
-          className="px-4 pt-5 pb-4"
+          style={{ borderBottomColor: colors.border, borderBottomWidth: 1, paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14 }}
         >
-          <Text style={{ color: colors.text }} className="text-xl font-bold">تحليلات</Text>
-          <Text style={{ color: colors.textMuted }} className="text-xs mt-0.5">
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '800' }}>تحليلات</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 3 }}>
             ذكاء اصطناعي وتوقعات البورصة المصرية
           </Text>
         </View>
@@ -125,7 +124,7 @@ export default function AnalyticsPage() {
 
           {/* ─── AI Tools ─── */}
           <View>
-            <Text style={{ color: colors.textMuted }} className="text-xs font-semibold uppercase tracking-wider mb-3">
+            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700', marginBottom: 12 }}>
               الذكاء الاصطناعي
             </Text>
             <View className="gap-3">
@@ -234,7 +233,7 @@ export default function AnalyticsPage() {
                       <View>
                         <Text style={{ color: colors.text }} className="text-sm font-bold">{p.ticker}</Text>
                         <Text style={{ color: colors.textMuted }} className="text-xs">
-                          {new Date(p.deadline).toLocaleDateString('ar-EG')}
+                          {new Date(p.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </Text>
                       </View>
                     </View>
@@ -257,7 +256,7 @@ export default function AnalyticsPage() {
 
           {/* ─── Calculator ─── */}
           <View>
-            <Text style={{ color: colors.textMuted }} className="text-xs font-semibold uppercase tracking-wider mb-3">
+            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700', marginBottom: 12 }}>
               أدوات
             </Text>
             <Pressable

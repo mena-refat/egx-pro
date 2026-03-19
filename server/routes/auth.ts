@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import * as AuthController from '../controllers/auth.controller.ts';
 import { authenticate } from '../middleware/auth.middleware.ts';
 import { idempotencyMiddleware } from '../middleware/idempotency.middleware.ts';
@@ -16,12 +17,23 @@ import { tokenIdParamSchema } from '../schemas/params.ts';
 
 const router = Router();
 
+// 5 محاولات كل 15 دقيقة لكل IP — يمنع brute-force على 2FA
+const twoFaAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? 'unknown'),
+  handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
+  skipSuccessfulRequests: true,
+});
+
 router.post('/verify-email/send', authenticate, idempotencyMiddleware, AuthController.sendVerifyEmail);
 router.post('/verify-email/confirm', authenticate, idempotencyMiddleware, validate(verifyEmailConfirmBodySchema, 'body'), AuthController.confirmVerifyEmail);
 
 router.post('/register', validate(registerBodySchema, 'body'), AuthController.register);
 router.post('/login', validate(loginBodySchema, 'body'), AuthController.login);
-router.post('/2fa/authenticate', validate(twoFaAuthenticateBodySchema, 'body'), AuthController.twoFaAuthenticate);
+router.post('/2fa/authenticate', twoFaAuthLimiter, validate(twoFaAuthenticateBodySchema, 'body'), AuthController.twoFaAuthenticate);
 router.post('/2fa/setup', authenticate, idempotencyMiddleware, validate(twoFaSetupBodySchema, 'body'), AuthController.twoFaSetup);
 router.post('/2fa/verify', authenticate, idempotencyMiddleware, validate(twoFaVerifyBodySchema, 'body'), AuthController.twoFaVerify);
 router.post('/2fa/disable', authenticate, idempotencyMiddleware, AuthController.twoFaDisable);

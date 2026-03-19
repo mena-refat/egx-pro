@@ -76,7 +76,15 @@
       "Bash(find /c/Users/menar/Desktop/egx-pro/server -name \"*.ts\" -type f -exec grep -l \"SQL\\\\|injection\\\\|exec\" {})",
       "Read(//c/Users/menar/Desktop/**)",
       "Bash(node --import tsx/esm -e \"import\\(''''./server/services/auth.service.ts''''\\).then\\(\\(\\) => console.log\\(''''OK''''\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(node --import tsx/esm -e \"import\\(''''./server/controllers/auth.controller.ts''''\\).then\\(\\(\\) => console.log\\(''''auth controller OK''''\\)\\).catch\\(e => console.error\\(''''FAIL:'''', e.message\\)\\)\")",
+      "Bash(node --import tsx/esm -e \"import\\(''''./server/routes/analysis.ts''''\\).then\\(\\(\\) => console.log\\(''''analysis OK''''\\)\\).catch\\(e => console.error\\(''''FAIL:'''', e.message\\)\\)\")",
+      "Bash(node --import tsx/esm -e \"import\\(''''./server/controllers/auth.controller.ts''''\\).then\\(\\(\\) => console.log\\(''''OK''''\\)\\).catch\\(e => console.error\\(''''FAIL:'''', e.message\\)\\)\")",
+      "Bash(node -e \"const l = require\\(''./node_modules/lucide-react''\\); console.log\\(typeof l.KeyRound, typeof l.Smartphone, typeof l.Shield\\)\")",
+      "Bash(ls -la \"c:/Users/menar/Desktop/egx-pro/MobileApp/app/\\(tabs\\)/\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(''''browser:'''', d.get\\(''''browser''''\\)\\); print\\(''''module:'''', d.get\\(''''module''''\\)\\); print\\(''''main:'''', d.get\\(''''main''''\\)\\)\")",
+      "Bash(node -e \"const p = require\\(''./node_modules/qrcode/package.json''\\); console.log\\(''browser:'', p.browser\\); console.log\\(''module:'', p.module\\); console.log\\(''main:'', p.main\\)\")",
+      "Bash(node -e \"const l = require\\(''./node_modules/lucide-react''\\); [''Eye'',''EyeOff'',''Copy'',''Check'',''Shield'',''Smartphone'',''KeyRound''].forEach\\(n => console.log\\(n, typeof l[n]\\)\\)\")"
     ]
   }
 }

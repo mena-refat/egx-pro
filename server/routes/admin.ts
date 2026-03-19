@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { adminAuthenticate, requirePermission, requireSuperAdmin } from '../middleware/adminAuth.middleware.ts';
 import { AdminAuthController } from '../controllers/admin/adminAuth.controller.ts';
 import { AdminUsersController } from '../controllers/admin/adminUsers.controller.ts';
@@ -26,6 +26,36 @@ const authActionLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  message: { error: 'RATE_LIMITED' },
+});
+
+// 10 دعوات إيميل كل ساعة — يمنع spam الدعوات
+const inviteLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? 'unknown'),
+  message: { error: 'RATE_LIMITED' },
+});
+
+// 5 broadcasts كل ساعة — يمنع mass notification spam
+const broadcastLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? 'unknown'),
+  message: { error: 'RATE_LIMITED' },
+});
+
+// 10 عمليات bulk كل ساعة — يمنع DB flooding
+const bulkOpsLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? 'unknown'),
   message: { error: 'RATE_LIMITED' },
 });
 
@@ -73,6 +103,7 @@ router.get(
 router.post(
   '/users/invite',
   adminAuthenticate,
+  inviteLimiter,
   requirePermission('users.edit'),
   (req, res, next) => {
     void AdminUsersController.inviteUser(req as any, res).catch(next);
@@ -189,6 +220,7 @@ router.get(
 router.post(
   '/support/bulk-assign',
   adminAuthenticate,
+  bulkOpsLimiter,
   requirePermission('support.manage'),
   (req, res, next) => {
     void AdminSupportController.bulkAssign(req as any, res).catch(next);
@@ -198,6 +230,7 @@ router.post(
 router.post(
   '/support/bulk-status',
   adminAuthenticate,
+  bulkOpsLimiter,
   requirePermission('support.manage'),
   (req, res, next) => {
     void AdminSupportController.bulkStatus(req as any, res).catch(next);
@@ -279,7 +312,7 @@ router.post(
 router.patch(
   '/support/:id/status',
   adminAuthenticate,
-  requirePermission('support.assign'),
+  requirePermission('support.manage'),
   (req, res, next) => {
     void AdminSupportController.updateStatus(req as any, res).catch(next);
   }
@@ -435,6 +468,7 @@ router.delete('/admins/:id', adminAuthenticate, requireSuperAdmin, (req, res, ne
 router.post(
   '/notifications/broadcast',
   adminAuthenticate,
+  broadcastLimiter,
   requirePermission('notifications.send'),
   (req, res, next) => {
     void AdminNotificationsController.broadcast(req as any, res).catch(next);
@@ -444,6 +478,7 @@ router.post(
 router.post(
   '/notifications/schedule',
   adminAuthenticate,
+  broadcastLimiter,
   requirePermission('notifications.send'),
   (req, res, next) => {
     void AdminNotificationsController.schedule(req as any, res).catch(next);

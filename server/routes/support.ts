@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma.ts';
 import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 import { authenticate } from '../middleware/auth.middleware.ts';
@@ -10,7 +11,18 @@ const SUBJECT_MAX = 120;
 const MESSAGE_MAX = 2000;
 const PAGE_SIZE    = 20;
 
-router.post('/', authenticate, async (req, res) => {
+// 5 تيكيتات كل ساعة لكل مستخدم — يمنع spam الدعم
+const ticketCreateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `user:${(req as AuthRequest).user!.id}`,
+  validate: { keyGeneratorIpFallback: false },
+  handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
+});
+
+router.post('/', authenticate, ticketCreateLimiter, async (req, res) => {
   const userId = (req as AuthRequest).user?.id;
   if (!userId) { sendError(res, 'UNAUTHORIZED', 401); return; }
 

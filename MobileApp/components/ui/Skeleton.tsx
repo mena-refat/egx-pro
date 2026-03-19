@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
+import { useTheme } from '../../hooks/useTheme';
 
 interface Props {
   width?: number | string;
@@ -9,13 +10,14 @@ interface Props {
 }
 
 export function Skeleton({ height = 16, borderRadius = 8, className }: Props) {
-  const opacity = useRef(new Animated.Value(0.4)).current;
+  const { colors } = useTheme();
+  const opacity = useRef(new Animated.Value(0.5)).current;
 
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.4, duration: 800, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.5, duration: 700, useNativeDriver: true }),
       ]),
     );
     anim.start();
@@ -24,9 +26,8 @@ export function Skeleton({ height = 16, borderRadius = 8, className }: Props) {
 
   return (
     <Animated.View
-      style={{ height, borderRadius, opacity }}
-      className={`bg-white/10 w-full ${className ?? ''}`}
+      style={{ height, borderRadius, opacity, backgroundColor: colors.border, width: '100%' }}
+      className={className}
     />
   );
 }
-
