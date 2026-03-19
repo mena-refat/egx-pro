@@ -252,7 +252,13 @@
     "required_field": "This field is required",
     "phone_required": "Phone number is required",
     "phone_11_digits": "Phone number must be 11 digits",
-    "loadFailed": "Failed to load data, please try again"
+    "loadFailed": "Failed to load data, please try again",
+    "no_internet": "No internet connection",
+    "server_busy": "Service is busy. Try again in a minute.",
+    "server_error": "Server error. Try again later.",
+    "analysis_empty": "Analysis returned empty — try again or try another stock.",
+    "unexpected": "An unexpected error occurred. Try again later.",
+    "buy_date_future": "Buy date cannot be in the future"
   },
   "auth": {
     "loading": "Loading...",
@@ -417,7 +423,12 @@
     "noPerformanceData": "Add stocks to your portfolio to see performance",
     "connecting": "Connecting...",
     "showIndicators": "Show Indicators",
-    "hideIndicators": "Hide Indicators"
+    "hideIndicators": "Hide Indicators",
+    "marketLabel": "Market:",
+    "marketOpen": "Open",
+    "marketClosed": "Closed",
+    "timeLabel": "Time:",
+    "reconnectingLive": "Reconnecting to live prices..."
   },
   "achievements": {
     "congrats": "Congratulations!",
@@ -534,7 +545,7 @@
     "system": "System",
     "light": "Light",
     "language": "Language",
-    "arabic": "العربية",
+    "arabic": "Arabic",
     "english": "English",
     "shariaMode": "Islamic Sharia mode",
     "shariaDesc": "Filter content and recommendations per Sharia guidelines",

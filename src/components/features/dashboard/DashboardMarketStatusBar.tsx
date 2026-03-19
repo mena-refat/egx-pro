@@ -24,7 +24,7 @@ export function DashboardMarketStatusBar({ isConnected, showMarketOverview, onTo
         onClick={onToggle}
         className="text-label text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
       >
-        {showMarketOverview ? (isRTL ? 'إخفاء المؤشرات' : 'Hide Indicators') : (isRTL ? 'إظهار المؤشرات' : 'Show Indicators')}
+        {showMarketOverview ? t('dashboard.hideIndicators') : t('dashboard.showIndicators')}
       </button>
     </div>
   );

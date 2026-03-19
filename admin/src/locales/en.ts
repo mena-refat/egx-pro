@@ -261,6 +261,8 @@ export const en = {
     noAgents: 'No support agents found. Assign support.reply permission to admins.',
     previousReply: 'Previous reply',
     ticketsSelected: 'tickets selected',
+    quickSelect: 'Quick select',
+    chooseAgent: 'Choose agent...',
   },
 
   account: {

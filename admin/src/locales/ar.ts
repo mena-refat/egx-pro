@@ -261,6 +261,8 @@ export const ar = {
     noAgents: 'لا يوجد وكلاء دعم. قم بتعيين صلاحية support.reply للإداريين.',
     previousReply: 'الرد السابق',
     ticketsSelected: 'تذاكر محددة',
+    quickSelect: 'اختيار سريع',
+    chooseAgent: 'اختر موظف...',
   },
 
   account: {

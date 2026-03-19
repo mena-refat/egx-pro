@@ -41,7 +41,7 @@ export default function AIRecommendationsPage() {
       } else if (status === 401) {
         setError(t('ai.sessionExpired'));
       } else if (status === 429) {
-        setError('خدمة التحليل مشغولة حالياً. حاول بعد دقيقة.');
+        setError(t('error.server_busy'));
       } else if (status === 502 || status === 504) {
         setError(t('ai.analysisTimeout'));
       } else if (status === 503) {
@@ -51,11 +51,11 @@ export default function AIRecommendationsPage() {
       } else {
         const msg = (err as Error)?.message || '';
         if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-          setError('مفيش اتصال بالإنترنت. تأكد من الاتصال وحاول تاني.');
+          setError(t('error.no_internet'));
         } else if (msg.includes('empty') || msg.includes('Empty')) {
-          setError('التحليل رجع فاضي — حاول تاني أو جرب سهم تاني.');
+          setError(t('error.analysis_empty'));
         } else {
-          setError('حدث خطأ غير متوقع. حاول تاني بعد شوية.');
+          setError(t('error.unexpected'));
         }
         if (import.meta.env.DEV) console.error('Recommendations error:', err);
       }

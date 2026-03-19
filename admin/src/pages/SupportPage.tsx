@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { Pagination } from '../components/Pagination';
-import { MessageSquare, RefreshCw, Users, Clock, Star, UserCheck, UserPlus } from 'lucide-react';
+import { MessageSquare, RefreshCw, Users, Clock, Star, UserCheck, UserPlus, CheckSquare } from 'lucide-react';
 
 type Ticket = {
   id: string;
@@ -37,9 +37,9 @@ type Agent = { id: number; fullName: string; email: string };
 
 const PRIORITY_COLORS: Record<string, string> = {
   URGENT: 'text-red-400',
-  HIGH: 'text-orange-400',
+  HIGH:   'text-orange-400',
   NORMAL: 'text-slate-400',
-  LOW: 'text-slate-600',
+  LOW:    'text-slate-600',
 };
 
 export default function SupportPage() {
@@ -49,105 +49,114 @@ export default function SupportPage() {
   const [tab, setTab] = useState<'all' | 'unassigned' | 'team'>('all');
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [total, setTotal]     = useState(0);
+  const [page, setPage]       = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
-  const [agentFilter, setAgentFilter] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [agentFilter, setAgentFilter]   = useState('');
+  const [loading, setLoading]           = useState(false);
 
-  const [selected, setSelected] = useState<Ticket | null>(null);
-  const [reply, setReply] = useState('');
+  const [selected, setSelected]   = useState<Ticket | null>(null);
+  const [reply, setReply]         = useState('');
   const [newStatus, setNewStatus] = useState('RESOLVED');
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving]       = useState(false);
 
   const [assignTarget, setAssignTarget] = useState<Ticket | null>(null);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [assignTo, setAssignTo] = useState('');
-  const [assigning, setAssigning] = useState(false);
+  const [agents, setAgents]             = useState<Agent[]>([]);
+  const [assignTo, setAssignTo]         = useState('');
+  const [assigning, setAssigning]       = useState(false);
 
-  const [agentStats, setAgentStats] = useState<AgentStat[]>([]);
+  const [agentStats, setAgentStats]     = useState<AgentStat[]>([]);
   const [statsLoading, setStatsLoading] = useState(false);
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkAgentId, setBulkAgentId] = useState('');
+  const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set());
+  const [bulkAgentId, setBulkAgentId]   = useState('');
   const [bulkAssigning, setBulkAssigning] = useState(false);
 
+  // Prevent double load when tab changes reset the page
+  const skipNextPageLoad = useRef(false);
+
+  /* ── Init ── */
   useEffect(() => {
-    adminApi
-      .get('/auth/me')
-      .then((r) => {
-        const a = r.data.data;
-        const m = a.role === 'SUPER_ADMIN' || (a.permissions ?? []).includes('support.manage');
-        setManagerMode(m);
-      })
-      .catch(() => null);
+    adminApi.get('/auth/me').then((r) => {
+      const a = r.data.data;
+      setManagerMode(a.role === 'SUPER_ADMIN' || (a.permissions ?? []).includes('support.manage'));
+    }).catch(() => null);
   }, []);
 
   useEffect(() => {
     if (!managerMode) return;
-    adminApi
-      .get('/support/agents')
-      .then((r) => setAgents(r.data.data ?? []))
-      .catch(() => null);
+    adminApi.get('/support/agents').then((r) => setAgents(r.data.data ?? [])).catch(() => null);
   }, [managerMode]);
 
-  const load = useCallback(
-    async (p = page, s = statusFilter, a = agentFilter, currentTab = tab) => {
-      setLoading(true);
-      try {
-        const params: Record<string, string> = { page: String(p) };
-        if (s) params.status = s;
-        if (currentTab === 'unassigned') params.agentId = 'unassigned';
-        else if (a) params.agentId = a;
-        const r = await adminApi.get('/support', { params });
-        setTickets(r.data.data.tickets ?? []);
-        setTotal(r.data.data.total ?? 0);
-      } catch {
-        setTickets([]);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [page, statusFilter, agentFilter, tab]
-  );
+  /* ── Load tickets ── */
+  const load = useCallback(async (p: number, s: string, a: string, currentTab: typeof tab) => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = { page: String(p) };
+      if (s) params.status = s;
+      if (currentTab === 'unassigned') params.agentId = 'unassigned';
+      else if (a) params.agentId = a;
+      const r = await adminApi.get('/support', { params });
+      setTickets(r.data.data.tickets ?? []);
+      setTotal(r.data.data.total ?? 0);
+    } catch {
+      setTickets([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  // Tab change → reset page & selection, load fresh
   useEffect(() => {
-    void load(1, statusFilter, agentFilter, tab);
+    skipNextPageLoad.current = true;
     setPage(1);
     setSelectedIds(new Set());
+    setStatusFilter('');
+    setAgentFilter('');
+    void load(1, '', '', tab);
   }, [tab]); // eslint-disable-line
 
+  // Page change → load (skip if triggered by tab reset)
   useEffect(() => {
+    if (skipNextPageLoad.current) { skipNextPageLoad.current = false; return; }
     void load(page, statusFilter, agentFilter, tab);
   }, [page]); // eslint-disable-line
 
+  /* ── Team stats ── */
   const loadTeamStats = useCallback(async () => {
     setStatsLoading(true);
     try {
       const r = await adminApi.get('/support/agents/stats');
       setAgentStats(r.data.data ?? []);
-    } catch {
-      setAgentStats([]);
-    } finally {
-      setStatsLoading(false);
-    }
+    } catch { setAgentStats([]); }
+    finally { setStatsLoading(false); }
   }, []);
 
   useEffect(() => {
     if (tab === 'team') void loadTeamStats();
   }, [tab, loadTeamStats]);
 
+  /* ── Handlers ── */
   const handleReply = async () => {
     if (!selected || !reply.trim()) return;
     setSaving(true);
     try {
       await adminApi.patch(`/support/${selected.id}/reply`, { reply, status: newStatus });
-      setSelected(null);
-      setReply('');
-      void load();
-    } finally {
-      setSaving(false);
-    }
+      setSelected(null); setReply('');
+      void load(page, statusFilter, agentFilter, tab);
+    } finally { setSaving(false); }
+  };
+
+  const handleAssign = async () => {
+    if (!assignTarget) return;
+    setAssigning(true);
+    try {
+      await adminApi.patch(`/support/${assignTarget.id}/assign`, {
+        agentId: assignTo ? parseInt(assignTo, 10) : null,
+      });
+      setAssignTarget(null); setAssignTo('');
+      void load(page, statusFilter, agentFilter, tab);
+    } finally { setAssigning(false); }
   };
 
   const handleBulkAssign = async () => {
@@ -158,140 +167,134 @@ export default function SupportPage() {
         ticketIds: [...selectedIds],
         agentId: parseInt(bulkAgentId, 10),
       });
-      setSelectedIds(new Set());
-      setBulkAgentId('');
-      void load();
-    } finally {
-      setBulkAssigning(false);
-    }
+      setSelectedIds(new Set()); setBulkAgentId('');
+      void load(page, statusFilter, agentFilter, tab);
+    } finally { setBulkAssigning(false); }
   };
 
-  const handleAssign = async () => {
-    if (!assignTarget) return;
-    setAssigning(true);
-    try {
-      await adminApi.patch(`/support/${assignTarget.id}/assign`, {
-        agentId: assignTo ? parseInt(assignTo, 10) : null,
-      });
-      setAssignTarget(null);
-      setAssignTo('');
-      void load();
-    } finally {
-      setAssigning(false);
-    }
+  // Quick-select first N unassigned tickets from current page
+  const selectBatch = (n: number) => {
+    const unassigned = tickets.filter((tk) => !tk.assignedTo).slice(0, n);
+    setSelectedIds(new Set(unassigned.map((tk) => tk.id)));
   };
 
+  const unassignedOnPage = tickets.filter((tk) => !tk.assignedTo);
+
+  /* ── Render ── */
   return (
     <div className="space-y-5">
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">{t('support.title')}</h1>
-          <p className="text-sm text-slate-500">
-            {total} {t('support.tickets')}
-          </p>
+          <p className="text-sm text-slate-500">{total} {t('support.tickets')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => void load()}
+            onClick={() => void load(page, statusFilter, agentFilter, tab)}
             className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-all"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-              void load(1, e.target.value, agentFilter, tab);
-            }}
-            className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
-          >
-            <option value="">{t('support.all')}</option>
-            <option value="OPEN">{t('support.open')}</option>
-            <option value="IN_PROGRESS">{t('support.inProgress')}</option>
-            <option value="RESOLVED">{t('support.resolved')}</option>
-            <option value="CLOSED">{t('support.closed')}</option>
-          </select>
-          {managerMode && tab !== 'unassigned' && tab !== 'team' && (
+          {tab !== 'team' && (
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); void load(1, e.target.value, agentFilter, tab); }}
+              className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
+            >
+              <option value="">{t('support.all')}</option>
+              <option value="OPEN">{t('support.open')}</option>
+              <option value="IN_PROGRESS">{t('support.inProgress')}</option>
+              <option value="RESOLVED">{t('support.resolved')}</option>
+              <option value="CLOSED">{t('support.closed')}</option>
+            </select>
+          )}
+          {managerMode && tab === 'all' && (
             <select
               value={agentFilter}
-              onChange={(e) => {
-                setAgentFilter(e.target.value);
-                setPage(1);
-                void load(1, statusFilter, e.target.value, tab);
-              }}
+              onChange={(e) => { setAgentFilter(e.target.value); setPage(1); void load(1, statusFilter, e.target.value, tab); }}
               className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
             >
               <option value="">{t('support.allAgents')}</option>
               {agents.map((a) => (
-                <option key={a.id} value={String(a.id)}>
-                  {a.fullName || a.email}
-                </option>
+                <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>
               ))}
             </select>
           )}
         </div>
       </div>
 
-      {/* Tabs — manager only */}
+      {/* Tabs */}
       {managerMode && (
-        <div className="flex gap-1 p-1 bg-white/[0.04] border border-white/[0.06] rounded-xl w-fit">
-          {([
-            { key: 'all', label: t('support.all') },
-            { key: 'unassigned', label: t('support.unassigned'), icon: <UserPlus size={13} /> },
-            { key: 'team', label: t('support.myTeam'), icon: <Users size={13} /> },
-          ] as { key: 'all' | 'unassigned' | 'team'; label: string; icon?: React.ReactNode }[]).map((item) => (
-            <button
-              key={item.key}
-              onClick={() => setTab(item.key)}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                tab === item.key ? 'bg-white/[0.1] text-white' : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1 p-1 bg-white/[0.04] border border-white/[0.06] rounded-xl w-fit">
+            {([
+              { key: 'all',        label: t('support.all') },
+              { key: 'unassigned', label: t('support.unassigned'), icon: <UserPlus size={13} /> },
+              { key: 'team',       label: t('support.myTeam'),     icon: <Users size={13} /> },
+            ] as { key: 'all' | 'unassigned' | 'team'; label: string; icon?: React.ReactNode }[]).map((item) => (
+              <button
+                key={item.key}
+                onClick={() => setTab(item.key)}
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  tab === item.key ? 'bg-white/[0.1] text-white' : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {item.icon}{item.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Quick-select buttons — only on unassigned tab */}
+          {tab === 'unassigned' && unassignedOnPage.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-600">{t('support.quickSelect')}:</span>
+              {[10, 50].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => selectBatch(n)}
+                  disabled={unassignedOnPage.length === 0}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 rounded-lg transition-all disabled:opacity-40"
+                >
+                  <CheckSquare size={12} /> {n}
+                </button>
+              ))}
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-xs text-slate-500 hover:text-slate-300 transition-colors px-2"
+                >
+                  {t('common.cancel')}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* My Team Tab */}
       {tab === 'team' && managerMode ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {statsLoading && (
-            <p className="text-slate-500 text-sm col-span-3 py-8 text-center">{t('common.loading')}</p>
-          )}
+          {statsLoading && <p className="text-slate-500 text-sm col-span-3 py-8 text-center">{t('common.loading')}</p>}
           {!statsLoading && agentStats.length === 0 && (
             <p className="text-slate-600 text-sm col-span-3 py-8 text-center">{t('support.noAgents')}</p>
           )}
           {agentStats.map((s) => {
             const resolveRate = s.total > 0 ? Math.round((s.resolved / s.total) * 100) : 0;
             return (
-              <div
-                key={s.agent.id}
-                className="bg-[#111118] border border-white/[0.07] rounded-xl p-5 space-y-4 hover:border-white/[0.12] transition-colors"
-              >
-                {/* Agent header */}
+              <div key={s.agent.id} className="bg-[#111118] border border-white/[0.07] rounded-xl p-5 space-y-4 hover:border-white/[0.12] transition-colors">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm font-semibold text-white">{s.agent.fullName || '—'}</p>
                     <p className="text-xs text-slate-500">{s.agent.email}</p>
                   </div>
-                  <span
-                    className={`px-2 py-1 rounded-lg text-xs font-semibold ${
-                      s.active > 5
-                        ? 'bg-red-500/15 text-red-400'
-                        : s.active > 0
-                        ? 'bg-amber-500/15 text-amber-400'
-                        : 'bg-emerald-500/15 text-emerald-400'
-                    }`}
-                  >
+                  <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${
+                    s.active > 5 ? 'bg-red-500/15 text-red-400' : s.active > 0 ? 'bg-amber-500/15 text-amber-400' : 'bg-emerald-500/15 text-emerald-400'
+                  }`}>
                     {s.active} {t('support.activeTickets')}
                   </span>
                 </div>
-
-                {/* Stats grid */}
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div>
                     <p className="text-xl font-bold text-white">{s.total}</p>
@@ -302,14 +305,10 @@ export default function SupportPage() {
                     <p className="text-xs text-slate-500">{t('support.resolved')}</p>
                   </div>
                   <div>
-                    <p className="text-xl font-bold text-amber-400">
-                      {s.avgRating ? `${s.avgRating}★` : '—'}
-                    </p>
+                    <p className="text-xl font-bold text-amber-400">{s.avgRating ? `${s.avgRating}★` : '—'}</p>
                     <p className="text-xs text-slate-500">{t('support.rating')}</p>
                   </div>
                 </div>
-
-                {/* Resolve rate bar */}
                 <div>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-slate-500">{t('support.resolveRate')}</span>
@@ -317,32 +316,17 @@ export default function SupportPage() {
                   </div>
                   <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all ${
-                        resolveRate >= 80
-                          ? 'bg-emerald-500'
-                          : resolveRate >= 50
-                          ? 'bg-amber-500'
-                          : 'bg-red-500'
-                      }`}
+                      className={`h-full rounded-full transition-all ${resolveRate >= 80 ? 'bg-emerald-500' : resolveRate >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
                       style={{ width: `${resolveRate}%` }}
                     />
                   </div>
                 </div>
-
-                {/* Response time */}
                 {s.avgResponseHours !== null && (
                   <div className="flex items-center gap-1.5 text-xs text-slate-400 pt-1 border-t border-white/[0.05]">
                     <Clock size={11} />
-                    {t('support.avgResponse')}:{' '}
-                    <span className="font-semibold text-white">{s.avgResponseHours}h</span>
+                    {t('support.avgResponse')}: <span className="font-semibold text-white">{s.avgResponseHours}h</span>
                     {s.ratingCount > 0 && (
-                      <>
-                        <span className="text-slate-600 mx-1">·</span>
-                        <Star size={11} className="text-amber-400" />
-                        <span className="text-slate-400">
-                          {s.ratingCount} {t('support.ratings')}
-                        </span>
-                      </>
+                      <><span className="text-slate-600 mx-1">·</span><Star size={11} className="text-amber-400" /><span>{s.ratingCount} {t('support.ratings')}</span></>
                     )}
                   </div>
                 )}
@@ -367,128 +351,106 @@ export default function SupportPage() {
             rowCount={tickets.length}
             empty={t('support.noTickets')}
           >
-            {tickets.map((tk) => (
-              <tr
-                key={tk.id}
-                className="hover:bg-white/[0.02] transition-colors border-b border-white/[0.04] last:border-0"
-              >
-                {managerMode && (
-                  <td className="px-3 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(tk.id)}
-                      onChange={(e) => {
-                        setSelectedIds((prev) => {
-                          const next = new Set(prev);
-                          if (e.target.checked) next.add(tk.id); else next.delete(tk.id);
-                          return next;
-                        });
-                      }}
-                      className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer"
-                    />
-                  </td>
-                )}
-                <td className="px-4 py-3">
-                  <p className="text-sm text-white font-medium">{tk.subject}</p>
-                  <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{tk.message}</p>
-                </td>
-                <td className="px-4 py-3">
-                  <p className="text-sm text-slate-300">{tk.user?.fullName ?? tk.user?.username ?? '—'}</p>
-                  <p className="text-xs text-slate-500">{tk.user?.email ?? '—'}</p>
-                </td>
-                <td className="px-4 py-3">
-                  <Badge label={tk.status} />
-                </td>
-                <td className={`px-4 py-3 text-xs font-semibold ${PRIORITY_COLORS[tk.priority] ?? 'text-slate-400'}`}>
-                  {tk.priority}
-                </td>
-                {managerMode && (
-                  <td className="px-4 py-3">
-                    {tk.assignedAgent ? (
-                      <div>
-                        <p className="text-xs font-medium text-slate-300">
-                          {tk.assignedAgent.fullName || tk.assignedAgent.email}
-                        </p>
-                      </div>
-                    ) : (
-                      <span className="text-xs italic text-slate-600">{t('support.unassigned')}</span>
-                    )}
-                  </td>
-                )}
-                <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
-                  {new Date(tk.createdAt).toLocaleDateString('en-GB', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => {
-                        setSelected(tk);
-                        setReply(tk.reply ?? '');
-                        setNewStatus('RESOLVED');
-                      }}
-                      className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
-                    >
-                      <MessageSquare size={12} /> {t('support.reply')}
-                    </button>
-                    {managerMode && (
-                      <button
-                        onClick={() => {
-                          setAssignTarget(tk);
-                          setAssignTo(tk.assignedTo ? String(tk.assignedTo) : '');
+            {tickets.map((tk) => {
+              const isAssigned = !!tk.assignedTo;
+              return (
+                <tr key={tk.id} className={`hover:bg-white/[0.02] transition-colors border-b border-white/[0.04] last:border-0 ${isAssigned && tab === 'unassigned' ? 'opacity-50' : ''}`}>
+                  {managerMode && (
+                    <td className="px-3 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(tk.id)}
+                        disabled={isAssigned}
+                        onChange={(e) => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(tk.id); else next.delete(tk.id);
+                            return next;
+                          });
                         }}
-                        className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                        className="w-3.5 h-3.5 rounded accent-blue-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={isAssigned ? 'Already assigned' : ''}
+                      />
+                    </td>
+                  )}
+                  <td className="px-4 py-3">
+                    <p className="text-sm text-white font-medium">{tk.subject}</p>
+                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{tk.message}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="text-sm text-slate-300">{tk.user?.fullName ?? tk.user?.username ?? '—'}</p>
+                    <p className="text-xs text-slate-500">{tk.user?.email ?? '—'}</p>
+                  </td>
+                  <td className="px-4 py-3"><Badge label={tk.status} /></td>
+                  <td className={`px-4 py-3 text-xs font-semibold ${PRIORITY_COLORS[tk.priority] ?? 'text-slate-400'}`}>{tk.priority}</td>
+                  {managerMode && (
+                    <td className="px-4 py-3">
+                      {tk.assignedAgent ? (
+                        <p className="text-xs font-medium text-slate-300">{tk.assignedAgent.fullName || tk.assignedAgent.email}</p>
+                      ) : (
+                        <span className="text-xs italic text-slate-600">{t('support.unassigned')}</span>
+                      )}
+                    </td>
+                  )}
+                  <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
+                    {new Date(tk.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => { setSelected(tk); setReply(tk.reply ?? ''); setNewStatus('RESOLVED'); }}
+                        className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
                       >
-                        <UserCheck size={12} /> {t('support.assign')}
+                        <MessageSquare size={12} /> {t('support.reply')}
                       </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                      {managerMode && (
+                        <button
+                          onClick={() => { setAssignTarget(tk); setAssignTo(tk.assignedTo ? String(tk.assignedTo) : ''); }}
+                          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                        >
+                          <UserCheck size={12} /> {t('support.assign')}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </DataTable>
-          <Pagination
-            page={page}
-            totalPages={Math.ceil(total / 20)}
-            total={total}
-            limit={20}
-            onChange={setPage}
-          />
+          <Pagination page={page} totalPages={Math.ceil(total / 20)} total={total} limit={20} onChange={setPage} />
         </>
       )}
 
-      {/* Bulk assign bar */}
+      {/* Bulk assign floating bar */}
       {managerMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#1a1a2e] border border-blue-500/30 rounded-xl px-5 py-3 shadow-2xl shadow-blue-500/10">
-          <span className="text-sm font-semibold text-white">{selectedIds.size} {t('support.ticketsSelected')}</span>
-          <span className="text-slate-600">·</span>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#12121f] border border-blue-500/25 rounded-2xl px-5 py-3 shadow-2xl shadow-black/40 backdrop-blur-sm">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-bold text-white">{selectedIds.size}</span>
+            <span className="text-sm text-slate-400">{t('support.ticketsSelected')}</span>
+          </div>
+          <div className="w-px h-4 bg-white/[0.1]" />
           <select
             value={bulkAgentId}
             onChange={(e) => setBulkAgentId(e.target.value)}
-            className="px-3 py-1.5 text-sm bg-[#111118] border border-white/[0.1] rounded-lg text-slate-300 focus:outline-none"
+            className="px-3 py-1.5 text-sm bg-[#1a1a2e] border border-white/[0.1] rounded-lg text-slate-300 focus:outline-none focus:border-blue-500/50 min-w-[160px]"
           >
-            <option value="">{t('support.assignTo')}</option>
+            <option value="">{t('support.chooseAgent')}</option>
             {agents.map((a) => (
-              <option key={a.id} value={String(a.id)}>
-                {a.fullName || a.email}
-              </option>
+              <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>
             ))}
           </select>
           <button
             onClick={() => void handleBulkAssign()}
             disabled={bulkAssigning || !bulkAgentId}
-            className="px-4 py-1.5 text-sm font-semibold bg-blue-500 hover:bg-blue-400 text-white rounded-lg disabled:opacity-50 transition-all"
+            className="px-4 py-1.5 text-sm font-semibold bg-blue-500 hover:bg-blue-400 text-white rounded-lg disabled:opacity-50 transition-all whitespace-nowrap"
           >
             {bulkAssigning ? t('common.saving') : t('support.confirmAssign')}
           </button>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            className="text-xs text-slate-600 hover:text-slate-300 transition-colors"
           >
-            {t('common.cancel')}
+            ✕
           </button>
         </div>
       )}
@@ -538,9 +500,7 @@ export default function SupportPage() {
               </select>
             </div>
             <div className="flex gap-3 justify-end">
-              <button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-slate-400">
-                {t('common.cancel')}
-              </button>
+              <button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-slate-400">{t('common.cancel')}</button>
               <button
                 onClick={() => void handleReply()}
                 disabled={saving || !reply.trim()}
@@ -559,9 +519,7 @@ export default function SupportPage() {
           <div className="space-y-4">
             <div className="bg-[#0d0d14] rounded-lg p-3 border border-white/[0.06]">
               <p className="text-sm font-semibold text-white">{assignTarget.subject}</p>
-              <p className="text-xs text-slate-500 mt-1">
-                {assignTarget.user?.fullName ?? assignTarget.user?.email}
-              </p>
+              <p className="text-xs text-slate-500 mt-1">{assignTarget.user?.fullName ?? assignTarget.user?.email}</p>
               <div className="flex items-center gap-2 mt-2">
                 <Badge label={assignTarget.status} />
                 <Badge label={assignTarget.priority} />
@@ -576,21 +534,17 @@ export default function SupportPage() {
               >
                 <option value="">{t('support.unassignedOption')}</option>
                 {agents.map((a) => (
-                  <option key={a.id} value={String(a.id)}>
-                    {a.fullName || a.email}
-                  </option>
+                  <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>
                 ))}
               </select>
             </div>
             {assignTo && (
-              <div className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">
+              <p className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">
                 {t('support.assignNote')}
-              </div>
+              </p>
             )}
             <div className="flex gap-3 justify-end">
-              <button onClick={() => setAssignTarget(null)} className="px-4 py-2 text-sm text-slate-400">
-                {t('common.cancel')}
-              </button>
+              <button onClick={() => setAssignTarget(null)} className="px-4 py-2 text-sm text-slate-400">{t('common.cancel')}</button>
               <button
                 onClick={() => void handleAssign()}
                 disabled={assigning}

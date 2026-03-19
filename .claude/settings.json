@@ -22,7 +22,15 @@
       "Bash(npx tsx:*)",
       "Bash(node -e \"const f=require\\(''./public/locales/ar/common.json''\\); console.log\\(JSON.stringify\\(f.nav, null, 2\\)\\)\")",
       "Bash(node -e \"const f=require\\(''./public/locales/en/common.json''\\); console.log\\(JSON.stringify\\(f.nav, null, 2\\)\\)\")",
-      "Bash(node -e \"const f=require\\(''./public/locales/ar/common.json''\\); console.log\\(JSON.stringify\\(f.nav_group || ''missing'', null, 2\\)\\)\")"
+      "Bash(node -e \"const f=require\\(''./public/locales/ar/common.json''\\); console.log\\(JSON.stringify\\(f.nav_group || ''missing'', null, 2\\)\\)\")",
+      "Read(//tmp/**)",
+      "Bash(grep -r \"السوق\\\\|مفتوح\\\\|مغلق\\\\|الوقت\" src --include=*.tsx --include=*.ts)",
+      "Bash(grep -r \"isAr\\\\|isRTL\" src --include=*.tsx --include=*.ts -A 2)",
+      "Bash(grep -r \"السابق\\\\|التالي\\\\|أخرى\\\\|لا توجد\\\\|تاريخ الشراء\\\\|Buy Date\\\\|ص\\\\|م\\\\|AM\\\\|PM\" src --include=*.tsx --include=*.ts)",
+      "Bash(grep -r \"هل أنت\\\\|تعطيل\\\\|تفعيل\\\\|المصادقة\\\\|إعداد\\\\|تأكيد\" src --include=*.tsx --include=*.ts)",
+      "Bash(grep -rn \"🤔\\\\|شراء عقار\\\\|تنمية ثروتي\\\\|التقاعد\\\\|سفر ومغامرات\\\\|أرباح سريعة\\\\|اختر الهدف\\\\|إمتى عايز\\\\|الأفق الزمني\\\\|أقل من سنة\\\\|من فضلك اكتب\\\\|كود غير صحيح\" src --include=*.tsx --include=*.ts)",
+      "Bash(grep -r \"جاري التحليل\\\\|التقدّم\\\\|قد يستغرق\\\\|شوية وهنخلص\\\\|جاري جمع\\\\|جاري المقارنة\\\\|خدمة التحليل\" src --include=*.tsx --include=*.ts)",
+      "Bash(grep -rn \"isAr\\\\|isRTL\" src --include=*.tsx --include=*.ts)"
     ]
   }
 }

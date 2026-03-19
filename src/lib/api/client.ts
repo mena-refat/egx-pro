@@ -1,4 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
+import i18next from 'i18next';
 import { getAccessToken, refreshAccessToken, clearTokens } from '../auth/tokens';
 
 const baseURL =
@@ -52,7 +53,7 @@ apiClient.interceptors.response.use(
       return Promise.reject({
         ok: false,
         error: 'NETWORK_ERROR',
-        message: 'لا يوجد اتصال بالإنترنت',
+        message: i18next.t('error.no_internet', { ns: 'common' }),
       });
     }
 

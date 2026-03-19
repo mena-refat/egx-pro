@@ -522,53 +522,38 @@ export default function AdminsPage() {
       /* ─── Step 3: permissions ─── */
       case 3:
         return (
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs text-slate-400 block mb-2">{t('admins.permissions')}</label>
-              <div className="space-y-3">
-                {PERM_GROUPS.map((group) => (
-                  <div key={group.label}>
-                    <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1.5">{group.label}</p>
-                    <div className="space-y-1">
-                      {group.perms.map((p, idx) => {
-                        const isRequired = Object.entries(PERM_REQUIRES).some(([higher, deps]) =>
-                          deps.includes(p) && form.permissions.includes(higher)
-                        );
-                        return (
-                          <label
-                            key={p}
-                            className="flex items-center gap-2.5 cursor-pointer group rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 hover:bg-white/[0.04] transition-colors"
-                            style={{ marginLeft: `${idx * 12}px` }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={form.permissions.includes(p)}
-                              onChange={() => togglePermission(p)}
-                              disabled={isRequired}
-                              className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer disabled:opacity-50"
-                            />
-                            <span className="flex-1 text-xs text-slate-300 group-hover:text-white transition-colors">
-                              {PERM_LABELS[p] ?? p}
-                            </span>
-                            {isRequired && (
-                              <span className="text-[10px] text-emerald-600">required</span>
-                            )}
-                            {(PERM_REQUIRES[p] ?? []).length > 0 && (
-                              <span className="text-[10px] text-slate-700">
-                                needs: {(PERM_REQUIRES[p] ?? []).map(r => PERM_LABELS[r] ?? r).join(', ')}
-                              </span>
-                            )}
-                          </label>
-                        );
-                      })}
-                    </div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              {PERM_GROUPS.map((group) => (
+                <div key={group.label} className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-2.5">{group.label}</p>
+                  <div className="space-y-2">
+                    {group.perms.map((p) => {
+                      const isRequired = Object.entries(PERM_REQUIRES).some(
+                        ([higher, deps]) => deps.includes(p) && form.permissions.includes(higher)
+                      );
+                      return (
+                        <label key={p} className="flex items-center gap-2 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={form.permissions.includes(p)}
+                            onChange={() => togglePermission(p)}
+                            disabled={isRequired}
+                            className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer disabled:opacity-40 shrink-0"
+                          />
+                          <span className={`text-xs leading-tight transition-colors ${isRequired ? 'text-emerald-500/60' : 'text-slate-400 group-hover:text-white'}`}>
+                            {PERM_LABELS[p] ?? p}
+                          </span>
+                        </label>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
 
-            <div className="border-t border-white/[0.06] pt-3">
-              <label className="flex items-start gap-3 cursor-pointer group rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 hover:bg-white/[0.04] transition-colors">
+            <div className="border border-amber-500/20 bg-amber-500/5 rounded-xl px-3 py-2.5">
+              <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={form.isSuperAdmin}
@@ -576,19 +561,17 @@ export default function AdminsPage() {
                   className="mt-0.5 w-4 h-4 rounded accent-amber-400 cursor-pointer shrink-0"
                 />
                 <div>
-                  <span className="text-xs font-medium text-slate-200">{t('admins.superAdmin')}</span>
+                  <span className="text-xs font-semibold text-amber-300">{t('admins.superAdmin')}</span>
                   <p className="text-[11px] text-slate-500 mt-0.5">{t('admins.superAdminNote')}</p>
                 </div>
               </label>
             </div>
 
-            <div className="flex justify-between gap-3 pt-2">
-              <button type="button" onClick={goBack}
-                className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200">
+            <div className="flex justify-between gap-3 pt-1">
+              <button type="button" onClick={goBack} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200">
                 {t('common.back')}
               </button>
-              <button type="button" onClick={goNext}
-                className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg transition-all">
+              <button type="button" onClick={goNext} className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg transition-all">
                 {t('common.next')}
               </button>
             </div>
@@ -1032,35 +1015,28 @@ export default function AdminsPage() {
         title={`Permissions — ${editPermAdmin?.fullName || editPermAdmin?.email}`}
       >
         {editPermAdmin && (
-          <div className="space-y-4">
-            <div className="space-y-3">
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
               {PERM_GROUPS.map((group) => (
-                <div key={group.label}>
-                  <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1.5">{group.label}</p>
-                  <div className="space-y-1">
-                    {group.perms.map((p, idx) => {
+                <div key={group.label} className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-2.5">{group.label}</p>
+                  <div className="space-y-2">
+                    {group.perms.map((p) => {
                       const isRequired = Object.entries(PERM_REQUIRES).some(
                         ([higher, deps]) => deps.includes(p) && editPermissions.includes(higher)
                       );
                       return (
-                        <label
-                          key={p}
-                          className="flex items-center gap-2.5 cursor-pointer group rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 hover:bg-white/[0.04] transition-colors"
-                          style={{ marginLeft: `${idx * 12}px` }}
-                        >
+                        <label key={p} className="flex items-center gap-2 cursor-pointer group">
                           <input
                             type="checkbox"
                             checked={editPermissions.includes(p)}
                             onChange={() => toggleEditPermission(p)}
                             disabled={isRequired}
-                            className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer disabled:opacity-50"
+                            className="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer disabled:opacity-40 shrink-0"
                           />
-                          <span className="flex-1 text-xs text-slate-300 group-hover:text-white transition-colors">
+                          <span className={`text-xs leading-tight transition-colors ${isRequired ? 'text-emerald-500/60' : 'text-slate-400 group-hover:text-white'}`}>
                             {PERM_LABELS[p] ?? p}
                           </span>
-                          {isRequired && (
-                            <span className="text-[10px] text-emerald-600">required</span>
-                          )}
                         </label>
                       );
                     })}
@@ -1071,18 +1047,16 @@ export default function AdminsPage() {
 
             {/* Manager assignment — shown when admin has support.reply but not support.manage */}
             {editPermissions.includes('support.reply') && !editPermissions.includes('support.manage') && (
-              <div className="border-t border-white/[0.06] pt-3">
+              <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl px-3 py-3">
                 <label className="text-xs text-slate-400 block mb-1.5">Reports to Support Manager</label>
                 <select
                   value={editPermManagerId}
                   onChange={(e) => setEditPermManagerId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-emerald-500/40"
+                  className="w-full px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-blue-500/40"
                 >
                   <option value="">— No manager assigned —</option>
                   {supportManagers.map((m) => (
-                    <option key={m.id} value={String(m.id)}>
-                      {m.fullName || m.email}
-                    </option>
+                    <option key={m.id} value={String(m.id)}>{m.fullName || m.email}</option>
                   ))}
                 </select>
               </div>

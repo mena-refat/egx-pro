@@ -1,4 +1,5 @@
 import axios from 'axios';
+import i18next from 'i18next';
 import { useAuthStore } from '../store/authStore';
 
 // عند نشر الفرونت على دومين والـ API على آخر (مثلاً Vercel + Railway) ضع VITE_API_URL في بيئة البناء
@@ -71,7 +72,7 @@ api.interceptors.response.use(
       return Promise.reject({
         ok: false,
         error: 'NETWORK_ERROR',
-        message: 'لا يوجد اتصال بالإنترنت',
+        message: i18next.t('error.no_internet', { ns: 'common' }),
       });
     }
 

@@ -248,7 +248,17 @@
     "invalid_phone": "رقم هاتف غير صالح",
     "password_too_short": "كلمة المرور قصيرة جداً",
     "passwords_no_match": "كلمتا المرور غير متطابقتين",
-    "phone_11_digits": "رقم الهاتف يجب أن يكون 11 رقماً"
+    "phone_11_digits": "رقم الهاتف يجب أن يكون 11 رقماً",
+    "phone_required": "رقم الهاتف مطلوب",
+    "required_field": "هذا الحقل مطلوب",
+    "unauthorized": "غير مصرح",
+    "username_taken": "اسم المستخدم مستخدم بالفعل",
+    "no_internet": "لا يوجد اتصال بالإنترنت",
+    "server_busy": "الخدمة مشغولة حالياً. حاول بعد دقيقة.",
+    "server_error": "خطأ من الخادم. حاول مرة أخرى بعد قليل.",
+    "analysis_empty": "التحليل رجع فارغاً — حاول مرة أخرى أو جرب سهماً آخر.",
+    "unexpected": "حدث خطأ غير متوقع. حاول مرة أخرى بعد قليل.",
+    "buy_date_future": "تاريخ الشراء لا يمكن أن يكون في المستقبل"
   },
   "auth": {
     "loading": "جاري التحميل...",
@@ -414,7 +424,11 @@
     "noPerformanceData": "أضف أسهم للمحفظة لرؤية أداء المحفظة",
     "connecting": "جاري الاتصال...",
     "showIndicators": "إظهار المؤشرات",
-    "hideIndicators": "إخفاء المؤشرات"
+    "hideIndicators": "إخفاء المؤشرات",
+    "marketLabel": "السوق:",
+    "marketOpen": "مفتوح",
+    "marketClosed": "مغلق",
+    "timeLabel": "الوقت:"
   },
   "achievements": {
     "congrats": "مبروك!",

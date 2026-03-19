@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isEgyptMarketOpen, formatCairoTimeEn } from '../../../lib/cairoTime';
 
 type DataPoint = { value?: number; changePercent?: number };
@@ -13,6 +14,7 @@ function formatNum(n: number, locale: string): string {
 }
 
 export function DashboardMarketBar({ egx30, locale }: Props) {
+  const { t } = useTranslation('common');
   const [timeParts, setTimeParts] = useState(() => formatCairoTimeEn());
   const [open, setOpen] = useState(() => isEgyptMarketOpen());
   const [colonOn, setColonOn] = useState(true);
@@ -46,15 +48,15 @@ export function DashboardMarketBar({ egx30, locale }: Props) {
       dir="rtl"
     >
       <span className="shrink-0 flex items-center gap-2">
-        <span>السوق:</span>
+        <span>{t('dashboard.marketLabel')}</span>
         {open ? (
           <>
-            <span className="text-green-400 font-medium">مفتوح</span>
+            <span className="text-green-400 font-medium">{t('dashboard.marketOpen')}</span>
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" aria-hidden />
           </>
         ) : (
           <>
-            <span className="text-red-400 font-medium">مغلق</span>
+            <span className="text-red-400 font-medium">{t('dashboard.marketClosed')}</span>
             <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" aria-hidden />
           </>
         )}
@@ -77,7 +79,7 @@ export function DashboardMarketBar({ egx30, locale }: Props) {
       </span>
       <span className="text-white/10 select-none mx-4" aria-hidden>|</span>
       <span className="shrink-0 flex items-center gap-1">
-        <span>الوقت:</span>
+        <span>{t('dashboard.timeLabel')}</span>
         <span
           className="tabular-nums font-medium text-white/90"
           aria-label="Cairo time"

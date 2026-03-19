@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import i18next from 'i18next';
 
 /** Normalize Egyptian mobile phone:
  * - Accepts formats like 010xxxxxxxx, 2010xxxxxxxx, +2010xxxxxxxx
@@ -147,7 +148,7 @@ export const addHoldingSchema = z.object({
   purchaseDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format')
-    .refine((dateStr) => dateStr <= new Date().toISOString().slice(0, 10), { message: 'تاريخ الشراء لا يمكن أن يكون في المستقبل' }),
+    .refine((dateStr) => dateStr <= new Date().toISOString().slice(0, 10), { message: i18next.t('error.buy_date_future', { ns: 'common' }) }),
 });
 
 export const watchlistTickerSchema = z.object({

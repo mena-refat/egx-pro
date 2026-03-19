@@ -64,11 +64,11 @@ export default function AIAnalyzePage() {
       if (code === 'ANALYSIS_LIMIT_REACHED') {
         setShowLimitModal(true);
       } else if (code === 'NETWORK_ERROR' || msg.includes('لا يوجد اتصال') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-        setError('مفيش اتصال بالإنترنت. تأكد من الاتصال وحاول تاني.');
+        setError(t('error.no_internet'));
       } else if (status === 401) {
         setError(t('ai.sessionExpired'));
       } else if (status === 429 || code === 'RATE_LIMITED') {
-        setError('خدمة التحليل مشغولة حالياً. حاول بعد دقيقة.');
+        setError(t('error.server_busy'));
       } else if (status === 502 || status === 504 || code === 'ANALYSIS_FAILED' || code === 'ANALYSIS_TIMEOUT') {
         setError(t('ai.analysisTimeout'));
       } else if (status === 503 || code === 'SERVICE_UNAVAILABLE') {
@@ -76,10 +76,10 @@ export default function AIAnalyzePage() {
       } else if (axiosErr?.code === 'ECONNABORTED') {
         setError(t('ai.analysisTimeout'));
       } else if (status === 500) {
-        setError('خطأ من الخادم. حاول تاني بعد شوية.');
+        setError(t('error.server_error'));
       } else {
         if (msg.includes('empty') || msg.includes('Empty')) {
-          setError('التحليل رجع فاضي — حاول تاني أو جرب سهم تاني.');
+          setError(t('error.analysis_empty'));
         } else {
           setError(t('ai.analysisTimeout'));
         }

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
-  View, Text, ScrollView, RefreshControl, Pressable,
+  View, Text, ScrollView, RefreshControl, Pressable, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -8,6 +8,7 @@ import {
   Briefcase, Star, BarChart2,
 } from 'lucide-react-native';
 import { I18nManager } from 'react-native';
+import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { WatchlistRow } from '../../components/features/dashboard/WatchlistRow';
 import { MarketStatusBadge } from '../../components/shared/MarketStatusBadge';
@@ -136,7 +137,7 @@ function PortfolioSummaryCard({
         <View className="flex-1 px-5 py-3">
           <Text style={{ color: colors.textMuted }} className="text-xs mb-1">الربح / الخسارة</Text>
           <Text className="text-sm font-semibold tabular-nums" style={{ color: gainColor }}>
-            {isUp ? '+' : ''}{fmtNum(totalGainLoss)} EGP
+            {isUp ? '+' : ''}{totalGainLossPercent.toFixed(2)}%
           </Text>
         </View>
       </View>
@@ -168,6 +169,178 @@ function SectionHeader({
           <Text className="text-xs text-brand">{linkLabel}</Text>
           <ChevronIcon size={11} color="#8b5cf6" />
         </Pressable>
+      )}
+    </View>
+  );
+}
+
+/* ─── Portfolio Chart ─── */
+const CHART_RANGES = [
+  { id: '1w' as const,  label: '١ أ' },
+  { id: '1mo' as const, label: '١ ش' },
+  { id: '3mo' as const, label: '٣ ش' },
+];
+type ChartRange = '1w' | '1mo' | '3mo';
+const CHART_H = 140;
+
+function buildPortfolioPath(
+  data: { value: number }[],
+  width: number,
+  height: number,
+): { linePath: string; areaPath: string } {
+  if (data.length < 2) return { linePath: '', areaPath: '' };
+  const pad = { top: 12, bottom: 8 };
+  const vals = data.map((d) => d.value);
+  const minV = Math.min(...vals);
+  const maxV = Math.max(...vals);
+  const vRange = maxV - minV || 1;
+  const toX = (i: number) => (i / (data.length - 1)) * width;
+  const toY = (v: number) => pad.top + ((maxV - v) / vRange) * (height - pad.top - pad.bottom);
+  const pts = data.map((d, i) => ({ x: toX(i), y: toY(d.value) }));
+  const linePath = pts.reduce((acc, p, i) => {
+    if (i === 0) return `M ${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+    const prev = pts[i - 1];
+    const cx = ((prev.x + p.x) / 2).toFixed(2);
+    return `${acc} C ${cx} ${prev.y.toFixed(2)} ${cx} ${p.y.toFixed(2)} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+  }, '');
+  const last = pts[pts.length - 1];
+  const first = pts[0];
+  const areaPath = `${linePath} L ${last.x.toFixed(2)} ${height} L ${first.x.toFixed(2)} ${height} Z`;
+  return { linePath, areaPath };
+}
+
+function PortfolioChart({
+  holdings,
+}: {
+  holdings: Array<{ ticker: string; shares: number; avgPrice: number }>;
+}) {
+  const { colors } = useTheme();
+  const [range, setRange] = useState<ChartRange>('1mo');
+  const [data, setData] = useState<{ value: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [chartWidth, setChartWidth] = useState(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
+  useEffect(() => {
+    if (holdings.length === 0) { setData([]); setLoading(false); return; }
+    const ctrl = new AbortController();
+    setLoading(true);
+
+    Promise.all(
+      holdings.map((h) =>
+        apiClient
+          .get(`/api/stocks/${h.ticker}/history?range=${range}`, { signal: ctrl.signal })
+          .then((res) => {
+            const raw = (res.data as { data?: Array<{ date: string; price: number }> })?.data ?? res.data;
+            return { ticker: h.ticker, shares: h.shares, history: Array.isArray(raw) ? raw as Array<{ date: string; price: number }> : [] };
+          })
+          .catch(() => ({ ticker: h.ticker, shares: h.shares, history: [] as Array<{ date: string; price: number }> })),
+      ),
+    ).then((results) => {
+      if (ctrl.signal.aborted || !mountedRef.current) return;
+      const dateMap = new Map<string, Record<string, number>>();
+      for (const { ticker, history } of results) {
+        for (const pt of history) {
+          if (!dateMap.has(pt.date)) dateMap.set(pt.date, {});
+          dateMap.get(pt.date)![ticker] = pt.price;
+        }
+      }
+      const portfolioData = Array.from(dateMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([, prices]) => ({
+          value: holdings.reduce((sum, h) => {
+            const p = prices[h.ticker];
+            return p ? sum + h.shares * p : sum;
+          }, 0),
+        }))
+        .filter((d) => d.value > 0);
+      setData(portfolioData);
+    }).catch(() => {
+      if (mountedRef.current) setData([]);
+    }).finally(() => {
+      if (!ctrl.signal.aborted && mountedRef.current) setLoading(false);
+    });
+
+    return () => ctrl.abort();
+  }, [holdings, range]);
+
+  const firstVal = data[0]?.value ?? 0;
+  const lastVal = data[data.length - 1]?.value ?? 0;
+  const gain = firstVal > 0 ? ((lastVal - firstVal) / firstVal) * 100 : 0;
+  const isUp = gain >= 0;
+  const lineColor = isUp ? '#4ade80' : '#f87171';
+  const { linePath, areaPath } =
+    chartWidth > 0 && data.length >= 2
+      ? buildPortfolioPath(data, chartWidth, CHART_H)
+      : { linePath: '', areaPath: '' };
+
+  return (
+    <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl overflow-hidden">
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-4 pt-3.5 pb-2">
+        <View className="flex-row items-center gap-1.5">
+          <TrendingUp size={12} color={colors.textMuted} />
+          <Text style={{ color: colors.textMuted }} className="text-xs font-semibold uppercase tracking-wider">
+            أداء المحفظة
+          </Text>
+        </View>
+        {data.length > 1 && (
+          <View
+            className="flex-row items-center px-2 py-0.5 rounded-lg"
+            style={{ backgroundColor: isUp ? '#4ade8018' : '#f8717118' }}
+          >
+            <Text className="text-xs font-bold tabular-nums" style={{ color: lineColor }}>
+              {isUp ? '+' : ''}{gain.toFixed(2)}%
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Range tabs */}
+      <View className="flex-row gap-1.5 px-4 pb-2">
+        {CHART_RANGES.map((r) => (
+          <Pressable
+            key={r.id}
+            onPress={() => setRange(r.id)}
+            className="px-3 py-1 rounded-lg"
+            style={{ backgroundColor: range === r.id ? '#8b5cf6' : colors.border2 }}
+          >
+            <Text className="text-xs font-semibold" style={{ color: range === r.id ? '#fff' : colors.textMuted }}>
+              {r.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Chart area */}
+      {loading ? (
+        <View style={{ height: CHART_H }} className="items-center justify-center">
+          <ActivityIndicator color="#8b5cf6" size="small" />
+        </View>
+      ) : data.length < 2 ? (
+        <View style={{ height: CHART_H }} className="items-center justify-center">
+          <Text style={{ color: colors.textMuted }} className="text-sm">لا توجد بيانات كافية</Text>
+        </View>
+      ) : (
+        <View
+          style={{ height: CHART_H }}
+          onLayout={(e) => setChartWidth(e.nativeEvent.layout.width)}
+        >
+          {chartWidth > 0 && (
+            <Svg width={chartWidth} height={CHART_H}>
+              <Defs>
+                <LinearGradient id="portGrad" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={lineColor} stopOpacity="0.2" />
+                  <Stop offset="1" stopColor={lineColor} stopOpacity="0" />
+                </LinearGradient>
+              </Defs>
+              {areaPath ? <Path d={areaPath} fill="url(#portGrad)" /> : null}
+              {linePath ? <Path d={linePath} stroke={lineColor} strokeWidth={1.8} fill="none" /> : null}
+            </Svg>
+          )}
+        </View>
       )}
     </View>
   );
@@ -269,7 +442,8 @@ export default function HomePage() {
           <View className="flex-row items-center gap-3">
             <MarketStatusBadge />
             <Pressable
-              onPress={() => router.push('/settings/notifications')}
+              onPress={() => router.navigate('/settings/notifications')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={{ backgroundColor: colors.hover, borderColor: colors.border }}
               className="w-9 h-9 rounded-xl border items-center justify-center"
             >
@@ -359,7 +533,14 @@ export default function HomePage() {
             </View>
           </View>
 
-          {/* ─── 3. Top Movers ─── */}
+          {/* ─── 3. Portfolio Chart ─── */}
+          {!portfolioLoading && enrichedHoldings.length > 0 && (
+            <View className="px-4">
+              <PortfolioChart holdings={enrichedHoldings} />
+            </View>
+          )}
+
+          {/* ─── 4. Top Movers ─── */}
           {!loadingStocks && (topGainers.length > 0 || topLosers.length > 0) && (
             <View className="px-4">
               <SectionHeader
@@ -439,7 +620,7 @@ export default function HomePage() {
             </View>
           )}
 
-          {/* ─── 4. Portfolio Performance ─── */}
+          {/* ─── 5. Portfolio Performance ─── */}
           {!portfolioLoading && enrichedHoldings.length > 0 && (
             <View className="px-4">
               <SectionHeader title="أداء المحفظة" icon={TrendingUp} />
@@ -519,7 +700,7 @@ export default function HomePage() {
             </View>
           )}
 
-          {/* ─── 5. Watchlist ─── */}
+          {/* ─── 6. Watchlist ─── */}
           <View className="px-4">
             <SectionHeader
               title="قائمة المتابعة"
