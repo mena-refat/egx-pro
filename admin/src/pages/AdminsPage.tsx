@@ -12,6 +12,7 @@ const PERMS = [
   'discounts.manage',
   'support.view',
   'support.reply',
+  'support.manage',
   'notifications.send',
   'audit.view',
 ];

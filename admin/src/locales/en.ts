@@ -242,6 +242,24 @@ export const en = {
     setStatus: 'Set Status',
     sendReply: 'Send Reply',
     noTickets: 'No support tickets found',
+    allAgents: 'All Agents',
+    assignedTo: 'Assigned To',
+    assign: 'Assign',
+    assignTicket: 'Assign Ticket',
+    assignTo: 'Assign to Agent',
+    assignNote: 'Ticket status will change to In Progress.',
+    confirmAssign: 'Confirm',
+    unassigned: 'Unassigned',
+    unassignedOption: '— Remove Assignment —',
+    myTeam: 'My Team',
+    totalTickets: 'Total',
+    activeTickets: 'active',
+    rating: 'Rating',
+    ratings: 'ratings',
+    avgResponse: 'Avg. response',
+    resolveRate: 'Resolve rate',
+    noAgents: 'No support agents found. Assign support.reply permission to admins.',
+    previousReply: 'Previous reply',
   },
 
   account: {
@@ -319,6 +337,7 @@ export const en = {
     newPasswordLabel: 'New password for this admin',
     reset2FAMsg: 'This will disable 2FA for this admin. They will need to set it up again on next login.',
     emailExists: 'This email is already in use.',
+    permSupportManage: 'Support Manager',
   },
 
   audit: {

@@ -128,8 +128,8 @@ export default function RevenuePage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatsCard label={t('revenue.mrr')}          value={data ? `${data.mrr.toLocaleString()} EGP` : 0}  icon={DollarSign} accent="emerald" sub={t('revenue.mrrSub')} />
-        <StatsCard label={t('revenue.arr')}          value={data ? `${data.arr.toLocaleString()} EGP` : 0}  icon={TrendingUp}  accent="blue"    sub={t('revenue.arrSub')} />
+        <StatsCard label={t('revenue.mrr')}          value={data ? `${(data.mrr ?? 0).toLocaleString()} EGP` : 0}  icon={DollarSign} accent="emerald" sub={t('revenue.mrrSub')} />
+        <StatsCard label={t('revenue.arr')}          value={data ? `${(data.arr ?? 0).toLocaleString()} EGP` : 0}  icon={TrendingUp}  accent="blue"    sub={t('revenue.arrSub')} />
         <StatsCard label={t('revenue.paidUsers')}    value={data?.totalPaidUsers ?? 0}                       icon={Users}       accent="amber"   sub={`+${newThis} ${t('common.thisMonth')} (${mrrGrowth}%)`} />
         <StatsCard label={t('revenue.freeUpgrades')} value={data?.freeUpgrades ?? 0}                         icon={Gift}        accent="rose"    sub={t('revenue.freeUpgradesSub')} />
       </div>

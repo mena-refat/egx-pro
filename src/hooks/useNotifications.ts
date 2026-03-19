@@ -44,7 +44,9 @@ export function useNotifications(isAuthenticated: boolean) {
     const interval = setInterval(() => {
       if (!document.hidden) fetchNotifications();
     }, 30000);
-    return () => { controller.abort(); clearInterval(interval); };
+    const onReplyRead = () => fetchNotifications();
+    window.addEventListener('support:reply-read', onReplyRead);
+    return () => { controller.abort(); clearInterval(interval); window.removeEventListener('support:reply-read', onReplyRead); };
   }, [isAuthenticated, fetchNotifications]);
 
   const markAllRead = useCallback(async () => {

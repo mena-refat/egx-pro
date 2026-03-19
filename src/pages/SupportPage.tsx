@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   LifeBuoy, Plus, Clock, CheckCircle2, XCircle,
   Send, AlertCircle, ArrowLeft, Inbox, MessageSquare,
-  RefreshCw,
+  RefreshCw, Star,
 } from 'lucide-react';
 import api from '../lib/api';
 
@@ -19,6 +19,8 @@ interface SupportTicket {
   reply?: string | null;
   repliedAt?: string | null;
   replyRead: boolean;
+  rating?: number | null;
+  ratedAt?: string | null;
   createdAt: string;
 }
 
@@ -63,16 +65,95 @@ function StatusBadge({ status, isAr }: { status: TicketStatus; isAr: boolean }) 
   );
 }
 
+/* ─── Rating Widget ───────────────────────────────────────────────────────── */
+
+function RatingWidget({
+  ticket,
+  isAr,
+  onRated,
+}: {
+  ticket: SupportTicket;
+  isAr: boolean;
+  onRated: (rating: number) => void;
+}) {
+  const [hovered, setHovered]   = useState(0);
+  const [loading, setLoading]   = useState(false);
+  const [done,    setDone]      = useState(false);
+  const current = ticket.rating ?? 0;
+
+  const labels_ar = ['', 'سيء', 'مقبول', 'جيد', 'جيد جداً', 'ممتاز'];
+  const labels_en = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+
+  if (ticket.rating) {
+    return (
+      <div className="mt-4 p-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] flex items-center gap-3">
+        <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+        <div>
+          <p className="text-sm font-medium text-[var(--text-primary)]">
+            {isAr ? 'شكرًا على تقييمك!' : 'Thanks for your feedback!'}
+          </p>
+          <div className="flex items-center gap-0.5 mt-1">
+            {[1,2,3,4,5].map(s => (
+              <Star key={s} className={`w-4 h-4 ${s <= current ? 'fill-yellow-400 text-yellow-400' : 'text-[var(--border-strong)]'}`} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const handleRate = async (rating: number) => {
+    if (loading || done) return;
+    setLoading(true);
+    try {
+      await api.patch(`/support/${ticket.id}/rate`, { rating });
+      setDone(true);
+      onRated(rating);
+    } catch { /* silent */ } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 p-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)]">
+      <p className="text-sm font-medium text-[var(--text-secondary)] mb-3">
+        {isAr ? 'كيف كانت تجربتك مع فريق الدعم؟' : 'How was your support experience?'}
+      </p>
+      <div className="flex items-center gap-1.5">
+        {[1,2,3,4,5].map(s => (
+          <button
+            key={s}
+            disabled={loading}
+            onClick={() => handleRate(s)}
+            onMouseEnter={() => setHovered(s)}
+            onMouseLeave={() => setHovered(0)}
+            className="p-1 rounded-lg transition-transform hover:scale-110 disabled:opacity-50"
+          >
+            <Star className={`w-7 h-7 transition-colors ${s <= (hovered || current) ? 'fill-yellow-400 text-yellow-400' : 'text-[var(--border-strong)]'}`} />
+          </button>
+        ))}
+        {hovered > 0 && (
+          <span className="text-xs text-[var(--text-muted)] ms-2">
+            {isAr ? labels_ar[hovered] : labels_en[hovered]}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Ticket Detail View ──────────────────────────────────────────────────── */
 
 function TicketDetail({
   ticket,
   isAr,
   onBack,
+  onRated,
 }: {
   ticket: SupportTicket;
   isAr: boolean;
   onBack: () => void;
+  onRated: (rating: number) => void;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -145,6 +226,11 @@ function TicketDetail({
           </div>
         )}
       </div>
+
+      {/* Rating — show only when resolved/closed */}
+      {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && (
+        <RatingWidget ticket={ticket} isAr={isAr} onRated={onRated} />
+      )}
     </div>
   );
 }
@@ -372,6 +458,7 @@ export default function SupportPage() {
       try {
         await api.patch(`/support/${ticket.id}/read-reply`);
         setTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, replyRead: true } : t));
+        window.dispatchEvent(new CustomEvent('support:reply-read'));
       } catch { /* silent */ }
     }
   }, []);
@@ -507,6 +594,10 @@ export default function SupportPage() {
           ticket={selected}
           isAr={isAr}
           onBack={() => { setView('list'); setSelected(null); }}
+          onRated={(rating) => {
+            setSelected(prev => prev ? { ...prev, rating } : prev);
+            setTickets(prev => prev.map(t => t.id === selected.id ? { ...t, rating } : t));
+          }}
         />
       </div>
     );

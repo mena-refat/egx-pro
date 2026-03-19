@@ -129,6 +129,24 @@ router.delete(
 );
 
 router.get(
+  '/support/agents',
+  adminAuthenticate,
+  requirePermission('support.manage'),
+  (req, res, next) => {
+    void AdminSupportController.getAgents(req as any, res).catch(next);
+  }
+);
+
+router.get(
+  '/support/agents/stats',
+  adminAuthenticate,
+  requirePermission('support.manage'),
+  (req, res, next) => {
+    void AdminSupportController.agentStats(req as any, res).catch(next);
+  }
+);
+
+router.get(
   '/support',
   adminAuthenticate,
   requirePermission('support.view'),
@@ -161,6 +179,15 @@ router.patch(
   requirePermission('support.assign'),
   (req, res, next) => {
     void AdminSupportController.updateStatus(req as any, res).catch(next);
+  }
+);
+
+router.patch(
+  '/support/:id/assign',
+  adminAuthenticate,
+  requirePermission('support.manage'),
+  (req, res, next) => {
+    void AdminSupportController.assignTicket(req as any, res).catch(next);
   }
 );
 

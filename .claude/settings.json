@@ -19,7 +19,9 @@
       "Bash(curl -s \"http://localhost:3000/src/pages/DashboardPage.tsx\")",
       "Bash(curl -v -m 10 http://localhost:3000/api/auth/me)",
       "Bash(npx tsc:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(node -e \"const f=require\\(''./public/locales/ar/common.json''\\); console.log\\(JSON.stringify\\(f.nav, null, 2\\)\\)\")",
+      "Bash(node -e \"const f=require\\(''./public/locales/en/common.json''\\); console.log\\(JSON.stringify\\(f.nav, null, 2\\)\\)\")"
     ]
   }
 }

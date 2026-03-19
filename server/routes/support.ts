@@ -45,6 +45,26 @@ router.get('/my', authenticate, async (req, res) => {
   sendSuccess(res, tickets);
 });
 
+router.patch('/:id/rate', authenticate, async (req, res) => {
+  const userId = (req as AuthRequest).user?.id;
+  const { id } = req.params as { id: string };
+  const { rating } = req.body as { rating?: number };
+
+  if (!userId) { sendError(res, 'UNAUTHORIZED', 401); return; }
+  if (!rating || rating < 1 || rating > 5 || !Number.isInteger(rating)) {
+    sendError(res, 'VALIDATION_ERROR', 400); return;
+  }
+
+  const ticket = await prisma.supportTicket.findUnique({ where: { id } });
+  if (!ticket || ticket.userId !== userId) { sendError(res, 'NOT_FOUND', 404); return; }
+  if (ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED') {
+    sendError(res, 'TICKET_NOT_CLOSED', 400); return;
+  }
+
+  await prisma.$executeRaw`UPDATE "SupportTicket" SET "rating" = ${rating}, "ratedAt" = NOW() WHERE "id" = ${id}`;
+  sendSuccess(res, { ok: true });
+});
+
 router.patch('/:id/read-reply', authenticate, async (req, res) => {
   const userId = (req as AuthRequest).user?.id;
   const { id } = req.params as { id: string };

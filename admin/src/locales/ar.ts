@@ -242,6 +242,24 @@ export const ar = {
     setStatus: 'تغيير الحالة',
     sendReply: 'إرسال الرد',
     noTickets: 'لا توجد تذاكر دعم',
+    allAgents: 'كل الوكلاء',
+    assignedTo: 'مُعين إلى',
+    assign: 'تعيين',
+    assignTicket: 'تعيين التذكرة',
+    assignTo: 'تعيين إلى وكيل',
+    assignNote: 'سيتغير حالة التذكرة إلى قيد المعالجة.',
+    confirmAssign: 'تأكيد',
+    unassigned: 'غير مُعين',
+    unassignedOption: '— إزالة التعيين —',
+    myTeam: 'فريقي',
+    totalTickets: 'الإجمالي',
+    activeTickets: 'نشطة',
+    rating: 'التقييم',
+    ratings: 'تقييمات',
+    avgResponse: 'متوسط الاستجابة',
+    resolveRate: 'معدل الحل',
+    noAgents: 'لا يوجد وكلاء دعم. قم بتعيين صلاحية support.reply للإداريين.',
+    previousReply: 'الرد السابق',
   },
 
   account: {
@@ -319,6 +337,7 @@ export const ar = {
     newPasswordLabel: 'كلمة المرور الجديدة لهذا المسؤول',
     reset2FAMsg: 'سيؤدي هذا إلى تعطيل المصادقة الثنائية لهذا المسؤول. سيحتاج إلى إعدادها مجددًا عند تسجيل الدخول التالي.',
     emailExists: 'هذا البريد الإلكتروني مستخدم بالفعل.',
+    permSupportManage: 'مدير الدعم الفني',
   },
 
   audit: {

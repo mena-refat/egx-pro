@@ -9,6 +9,7 @@ export const ADMIN_PERMISSIONS = [
   'support.view',
   'support.reply',
   'support.assign',
+  'support.manage',
   'analytics.view',
   'audit.view',
   'notifications.send',
