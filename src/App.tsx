@@ -31,7 +31,7 @@ import {
   CalculatorSkeleton,
   UsernameSetupSkeleton,
 } from './components/skeletons';
-import { SubscriptionTab, ReferralTab, AchievementsTab, AccountOverviewTab, InvestorProfileTab } from './components/features/settings';
+import { SubscriptionTab, ReferralTab, AchievementsTab, AccountOverviewTab, InvestorProfileTab, AccountSettingsTab, SecuritySettingsTab, PreferencesSettingsTab, NotificationsSettingsTab, DangerSettingsTab } from './components/features/settings';
 import SettingsLayout from './components/layout/SettingsLayout';
 
 const PortfolioTracker = lazy(() => import('./components/PortfolioTracker'));
@@ -215,7 +215,12 @@ export default function App() {
                 <Route path="/goals" element={<ErrorBoundary><Suspense fallback={<GoalsSkeleton />}><GoalsPage currentWealth={stats.totalValue} /></Suspense></ErrorBoundary>} />
                 <Route path="/settings" element={<ErrorBoundary><SettingsLayout /></ErrorBoundary>}>
                   <Route index element={<Navigate to="/settings/account" replace />} />
-                  <Route path="account" element={<AccountOverviewTab />} />
+                  <Route path="account" element={<AccountSettingsTab />} />
+                  <Route path="security" element={<SecuritySettingsTab />} />
+                  <Route path="preferences" element={<PreferencesSettingsTab />} />
+                  <Route path="notifications" element={<NotificationsSettingsTab />} />
+                  <Route path="danger" element={<DangerSettingsTab />} />
+                  <Route path="overview" element={<AccountOverviewTab />} />
                   <Route path="investor" element={<InvestorProfileTab />} />
                   <Route path="subscription" element={<SubscriptionTab />} />
                   <Route path="referrals" element={<ReferralTab />} />

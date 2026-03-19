@@ -194,8 +194,11 @@ export const AdminSupportController = {
       isActive: true,
       permissions: { has: 'support.reply' },
     };
+    const { managerId: managerIdParam } = req.query as Record<string, string>;
     if (req.admin!.role !== 'SUPER_ADMIN') {
       where.managerId = req.admin!.id;
+    } else if (managerIdParam) {
+      where.managerId = parseInt(managerIdParam, 10);
     }
 
     const agents = await prisma.admin.findMany({
@@ -352,6 +355,66 @@ export const AdminSupportController = {
       ratingCount: ratingAgg._count.rating,
       avgResponseHours,
     });
+  },
+
+  async managersStats(req: AdminRequest, res: Response): Promise<void> {
+    if (req.admin!.role !== 'SUPER_ADMIN') {
+      sendError(res, 'ADMIN_FORBIDDEN', 403);
+      return;
+    }
+
+    const managers = await prisma.admin.findMany({
+      where: { isActive: true, permissions: { has: 'support.manage' } },
+      select: { id: true, fullName: true, email: true },
+      orderBy: { fullName: 'asc' },
+    });
+
+    const unassignedOpen = await prisma.supportTicket.count({
+      where: { status: 'OPEN', assignedTo: null },
+    });
+
+    const result = await Promise.all(managers.map(async (manager) => {
+      const agents = await prisma.admin.findMany({
+        where: { managerId: manager.id, isActive: true, permissions: { has: 'support.reply' } },
+        select: { id: true },
+      });
+      const agentIds = agents.map((a) => a.id);
+
+      if (agentIds.length === 0) {
+        return { manager, teamSize: 0, teamTotal: 0, teamResolved: 0, teamResolveRate: 0, avgAssignmentHours: null };
+      }
+
+      const [teamTotal, teamResolved] = await Promise.all([
+        prisma.supportTicket.count({ where: { assignedTo: { in: agentIds } } }),
+        prisma.supportTicket.count({ where: { assignedTo: { in: agentIds }, status: { in: ['RESOLVED', 'CLOSED'] } } }),
+      ]);
+
+      const assignedTickets = await prisma.supportTicket.findMany({
+        where: { assignedTo: { in: agentIds }, assignedAt: { not: null } },
+        select: { createdAt: true, assignedAt: true },
+      });
+
+      const avgAssignmentHours =
+        assignedTickets.length > 0
+          ? Math.round(
+              (assignedTickets.reduce((sum, t) => sum + (t.assignedAt!.getTime() - t.createdAt.getTime()), 0) /
+                assignedTickets.length /
+                3_600_000) *
+                10
+            ) / 10
+          : null;
+
+      return {
+        manager,
+        teamSize: agentIds.length,
+        teamTotal,
+        teamResolved,
+        teamResolveRate: teamTotal > 0 ? Math.round((teamResolved / teamTotal) * 100) : 0,
+        avgAssignmentHours,
+      };
+    }));
+
+    sendSuccess(res, { managers: result, globalUnassigned: unassignedOpen });
   },
 
   async stats(_req: AdminRequest, res: Response): Promise<void> {

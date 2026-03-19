@@ -1,176 +1,303 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
-import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { Pagination } from '../components/Pagination';
-import { MessageSquare, RefreshCw, Users, Clock, Star, UserCheck, UserPlus, CheckSquare, ArrowUpDown, TrendingUp } from 'lucide-react';
+import {
+  RefreshCw, Users, Star, UserCheck,
+  CheckSquare, ArrowUpDown, TrendingUp, ChevronRight, AlertTriangle,
+  Inbox, Send, X, Filter,
+} from 'lucide-react';
 import { useAdminStore } from '../store/adminAuthStore';
 
+/* ─── Types ─────────────────────────────────────────────────── */
 type Ticket = {
-  id: string;
-  subject: string;
-  message: string;
-  status: string;
-  priority: string;
-  assignedTo: number | null;
-  assignedAt: string | null;
+  id: string; subject: string; message: string; status: string; priority: string;
+  assignedTo: number | null; assignedAt: string | null;
   assignedAgent: { fullName: string; email: string } | null;
-  reply: string | null;
-  repliedAt: string | null;
-  rating: number | null;
+  reply: string | null; repliedAt: string | null; rating: number | null;
   createdAt: string;
   user: { id: number; email: string | null; username: string | null; fullName: string | null; plan: string };
 };
-
 type AgentStat = {
   agent: { id: number; fullName: string; email: string };
-  total: number;
-  resolved: number;
-  active: number;
-  avgRating: number | null;
-  ratingCount: number;
-  avgResponseHours: number | null;
+  total: number; resolved: number; active: number;
+  avgRating: number | null; ratingCount: number; avgResponseHours: number | null;
 };
-
-type ManagerStats = {
-  avgAssignmentHours: number | null;
-  unassignedOpen: number;
-  teamTotal: number;
-  teamResolved: number;
-  teamResolveRate: number;
+type ManagerStat = {
+  manager: { id: number; fullName: string; email: string };
+  teamSize: number; teamTotal: number; teamResolved: number;
+  teamResolveRate: number; avgAssignmentHours: number | null;
 };
-
-// e.g. 4.8, 5, 3, 4.1 — max 1 decimal, no trailing zero
-const fmt = (n: number) => Number(n.toFixed(1)).toString();
-
 type MyStats = {
-  total: number;
-  resolved: number;
-  active: number;
-  avgRating: number | null;
-  ratingCount: number;
-  avgResponseHours: number | null;
+  total: number; resolved: number; active: number;
+  avgRating: number | null; ratingCount: number; avgResponseHours: number | null;
 };
-
 type Agent = { id: number; fullName: string; email: string };
 
-const PRIORITY_COLORS: Record<string, string> = {
-  URGENT: 'text-red-400',
-  HIGH:   'text-orange-400',
-  NORMAL: 'text-slate-400',
-  LOW:    'text-slate-600',
+/* ─── Helpers ────────────────────────────────────────────────── */
+const fmt = (n: number) => Number(n.toFixed(1)).toString();
+
+const STATUS_BAR: Record<string, string> = {
+  OPEN: 'bg-blue-500', IN_PROGRESS: 'bg-amber-500',
+  RESOLVED: 'bg-emerald-500', CLOSED: 'bg-slate-600',
+};
+const PRIORITY_DOT: Record<string, string> = {
+  URGENT: 'bg-red-500', HIGH: 'bg-orange-400',
+  NORMAL: 'bg-slate-500', LOW: 'bg-slate-700',
+};
+const PRIORITY_TEXT: Record<string, string> = {
+  URGENT: 'text-red-400', HIGH: 'text-orange-400',
+  NORMAL: 'text-slate-400', LOW: 'text-slate-600',
 };
 
+function timeAgo(date: string) {
+  const diff = (Date.now() - new Date(date).getTime()) / 1000;
+  if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
+  return `${Math.round(diff / 86400)}d ago`;
+}
+
+function StatPill({ label, value, color }: { label: string; value: string | number; color: string }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className={`text-base font-bold tabular-nums ${color}`}>{value}</span>
+      <span className="text-[10px] text-slate-500 leading-tight">{label}</span>
+    </div>
+  );
+}
+
+function resolveColor(rate: number) {
+  return rate >= 80 ? 'text-emerald-400' : rate >= 50 ? 'text-amber-400' : 'text-red-400';
+}
+function responseColor(h: number | null) {
+  if (h === null) return 'text-slate-500';
+  return h <= 2 ? 'text-emerald-400' : h <= 6 ? 'text-amber-400' : 'text-red-400';
+}
+
+/* ─── Agent Card ─────────────────────────────────────────────── */
+function AgentCard({ s, t, onViewTickets }: { s: AgentStat; t: (k: string) => string; onViewTickets?: () => void }) {
+  const rate = s.total > 0 ? Math.round((s.resolved / s.total) * 100) : 0;
+  return (
+    <div className="bg-[#111118] border border-white/[0.07] rounded-xl p-4 space-y-3 hover:border-white/[0.12] transition-colors">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/30 to-blue-700/30 border border-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-300 shrink-0">
+            {(s.agent.fullName?.[0] ?? s.agent.email?.[0] ?? '?').toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-white truncate">{s.agent.fullName || '—'}</p>
+            <p className="text-[10px] text-slate-500 truncate">{s.agent.email}</p>
+          </div>
+        </div>
+        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+          s.active > 5 ? 'bg-red-500/15 text-red-400' : s.active > 0 ? 'bg-amber-500/15 text-amber-400' : 'bg-emerald-500/15 text-emerald-400'
+        }`}>
+          {s.active} {t('support.activeTickets')}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2 text-center py-2 border-y border-white/[0.05]">
+        <StatPill label={t('support.totalTickets')} value={s.total} color="text-white" />
+        <StatPill label={t('support.resolved')} value={s.resolved} color="text-emerald-400" />
+        <StatPill label={t('support.rating')} value={s.avgRating ? `${fmt(s.avgRating)}★` : '—'} color="text-amber-400" />
+        <StatPill label={t('support.avgResponse')} value={s.avgResponseHours !== null ? `${s.avgResponseHours}h` : '—'} color={responseColor(s.avgResponseHours)} />
+      </div>
+
+      <div>
+        <div className="flex justify-between text-[10px] mb-1">
+          <span className="text-slate-500">{t('support.resolveRate')}</span>
+          <span className={`font-bold ${resolveColor(rate)}`}>{rate}%</span>
+        </div>
+        <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
+          <div className={`h-full rounded-full ${rate >= 80 ? 'bg-emerald-500' : rate >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${rate}%` }} />
+        </div>
+      </div>
+
+      {onViewTickets && (
+        <button
+          onClick={onViewTickets}
+          className="w-full text-[10px] text-blue-400 hover:text-blue-300 text-center transition-colors pt-1"
+        >
+          {t('support.viewTeam')}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ─── Manager Card ───────────────────────────────────────────── */
+function ManagerCard({ s, t, onClick }: { s: ManagerStat; t: (k: string) => string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="bg-[#111118] border border-white/[0.07] hover:border-violet-500/30 rounded-xl p-4 space-y-3 transition-all text-start w-full group"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500/30 to-violet-700/30 border border-violet-500/20 flex items-center justify-center text-sm font-bold text-violet-300 shrink-0">
+            {(s.manager.fullName?.[0] ?? s.manager.email?.[0] ?? '?').toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{s.manager.fullName || '—'}</p>
+            <p className="text-[11px] text-slate-500 truncate">{s.manager.email}</p>
+          </div>
+        </div>
+        <ChevronRight size={14} className="text-slate-600 group-hover:text-violet-400 transition-colors shrink-0" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        {[
+          { label: t('support.teamSize'), value: s.teamSize, color: 'text-blue-400' },
+          { label: t('support.teamTotal'), value: s.teamTotal, color: 'text-white' },
+          {
+            label: t('support.teamResolveRate'),
+            value: `${s.teamResolveRate}%`,
+            color: resolveColor(s.teamResolveRate),
+          },
+          {
+            label: t('support.avgAssignmentTime'),
+            value: s.avgAssignmentHours !== null ? `${s.avgAssignmentHours}h` : '—',
+            color: responseColor(s.avgAssignmentHours),
+          },
+        ].map((item) => (
+          <div key={item.label} className="bg-white/[0.03] rounded-lg px-3 py-2">
+            <p className={`text-sm font-bold tabular-nums ${item.color}`}>{item.value}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{item.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="text-[10px] text-violet-400 group-hover:text-violet-300 transition-colors flex items-center gap-1 justify-end">
+        {t('support.viewTeam')} <ChevronRight size={10} />
+      </div>
+    </button>
+  );
+}
+
+/* ─── Main Page ──────────────────────────────────────────────── */
 export default function SupportPage() {
   const { t } = useTranslation();
   const currentAdmin = useAdminStore((s) => s.admin);
   const isSuperAdmin = currentAdmin?.role === 'SUPER_ADMIN';
 
-  const [managerMode, setManagerMode] = useState(false);
-  const [myStats, setMyStats]         = useState<MyStats | null>(null);
-  const [tab, setTab] = useState<'all' | 'unassigned' | 'team'>('all');
+  /* Permissions */
+  const canReply =
+    isSuperAdmin ||
+    currentAdmin?.permissions?.includes('support.reply') ||
+    currentAdmin?.permissions?.includes('support.manage');
+  const canAssign = isSuperAdmin || currentAdmin?.permissions?.includes('support.assign') || currentAdmin?.permissions?.includes('support.manage');
+  const managerMode = isSuperAdmin || !!(currentAdmin?.permissions?.includes('support.manage'));
 
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [total, setTotal]     = useState(0);
-  const [page, setPage]       = useState(1);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [agentFilter, setAgentFilter]   = useState('');
-  const [sortOrder, setSortOrder]       = useState('oldest'); // agents default: oldest first
-  const [loading, setLoading]           = useState(false);
+  /* View state */
+  const [view, setView]                   = useState<'tickets' | 'team'>('tickets');
+  const [selectedManager, setSelectedManager] = useState<ManagerStat | null>(null);
 
-  const [selected, setSelected]   = useState<Ticket | null>(null);
-  const [reply, setReply]         = useState('');
-  const [newStatus, setNewStatus] = useState('RESOLVED');
-  const [saving, setSaving]       = useState(false);
+  /* Ticket state */
+  const [tickets, setTickets]       = useState<Ticket[]>([]);
+  const [total, setTotal]           = useState(0);
+  const [page, setPage]             = useState(1);
+  const [statusFilter, setStatus]   = useState('');
+  const [priorityFilter, setPrio]   = useState('');
+  const [agentFilter, setAgent]     = useState('');
+  const [sortOrder, setSort]        = useState('oldest');
+  const [loading, setLoading]       = useState(false);
+  const [selected, setSelected]     = useState<Ticket | null>(null);
 
+  /* Reply */
+  const [reply, setReply]           = useState('');
+  const [newStatus, setNewStatus]   = useState('RESOLVED');
+  const [saving, setSaving]         = useState(false);
+
+  /* Assign */
   const [assignTarget, setAssignTarget] = useState<Ticket | null>(null);
-  const [agents, setAgents]             = useState<Agent[]>([]);
   const [assignTo, setAssignTo]         = useState('');
   const [assigning, setAssigning]       = useState(false);
+  const [agents, setAgents]             = useState<Agent[]>([]);
 
-  const [agentStats, setAgentStats]       = useState<AgentStat[]>([]);
-  const [managerStats, setManagerStats]   = useState<ManagerStats | null>(null);
-  const [statsLoading, setStatsLoading]   = useState(false);
-
-  const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set());
-  const [bulkAgentId, setBulkAgentId]   = useState('');
+  /* Bulk */
+  const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set());
+  const [bulkAgentId, setBulkAgentId]     = useState('');
   const [bulkAssigning, setBulkAssigning] = useState(false);
 
-  // Prevent double load when tab changes reset the page
-  const skipNextPageLoad = useRef(false);
+  /* Team stats */
+  const [agentStats, setAgentStats]         = useState<AgentStat[]>([]);
+  const [managerStats, setManagerStats]     = useState<ManagerStat[]>([]);
+  const [globalUnassigned, setGlobalUnassigned] = useState(0);
+  const [statsLoading, setStatsLoading]     = useState(false);
+  const [myStats, setMyStats]               = useState<MyStats | null>(null);
 
-  /* ── Init ── */
-  useEffect(() => {
-    adminApi.get('/auth/me').then((r) => {
-      const a = r.data.data;
-      const isManager = a.role === 'SUPER_ADMIN' || (a.permissions ?? []).includes('support.manage');
-      setManagerMode(isManager);
-      // Load own performance for agents (not managers)
-      if (!isManager && (a.permissions ?? []).includes('support.reply')) {
-        adminApi.get('/support/my-stats')
-          .then((rs) => setMyStats(rs.data.data))
-          .catch(() => null);
-      }
-    }).catch(() => null);
-  }, []);
-
-  useEffect(() => {
-    if (!managerMode) return;
-    adminApi.get('/support/agents').then((r) => setAgents(r.data.data ?? [])).catch(() => null);
-  }, [managerMode]);
+  const skipNext = useRef(false);
 
   /* ── Load tickets ── */
-  const load = useCallback(async (p: number, s: string, a: string, currentTab: typeof tab, sort: string) => {
+  const load = useCallback(async (p: number, s: string, pr: string, a: string, srt: string) => {
     setLoading(true);
     try {
       const params: Record<string, string> = { page: String(p) };
       if (s) params.status = s;
-      if (sort) params.sort = sort;
-      if (currentTab === 'unassigned') params.agentId = 'unassigned';
-      else if (a) params.agentId = a;
+      if (pr) params.priority = pr;
+      if (srt) params.sort = srt;
+      if (a) params.agentId = a;
+      else if (!managerMode) params.agentId = '';
       const r = await adminApi.get('/support', { params });
       setTickets(r.data.data.tickets ?? []);
       setTotal(r.data.data.total ?? 0);
-    } catch {
-      setTickets([]);
-    } finally {
-      setLoading(false);
+    } catch { setTickets([]); }
+    finally { setLoading(false); }
+  }, [managerMode]);
+
+  /* ── Load agents ── */
+  useEffect(() => {
+    if (canAssign) {
+      adminApi.get('/support/agents').then((r) => setAgents(r.data.data ?? [])).catch(() => null);
     }
-  }, []);
+  }, [canAssign]);
 
-  // Tab change → reset page & selection, load fresh
+  /* ── Load own stats (agent only) ── */
   useEffect(() => {
-    skipNextPageLoad.current = true;
-    setPage(1);
-    setSelectedIds(new Set());
-    setStatusFilter('');
-    setAgentFilter('');
-    void load(1, '', '', tab, sortOrder);
-  }, [tab]); // eslint-disable-line
+    if (!managerMode && currentAdmin?.permissions?.includes('support.reply')) {
+      adminApi.get('/support/my-stats').then((r) => setMyStats(r.data.data)).catch(() => null);
+    }
+  }, [managerMode, currentAdmin]);
 
-  // Page change → load (skip if triggered by tab reset)
+  /* ── Initial load ── */
   useEffect(() => {
-    if (skipNextPageLoad.current) { skipNextPageLoad.current = false; return; }
-    void load(page, statusFilter, agentFilter, tab, sortOrder);
+    void load(1, '', '', '', sortOrder);
+  }, []); // eslint-disable-line
+
+  useEffect(() => {
+    if (skipNext.current) { skipNext.current = false; return; }
+    void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
   }, [page]); // eslint-disable-line
 
-  /* ── Team stats ── */
-  const loadTeamStats = useCallback(async () => {
+  /* ── Load team stats ── */
+  const loadTeamStats = useCallback(async (managerId?: number) => {
     setStatsLoading(true);
     try {
-      const r = await adminApi.get('/support/agents/stats');
-      const data = r.data.data ?? {};
-      setAgentStats(data.agents ?? []);
-      setManagerStats(data.managerStats ?? null);
-    } catch { setAgentStats([]); setManagerStats(null); }
+      if (isSuperAdmin && managerId === undefined) {
+        const r = await adminApi.get('/support/managers/stats');
+        setManagerStats(r.data.data.managers ?? []);
+        setGlobalUnassigned(r.data.data.globalUnassigned ?? 0);
+        setAgentStats([]);
+      } else {
+        const params: Record<string, string> = {};
+        if (managerId !== undefined) params.managerId = String(managerId);
+        const r = await adminApi.get('/support/agents/stats', { params });
+        setAgentStats(r.data.data.agents ?? []);
+        setManagerStats([]);
+      }
+    } catch { setAgentStats([]); setManagerStats([]); }
     finally { setStatsLoading(false); }
-  }, []);
+  }, [isSuperAdmin]);
 
   useEffect(() => {
-    if (tab === 'team') void loadTeamStats();
-  }, [tab, loadTeamStats]);
+    if (view === 'team') {
+      if (isSuperAdmin && !selectedManager) void loadTeamStats();
+      else if (isSuperAdmin && selectedManager) void loadTeamStats(selectedManager.manager.id);
+      else void loadTeamStats();
+    }
+  }, [view, selectedManager]); // eslint-disable-line
 
   /* ── Handlers ── */
   const handleReply = async () => {
@@ -179,7 +306,7 @@ export default function SupportPage() {
     try {
       await adminApi.patch(`/support/${selected.id}/reply`, { reply, status: newStatus });
       setSelected(null); setReply('');
-      void load(page, statusFilter, agentFilter, tab, sortOrder);
+      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
     } finally { setSaving(false); }
   };
 
@@ -187,11 +314,9 @@ export default function SupportPage() {
     if (!assignTarget) return;
     setAssigning(true);
     try {
-      await adminApi.patch(`/support/${assignTarget.id}/assign`, {
-        agentId: assignTo ? parseInt(assignTo, 10) : null,
-      });
+      await adminApi.patch(`/support/${assignTarget.id}/assign`, { agentId: assignTo ? parseInt(assignTo, 10) : null });
       setAssignTarget(null); setAssignTo('');
-      void load(page, statusFilter, agentFilter, tab, sortOrder);
+      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
     } finally { setAssigning(false); }
   };
 
@@ -199,101 +324,40 @@ export default function SupportPage() {
     if (selectedIds.size === 0 || !bulkAgentId) return;
     setBulkAssigning(true);
     try {
-      await adminApi.post('/support/bulk-assign', {
-        ticketIds: [...selectedIds],
-        agentId: parseInt(bulkAgentId, 10),
-      });
+      await adminApi.post('/support/bulk-assign', { ticketIds: [...selectedIds], agentId: parseInt(bulkAgentId, 10) });
       setSelectedIds(new Set()); setBulkAgentId('');
-      void load(page, statusFilter, agentFilter, tab, sortOrder);
+      void load(page, statusFilter, priorityFilter, agentFilter, sortOrder);
     } finally { setBulkAssigning(false); }
   };
 
-  // Quick-select first N unassigned tickets from current page
-  const selectBatch = (n: number) => {
-    const unassigned = tickets.filter((tk) => !tk.assignedTo).slice(0, n);
-    setSelectedIds(new Set(unassigned.map((tk) => tk.id)));
+  const applyFilter = (s: string, pr: string, a: string, srt: string) => {
+    skipNext.current = true;
+    setPage(1);
+    void load(1, s, pr, a, srt);
   };
 
-  const unassignedOnPage = tickets.filter((tk) => !tk.assignedTo);
-
-  /* ── Render ── */
+  /* ─── RENDER ─────────────────────────────────────────────────── */
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">{t('support.title')}</h1>
           <p className="text-sm text-slate-500">{total} {t('support.tickets')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => void load(page, statusFilter, agentFilter, tab, sortOrder)}
-            className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-all"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          </button>
-          {tab !== 'team' && (
-            <>
-              <select
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); void load(1, e.target.value, agentFilter, tab, sortOrder); }}
-                className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
-              >
-                <option value="">{t('support.all')}</option>
-                <option value="OPEN">{t('support.open')}</option>
-                <option value="IN_PROGRESS">{t('support.inProgress')}</option>
-                <option value="RESOLVED">{t('support.resolved')}</option>
-                <option value="CLOSED">{t('support.closed')}</option>
-              </select>
-              <div className="flex items-center gap-1.5 px-3 py-2 bg-[#111118] border border-white/[0.08] rounded-lg">
-                <ArrowUpDown size={13} className="text-slate-500 shrink-0" />
-                <select
-                  value={sortOrder}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setSortOrder(v);
-                    setPage(1);
-                    void load(1, statusFilter, agentFilter, tab, v);
-                  }}
-                  className="text-sm bg-transparent text-slate-300 focus:outline-none"
-                >
-                  <option value="oldest">{t('support.sortOldest')}</option>
-                  <option value="newest">{t('support.sortNewest')}</option>
-                  <option value="priority">{t('support.sortPriority')}</option>
-                </select>
-              </div>
-            </>
-          )}
-          {managerMode && tab === 'all' && (
-            <select
-              value={agentFilter}
-              onChange={(e) => { setAgentFilter(e.target.value); setPage(1); void load(1, statusFilter, e.target.value, tab, sortOrder); }}
-              className="px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
-            >
-              <option value="">{t('support.allAgents')}</option>
-              {agents.map((a) => (
-                <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      </div>
-
-      {/* Tabs */}
-      {managerMode && (
-        <div className="flex items-center justify-between">
-          <div className="flex gap-1 p-1 bg-white/[0.04] border border-white/[0.06] rounded-xl w-fit">
+          {/* Tab switcher */}
+          <div className="flex gap-0.5 p-0.5 bg-white/[0.04] border border-white/[0.06] rounded-lg">
             {([
-              { key: 'all',        label: t('support.all') },
-              { key: 'unassigned', label: t('support.unassigned'), icon: <UserPlus size={13} /> },
-              { key: 'team',       label: t('support.myTeam'),     icon: <Users size={13} /> },
-            ] as { key: 'all' | 'unassigned' | 'team'; label: string; icon?: React.ReactNode }[]).map((item) => (
+              { key: 'tickets', label: t('support.ticketsView'), icon: <Inbox size={12} /> },
+              ...(managerMode ? [{ key: 'team', label: t('support.teamView'), icon: <Users size={12} /> }] : []),
+            ] as { key: 'tickets' | 'team'; label: string; icon: React.ReactNode }[]).map((item) => (
               <button
                 key={item.key}
-                onClick={() => setTab(item.key)}
-                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  tab === item.key ? 'bg-white/[0.1] text-white' : 'text-slate-500 hover:text-slate-300'
+                onClick={() => setView(item.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  view === item.key ? 'bg-white/[0.1] text-white' : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
                 {item.icon}{item.label}
@@ -301,278 +365,407 @@ export default function SupportPage() {
             ))}
           </div>
 
-          {/* Quick-select buttons — only on unassigned tab */}
-          {tab === 'unassigned' && unassignedOnPage.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-600">{t('support.quickSelect')}:</span>
-              {[10, 50].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => selectBatch(n)}
-                  disabled={unassignedOnPage.length === 0}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 rounded-lg transition-all disabled:opacity-40"
-                >
-                  <CheckSquare size={12} /> {n}
-                </button>
-              ))}
-              {selectedIds.size > 0 && (
-                <button
-                  onClick={() => setSelectedIds(new Set())}
-                  className="text-xs text-slate-500 hover:text-slate-300 transition-colors px-2"
-                >
-                  {t('common.cancel')}
-                </button>
-              )}
-            </div>
-          )}
+          <button
+            onClick={() => void load(page, statusFilter, priorityFilter, agentFilter, sortOrder)}
+            className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-all"
+          >
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+          </button>
         </div>
-      )}
+      </div>
 
-      {/* Agent self-performance card */}
-      {!managerMode && myStats && (
-        <div className="rounded-xl border border-blue-500/20 bg-[#111118] p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={14} className="text-blue-400" />
-            <h2 className="text-sm font-semibold text-white">{t('support.myPerformance')}</h2>
+      {/* ── My Performance (agent only) ── */}
+      {!managerMode && myStats && view === 'tickets' && (
+        <div className="rounded-xl border border-blue-500/20 bg-[#111118] p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp size={13} className="text-blue-400" />
+            <h2 className="text-xs font-semibold text-white">{t('support.myPerformance')}</h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             {[
-              { label: t('support.totalTickets'),  value: myStats.total,    color: 'text-white' },
-              { label: t('support.activeTickets'), value: myStats.active,   color: myStats.active > 5 ? 'text-red-400' : myStats.active > 0 ? 'text-amber-400' : 'text-emerald-400' },
-              { label: t('support.resolved'),      value: myStats.resolved, color: 'text-emerald-400' },
-              {
-                label: t('support.resolveRate'),
-                value: myStats.total > 0 ? `${Math.round((myStats.resolved / myStats.total) * 100)}%` : '—',
-                color: myStats.total > 0 && (myStats.resolved / myStats.total) >= 0.8 ? 'text-emerald-400' : 'text-amber-400',
-              },
-              {
-                label: t('support.avgResponse'),
-                value: myStats.avgResponseHours !== null ? `${myStats.avgResponseHours}h` : '—',
-                color: myStats.avgResponseHours !== null && myStats.avgResponseHours <= 2 ? 'text-emerald-400' : myStats.avgResponseHours !== null && myStats.avgResponseHours <= 6 ? 'text-amber-400' : 'text-red-400',
-              },
-              {
-                label: t('support.rating'),
-                value: myStats.avgRating ? `${fmt(myStats.avgRating)}★` : '—',
-                color: 'text-amber-400',
-              },
+              { label: t('support.totalTickets'), value: myStats.total, color: 'text-white' },
+              { label: t('support.activeTickets'), value: myStats.active, color: myStats.active > 5 ? 'text-red-400' : myStats.active > 0 ? 'text-amber-400' : 'text-emerald-400' },
+              { label: t('support.resolved'), value: myStats.resolved, color: 'text-emerald-400' },
+              { label: t('support.resolveRate'), value: myStats.total > 0 ? `${Math.round((myStats.resolved / myStats.total) * 100)}%` : '—', color: resolveColor(myStats.total > 0 ? Math.round((myStats.resolved / myStats.total) * 100) : 0) },
+              { label: t('support.avgResponse'), value: myStats.avgResponseHours !== null ? `${myStats.avgResponseHours}h` : '—', color: responseColor(myStats.avgResponseHours) },
+              { label: t('support.rating'), value: myStats.avgRating ? `${fmt(myStats.avgRating)}★` : '—', color: 'text-amber-400' },
             ].map((item) => (
-              <div key={item.label} className="rounded-lg bg-white/[0.03] border border-white/[0.05] px-3 py-3 flex flex-col gap-1">
-                <span className={`text-xl font-bold tabular-nums ${item.color}`}>{item.value}</span>
-                <span className="text-[11px] text-slate-500 leading-tight">{item.label}</span>
+              <div key={item.label} className="rounded-lg bg-white/[0.03] border border-white/[0.05] px-3 py-2.5">
+                <span className={`text-lg font-bold tabular-nums block ${item.color}`}>{item.value}</span>
+                <span className="text-[10px] text-slate-500">{item.label}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* My Team Tab */}
-      {tab === 'team' && managerMode ? (
-        <div className="space-y-5">
-
-        {/* Manager performance card — Super Admin only */}
-        {!statsLoading && managerStats && isSuperAdmin && (
-          <div className="rounded-xl border border-violet-500/20 bg-[#111118] p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <UserCheck size={14} className="text-violet-400" />
-              <h2 className="text-sm font-semibold text-white">{t('support.managerPerformance')}</h2>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                {
-                  label: t('support.avgAssignmentTime'),
-                  value: managerStats.avgAssignmentHours !== null ? `${managerStats.avgAssignmentHours}h` : '—',
-                  color: managerStats.avgAssignmentHours !== null && managerStats.avgAssignmentHours <= 2
-                    ? 'text-emerald-400' : managerStats.avgAssignmentHours !== null && managerStats.avgAssignmentHours <= 6
-                    ? 'text-amber-400' : 'text-red-400',
-                  hint: '↓ better',
-                },
-                {
-                  label: t('support.unassignedBacklog'),
-                  value: managerStats.unassignedOpen,
-                  color: managerStats.unassignedOpen === 0
-                    ? 'text-emerald-400' : managerStats.unassignedOpen <= 5
-                    ? 'text-amber-400' : 'text-red-400',
-                  hint: managerStats.unassignedOpen > 0 ? '⚠ needs attention' : '✓ clear',
-                },
-                {
-                  label: t('support.teamResolveRate'),
-                  value: `${managerStats.teamResolveRate}%`,
-                  color: managerStats.teamResolveRate >= 80
-                    ? 'text-emerald-400' : managerStats.teamResolveRate >= 50
-                    ? 'text-amber-400' : 'text-red-400',
-                  hint: '↑ better',
-                },
-                {
-                  label: t('support.teamTotal'),
-                  value: managerStats.teamTotal,
-                  color: 'text-blue-400',
-                  hint: '',
-                },
-              ].map((item) => (
-                <div key={item.label} className="rounded-lg bg-white/[0.03] border border-white/[0.05] px-4 py-3 flex flex-col gap-1">
-                  <span className={`text-xl font-bold tabular-nums ${item.color}`}>{item.value}</span>
-                  <span className="text-[11px] text-slate-500 leading-tight">{item.label}</span>
-                  {item.hint && <span className="text-[10px] text-slate-700">{item.hint}</span>}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {statsLoading && <p className="text-slate-500 text-sm col-span-3 py-8 text-center">{t('common.loading')}</p>}
-          {!statsLoading && agentStats.length === 0 && (
-            <p className="text-slate-600 text-sm col-span-3 py-8 text-center">{t('support.noAgents')}</p>
-          )}
-          {agentStats.map((s) => {
-            const resolveRate = s.total > 0 ? Math.round((s.resolved / s.total) * 100) : 0;
-            return (
-              <div key={s.agent.id} className="bg-[#111118] border border-white/[0.07] rounded-xl p-5 space-y-4 hover:border-white/[0.12] transition-colors" >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-white">{s.agent.fullName || '—'}</p>
-                    <p className="text-xs text-slate-500">{s.agent.email}</p>
-                  </div>
-                  <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${
-                    s.active > 5 ? 'bg-red-500/15 text-red-400' : s.active > 0 ? 'bg-amber-500/15 text-amber-400' : 'bg-emerald-500/15 text-emerald-400'
-                  }`}>
-                    {s.active} {t('support.activeTickets')}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div>
-                    <p className="text-xl font-bold text-white">{s.total}</p>
-                    <p className="text-xs text-slate-500">{t('support.totalTickets')}</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-emerald-400">{s.resolved}</p>
-                    <p className="text-xs text-slate-500">{t('support.resolved')}</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-amber-400">{s.avgRating ? `${fmt(s.avgRating)}★` : '—'}</p>
-                    <p className="text-xs text-slate-500">{t('support.rating')}</p>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-slate-500">{t('support.resolveRate')}</span>
-                    <span className="font-semibold text-white">{resolveRate}%</span>
-                  </div>
-                  <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${resolveRate >= 80 ? 'bg-emerald-500' : resolveRate >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
-                      style={{ width: `${resolveRate}%` }}
-                    />
-                  </div>
-                </div>
-                {s.avgResponseHours !== null && (
-                  <div className="flex items-center gap-1.5 text-xs text-slate-400 pt-1 border-t border-white/[0.05]">
-                    <Clock size={11} />
-                    {t('support.avgResponse')}: <span className="font-semibold text-white">{s.avgResponseHours}h</span>
-                    {s.ratingCount > 0 && (
-                      <><span className="text-slate-600 mx-1">·</span><Star size={11} className="text-amber-400" /><span>{s.ratingCount} {t('support.ratings')}</span></>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        </div>
-      ) : (
+      {/* ════ TICKETS VIEW ════ */}
+      {view === 'tickets' && (
         <>
-          <DataTable
-            headers={[
-              ...(managerMode ? [''] : []),
-              t('support.subject'),
-              t('support.user'),
-              t('support.status'),
-              t('support.priority'),
-              ...(managerMode ? [t('support.assignedTo')] : []),
-              t('support.date'),
-              '',
-            ]}
-            loading={loading}
-            rowCount={tickets.length}
-            empty={t('support.noTickets')}
-          >
-            {tickets.map((tk) => {
-              const isAssigned = !!tk.assignedTo;
-              return (
-                <tr key={tk.id} className={`hover:bg-white/[0.02] transition-colors border-b border-white/[0.04] last:border-0 ${isAssigned && tab === 'unassigned' ? 'opacity-50' : ''}`}>
-                  {managerMode && (
-                    <td className="px-3 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(tk.id)}
-                        disabled={isAssigned}
-                        onChange={(e) => {
-                          setSelectedIds((prev) => {
-                            const next = new Set(prev);
-                            if (e.target.checked) next.add(tk.id); else next.delete(tk.id);
-                            return next;
-                          });
-                        }}
-                        className="w-3.5 h-3.5 rounded accent-blue-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                        title={isAssigned ? 'Already assigned' : ''}
-                      />
-                    </td>
-                  )}
-                  <td className="px-4 py-3">
-                    <p className="text-sm text-white font-medium">{tk.subject}</p>
-                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{tk.message}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="text-sm text-slate-300">{tk.user?.fullName ?? tk.user?.username ?? '—'}</p>
-                    <p className="text-xs text-slate-500">{tk.user?.email ?? '—'}</p>
-                  </td>
-                  <td className="px-4 py-3"><Badge label={tk.status} /></td>
-                  <td className={`px-4 py-3 text-xs font-semibold ${PRIORITY_COLORS[tk.priority] ?? 'text-slate-400'}`}>{tk.priority}</td>
-                  {managerMode && (
-                    <td className="px-4 py-3">
-                      {tk.assignedAgent ? (
-                        <p className="text-xs font-medium text-slate-300">{tk.assignedAgent.fullName || tk.assignedAgent.email}</p>
-                      ) : (
-                        <span className="text-xs italic text-slate-600">{t('support.unassigned')}</span>
+          {/* Filters bar */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 text-slate-500">
+              <Filter size={12} />
+            </div>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatus(e.target.value); applyFilter(e.target.value, priorityFilter, agentFilter, sortOrder); }}
+              className="px-2.5 py-1.5 text-xs bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
+            >
+              <option value="">{t('support.all')}</option>
+              <option value="OPEN">{t('support.open')}</option>
+              <option value="IN_PROGRESS">{t('support.inProgress')}</option>
+              <option value="RESOLVED">{t('support.resolved')}</option>
+              <option value="CLOSED">{t('support.closed')}</option>
+            </select>
+
+            <select
+              value={priorityFilter}
+              onChange={(e) => { setPrio(e.target.value); applyFilter(statusFilter, e.target.value, agentFilter, sortOrder); }}
+              className="px-2.5 py-1.5 text-xs bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
+            >
+              <option value="">{t('support.priorityFilter')}</option>
+              <option value="URGENT">URGENT</option>
+              <option value="HIGH">HIGH</option>
+              <option value="NORMAL">NORMAL</option>
+              <option value="LOW">LOW</option>
+            </select>
+
+            {managerMode && (
+              <select
+                value={agentFilter}
+                onChange={(e) => { setAgent(e.target.value); applyFilter(statusFilter, priorityFilter, e.target.value, sortOrder); }}
+                className="px-2.5 py-1.5 text-xs bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
+              >
+                <option value="">{t('support.allAgents')}</option>
+                <option value="unassigned">{t('support.unassigned')}</option>
+                {agents.map((a) => <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>)}
+              </select>
+            )}
+
+            <div className="flex items-center gap-1 px-2.5 py-1.5 bg-[#111118] border border-white/[0.08] rounded-lg">
+              <ArrowUpDown size={11} className="text-slate-500" />
+              <select
+                value={sortOrder}
+                onChange={(e) => { setSort(e.target.value); applyFilter(statusFilter, priorityFilter, agentFilter, e.target.value); }}
+                className="text-xs bg-transparent text-slate-300 focus:outline-none"
+              >
+                <option value="oldest">{t('support.sortOldest')}</option>
+                <option value="newest">{t('support.sortNewest')}</option>
+                <option value="priority">{t('support.sortPriority')}</option>
+              </select>
+            </div>
+
+            {managerMode && selectedIds.size === 0 && (
+              <div className="ms-auto flex items-center gap-2">
+                <span className="text-[10px] text-slate-600">{t('support.quickSelect')}:</span>
+                {[10, 50].map((n) => (
+                  <button key={n} onClick={() => {
+                    const unassigned = tickets.filter((tk) => !tk.assignedTo).slice(0, n);
+                    setSelectedIds(new Set(unassigned.map((tk) => tk.id)));
+                  }} className="px-2 py-1 text-[10px] font-medium bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 rounded-md transition-all flex items-center gap-1">
+                    <CheckSquare size={10} /> {n}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Split panel */}
+          <div className={`grid gap-4 ${selected ? 'grid-cols-1 lg:grid-cols-[1fr_420px]' : 'grid-cols-1'}`}>
+
+            {/* ── Left: Ticket list ── */}
+            <div className="space-y-1.5">
+              {loading && (
+                <div className="flex items-center justify-center py-16 text-slate-600 text-sm">{t('common.loading')}</div>
+              )}
+              {!loading && tickets.length === 0 && (
+                <div className="flex items-center justify-center py-16 text-slate-600 text-sm">{t('support.noTickets')}</div>
+              )}
+              {tickets.map((tk) => (
+                <button
+                  key={tk.id}
+                  onClick={() => { setSelected(tk); setReply(tk.reply ?? ''); setNewStatus('RESOLVED'); }}
+                  className={`w-full text-start flex items-stretch gap-0 rounded-xl border transition-all overflow-hidden ${
+                    selected?.id === tk.id
+                      ? 'border-emerald-500/40 bg-emerald-500/5'
+                      : 'border-white/[0.06] bg-[#111118] hover:border-white/[0.12] hover:bg-white/[0.02]'
+                  }`}
+                >
+                  {/* Status bar */}
+                  <div className={`w-1 shrink-0 ${STATUS_BAR[tk.status] ?? 'bg-slate-600'}`} />
+
+                  <div className="flex-1 px-3.5 py-2.5 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          {managerMode && (
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(tk.id)}
+                              disabled={!!tk.assignedTo}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => {
+                                setSelectedIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (e.target.checked) next.add(tk.id); else next.delete(tk.id);
+                                  return next;
+                                });
+                              }}
+                              className="w-3 h-3 rounded accent-blue-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                            />
+                          )}
+                          <p className="text-xs font-semibold text-white truncate">{tk.subject}</p>
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate">{tk.message}</p>
+                      </div>
+                      <div className="shrink-0 flex flex-col items-end gap-1">
+                        <span className="text-[10px] text-slate-600 whitespace-nowrap">{timeAgo(tk.createdAt)}</span>
+                        <span className={`w-2 h-2 rounded-full ${PRIORITY_DOT[tk.priority] ?? 'bg-slate-600'}`} title={tk.priority} />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <Badge label={tk.status} />
+                      <span className={`text-[10px] font-medium ${PRIORITY_TEXT[tk.priority] ?? 'text-slate-500'}`}>{tk.priority}</span>
+                      {tk.user && (
+                        <span className="text-[10px] text-slate-500 truncate max-w-[120px]">
+                          {tk.user.fullName ?? tk.user.username ?? tk.user.email ?? '—'}
+                        </span>
                       )}
-                    </td>
-                  )}
-                  <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
-                    {new Date(tk.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => { setSelected(tk); setReply(tk.reply ?? ''); setNewStatus('RESOLVED'); }}
-                        className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
-                      >
-                        <MessageSquare size={12} /> {t('support.reply')}
-                      </button>
-                      {managerMode && (
-                        <button
-                          onClick={() => { setAssignTarget(tk); setAssignTo(tk.assignedTo ? String(tk.assignedTo) : ''); }}
-                          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
-                        >
-                          <UserCheck size={12} /> {t('support.assign')}
-                        </button>
+                      {tk.assignedAgent ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/15">
+                          {tk.assignedAgent.fullName || tk.assignedAgent.email}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/15 flex items-center gap-0.5">
+                          <AlertTriangle size={8} /> {t('support.unassigned')}
+                        </span>
+                      )}
+                      {tk.rating && (
+                        <span className="text-[10px] text-amber-400 flex items-center gap-0.5">
+                          <Star size={9} fill="currentColor" /> {tk.rating}
+                        </span>
                       )}
                     </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </DataTable>
-          <Pagination page={page} totalPages={Math.ceil(total / 20)} total={total} limit={20} onChange={setPage} />
+                  </div>
+                </button>
+              ))}
+
+              <div className="pt-2">
+                <Pagination page={page} totalPages={Math.ceil(total / 20)} total={total} limit={20} onChange={(p) => {
+                  skipNext.current = false;
+                  setPage(p);
+                }} />
+              </div>
+            </div>
+
+            {/* ── Right: Ticket detail ── */}
+            {selected && (
+              <div className="lg:sticky lg:top-4 self-start space-y-3 rounded-xl border border-white/[0.08] bg-[#111118] overflow-hidden">
+                {/* Detail header */}
+                <div className="flex items-start justify-between gap-3 px-4 pt-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white leading-snug">{selected.subject}</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <Badge label={selected.status} />
+                      <span className={`text-[10px] font-semibold ${PRIORITY_TEXT[selected.priority] ?? ''}`}>{selected.priority}</span>
+                      <span className="text-[10px] text-slate-500">{new Date(selected.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelected(null)} className="shrink-0 text-slate-600 hover:text-slate-300 transition-colors mt-0.5">
+                    <X size={14} />
+                  </button>
+                </div>
+
+                {/* User info */}
+                <div className="mx-4 rounded-lg bg-white/[0.03] border border-white/[0.05] px-3 py-2">
+                  <p className="text-[11px] text-slate-400">
+                    <span className="text-slate-500">From: </span>
+                    <span className="font-medium text-slate-200">{selected.user?.fullName ?? selected.user?.username ?? '—'}</span>
+                    {selected.user?.email && <span className="text-slate-500"> · {selected.user.email}</span>}
+                    <span className="text-slate-600"> · {selected.user?.plan}</span>
+                  </p>
+                  {selected.assignedAgent && (
+                    <p className="text-[11px] mt-1">
+                      <span className="text-slate-500">Agent: </span>
+                      <span className="text-blue-400 font-medium">{selected.assignedAgent.fullName || selected.assignedAgent.email}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Conversation */}
+                <div className="mx-4 space-y-2 max-h-48 overflow-y-auto">
+                  {/* Original message */}
+                  <div className="rounded-lg bg-white/[0.03] border border-white/[0.05] px-3 py-2.5">
+                    <p className="text-[10px] text-slate-500 mb-1.5">{t('support.originalMessage')}</p>
+                    <p className="text-xs text-slate-300 leading-relaxed">{selected.message}</p>
+                  </div>
+                  {/* Previous reply */}
+                  {selected.reply && (
+                    <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/20 px-3 py-2.5">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-[10px] text-emerald-400 font-medium">{t('support.previousReply')}</p>
+                        {selected.repliedAt && <p className="text-[10px] text-slate-600">{timeAgo(selected.repliedAt)}</p>}
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed">{selected.reply}</p>
+                      {selected.rating != null && (
+                        <div className="mt-2 flex items-center gap-1 text-[10px] text-amber-400">
+                          <Star size={9} fill="currentColor" /> {selected.rating}/5
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="px-4 pb-4 space-y-3">
+                  {/* Assign button */}
+                  {canAssign && (
+                    <button
+                      onClick={() => { setAssignTarget(selected); setAssignTo(selected.assignedTo ? String(selected.assignedTo) : ''); }}
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-blue-500/25 text-blue-400 hover:bg-blue-500/10 transition-all"
+                    >
+                      <UserCheck size={12} /> {t('support.assign')}
+                    </button>
+                  )}
+
+                  {/* Reply form */}
+                  {canReply && (
+                    <div className="space-y-2">
+                      <textarea
+                        value={reply}
+                        onChange={(e) => setReply(e.target.value)}
+                        rows={3}
+                        placeholder={t('support.yourReply')}
+                        className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50 resize-none placeholder-slate-600"
+                      />
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={newStatus}
+                          onChange={(e) => setNewStatus(e.target.value)}
+                          className="flex-1 px-2 py-1.5 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none"
+                        >
+                          <option value="IN_PROGRESS">{t('support.inProgress')}</option>
+                          <option value="RESOLVED">{t('support.resolved')}</option>
+                          <option value="CLOSED">{t('support.closed')}</option>
+                        </select>
+                        <button
+                          onClick={() => void handleReply()}
+                          disabled={saving || !reply.trim()}
+                          className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all whitespace-nowrap"
+                        >
+                          <Send size={11} /> {saving ? t('common.sending') : t('support.sendReply')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </>
       )}
 
-      {/* Bulk assign floating bar */}
+      {/* ════ TEAM VIEW ════ */}
+      {view === 'team' && managerMode && (
+        <div className="space-y-4">
+
+          {/* Breadcrumb / back for Super Admin manager drill-down */}
+          {isSuperAdmin && (
+            <div className="flex items-center gap-2">
+              {selectedManager ? (
+                <>
+                  <button
+                    onClick={() => { setSelectedManager(null); }}
+                    className="text-xs text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1"
+                  >
+                    {t('support.backToManagers')}
+                  </button>
+                  <ChevronRight size={12} className="text-slate-600" />
+                  <span className="text-xs text-white font-medium">{selectedManager.manager.fullName || selectedManager.manager.email}</span>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Users size={13} className="text-violet-400" />
+                  <span className="text-xs font-semibold text-white">{t('support.managers')}</span>
+                  {globalUnassigned > 0 && (
+                    <span className="ms-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/15 text-red-400 border border-red-500/20 flex items-center gap-1">
+                      <AlertTriangle size={9} /> {globalUnassigned} {t('support.globalUnassigned')}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {statsLoading && (
+            <div className="flex items-center justify-center py-16 text-slate-600 text-sm">{t('common.loading')}</div>
+          )}
+
+          {/* Manager cards (Super Admin, no manager selected) */}
+          {!statsLoading && isSuperAdmin && !selectedManager && (
+            <>
+              {managerStats.length === 0 && (
+                <div className="text-center py-12 text-slate-600 text-sm">{t('support.noManagers')}</div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {managerStats.map((s) => (
+                  <ManagerCard key={s.manager.id} s={s} t={t} onClick={() => setSelectedManager(s)} />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Agent cards (when manager selected or non-super-admin manager) */}
+          {!statsLoading && (!isSuperAdmin || selectedManager) && (
+            <>
+              {/* Selected manager summary */}
+              {isSuperAdmin && selectedManager && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: t('support.teamSize'), value: selectedManager.teamSize, color: 'text-blue-400' },
+                    { label: t('support.teamTotal'), value: selectedManager.teamTotal, color: 'text-white' },
+                    { label: t('support.teamResolveRate'), value: `${selectedManager.teamResolveRate}%`, color: resolveColor(selectedManager.teamResolveRate) },
+                    { label: t('support.avgAssignmentTime'), value: selectedManager.avgAssignmentHours !== null ? `${selectedManager.avgAssignmentHours}h` : '—', color: responseColor(selectedManager.avgAssignmentHours) },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-xl border border-violet-500/15 bg-[#111118] px-4 py-3">
+                      <p className={`text-xl font-bold tabular-nums ${item.color}`}>{item.value}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">{item.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {agentStats.length === 0 && (
+                <div className="text-center py-12 text-slate-600 text-sm">{t('support.noAgents')}</div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {agentStats.map((s) => (
+                  <AgentCard
+                    key={s.agent.id}
+                    s={s}
+                    t={t}
+                    onViewTickets={() => {
+                      setAgent(String(s.agent.id));
+                      setView('tickets');
+                      applyFilter(statusFilter, priorityFilter, String(s.agent.id), sortOrder);
+                    }}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Bulk assign floating bar ── */}
       {managerMode && selectedIds.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#12121f] border border-blue-500/25 rounded-2xl px-5 py-3 shadow-2xl shadow-black/40 backdrop-blur-sm">
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm font-bold text-white">{selectedIds.size}</span>
-            <span className="text-sm text-slate-400">{t('support.ticketsSelected')}</span>
-          </div>
+          <span className="text-sm font-bold text-white">{selectedIds.size}</span>
+          <span className="text-sm text-slate-400">{t('support.ticketsSelected')}</span>
           <div className="w-px h-4 bg-white/[0.1]" />
           <select
             value={bulkAgentId}
@@ -580,85 +773,20 @@ export default function SupportPage() {
             className="px-3 py-1.5 text-sm bg-[#1a1a2e] border border-white/[0.1] rounded-lg text-slate-300 focus:outline-none focus:border-blue-500/50 min-w-[160px]"
           >
             <option value="">{t('support.chooseAgent')}</option>
-            {agents.map((a) => (
-              <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>
-            ))}
+            {agents.map((a) => <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>)}
           </select>
           <button
             onClick={() => void handleBulkAssign()}
             disabled={bulkAssigning || !bulkAgentId}
-            className="px-4 py-1.5 text-sm font-semibold bg-blue-500 hover:bg-blue-400 text-white rounded-lg disabled:opacity-50 transition-all whitespace-nowrap"
+            className="px-4 py-1.5 text-sm font-semibold bg-blue-500 hover:bg-blue-400 text-white rounded-lg disabled:opacity-50 transition-all"
           >
             {bulkAssigning ? t('common.saving') : t('support.confirmAssign')}
           </button>
-          <button
-            onClick={() => setSelectedIds(new Set())}
-            className="text-xs text-slate-600 hover:text-slate-300 transition-colors"
-          >
-            ✕
-          </button>
+          <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-600 hover:text-slate-300 transition-colors">✕</button>
         </div>
       )}
 
-      {/* Reply Modal */}
-      <Modal open={!!selected} onClose={() => setSelected(null)} title={t('support.replyToTicket')}>
-        {selected && (
-          <div className="space-y-4">
-            <div className="bg-[#0d0d14] rounded-lg p-4 border border-white/[0.06]">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-slate-500">{selected.user?.email}</p>
-                <Badge label={selected.priority} />
-              </div>
-              <p className="text-sm font-semibold text-white mb-2">{selected.subject}</p>
-              <p className="text-sm text-slate-300 leading-relaxed">{selected.message}</p>
-              {selected.rating != null && (
-                <div className="mt-3 flex items-center gap-1 text-xs text-amber-400">
-                  <Star size={11} fill="currentColor" /> {t('support.rating')}: {selected.rating}/5
-                </div>
-              )}
-            </div>
-            {selected.reply && (
-              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
-                <p className="text-xs text-emerald-400 font-medium mb-1">{t('support.previousReply')}</p>
-                <p className="text-xs text-slate-400">{selected.reply}</p>
-              </div>
-            )}
-            <div>
-              <label className="text-xs text-slate-400 block mb-1.5">{t('support.yourReply')}</label>
-              <textarea
-                value={reply}
-                onChange={(e) => setReply(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2.5 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50 resize-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-slate-400 block mb-1.5">{t('support.setStatus')}</label>
-              <select
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none"
-              >
-                <option value="IN_PROGRESS">{t('support.inProgress')}</option>
-                <option value="RESOLVED">{t('support.resolved')}</option>
-                <option value="CLOSED">{t('support.closed')}</option>
-              </select>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setSelected(null)} className="px-4 py-2 text-sm text-slate-400">{t('common.cancel')}</button>
-              <button
-                onClick={() => void handleReply()}
-                disabled={saving || !reply.trim()}
-                className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all"
-              >
-                {saving ? t('common.sending') : t('support.sendReply')}
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* Assign Modal */}
+      {/* ── Assign Modal ── */}
       <Modal open={!!assignTarget} onClose={() => setAssignTarget(null)} title={t('support.assignTicket')}>
         {assignTarget && (
           <div className="space-y-4">
@@ -678,15 +806,11 @@ export default function SupportPage() {
                 className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-blue-500/50"
               >
                 <option value="">{t('support.unassignedOption')}</option>
-                {agents.map((a) => (
-                  <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>
-                ))}
+                {agents.map((a) => <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>)}
               </select>
             </div>
             {assignTo && (
-              <p className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">
-                {t('support.assignNote')}
-              </p>
+              <p className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">{t('support.assignNote')}</p>
             )}
             <div className="flex gap-3 justify-end">
               <button onClick={() => setAssignTarget(null)} className="px-4 py-2 text-sm text-slate-400">{t('common.cancel')}</button>

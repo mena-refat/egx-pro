@@ -141,6 +141,18 @@ export default function RootLayout() {
               name="calculator/index"
               options={{ animation: 'slide_from_right' }}
             />
+            <Stack.Screen
+              name="support/index"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="referral/index"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="achievements/index"
+              options={{ animation: 'slide_from_right' }}
+            />
           </Stack>
         </SafeAreaProvider>
       </GestureHandlerRootView>

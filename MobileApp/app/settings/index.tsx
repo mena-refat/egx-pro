@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import {
   User, Shield, Bell, CreditCard, Fingerprint,
   ChevronRight, ChevronLeft, Info, LogOut, Trash2, Moon, Sun, Monitor,
+  Gift, Trophy, LifeBuoy,
 } from 'lucide-react-native';
 import { I18nManager } from 'react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
@@ -125,7 +126,9 @@ export default function SettingsPage() {
 
         <Section title="الحساب">
           <MenuItem icon={User}        label="البيانات الشخصية"  sub={user?.fullName ?? ''}                    onPress={() => router.push('/settings/account')} />
-          <MenuItem icon={CreditCard}  label="الاشتراك والخطة"   sub={(user?.plan ?? 'free').toUpperCase()}    onPress={() => router.push('/settings/subscription')} last />
+          <MenuItem icon={CreditCard}  label="الاشتراك والخطة"   sub={(user?.plan ?? 'free').toUpperCase()}    onPress={() => router.push('/settings/subscription')} />
+          <MenuItem icon={Gift}        label="برنامج الإحالة"    sub="ادعُ أصدقاء — احصل على Pro مجاناً"      onPress={() => router.push('/referral' as never)} />
+          <MenuItem icon={Trophy}      label="إنجازاتي"           sub="تتبّع تقدمك ومستواك"                    onPress={() => router.push('/achievements' as never)} last />
         </Section>
 
         <Section title="الأمان">
@@ -133,8 +136,9 @@ export default function SettingsPage() {
           <MenuItem icon={Fingerprint} label="البصمة / Face ID"  sub="تسجيل الدخول البيومتري"                 onPress={() => router.push('/settings/biometric')} last />
         </Section>
 
-        <Section title="الإشعارات">
-          <MenuItem icon={Bell}        label="إعدادات الإشعارات" sub="تخصيص ما تستقبله"                        onPress={() => router.push('/settings/notifications')} last />
+        <Section title="الإشعارات والدعم">
+          <MenuItem icon={Bell}        label="إعدادات الإشعارات" sub="تخصيص ما تستقبله"                       onPress={() => router.push('/settings/notifications')} />
+          <MenuItem icon={LifeBuoy}    label="الدعم الفني"        sub="تواصل مع الفريق — متوسط الرد 24س"       onPress={() => router.push('/support' as never)} last />
         </Section>
 
         <Section title="التطبيق">
@@ -164,7 +168,7 @@ export default function SettingsPage() {
                 'لحذف حسابك بشكل نهائي تواصل معنا عبر الدعم الفني.',
                 [
                   { text: 'إلغاء', style: 'cancel' },
-                  { text: 'تواصل مع الدعم', onPress: () => Linking.openURL('mailto:support@borsa.app') },
+                  { text: 'تواصل مع الدعم', onPress: () => router.push('/support' as never) },
                 ],
               )
             }

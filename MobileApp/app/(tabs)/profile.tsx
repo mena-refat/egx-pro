@@ -3,7 +3,8 @@ import { View, Text, Pressable, ScrollView, I18nManager } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   User, Shield, Bell, CreditCard, LogOut,
-  ChevronRight, ChevronLeft, Settings, Moon, Sun, Monitor,
+  ChevronRight, ChevronLeft, Moon, Sun, Monitor,
+  LifeBuoy, Gift, Trophy, Fingerprint,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
@@ -13,6 +14,11 @@ import apiClient from '../../lib/api/client';
 
 type ThemeOption = 'dark' | 'light' | 'system';
 
+const PLAN_LABELS: Record<string, string> = {
+  free: 'مجاني', pro: 'Pro', yearly: 'Pro سنوي',
+  ultra: 'Ultra', ultra_yearly: 'Ultra سنوي',
+};
+
 function MenuItem({
   icon: Icon,
   label,
@@ -20,6 +26,7 @@ function MenuItem({
   onPress,
   danger = false,
   iconColor,
+  badge,
 }: {
   icon: React.ComponentType<{ size: number; color: string }>;
   label: string;
@@ -27,6 +34,7 @@ function MenuItem({
   onPress: () => void;
   danger?: boolean;
   iconColor?: string;
+  badge?: number;
 }) {
   const { colors } = useTheme();
   const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
@@ -42,7 +50,7 @@ function MenuItem({
     >
       <View
         className="w-9 h-9 rounded-xl items-center justify-center"
-        style={{ backgroundColor: danger ? '#f8717115' : `${ic}15` }}
+        style={{ backgroundColor: danger ? '#f8717115' : `${ic}18` }}
       >
         <Icon size={16} color={ic} />
       </View>
@@ -50,20 +58,21 @@ function MenuItem({
         <Text style={{ color: danger ? '#f87171' : colors.text }} className="text-sm font-medium">{label}</Text>
         {sub && <Text style={{ color: colors.textMuted }} className="text-xs mt-0.5">{sub}</Text>}
       </View>
-      {!danger && <ChevronIcon size={14} color={colors.textMuted} />}
+      <View className="flex-row items-center gap-2">
+        {badge != null && badge > 0 && (
+          <View className="bg-brand px-1.5 py-0.5 rounded-full min-w-[18px] items-center">
+            <Text className="text-[10px] font-bold text-white">{badge > 99 ? '99+' : badge}</Text>
+          </View>
+        )}
+        {!danger && <ChevronIcon size={14} color={colors.textMuted} />}
+      </View>
     </Pressable>
   );
 }
 
 function Section({
-  title,
-  children,
-  last = false,
-}: {
-  title?: string;
-  children: React.ReactNode;
-  last?: boolean;
-}) {
+  title, children, last = false,
+}: { title?: string; children: React.ReactNode; last?: boolean }) {
   const { colors } = useTheme();
   return (
     <View className={`mx-4 ${last ? '' : 'mb-3'}`}>
@@ -72,10 +81,7 @@ function Section({
           {title}
         </Text>
       )}
-      <View
-        style={{ backgroundColor: colors.card, borderColor: colors.border }}
-        className="border rounded-2xl overflow-hidden"
-      >
+      <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl overflow-hidden">
         {children}
       </View>
     </View>
@@ -85,7 +91,7 @@ function Section({
 export default function ProfilePage() {
   const router = useRouter();
   const { user, logout, updateUser } = useAuthStore();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   const handleLogout = async () => {
     await logout();
@@ -104,44 +110,48 @@ export default function ProfilePage() {
   ];
 
   const currentTheme = (user?.theme as ThemeOption | undefined) ?? 'system';
+  const planLabel = PLAN_LABELS[user?.plan ?? 'free'] ?? 'مجاني';
+  const isPro = user?.plan && user.plan !== 'free';
 
   return (
     <ScreenWrapper padded={false}>
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: 32 }}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={{ paddingBottom: 36 }} showsVerticalScrollIndicator={false}>
+
         {/* ─── Header ─── */}
-        <View
-          style={{ borderBottomColor: colors.border, borderBottomWidth: 0.5 }}
-          className="px-4 pt-5 pb-4"
-        >
+        <View style={{ borderBottomColor: colors.border, borderBottomWidth: 0.5 }} className="px-4 pt-5 pb-4">
           <Text style={{ color: colors.text }} className="text-xl font-bold">حسابي</Text>
         </View>
 
         {/* ─── Profile Card ─── */}
         <View className="px-4 pt-4 pb-3">
-          <View
-            style={{ backgroundColor: colors.card, borderColor: colors.border }}
-            className="border rounded-2xl p-5"
-          >
+          <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-4">
             <View className="flex-row items-center gap-4">
+              {/* Avatar */}
               <View className="w-16 h-16 rounded-full bg-brand/20 items-center justify-center">
                 <Text className="text-2xl font-bold text-brand">
                   {user?.fullName?.[0]?.toUpperCase() ?? 'U'}
                 </Text>
               </View>
-              <View className="flex-1">
-                <Text style={{ color: colors.text }} className="text-base font-bold">
+
+              {/* Info */}
+              <View className="flex-1 gap-0.5">
+                <Text style={{ color: colors.text }} className="text-base font-bold" numberOfLines={1}>
                   {user?.fullName ?? '—'}
                 </Text>
-                <Text style={{ color: colors.textSub }} className="text-sm mt-0.5">
+                <Text style={{ color: colors.textSub }} className="text-sm">
                   @{user?.username ?? '—'}
                 </Text>
-                <View className="mt-2">
+                <View className="flex-row items-center gap-2 mt-1.5">
                   <Badge label={user?.plan ?? 'free'} />
+                  {user?.planExpiresAt && (
+                    <Text style={{ color: colors.textMuted }} className="text-[10px]">
+                      حتى {new Date(user.planExpiresAt).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' })}
+                    </Text>
+                  )}
                 </View>
               </View>
+
+              {/* Edit */}
               <Pressable
                 onPress={() => router.push('/settings/account')}
                 style={{ backgroundColor: colors.hover, borderColor: colors.border }}
@@ -149,6 +159,23 @@ export default function ProfilePage() {
               >
                 <Text style={{ color: colors.textSub }} className="text-xs font-medium">تعديل</Text>
               </Pressable>
+            </View>
+
+            {/* Stats row */}
+            <View style={{ borderTopColor: colors.border, borderTopWidth: 0.5 }} className="flex-row mt-4 pt-3">
+              {[
+                { label: 'الخطة', value: planLabel, color: isPro ? '#8b5cf6' : colors.textSub },
+                { label: 'التحليلات', value: String(user?.aiAnalysisUsedThisMonth ?? 0), color: colors.text },
+              ].map((s, i) => (
+                <View
+                  key={s.label}
+                  style={i === 0 ? { borderRightColor: colors.border, borderRightWidth: 0.5 } : undefined}
+                  className="flex-1 items-center"
+                >
+                  <Text style={{ color: s.color }} className="text-sm font-bold">{s.value}</Text>
+                  <Text style={{ color: colors.textMuted }} className="text-xs mt-0.5">{s.label}</Text>
+                </View>
+              ))}
             </View>
           </View>
         </View>
@@ -158,10 +185,7 @@ export default function ProfilePage() {
           <Text style={{ color: colors.textMuted }} className="text-xs font-semibold uppercase tracking-wider px-1 mb-2">
             المظهر
           </Text>
-          <View
-            style={{ backgroundColor: colors.card, borderColor: colors.border }}
-            className="border rounded-2xl p-1.5 flex-row gap-1"
-          >
+          <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-1.5 flex-row gap-1">
             {THEME_OPTIONS.map(({ id, label, Icon }) => {
               const active = currentTheme === id;
               return (
@@ -172,10 +196,7 @@ export default function ProfilePage() {
                   style={{ backgroundColor: active ? '#8b5cf6' : 'transparent' }}
                 >
                   <Icon size={13} color={active ? '#fff' : colors.textMuted} />
-                  <Text
-                    className="text-xs font-semibold"
-                    style={{ color: active ? '#fff' : colors.textMuted }}
-                  >
+                  <Text className="text-xs font-semibold" style={{ color: active ? '#fff' : colors.textMuted }}>
                     {label}
                   </Text>
                 </Pressable>
@@ -184,23 +205,31 @@ export default function ProfilePage() {
           </View>
         </View>
 
-        {/* ─── Account Settings ─── */}
+        {/* ─── Account ─── */}
         <Section title="الحساب">
-          <MenuItem icon={User}       label="البيانات الشخصية"  sub={user?.fullName ?? ''} onPress={() => router.push('/settings/account')}       iconColor="#8b5cf6" />
-          <MenuItem icon={Bell}       label="الإشعارات"          onPress={() => router.push('/settings/notifications')} iconColor="#3b82f6" />
-          <MenuItem icon={Shield}     label="الأمان و2FA"        sub="كلمة المرور والحماية" onPress={() => router.push('/settings/security')}   iconColor="#f59e0b" />
-          <MenuItem icon={CreditCard} label="الاشتراك والخطة"   sub={(user?.plan ?? 'free').toUpperCase()} onPress={() => router.push('/settings/subscription')} iconColor="#4ade80" />
+          <MenuItem icon={User}        label="البيانات الشخصية"  sub={user?.email ?? user?.phone ?? ''} onPress={() => router.push('/settings/account')}       iconColor="#8b5cf6" />
+          <MenuItem icon={CreditCard}  label="الاشتراك والخطة"   sub={planLabel}                        onPress={() => router.push('/settings/subscription')}  iconColor="#4ade80" />
+          <MenuItem icon={Gift}        label="برنامج الإحالة"    sub="ادعُ أصدقاء واحصل على Pro مجاناً" onPress={() => router.push('/referral' as never)}               iconColor="#f59e0b" />
+          <MenuItem icon={Trophy}      label="إنجازاتي"           sub="اكتشف ما أنجزته حتى الآن"         onPress={() => router.push('/achievements' as never)}           iconColor="#f59e0b" />
         </Section>
 
-        {/* ─── App Settings ─── */}
-        <Section title="التطبيق">
-          <MenuItem icon={Settings}   label="الإعدادات"          onPress={() => router.push('/settings')} iconColor={colors.textSub} />
+        {/* ─── Security ─── */}
+        <Section title="الأمان">
+          <MenuItem icon={Shield}      label="الأمان والخصوصية"  sub="كلمة المرور و2FA"                 onPress={() => router.push('/settings/security')}      iconColor="#f59e0b" />
+          <MenuItem icon={Fingerprint} label="البصمة / Face ID"  sub="تسجيل الدخول البيومتري"           onPress={() => router.push('/settings/biometric')}     iconColor="#3b82f6" />
+        </Section>
+
+        {/* ─── Support & Notifications ─── */}
+        <Section title="المساعدة">
+          <MenuItem icon={Bell}        label="الإشعارات"          sub="تخصيص ما تستقبله"                onPress={() => router.push('/settings/notifications')} iconColor="#8b5cf6" />
+          <MenuItem icon={LifeBuoy}    label="الدعم الفني"         sub="تواصل مع فريق الدعم"             onPress={() => router.push('/support' as never)}                iconColor="#38bdf8" />
         </Section>
 
         {/* ─── Logout ─── */}
         <Section last>
           <MenuItem icon={LogOut} label="تسجيل الخروج" onPress={handleLogout} danger />
         </Section>
+
       </ScrollView>
     </ScreenWrapper>
   );

@@ -147,6 +147,10 @@ router.get(
   }
 );
 
+router.get('/support/managers/stats', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
+  void AdminSupportController.managersStats(req as any, res).catch(next);
+});
+
 router.get(
   '/support/agents/stats',
   adminAuthenticate,
