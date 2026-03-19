@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets, type Edge } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
+import { ErrorBoundary } from './ErrorBoundary';
 
 interface Props {
   children: ReactNode;
@@ -88,7 +89,9 @@ export function ScreenWrapper({
 
   return (
     <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor: colors.bg }}>
-      {inner}
+      <ErrorBoundary>
+        {inner}
+      </ErrorBoundary>
     </SafeAreaView>
   );
 }

@@ -44,43 +44,33 @@ function groupHoldings(holdings: Holding[]): GroupedHolding[] {
       });
       continue;
     }
-
     const totalShares = existing.shares + holding.shares;
     const weightedAvg = totalShares > 0
       ? ((existing.avgPrice * existing.shares) + (holding.avgPrice * holding.shares)) / totalShares
       : 0;
-
     existing.ids.push(holding.id);
     existing.shares = totalShares;
     existing.avgPrice = weightedAvg;
     existing.currentPrice = holding.currentPrice ?? existing.currentPrice;
   }
-
   return Array.from(map.values()).sort((a, b) => b.shares - a.shares);
 }
 
 export function PortfolioHoldingsCard({
-  holdings,
-  livePrices,
-  cardBackground,
-  borderColor,
-  textColor,
-  subTextColor,
-  mutedTextColor,
-  onPressTicker,
-  onDeleteGroup,
+  holdings, livePrices, cardBackground, borderColor, textColor, subTextColor, mutedTextColor,
+  onPressTicker, onDeleteGroup,
 }: Props) {
   const grouped = groupHoldings(holdings);
 
   return (
     <View style={{ backgroundColor: cardBackground, borderColor, borderWidth: 1, borderRadius: 16, overflow: 'hidden' }}>
       <View style={{ paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: borderColor }}>
-        <Text style={{ color: textColor, fontSize: 16, fontWeight: '700' }}>Assets</Text>
+        <Text style={{ color: textColor, fontSize: 16, fontWeight: '700' }}>الأصول</Text>
       </View>
 
       {grouped.length === 0 ? (
         <View style={{ paddingVertical: 32, alignItems: 'center' }}>
-          <Text style={{ color: mutedTextColor, fontSize: 13 }}>No assets yet</Text>
+          <Text style={{ color: mutedTextColor, fontSize: 13 }}>لا توجد أصول بعد</Text>
         </View>
       ) : (
         grouped.map((holding, index) => {
@@ -88,8 +78,8 @@ export function PortfolioHoldingsCard({
           const currentPrice = livePrice ?? holding.currentPrice ?? holding.avgPrice;
           const value = holding.shares * currentPrice;
           const gainLossPercent = holding.avgPrice > 0 ? ((currentPrice - holding.avgPrice) / holding.avgPrice) * 100 : 0;
-          const gainColor = gainLossPercent > 0 ? '#7ee2a8' : gainLossPercent < 0 ? '#ff8b94' : mutedTextColor;
-          const gainBg = gainLossPercent > 0 ? '#7ee2a81f' : gainLossPercent < 0 ? '#ff8b941f' : '#94a3b81a';
+          const gainColor = gainLossPercent > 0 ? '#4ade80' : gainLossPercent < 0 ? '#f87171' : mutedTextColor;
+          const gainBg   = gainLossPercent > 0 ? '#4ade8018' : gainLossPercent < 0 ? '#f8717118' : '#8c959f18';
           const isLast = index === grouped.length - 1;
 
           return (
@@ -97,16 +87,14 @@ export function PortfolioHoldingsCard({
               <Pressable
                 onPress={() => onPressTicker(holding.ticker)}
                 style={({ pressed }) => ({
-                  backgroundColor: pressed ? '#1f293720' : 'transparent',
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
+                  backgroundColor: pressed ? '#8b5cf608' : 'transparent',
+                  paddingHorizontal: 16, paddingVertical: 14,
+                  flexDirection: 'row', alignItems: 'center', gap: 12,
                 })}
               >
-                <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: '#7c8cff1f', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ color: '#9aa7ff', fontSize: 10, fontWeight: '800' }} numberOfLines={1}>
+                {/* Ticker badge — unified brand purple */}
+                <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: '#8b5cf618', borderWidth: 1, borderColor: '#8b5cf628', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: '#8b5cf6', fontSize: 10, fontWeight: '800' }} numberOfLines={1}>
                     {holding.ticker.slice(0, 4)}
                   </Text>
                 </View>
@@ -117,7 +105,7 @@ export function PortfolioHoldingsCard({
                     {getStockName(holding.ticker, 'ar')}
                   </Text>
                   <Text style={{ color: mutedTextColor, fontSize: 11 }}>
-                    {holding.shares.toLocaleString('en-US')} shares
+                    {holding.shares.toLocaleString('en-US')} سهم
                   </Text>
                 </View>
 
@@ -126,7 +114,11 @@ export function PortfolioHoldingsCard({
                     {value.toLocaleString('en-US', { maximumFractionDigits: 0 })} EGP
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: gainBg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-                    {gainLossPercent > 0 ? <TrendingUp size={10} color={gainColor} /> : gainLossPercent < 0 ? <TrendingDown size={10} color={gainColor} /> : <Minus size={10} color={gainColor} />}
+                    {gainLossPercent > 0
+                      ? <TrendingUp size={10} color={gainColor} />
+                      : gainLossPercent < 0
+                      ? <TrendingDown size={10} color={gainColor} />
+                      : <Minus size={10} color={gainColor} />}
                     <Text style={{ color: gainColor, fontSize: 11, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
                       {gainLossPercent > 0 ? '+' : ''}{gainLossPercent.toFixed(2)}%
                     </Text>

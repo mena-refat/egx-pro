@@ -1,8 +1,11 @@
 import { Component, type ReactNode } from 'react';
 import { View, Text, Pressable } from 'react-native';
+import type { AppColors } from '../../lib/theme';
+import { useTheme } from '../../hooks/useTheme';
 
-interface Props {
+interface BaseProps {
   children: ReactNode;
+  colors: AppColors;
 }
 
 interface State {
@@ -13,7 +16,7 @@ interface State {
  * Catches unhandled render errors anywhere in the component tree.
  * Without this, any crash brings down the entire app with no recovery path.
  */
-export class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundaryBase extends Component<BaseProps, State> {
   state: State = { hasError: false };
 
   static getDerivedStateFromError(): State {
@@ -23,21 +26,23 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.hasError) return this.props.children;
 
+    const { colors } = this.props;
+
     return (
       <View
         style={{
           flex: 1,
-          backgroundColor: '#0d1117',
+          backgroundColor: colors.bg,
           alignItems: 'center',
           justifyContent: 'center',
           padding: 32,
           gap: 16,
         }}
       >
-        <Text style={{ color: '#e6edf3', fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
           حدث خطأ غير متوقع
         </Text>
-        <Text style={{ color: '#8b949e', fontSize: 13, textAlign: 'center', lineHeight: 22 }}>
+        <Text style={{ color: colors.textSub, fontSize: 13, textAlign: 'center', lineHeight: 22 }}>
           نأسف على ذلك. يرجى إعادة تشغيل التطبيق.
         </Text>
         <Pressable
@@ -54,4 +59,9 @@ export class ErrorBoundary extends Component<Props, State> {
       </View>
     );
   }
+}
+
+export function ErrorBoundary({ children }: { children: ReactNode }) {
+  const { colors } = useTheme();
+  return <ErrorBoundaryBase colors={colors}>{children}</ErrorBoundaryBase>;
 }

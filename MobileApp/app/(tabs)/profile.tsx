@@ -60,8 +60,8 @@ function MenuItem({
       </View>
       <View className="flex-row items-center gap-2">
         {badge != null && badge > 0 && (
-          <View className="bg-brand px-1.5 py-0.5 rounded-full min-w-[18px] items-center">
-            <Text className="text-[10px] font-bold text-white">{badge > 99 ? '99+' : badge}</Text>
+          <View style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999, minWidth: 18, alignItems: 'center' }}>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#fff' }}>{badge > 99 ? '99+' : badge}</Text>
           </View>
         )}
         {!danger && <ChevronIcon size={14} color={colors.textMuted} />}
@@ -127,8 +127,8 @@ export default function ProfilePage() {
           <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-4">
             <View className="flex-row items-center gap-4">
               {/* Avatar */}
-              <View className="w-16 h-16 rounded-full bg-brand/20 items-center justify-center">
-                <Text className="text-2xl font-bold text-brand">
+              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#8b5cf620', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 24, fontWeight: '700', color: '#8b5cf6', textAlign: 'center', lineHeight: 32 }}>
                   {user?.fullName?.[0]?.toUpperCase() ?? 'U'}
                 </Text>
               </View>

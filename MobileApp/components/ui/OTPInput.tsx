@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { View, TextInput } from 'react-native';
+import { useTheme } from '../../hooks/useTheme';
 
 interface Props {
   length?: number;
@@ -10,6 +11,7 @@ interface Props {
 export function OTPInput({ length = 6, onComplete, error }: Props) {
   const [values, setValues] = useState<string[]>(Array(length).fill(''));
   const inputsRef = useRef<(TextInput | null)[]>([]);
+  const { colors } = useTheme();
 
   const handleChange = (text: string, index: number) => {
     const cleaned = text.replace(/\D/g, '').slice(-1);
@@ -41,28 +43,37 @@ export function OTPInput({ length = 6, onComplete, error }: Props) {
   };
 
   return (
-    <View className="flex-row gap-3 justify-center">
-      {Array.from({ length }).map((_, i) => (
-        <TextInput
-          key={i}
-          ref={(r) => {
-            inputsRef.current[i] = r;
-          }}
-          value={values[i]}
-          onChangeText={(t) => handleChange(t, i)}
-          onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
-          keyboardType="numeric"
-          maxLength={1}
-          textAlign="center"
-          placeholderTextColor="#64748b"
-          className={`
-            w-12 h-14 rounded-xl text-xl font-bold text-white text-center
-            border bg-[#0d0d14]
-            ${error ? 'border-red-500' : values[i] ? 'border-brand' : 'border-white/10'}
-          `}
-        />
-      ))}
+    <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
+      {Array.from({ length }).map((_, i) => {
+        const borderColor = error
+          ? '#ef4444'
+          : values[i]
+          ? '#8b5cf6'
+          : colors.border;
+
+        return (
+          <TextInput
+            key={i}
+            ref={(r) => { inputsRef.current[i] = r; }}
+            value={values[i]}
+            onChangeText={(t) => handleChange(t, i)}
+            onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
+            keyboardType="numeric"
+            maxLength={1}
+            textAlign="center"
+            placeholderTextColor={colors.textMuted}
+            style={{
+              width: 48, height: 56,
+              borderRadius: 12,
+              fontSize: 20, fontWeight: '700',
+              color: colors.text,
+              backgroundColor: colors.inputBg,
+              borderWidth: 1,
+              borderColor,
+            }}
+          />
+        );
+      })}
     </View>
   );
 }
-

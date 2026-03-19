@@ -1,15 +1,15 @@
-import { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, ScrollView, Pressable, RefreshControl,
+  View, Text, FlatList, Pressable, RefreshControl,
   TextInput, I18nManager, useWindowDimensions,
 } from 'react-native';
+import type { ListRenderItem } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   Search, TrendingUp, TrendingDown, ChevronDown, ChevronUp,
   BarChart2, Eye, EyeOff, DollarSign,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
-import { PriceTag } from '../../components/shared/PriceTag';
 import { MarketStatusBadge } from '../../components/shared/MarketStatusBadge';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useTheme } from '../../hooks/useTheme';
@@ -19,6 +19,8 @@ import { getStockName } from '../../lib/egxStocks';
 import type { Stock, MarketOverview, CommodityData } from '../../types/stock';
 
 type Tab = 'gainers' | 'losers' | 'all';
+
+const ITEM_HEIGHT = 65;
 
 // ─── helpers ───────────────────────────────────────────────────
 function n(v: number, d = 0) {
@@ -85,7 +87,6 @@ function CommodityKaratTable({
       marginHorizontal: 16, marginBottom: 12,
       borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
     }}>
-      {/* Header */}
       <View style={{
         flexDirection: 'row', justifyContent: 'space-between',
         paddingHorizontal: 14, paddingVertical: 8,
@@ -151,7 +152,6 @@ function CommodityRow({
           flexDirection: 'row', alignItems: 'center', gap: 12,
         })}
       >
-        {/* Icon */}
         <View style={{
           width: 42, height: 42, borderRadius: 12,
           backgroundColor: colors.hover, borderWidth: 1, borderColor: colors.border,
@@ -160,7 +160,6 @@ function CommodityRow({
           <Text style={{ fontSize: 18 }}>{emoji}</Text>
         </View>
 
-        {/* Info */}
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{label}</Text>
           {subtitle && (
@@ -179,7 +178,6 @@ function CommodityRow({
           )}
         </View>
 
-        {/* Value */}
         <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end', flexShrink: 0 }}>
           <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
             {priceValue > 0 ? n(priceValue, 2) : '—'}
@@ -194,7 +192,6 @@ function CommodityRow({
           )}
         </View>
 
-        {/* Expand arrow */}
         {hasExpand && (
           <View style={{ flexShrink: 0, marginLeft: 4 }}>
             {expanded
@@ -248,7 +245,6 @@ function CommoditiesSection({
       backgroundColor: colors.card, borderColor: colors.border,
       borderWidth: 1, borderRadius: 20, overflow: 'hidden', marginHorizontal: 16, marginBottom: 16,
     }}>
-      {/* Section header */}
       <View style={{
         flexDirection: 'row', alignItems: 'center', gap: 8,
         paddingHorizontal: 16, paddingVertical: 13,
@@ -261,7 +257,6 @@ function CommoditiesSection({
         <Text style={{ color: colors.textMuted, fontSize: 11 }}>اضغط للتوسع</Text>
       </View>
 
-      {/* Dollar */}
       <CommodityRow
         emoji="💵"
         label="الدولار الأمريكي"
@@ -272,7 +267,6 @@ function CommoditiesSection({
         colors={colors}
       />
 
-      {/* Gold */}
       <CommodityRow
         emoji="🥇"
         label="الذهب"
@@ -293,7 +287,6 @@ function CommoditiesSection({
         colors={colors}
       />
 
-      {/* Silver */}
       <CommodityRow
         emoji="🥈"
         label="الفضة"
@@ -319,12 +312,12 @@ function CommoditiesSection({
 
 // ─── IndicesSection ─────────────────────────────────────────────
 const EGX_INDICES = [
-  { key: 'egx30',      label: 'EGX 30' },
+  { key: 'egx30',       label: 'EGX 30' },
   { key: 'egx30Capped', label: 'EGX 30 Capped' },
-  { key: 'egx70',      label: 'EGX 70 EWI' },
-  { key: 'egx100',     label: 'EGX 100 EWI' },
-  { key: 'egx33',      label: 'EGX 33 Shariah' },
-  { key: 'egx35',      label: 'EGX 35 LV' },
+  { key: 'egx70',       label: 'EGX 70 EWI' },
+  { key: 'egx100',      label: 'EGX 100 EWI' },
+  { key: 'egx33',       label: 'EGX 33 Shariah' },
+  { key: 'egx35',       label: 'EGX 35 LV' },
 ] as const;
 
 function IndicesSection({
@@ -338,7 +331,6 @@ function IndicesSection({
 
   return (
     <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
-      {/* Header row */}
       <View style={{
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10,
       }}>
@@ -368,7 +360,7 @@ function IndicesSection({
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <View key={i} style={{ flex: 1, minWidth: '45%' }}>
-                <Skeleton height={76} className="rounded-2xl" />
+                <Skeleton height={76} borderRadius={20} />
               </View>
             ))}
           </View>
@@ -394,8 +386,8 @@ function IndicesSection({
   );
 }
 
-// ─── StockRow ───────────────────────────────────────────────────
-function StockRow({
+// ─── StockRow (memoized) ─────────────────────────────────────────
+const StockRow = React.memo(function StockRow({
   s, onPress, colors,
 }: {
   s: Stock;
@@ -410,13 +402,12 @@ function StockRow({
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        backgroundColor: pressed ? colors.hover : 'transparent',
+        backgroundColor: pressed ? colors.hover : colors.card,
         borderBottomWidth: 1, borderBottomColor: colors.border,
         paddingHorizontal: 16, paddingVertical: 12,
         flexDirection: 'row', alignItems: 'center', gap: 12,
       })}
     >
-      {/* Ticker badge */}
       <View style={{
         width: 40, height: 40, borderRadius: 10,
         backgroundColor: '#8b5cf618', borderWidth: 1, borderColor: '#8b5cf628',
@@ -427,7 +418,6 @@ function StockRow({
         </Text>
       </View>
 
-      {/* Info */}
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{s.ticker}</Text>
         <Text style={{ color: colors.textSub, fontSize: 11, marginTop: 1 }} numberOfLines={1}>
@@ -435,7 +425,6 @@ function StockRow({
         </Text>
       </View>
 
-      {/* Price */}
       <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end', flexShrink: 0 }}>
         <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
           {(s.price ?? 0).toFixed(2)}
@@ -455,7 +444,110 @@ function StockRow({
       </View>
     </Pressable>
   );
+});
+
+// ─── MarketListHeader ────────────────────────────────────────────
+interface HeaderProps {
+  overview: MarketOverview | null;
+  loadingOverview: boolean;
+  loadingStocks: boolean;
+  colors: ReturnType<typeof useTheme>['colors'];
+  isCompact: boolean;
+  tab: Tab;
+  setTab: (t: Tab) => void;
+  search: string;
+  setSearch: (s: string) => void;
 }
+
+const MarketListHeader = React.memo(function MarketListHeader({
+  overview, loadingOverview, loadingStocks, colors, isCompact, tab, setTab, search, setSearch,
+}: HeaderProps) {
+  const TABS = [
+    { id: 'gainers' as Tab, label: 'الصاعدة', icon: TrendingUp, color: '#4ade80' },
+    { id: 'losers'  as Tab, label: 'الهابطة', icon: TrendingDown, color: '#f87171' },
+    { id: 'all'     as Tab, label: 'الكل',    icon: null,         color: '#8b5cf6' },
+  ];
+
+  return (
+    <View>
+      {/* Indices */}
+      <View style={{ paddingTop: 16 }}>
+        <IndicesSection overview={overview} loading={loadingOverview} colors={colors} />
+      </View>
+
+      {/* Commodities */}
+      {loadingOverview ? (
+        <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
+          <Skeleton height={220} borderRadius={20} />
+        </View>
+      ) : overview ? (
+        <CommoditiesSection overview={overview} colors={colors} />
+      ) : null}
+
+      {/* Search */}
+      <View style={{
+        marginHorizontal: 16, marginBottom: 8, marginTop: 4,
+        backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1,
+        borderRadius: 14, flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: 12, gap: 8,
+      }}>
+        <Search size={15} color={colors.textMuted} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="ابحث عن سهم..."
+          placeholderTextColor={colors.textMuted}
+          style={{ color: colors.text, flex: 1, paddingVertical: 11, fontSize: 14 }}
+        />
+      </View>
+
+      {/* Tabs */}
+      <View style={{
+        marginHorizontal: 16, marginBottom: 8,
+        backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1,
+        borderRadius: 14, padding: 4, flexDirection: 'row', gap: 4,
+      }}>
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <Pressable
+              key={t.id}
+              onPress={() => setTab(t.id)}
+              style={{
+                flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                gap: 5, paddingVertical: isCompact ? 8 : 9, borderRadius: 10,
+                backgroundColor: active ? (t.color + '22') : 'transparent',
+                borderWidth: active ? 1 : 0,
+                borderColor: active ? (t.color + '44') : 'transparent',
+              }}
+            >
+              {t.icon && <t.icon size={12} color={active ? t.color : colors.textMuted} />}
+              <Text style={{
+                fontSize: isCompact ? 11 : 12, fontWeight: '700',
+                color: active ? t.color : colors.textMuted,
+              }}>
+                {t.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Stock list loading skeletons */}
+      {loadingStocks && (
+        <View style={{
+          marginHorizontal: 16,
+          backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+          borderRadius: 20, overflow: 'hidden', padding: 12, gap: 2,
+        }}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} height={60} borderRadius={12} />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+});
 
 // ─── MarketPage ─────────────────────────────────────────────────
 export default function MarketPage() {
@@ -495,7 +587,7 @@ export default function MarketPage() {
       );
     }
     if (tab === 'gainers') return list.filter((s) => s.changePercent > 0).sort((a, b) => b.changePercent - a.changePercent);
-    if (tab === 'losers') return list.filter((s) => s.changePercent < 0).sort((a, b) => a.changePercent - b.changePercent);
+    if (tab === 'losers')  return list.filter((s) => s.changePercent < 0).sort((a, b) => a.changePercent - b.changePercent);
     return list.sort((a, b) => b.changePercent - a.changePercent);
   }, [enriched, tab, search]);
 
@@ -503,10 +595,52 @@ export default function MarketPage() {
     setVisibleTickers(filtered.slice(0, 30).map((s) => s.ticker));
   }, [filtered]);
 
+  const keyExtractor = useCallback((item: Stock) => item.ticker, []);
+
+  const renderItem: ListRenderItem<Stock> = useCallback(({ item: s }) => (
+    <StockRow
+      s={s}
+      onPress={() => router.push(`/stocks/${s.ticker}`)}
+      colors={colors}
+    />
+  ), [colors, router]);
+
+  const getItemLayout = useCallback((_: ArrayLike<Stock> | null | undefined, index: number) => ({
+    length: ITEM_HEIGHT,
+    offset: ITEM_HEIGHT * index,
+    index,
+  }), []);
+
+  const listHeader = useMemo(() => (
+    <MarketListHeader
+      overview={overview}
+      loadingOverview={loadingOverview}
+      loadingStocks={loadingStocks}
+      colors={colors}
+      isCompact={isCompact}
+      tab={tab}
+      setTab={setTab}
+      search={search}
+      setSearch={setSearch}
+    />
+  ), [overview, loadingOverview, loadingStocks, colors, isCompact, tab, search]);
+
+  const listEmpty = useMemo(() => (
+    loadingStocks ? null : (
+      <View style={{
+        marginHorizontal: 16,
+        backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+        borderRadius: 20, alignItems: 'center', paddingVertical: 48,
+      }}>
+        <Text style={{ color: colors.textMuted, fontSize: 14 }}>لا توجد نتائج</Text>
+      </View>
+    )
+  ), [loadingStocks, colors]);
+
   return (
     <ScreenWrapper padded={false} edges={['top']}>
       <View style={{ flex: 1 }}>
-        {/* ─── Header ─── */}
+        {/* Fixed page header */}
         <View style={{
           borderBottomWidth: 1, borderBottomColor: colors.border,
           paddingHorizontal: 16, paddingTop: isCompact ? 12 : 18, paddingBottom: isCompact ? 10 : 14,
@@ -516,109 +650,24 @@ export default function MarketPage() {
           <MarketStatusBadge />
         </View>
 
-        <ScrollView
+        <FlatList
+          data={loadingStocks ? [] : filtered}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          getItemLayout={getItemLayout}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={listEmpty}
+          ListFooterComponent={<View style={{ height: 32 }} />}
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#8b5cf6" colors={['#8b5cf6']} />
           }
-        >
-          {/* ─── Indices ─── */}
-          <View style={{ paddingTop: 16 }}>
-            <IndicesSection overview={overview} loading={loadingOverview} colors={colors} />
-          </View>
-
-          {/* ─── Commodities ─── */}
-          <View>
-            {loadingOverview ? (
-              <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
-                <Skeleton height={220} className="rounded-2xl" />
-              </View>
-            ) : overview ? (
-              <CommoditiesSection overview={overview} colors={colors} />
-            ) : null}
-          </View>
-
-          {/* ─── Stocks section (sticky header) ─── */}
-          <View style={{ backgroundColor: colors.bg }}>
-            {/* Search */}
-            <View style={{
-              marginHorizontal: 16, marginBottom: 8, marginTop: 4,
-              backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1,
-              borderRadius: 14, flexDirection: 'row', alignItems: 'center',
-              paddingHorizontal: 12, gap: 8,
-            }}>
-              <Search size={15} color={colors.textMuted} />
-              <TextInput
-                value={search}
-                onChangeText={setSearch}
-                placeholder="ابحث عن سهم..."
-                placeholderTextColor={colors.textMuted}
-                style={{ color: colors.text, flex: 1, paddingVertical: 11, fontSize: 14 }}
-              />
-            </View>
-
-            {/* Tabs */}
-            <View style={{
-              marginHorizontal: 16, marginBottom: 8,
-              backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1,
-              borderRadius: 14, padding: 4, flexDirection: 'row', gap: 4,
-            }}>
-              {[
-                { id: 'gainers', label: 'الصاعدة', icon: TrendingUp, color: '#4ade80' },
-                { id: 'losers', label: 'الهابطة', icon: TrendingDown, color: '#f87171' },
-                { id: 'all', label: 'الكل', icon: null, color: '#8b5cf6' },
-              ].map((t) => {
-                const active = tab === t.id;
-                return (
-                  <Pressable
-                    key={t.id}
-                    onPress={() => setTab(t.id as Tab)}
-                    style={{
-                      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                      gap: 5, paddingVertical: isCompact ? 8 : 9, borderRadius: 10,
-                      backgroundColor: active ? (t.color + '22') : 'transparent',
-                      borderWidth: active ? 1 : 0,
-                      borderColor: active ? (t.color + '44') : 'transparent',
-                    }}
-                  >
-                    {t.icon && <t.icon size={12} color={active ? t.color : colors.textMuted} />}
-                    <Text style={{
-                      fontSize: isCompact ? 11 : 12, fontWeight: '700',
-                      color: active ? t.color : colors.textMuted,
-                    }}>
-                      {t.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* ─── Stock list ─── */}
-          <View style={{ marginHorizontal: 16, marginBottom: 32 }}>
-            <View style={{
-              backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
-              borderRadius: 20, overflow: 'hidden',
-            }}>
-              {loadingStocks ? (
-                <View style={{ gap: 2, padding: 12 }}>
-                  {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} height={60} className="rounded-xl" />)}
-                </View>
-              ) : filtered.length === 0 ? (
-                <View style={{ alignItems: 'center', paddingVertical: 48 }}>
-                  <Text style={{ color: colors.textMuted, fontSize: 14 }}>لا توجد نتائج</Text>
-                </View>
-              ) : (
-                filtered.map((s, i) => (
-                  <View key={s.ticker} style={{ borderBottomWidth: i < filtered.length - 1 ? 0 : 0 }}>
-                    <StockRow s={s} onPress={() => router.push(`/stocks/${s.ticker}`)} colors={colors} />
-                  </View>
-                ))
-              )}
-            </View>
-          </View>
-        </ScrollView>
+        />
       </View>
     </ScreenWrapper>
   );

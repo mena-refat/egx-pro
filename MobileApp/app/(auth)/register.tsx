@@ -5,9 +5,11 @@ import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useRegister } from '../../hooks/useLogin';
+import { useTheme } from '../../hooks/useTheme';
 
 export default function RegisterPage() {
   const { form, loading, error, onSubmit } = useRegister();
+  const { colors } = useTheme();
   const {
     control,
     formState: { errors },
@@ -17,25 +19,34 @@ export default function RegisterPage() {
     <ScreenWrapper>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
+        style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerClassName="flex-grow justify-center px-6 py-10"
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View className="items-center mb-8">
-            <View className="w-14 h-14 rounded-2xl bg-brand items-center justify-center mb-3">
-              <Text className="text-2xl font-bold text-white">B</Text>
+          <View style={{ alignItems: 'center', marginBottom: 32 }}>
+            <View style={{
+              width: 56, height: 56, borderRadius: 16,
+              backgroundColor: '#8b5cf6', alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+            }}>
+              <Text style={{ fontSize: 22, fontWeight: '700', color: '#fff' }}>B</Text>
             </View>
-            <Text className="text-2xl font-bold text-white">إنشاء حساب جديد</Text>
-            <Text className="text-sm text-slate-400 mt-1">ابدأ رحلتك في البورصة</Text>
+            <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text }}>إنشاء حساب جديد</Text>
+            <Text style={{ fontSize: 13, color: colors.textSub, marginTop: 4 }}>ابدأ رحلتك في البورصة</Text>
           </View>
 
-          <View className="bg-[#111118] border border-white/[0.07] rounded-2xl p-6 gap-5">
+          <View style={{
+            backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+            borderRadius: 20, padding: 24, gap: 20,
+          }}>
             {error && (
-              <View className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                <Text className="text-sm text-red-400 text-center">{error}</Text>
+              <View style={{
+                backgroundColor: '#ef444418', borderWidth: 1, borderColor: '#ef444430',
+                borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12,
+              }}>
+                <Text style={{ fontSize: 13, color: '#f87171', textAlign: 'center' }}>{error}</Text>
               </View>
             )}
 
@@ -88,11 +99,13 @@ export default function RegisterPage() {
               )}
             />
 
-            <View className="bg-white/[0.04] rounded-xl p-3 gap-1">
-              <Text className="text-xs text-slate-500">متطلبات كلمة المرور:</Text>
-              <Text className="text-xs text-slate-400">• 8 أحرف على الأقل</Text>
-              <Text className="text-xs text-slate-400">• حرف كبير واحد على الأقل (A-Z)</Text>
-              <Text className="text-xs text-slate-400">• رقم واحد على الأقل (0-9)</Text>
+            <View style={{
+              backgroundColor: colors.hover, borderRadius: 12, padding: 12, gap: 4,
+            }}>
+              <Text style={{ fontSize: 11, color: colors.textMuted }}>متطلبات كلمة المرور:</Text>
+              <Text style={{ fontSize: 11, color: colors.textSub }}>• 8 أحرف على الأقل</Text>
+              <Text style={{ fontSize: 11, color: colors.textSub }}>• حرف كبير واحد على الأقل (A-Z)</Text>
+              <Text style={{ fontSize: 11, color: colors.textSub }}>• رقم واحد على الأقل (0-9)</Text>
             </View>
 
             <Button
@@ -104,11 +117,11 @@ export default function RegisterPage() {
             />
           </View>
 
-          <View className="flex-row justify-center gap-1 mt-6">
-            <Text className="text-sm text-slate-400">عندك حساب بالفعل؟</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4, marginTop: 24 }}>
+            <Text style={{ fontSize: 13, color: colors.textSub }}>عندك حساب بالفعل؟</Text>
             <Link href="/(auth)/login" asChild>
               <Pressable>
-                <Text className="text-sm text-brand font-semibold">سجّل دخول</Text>
+                <Text style={{ fontSize: 13, color: '#8b5cf6', fontWeight: '600' }}>سجّل دخول</Text>
               </Pressable>
             </Link>
           </View>
@@ -117,4 +130,3 @@ export default function RegisterPage() {
     </ScreenWrapper>
   );
 }
-

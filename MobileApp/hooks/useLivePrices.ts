@@ -3,6 +3,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 import { getAccessToken } from '../lib/auth/tokens';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+const WS_BASE = process.env.EXPO_PUBLIC_WS_URL ?? API_URL.replace(/^http/, 'ws');
 
 type StockPrice = {
   symbol: string;
@@ -31,8 +32,7 @@ export function useLivePrices(tickers: string[] = []) {
     const token = await getAccessToken();
     if (!token) return;
 
-    const wsUrl = API_URL.replace(/^http/, 'ws');
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(WS_BASE);
     wsRef.current = ws;
 
     ws.onopen = () => {

@@ -1,19 +1,27 @@
 import { View, Text } from 'react-native';
+import { useTheme } from '../../hooks/useTheme';
 
-const styles: Record<string, { bg: string; text: string }> = {
-  free: { bg: 'bg-slate-700/60', text: 'text-slate-300' },
-  pro: { bg: 'bg-blue-500/15', text: 'text-blue-400' },
-  yearly: { bg: 'bg-indigo-500/15', text: 'text-indigo-400' },
-  ultra: { bg: 'bg-amber-500/15', text: 'text-amber-400' },
-  ultra_yearly: { bg: 'bg-orange-500/15', text: 'text-orange-400' },
+const BADGE_COLORS: Record<string, { bg: string; text: string }> = {
+  pro:          { bg: '#3b82f618', text: '#3b82f6' },
+  yearly:       { bg: '#6366f118', text: '#6366f1' },
+  ultra:        { bg: '#f59e0b18', text: '#f59e0b' },
+  ultra_yearly: { bg: '#f9731618', text: '#f97316' },
 };
 
 export function Badge({ label }: { label: string }) {
-  const s = styles[label] ?? styles.free;
+  const { colors } = useTheme();
+  const s = BADGE_COLORS[label] ?? { bg: colors.hover, text: colors.textSub };
+
   return (
-    <View className={`self-start px-2 py-0.5 rounded-md ${s.bg}`}>
-      <Text className={`text-[10px] font-bold uppercase ${s.text}`}>{label}</Text>
+    <View style={{
+      alignSelf: 'flex-start',
+      paddingHorizontal: 8, paddingVertical: 2,
+      borderRadius: 6,
+      backgroundColor: s.bg,
+    }}>
+      <Text style={{ fontSize: 10, fontWeight: '700', color: s.text, textTransform: 'uppercase' }}>
+        {label}
+      </Text>
     </View>
   );
 }
-

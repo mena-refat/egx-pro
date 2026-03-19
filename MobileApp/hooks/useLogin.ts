@@ -53,18 +53,19 @@ export function useLogin() {
     setLoading(true);
     setError(null);
     try {
-      const storedPin = await SecureStore.getItemAsync(PIN_KEY).catch(() => null);
-      if (!storedPin || storedPin !== pin) {
-        setError('رمز PIN غير صحيح');
-        setLoading(false);
-        return;
-      }
-      const res = await apiClient.post(ENDPOINTS.auth.refresh, {});
+      // TODO: backend must support POST /api/auth/login with { loginMethod: 'pin', pin }
+      // PIN verification is done server-side — never compare client-side from SecureStore
+      const res = await apiClient.post(ENDPOINTS.auth.login, {
+        loginMethod: 'pin',
+        pin,
+      });
       const body = res.data as { user: MobileUser; accessToken: string; refreshToken?: string };
       await setAuth(body.user, body.accessToken, body.refreshToken);
       router.replace('/');
-    } catch {
-      setError('فشل تسجيل الدخول، حاول إدخال كلمة المرور');
+    } catch (err: unknown) {
+      const code = (err as { error?: string })?.error;
+      if (code === 'INVALID_PIN') setError('رمز PIN غير صحيح');
+      else setError('فشل تسجيل الدخول، حاول إدخال كلمة المرور');
     } finally {
       setLoading(false);
     }
