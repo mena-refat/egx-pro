@@ -7,11 +7,11 @@ export const ReferralRepository = {
   },
   create(data: { referrerId: number; referredUserId: number; status?: string }) {
     return prisma.referral.create({
-      data: { referrerId: data.referrerId, referredUserId: data.referredUserId, status: data.status ?? 'completed' },
+      data: { referrerId: data.referrerId, referredUserId: data.referredUserId, status: (data.status ?? 'completed') as import('@prisma/client').ReferralStatus },
     });
   },
   activate(id: string) {
-    return prisma.referral.update({ where: { id }, data: { status: 'completed' } });
+    return prisma.referral.update({ where: { id }, data: { status: 'completed' as import('@prisma/client').ReferralStatus } });
   },
   countActiveByReferrer(referrerId: number) {
     return prisma.referral.count({ where: { referrerId } });
@@ -42,7 +42,7 @@ export const ReferralRepository = {
   findUnique(where: { referredUserId: number }) {
     return prisma.referral.findFirst({ where });
   },
-  update(where: { id: string }, data: { status?: string }) {
+  update(where: { id: string }, data: { status?: import('@prisma/client').ReferralStatus }) {
     return prisma.referral.update({ where, data });
   },
 
@@ -54,7 +54,7 @@ export const ReferralRepository = {
         data: { referredBy: referrerId.toString(), referralUsed: _referralCode },
       }),
       prisma.referral.create({
-        data: { referrerId, referredUserId, status: 'completed' },
+        data: { referrerId, referredUserId, status: 'completed' as import('@prisma/client').ReferralStatus },
       }),
     ]);
   },

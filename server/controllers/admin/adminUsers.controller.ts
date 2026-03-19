@@ -76,6 +76,8 @@ export const AdminUsersController = {
           isEmailVerified: true,
           isDeleted: true,
           aiAnalysisUsedThisMonth: true,
+          isSuspended: true,
+          warningCount: true,
           _count: {
             select: {
               portfolios: true,
@@ -144,7 +146,7 @@ export const AdminUsersController = {
     await prisma.user.update({
       where: { id },
       data: {
-        plan,
+        plan: plan as import('@prisma/client').UserPlan,
         planExpiresAt: planExpiresAt ? new Date(planExpiresAt) : null,
         // Mark as admin-granted so it's excluded from revenue calculations
         planSetByAdmin: plan !== 'free',
@@ -285,6 +287,32 @@ export const AdminUsersController = {
     ]);
 
     sendSuccess(res, { total, byPlan, newToday, newThisMonth });
+  },
+
+  async unsuspendUser(req: AdminRequest, res: Response): Promise<void> {
+    if (req.admin?.role !== 'SUPER_ADMIN') {
+      sendError(res, 'ADMIN_FORBIDDEN', 403);
+      return;
+    }
+
+    const userId = parseInt(req.params.id, 10);
+    if (isNaN(userId)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, isSuspended: true },
+    });
+    if (!user) { sendError(res, 'NOT_FOUND', 404); return; }
+    if (!user.isSuspended) { sendError(res, 'USER_NOT_SUSPENDED', 400); return; }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isSuspended: false, suspendedAt: null, warningCount: 0 },
+    });
+
+    await adminAudit(req.admin!.id, 'USER_UNSUSPENDED', String(userId), '', req);
+
+    sendSuccess(res, { ok: true });
   },
 };
 

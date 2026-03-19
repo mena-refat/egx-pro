@@ -430,7 +430,7 @@ export const AdminAnalyticsController = {
         escape(l.action),
         escape(l.target),
         escape(l.details),
-        escape(l.ipAddress),
+        escape(l.ipHash),
       ].join(',')
     );
 

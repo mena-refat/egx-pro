@@ -115,6 +115,10 @@ router.patch(
   }
 );
 
+router.patch('/users/:id/unsuspend', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
+  void AdminUsersController.unsuspendUser(req as any, res).catch(next);
+});
+
 router.get(
   '/discounts',
   adminAuthenticate,
@@ -287,6 +291,33 @@ router.patch(
   requirePermission('support.manage'),
   (req, res, next) => {
     void AdminSupportController.assignTicket(req as any, res).catch(next);
+  }
+);
+
+router.post(
+  '/support/:id/report-abuse',
+  adminAuthenticate,
+  requirePermission('support.reply'),
+  (req, res, next) => {
+    void AdminSupportController.reportAbuse(req as any, res).catch(next);
+  }
+);
+
+router.get(
+  '/support/abuse-reports',
+  adminAuthenticate,
+  requirePermission('support.manage'),
+  (req, res, next) => {
+    void AdminSupportController.listAbuseReports(req as any, res).catch(next);
+  }
+);
+
+router.patch(
+  '/support/abuse-reports/:id/resolve',
+  adminAuthenticate,
+  requirePermission('support.manage'),
+  (req, res, next) => {
+    void AdminSupportController.resolveAbuseReport(req as any, res).catch(next);
   }
 );
 

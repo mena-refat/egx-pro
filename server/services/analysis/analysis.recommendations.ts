@@ -62,7 +62,7 @@ export async function recommendationsAnalysis(
   const horizon = _body?.investmentHorizon ?? profile?.investmentHorizon ?? 5;
   let sectors: string[] = [];
   try {
-    sectors = _body?.interestedSectors ?? (profile?.interestedSectors ? JSON.parse(profile.interestedSectors) : []) ?? [];
+    sectors = (_body?.interestedSectors ?? profile?.interestedSectors ?? []) as string[];
   } catch {
     // ignore
   }

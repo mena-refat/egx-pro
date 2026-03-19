@@ -22,7 +22,7 @@ export const AdminDiscountsController = {
     const [discounts, total] = await Promise.all([
       prisma.discountCode.findMany({
         orderBy: { createdAt: 'desc' },
-        include: { _count: { select: { discountUsages: true } } },
+        include: { _count: { select: { usages: true } } },
         skip: (pageNum - 1) * 50,
         take: 50,
       }),

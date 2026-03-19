@@ -41,7 +41,7 @@ export const DiscountRepository = {
       }
 
       await tx.discountUsage.create({ data: { userId, codeId } });
-      await tx.user.update({ where: { id: userId }, data: { plan: planValue, planExpiresAt } });
+      await tx.user.update({ where: { id: userId }, data: { plan: planValue as import('@prisma/client').UserPlan, planExpiresAt } });
     });
   },
 
@@ -85,7 +85,7 @@ export const DiscountRepository = {
         await tx.discountUsage.create({ data: { userId, codeId: discount.id } });
       }
 
-      await tx.user.update({ where: { id: userId }, data: { plan: planValue, planExpiresAt } });
+      await tx.user.update({ where: { id: userId }, data: { plan: planValue as import('@prisma/client').UserPlan, planExpiresAt } });
     });
   },
 };

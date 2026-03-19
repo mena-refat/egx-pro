@@ -5,13 +5,15 @@ import { adminApi } from '../lib/adminApi';
 import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import { Pagination } from '../components/Pagination';
-import { Search, Download, RefreshCw, ShieldOff, Trash2, Plus } from 'lucide-react';
+import { Search, Download, RefreshCw, ShieldOff, Trash2, Plus, ShieldCheck } from 'lucide-react';
+import { useAdminStore } from '../store/adminAuthStore';
 
 type UserRow = {
   id: string; email: string | null; phone: string | null;
   fullName: string | null; username: string | null;
   plan: string; createdAt: string; lastLoginAt: string | null;
   isEmailVerified: boolean; aiAnalysisUsedThisMonth: number;
+  isSuspended: boolean; warningCount: number;
 };
 
 type BlockedItem = {
@@ -27,7 +29,10 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function UsersPage() {
   const { t } = useTranslation();
+  const currentAdmin = useAdminStore((s) => s.admin);
+  const isSuperAdmin = currentAdmin?.role === 'SUPER_ADMIN';
   const [tab, setTab] = useState<'users' | 'blocklist'>('users');
+  const [unsuspendingId, setUnsuspendingId] = useState<string | null>(null);
 
   /* ── Users state ─────────────────────────────────────────── */
   const [users, setUsers]   = useState<UserRow[]>([]);
@@ -124,6 +129,16 @@ export default function UsersPage() {
       setBlocked((prev) => prev.filter((b) => b.id !== id));
     } catch { /* ignore */ }
     finally { setRemovingId(null); }
+  };
+
+  const handleUnsuspend = async (userId: string) => {
+    if (!confirm(t('support.confirmUnsuspend'))) return;
+    setUnsuspendingId(userId);
+    try {
+      await adminApi.patch(`/users/${userId}/unsuspend`);
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, isSuspended: false, warningCount: 0 } : u));
+    } catch { /* silent */ }
+    finally { setUnsuspendingId(null); }
   };
 
   const typeLabel: Record<string, string> = {
@@ -224,10 +239,24 @@ export default function UsersPage() {
             empty={t('users.noUsers')}
           >
             {users.map((u) => (
-              <tr key={u.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/[0.04] last:border-0">
+              <tr key={u.id} className={`hover:bg-white/[0.02] transition-colors border-b border-white/[0.04] last:border-0 ${u.isSuspended ? 'bg-red-500/[0.03]' : ''}`}>
                 <td className="px-4 py-3">
-                  <p className="text-sm font-medium text-white">{u.fullName ?? u.username ?? '—'}</p>
-                  <p className="text-xs text-slate-500">{u.email ?? u.phone ?? '—'}</p>
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="text-sm font-medium text-white">{u.fullName ?? u.username ?? '—'}</p>
+                      <p className="text-xs text-slate-500">{u.email ?? u.phone ?? '—'}</p>
+                    </div>
+                    {u.isSuspended && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/20 whitespace-nowrap flex items-center gap-0.5 shrink-0">
+                        <ShieldOff size={8} /> {t('support.suspended')}
+                      </span>
+                    )}
+                    {!u.isSuspended && u.warningCount > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 whitespace-nowrap shrink-0">
+                        ⚠ {u.warningCount}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3"><Badge label={u.plan} /></td>
                 <td className="px-4 py-3 text-sm text-slate-400 tabular-nums">{u.aiAnalysisUsedThisMonth}</td>
@@ -240,9 +269,21 @@ export default function UsersPage() {
                   {new Date(u.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </td>
                 <td className="px-4 py-3">
-                  <Link to={`/users/${u.id}`} className="text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
-                    {t('users.view')}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link to={`/users/${u.id}`} className="text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
+                      {t('users.view')}
+                    </Link>
+                    {isSuperAdmin && u.isSuspended && (
+                      <button
+                        onClick={() => void handleUnsuspend(u.id)}
+                        disabled={unsuspendingId === u.id}
+                        className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all disabled:opacity-40 whitespace-nowrap"
+                        title={t('support.unsuspendUser')}
+                      >
+                        <ShieldCheck size={10} /> {t('support.unsuspendUser')}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

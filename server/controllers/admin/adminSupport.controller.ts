@@ -674,4 +674,153 @@ export const AdminSupportController = {
     ]);
     sendSuccess(res, { open, inProgress, resolved, closed });
   },
+
+  async reportAbuse(req: AdminRequest, res: Response): Promise<void> {
+    const { id: ticketId } = req.params as { id: string };
+    const { reason } = req.body as { reason?: string };
+
+    if (!reason?.trim() || reason.trim().length < 5) {
+      sendError(res, 'VALIDATION_ERROR', 400);
+      return;
+    }
+    if (reason.trim().length > 1000) {
+      sendError(res, 'VALIDATION_ERROR', 400);
+      return;
+    }
+
+    // Only non-manager agents can report
+    if (isManager(req.admin)) {
+      sendError(res, 'ADMIN_FORBIDDEN', 403);
+      return;
+    }
+
+    const ticket = await prisma.supportTicket.findUnique({
+      where: { id: ticketId },
+      select: { id: true, userId: true, assignedTo: true, status: true },
+    });
+    if (!ticket) { sendError(res, 'NOT_FOUND', 404); return; }
+    if (ticket.assignedTo !== req.admin!.id) { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
+
+    // Prevent duplicate pending report for same ticket by same agent
+    const existing = await prisma.abuseReport.findFirst({
+      where: { ticketId, reporterId: req.admin!.id, status: 'PENDING' },
+      select: { id: true },
+    });
+    if (existing) { sendError(res, 'ALREADY_REPORTED', 409); return; }
+
+    // Get agent's manager
+    const agent = await prisma.admin.findUnique({
+      where: { id: req.admin!.id },
+      select: { managerId: true, fullName: true },
+    });
+    if (!agent?.managerId) { sendError(res, 'NO_MANAGER_ASSIGNED', 400); return; }
+
+    const report = await prisma.abuseReport.create({
+      data: {
+        ticketId,
+        userId: ticket.userId,
+        reporterId: req.admin!.id,
+        reason: reason.trim(),
+      },
+    });
+
+    await adminAudit(req.admin!.id, 'ABUSE_REPORTED', ticketId, reason.trim().slice(0, 200), req);
+
+    sendSuccess(res, report, 201);
+  },
+
+  async listAbuseReports(req: AdminRequest, res: Response): Promise<void> {
+    if (!isManager(req.admin)) { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
+
+    const { status = '', page = '1' } = req.query as Record<string, string>;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+
+    const where: Record<string, unknown> = {};
+    if (status) where.status = status;
+
+    const [reports, total] = await Promise.all([
+      prisma.abuseReport.findMany({
+        where,
+        include: {
+          ticket: { select: { id: true, subject: true, message: true } },
+          user: { select: { id: true, email: true, username: true, fullName: true, warningCount: true, isSuspended: true } },
+          reporter: { select: { id: true, fullName: true, email: true } },
+          reviewer: { select: { id: true, fullName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (pageNum - 1) * 20,
+        take: 20,
+      }),
+      prisma.abuseReport.count({ where }),
+    ]);
+
+    sendSuccess(res, { reports, total, page: pageNum, totalPages: Math.ceil(total / 20) });
+  },
+
+  async resolveAbuseReport(req: AdminRequest, res: Response): Promise<void> {
+    if (!isManager(req.admin)) { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
+
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+
+    const { action, reviewNote } = req.body as { action: 'warn' | 'dismiss'; reviewNote?: string };
+    if (action !== 'warn' && action !== 'dismiss') { sendError(res, 'VALIDATION_ERROR', 400); return; }
+
+    const report = await prisma.abuseReport.findUnique({
+      where: { id },
+      select: { id: true, status: true, userId: true, ticketId: true },
+    });
+    if (!report) { sendError(res, 'NOT_FOUND', 404); return; }
+    if (report.status !== 'PENDING') { sendError(res, 'REPORT_ALREADY_RESOLVED', 409); return; }
+
+    const newStatus = action === 'warn' ? 'WARNED' : 'DISMISSED';
+
+    if (action === 'warn') {
+      // Increment warning count and check auto-suspend
+      const user = await prisma.user.update({
+        where: { id: report.userId },
+        data: {
+          warningCount: { increment: 1 },
+        },
+        select: { warningCount: true, isSuspended: true },
+      });
+
+      if (user.warningCount >= 2 && !user.isSuspended) {
+        await prisma.user.update({
+          where: { id: report.userId },
+          data: { isSuspended: true, suspendedAt: new Date() },
+        });
+
+        await createNotification(
+          report.userId,
+          'account_suspended',
+          'تم تعليق حسابك',
+          'تم تعليق حسابك بسبب تكرار الانتهاكات. يرجى التواصل مع الدعم.',
+          { route: '/support' }
+        ).catch(() => null);
+      } else {
+        await createNotification(
+          report.userId,
+          'abuse_warning',
+          'تحذير: سلوك مخالف',
+          'تلقيت تحذيراً بسبب سلوك مخالف في أحد تذاكر الدعم. الانتهاك المتكرر سيؤدي لتعليق الحساب.',
+          { route: '/support' }
+        ).catch(() => null);
+      }
+    }
+
+    const updated = await prisma.abuseReport.update({
+      where: { id },
+      data: {
+        status: newStatus,
+        reviewerId: req.admin!.id,
+        reviewedAt: new Date(),
+        reviewNote: reviewNote?.trim() || null,
+      },
+    });
+
+    await adminAudit(req.admin!.id, 'ABUSE_REPORT_RESOLVED', String(id), `${action} → user:${report.userId}`, req);
+
+    sendSuccess(res, updated);
+  },
 };

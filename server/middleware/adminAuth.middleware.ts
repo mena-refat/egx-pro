@@ -92,13 +92,17 @@ export async function adminAudit(
   req?: Request
 ): Promise<void> {
   try {
+    const ip = req?.ip ?? 'unknown';
+    const ipHash = ip !== 'unknown'
+      ? (await import('crypto')).createHash('sha256').update(ip, 'utf8').digest('hex')
+      : null;
     await prisma.adminAuditLog.create({
       data: {
         adminId,
         action,
         target: target ?? null,
         details: details ?? null,
-        ipAddress: req?.ip ?? null,
+        ipHash,
         userAgent: (req?.headers['user-agent'] ?? '').slice(0, 500),
       },
     });

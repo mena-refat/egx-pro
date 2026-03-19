@@ -24,11 +24,10 @@ export async function auditLog(params: {
         userId: params.userId != null ? Number(params.userId) : null,
         action: params.action,
         details: params.details ?? null,
-        ipAddress: params.req ? (ip === 'unknown' ? null : ip) : null,
         ipHash: hash(ip),
         userAgent: ua.length > 500 ? ua.slice(0, 500) : ua,
         result: params.result ?? null,
-        metadata: params.metadata ? JSON.stringify(params.metadata) : null,
+        metadata: (params.metadata ?? null) as import('@prisma/client').Prisma.InputJsonValue | null,
       },
     });
   } catch (e) {

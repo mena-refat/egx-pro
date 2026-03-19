@@ -7,371 +7,66 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Stock {
-  id                 String      @id @default(cuid())
-  ticker             String      @unique
-  nameAr             String
-  nameEn             String
-  sector             GicsSector?
-  description        String?     /// وصف منظم للنشاط والقطاع (عربي)
-  isShariaCompliant  Boolean?    /// true = متوافق مع الشريعة، false = غير متوافق، null = غير محدد
+// ─────────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────────
 
-  @@index([sector])
-  @@index([isShariaCompliant])
-}
-
-model User {
-  id                                     Int            @id @default(autoincrement())
-  email                                  String?        @unique
-  phone                                  String?        @unique
-  passwordHash                           String?
-  salt                                   String?
-  fullName                               String?
-  username                               String?        @unique
-  isEmailVerified                        Boolean        @default(false)
-  twoFactorEnabled                       Boolean        @default(false)
-  twoFactorSecret                        String?
-  twoFactorEnabledAt                     DateTime?
-  avatarUrl                              String?
-  riskTolerance                          String?        @default("moderate")
-  investmentHorizon                      Int?           @default(5)
-  monthlyBudget                          Float?         @default(0)
-  shariaMode                             Boolean        @default(false)
-  onboardingCompleted                    Boolean        @default(false)
-  interestedSectors                      String?        @default("[]")
-  language                               String         @default("system")
-  theme                                  String         @default("system")
-  plan                                   String         @default("free")
-  planExpiresAt                          DateTime?
-  aiAnalysisUsedThisMonth                Int            @default(0)
-  aiAnalysisResetDate                    DateTime?
-  planSetByAdmin                         Boolean        @default(false)
-  mustChangePassword Boolean        @default(false)
-  mustSetup2FA       Boolean        @default(false)
-  pwdMinLength       Boolean        @default(false)
-  pwdUppercase       Boolean        @default(false)
-  pwdLowercase       Boolean        @default(false)
-  pwdSymbols         Boolean        @default(false)
-  referralCode                           String?        @unique
-  referredBy                             String?
-  referralUsed                           String?
-  totalReferrals                         Int            @default(0)
-  referralProDaysRemaining               Int            @default(0)
-  referralProExpiresAt                   DateTime?
-  notifySignals                          Boolean        @default(true)
-  notifyPortfolio                        Boolean        @default(true)
-  notifyNews                             Boolean        @default(true)
-  notifyAchievements                     Boolean        @default(true)
-  notifyGoals                            Boolean        @default(true)
-  lastLoginAt                            DateTime?
-  lastLoginIp                            String?
-  loginStreak                            Int            @default(0)
-  freeReferralRewarded                   Boolean        @default(false)
-  lastPasswordChangeAt                   DateTime?
-  lastUsernameChangeAt                   DateTime?
-  usernameChangeCount                    Int            @default(0)
-  isDeleted                              Boolean        @default(false)
-  deletedAt                              DateTime?
-  deletionScheduledFor                   DateTime?
-  isFirstLogin                           Boolean        @default(true)
-  hearAboutUs                            String?
-  investorProfile                        Json?
-  userTitle                              String         @default("ناشئ")
-  failedLoginAttempts                    Int            @default(0)
-  lockedUntil                            DateTime?
-  unseenAchievements                     String[]       @default([])
-  isPrivate                              Boolean        @default(true)
-  showPortfolio                          Boolean        @default(true)
-  createdAt                              DateTime       @default(now())
-  updatedAt                              DateTime       @updatedAt
-  analyses                               Analysis[]
-  auditLogs                              AuditLog[]
-  discountUsages                         DiscountUsage[]
-  followsReceived                        Follow[]       @relation("FollowFollowing")
-  followsSent                            Follow[]       @relation("FollowFollower")
-  goals                                  Goal[]
-  idempotencyKeys                        IdempotencyKey[]
-  paymentTransactions                    PaymentTransaction[]
-  notifications                          Notification[]
-  portfolios                             Portfolio[]
-  predictionLikes                        PredictionLike[]
-  predictions                            Prediction[]
-  predictionStats                        UserPredictionStats?
-  Referral_Referral_referredUserIdToUser Referral[]     @relation("Referral_referredUserIdToUser")
-  referralsSent                          Referral[]     @relation("ReferralsSent")
-  refreshTokens                          RefreshToken[]
-  watchlists                             Watchlist[]
-  supportTickets                         SupportTicket[]
-  pushToken                              String?
-  pushPlatform                           String?
-  googlePlayToken                        String?   /// Latest Google Play purchaseToken for RTDN webhook lookup
-
-  @@index([isDeleted, deletionScheduledFor])
-  @@index([googlePlayToken])
-  @@index([plan, planExpiresAt])
-  @@index([username])
-  @@index([createdAt])
-}
-
+// Administration
 enum AdminRole {
   SUPER_ADMIN
   ADMIN
 }
 
-model Admin {
-  id           Int       @id @default(autoincrement())
-  email        String    @unique
-  phone        String?   @unique
-  passwordHash String
-  salt         String
-  fullName     String
-  role         AdminRole @default(ADMIN)
-  isActive     Boolean   @default(true)
-  isDeleted    Boolean   @default(false)
-  deletedAt    DateTime?
-  permissions  String[]  @default([])
-  twoFactorEnabled      Boolean  @default(false)
-  twoFactorSecret       String?
-  mustChangePassword Boolean  @default(false)
-  mustSetup2FA       Boolean  @default(false)
-  pwdMinLength       Boolean  @default(false)
-  pwdUppercase       Boolean  @default(false)
-  pwdLowercase       Boolean  @default(false)
-  pwdSymbols         Boolean  @default(false)
-  tokenVersion Int       @default(0)
-  lastLoginAt  DateTime?
-  lastLoginIp  String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  createdBy    Int?
-  managerId    Int?
-  manager      Admin?  @relation("SupportTeam", fields: [managerId], references: [id])
-  managedAgents Admin[] @relation("SupportTeam")
-  auditLogs    AdminAuditLog[]
-  quickReplies QuickReply[]
-
-  @@index([managerId])
-  @@index([isDeleted])
+// User plans — lowercase to match existing string literals in code
+enum UserPlan {
+  free
+  pro
+  yearly
+  ultra
+  ultra_yearly
 }
 
-model QuickReply {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String
-  createdBy Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  admin     Admin    @relation(fields: [createdBy], references: [id])
-
-  @@index([createdBy])
+// User preferences
+enum RiskTolerance {
+  conservative
+  moderate
+  aggressive
 }
 
-model AdminAuditLog {
-  id        String   @id @default(cuid())
-  adminId   Int
-  action    String
-  target    String?
-  details   String?
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  admin     Admin    @relation(fields: [adminId], references: [id])
-
-  @@index([adminId])
-  @@index([action])
-  @@index([createdAt])
+// Goals
+enum GoalStatus {
+  active
+  completed
 }
 
-model BlockedIdentifier {
-  id        String   @id @default(cuid())
-  type      String   // EMAIL | PHONE | EMAIL_DOMAIN
-  value     String
-  reason    String?
-  blockedBy Int?
-  createdAt DateTime @default(now())
-
-  @@unique([type, value])
-  @@index([type])
+// Referrals
+enum ReferralStatus {
+  pending
+  completed
 }
 
-model SupportTicket {
-  id          String              @id @default(cuid())
-  userId      Int
-  subject     String
-  message     String
-  status      SupportTicketStatus @default(OPEN)
-  priority    TicketPriority      @default(NORMAL)
-  assignedTo  Int?
-  assignedAt  DateTime?
-  reply       String?
-  repliedAt   DateTime?
-  repliedBy   Int?
-  replyRead          Boolean             @default(false)
-  rating             Int?
-  ratedAt            DateTime?
-  escalatedAt        DateTime?
-  escalatedBy        Int?
-  escalationNote     String?
-  escalatedToManager Int?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([status])
-  @@index([createdAt])
-  @@index([assignedTo])
-  @@index([assignedTo, status])
+// Blocked identifiers — uppercase to match existing code
+enum BlockedIdentifierType {
+  EMAIL
+  PHONE
+  EMAIL_DOMAIN
 }
 
-enum SupportTicketStatus {
-  OPEN
-  IN_PROGRESS
-  RESOLVED
-  CLOSED
-  CANCELLED
+// Idempotency — uppercase to match existing code
+enum IdempotencyStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
 }
 
-enum TicketPriority {
-  LOW
-  NORMAL
-  HIGH
-  URGENT
-}
-
-model RefreshToken {
-  id         String   @id @default(cuid())
-  token      String   @unique
-  userId     Int
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  deviceInfo String?
-  deviceType String?
-  browser    String?
-  os         String?
-  ipAddress  String?
-  city       String?
-  country    String?
-  isRevoked  Boolean  @default(false)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([userId, isRevoked, expiresAt])
-  @@index([expiresAt])
-}
-
-model AuditLog {
-  id        String   @id @default(cuid())
-  userId    Int?
-  action    String
-  details   String?
-  ipAddress String?
-  userAgent String?
-  ipHash    String?
-  result    String?
-  metadata  String?
-  createdAt DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([userId, createdAt])
-  @@index([action])
-  @@index([createdAt])
-}
-
-model Portfolio {
-  id        String   @id @default(uuid())
-  userId    Int
-  ticker    String
-  shares    Float
-  avgPrice  Float
-  buyDate   DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([userId, ticker])
-  @@index([ticker])
-}
-
-model Goal {
-  id            String    @id @default(cuid())
-  userId        Int
-  title         String
-  targetAmount  Float
-  currentAmount Float     @default(0)
-  currency      String    @default("EGP")
-  deadline      DateTime?
-  category      String
-  status        String    @default("active")
-  achievedAt    DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([userId, status])
-  @@index([deadline])
-}
-
-model Watchlist {
-  id                      String    @id @default(uuid())
-  userId                  Int
-  ticker                  String
-  targetPrice             Float?
-  targetReachedNotifiedAt DateTime?
-  createdAt               DateTime  @default(now())
-  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@unique([userId, ticker])
-  @@index([userId, ticker])
-}
-
-model Analysis {
-  id              String    @id @default(uuid())
-  userId          Int
-  ticker          String
-  content         String
-  createdAt       DateTime  @default(now())
-  priceAtAnalysis Float?
-  targetPrice     Float?
-  stopLoss        Float?
-  verdict         String?
-  priceAfter7d    Float?
-  priceAfter30d   Float?
-  accuracyScore   Float?
-  accuracyNote    String?
-  checkedAt       DateTime?
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([userId, ticker])
-  @@index([checkedAt])
-  @@index([createdAt])
-  @@index([ticker, createdAt])
-}
-
-model Referral {
-  id                                 String   @id @default(cuid())
-  referrerId                         Int
-  referredUserId                     Int
-  status                             String   @default("pending")
-  createdAt                          DateTime @default(now())
-  User_Referral_referredUserIdToUser User     @relation("Referral_referredUserIdToUser", fields: [referredUserId], references: [id], onDelete: Cascade)
-  referrer                           User     @relation("ReferralsSent", fields: [referrerId], references: [id], onDelete: Cascade)
-
-  @@unique([referredUserId])
-  @@index([referrerId, status, createdAt])
-}
-
+// Social
 enum FollowStatus {
   PENDING
   ACCEPTED
   BLOCKED
 }
 
+// Predictions
 enum PredictionDir {
   UP
   DOWN
@@ -401,6 +96,422 @@ enum UserRank {
   LEGEND
 }
 
+// Support
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  CANCELLED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// Market
+enum GicsSector {
+  INFORMATION_TECHNOLOGY
+  HEALTH_CARE
+  FINANCIALS
+  CONSUMER_DISCRETIONARY
+  CONSUMER_STAPLES
+  ENERGY
+  INDUSTRIALS
+  MATERIALS
+  UTILITIES
+  REAL_ESTATE
+  COMMUNICATION_SERVICES
+}
+
+enum NewsSourceType {
+  NEWS_API
+  GOOGLE_RSS
+  EGX_DISCLOSURE
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Market Data
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Stock {
+  id                String      @id @default(cuid())
+  ticker            String      @unique
+  nameAr            String
+  nameEn            String
+  sector            GicsSector?
+  description       String?
+  isShariaCompliant Boolean?
+
+  @@index([sector])
+  @@index([isShariaCompliant])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Users
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id    Int     @id @default(autoincrement())
+  email String? @unique
+  phone String? @unique
+
+  // ── Authentication ──────────────────────────────────────────────────────
+  passwordHash         String?
+  salt                 String?
+  isEmailVerified      Boolean   @default(false)
+  twoFactorEnabled     Boolean   @default(false)
+  twoFactorSecret      String?
+  twoFactorEnabledAt   DateTime?
+  failedLoginAttempts  Int       @default(0)
+  lockedUntil          DateTime?
+  lastPasswordChangeAt DateTime?
+  mustChangePassword   Boolean   @default(false)
+  mustSetup2FA         Boolean   @default(false)
+  // Password-policy flags set per-user by admin
+  pwdMinLength Boolean @default(false)
+  pwdUppercase Boolean @default(false)
+  pwdLowercase Boolean @default(false)
+  pwdSymbols   Boolean @default(false)
+
+  // ── Profile ─────────────────────────────────────────────────────────────
+  fullName             String?
+  username             String?   @unique
+  avatarUrl            String?
+  userTitle            String    @default("ناشئ")
+  hearAboutUs          String?
+  lastUsernameChangeAt DateTime?
+  usernameChangeCount  Int       @default(0)
+  isFirstLogin         Boolean   @default(true)
+  isPrivate            Boolean   @default(true)
+  showPortfolio        Boolean   @default(true)
+
+  // ── Preferences ─────────────────────────────────────────────────────────
+  language            String         @default("system")
+  theme               String         @default("system")
+  riskTolerance       RiskTolerance? @default(moderate)
+  investmentHorizon   Int?           @default(5)
+  monthlyBudget       Float?         @default(0)
+  shariaMode          Boolean        @default(false)
+  onboardingCompleted Boolean        @default(false)
+  interestedSectors   Json?
+  investorProfile     Json?
+
+  // ── Notification Preferences ─────────────────────────────────────────────
+  notifySignals      Boolean @default(true)
+  notifyPortfolio    Boolean @default(true)
+  notifyNews         Boolean @default(true)
+  notifyAchievements Boolean @default(true)
+  notifyGoals        Boolean @default(true)
+  pushToken          String?
+  pushPlatform       String?
+
+  // ── Plan & Billing ───────────────────────────────────────────────────────
+  plan                    UserPlan  @default(free)
+  planExpiresAt           DateTime?
+  planSetByAdmin          Boolean   @default(false)
+  aiAnalysisUsedThisMonth Int       @default(0)
+  aiAnalysisResetDate     DateTime?
+
+  // ── Referral ─────────────────────────────────────────────────────────────
+  referralCode             String?   @unique
+  referredBy               String?
+  referralUsed             String?
+  totalReferrals           Int       @default(0)
+  referralProDaysRemaining Int       @default(0)
+  referralProExpiresAt     DateTime?
+  freeReferralRewarded     Boolean   @default(false)
+
+  // ── Activity & Gamification ───────────────────────────────────────────────
+  lastLoginAt        DateTime?
+  lastLoginIp        String?
+  loginStreak        Int      @default(0)
+  unseenAchievements String[] @default([])
+  googlePlayToken    String? /// Latest Google Play purchaseToken for RTDN lookup
+
+  // ── Soft Delete ───────────────────────────────────────────────────────────
+  isDeleted            Boolean   @default(false)
+  deletedAt            DateTime?
+  deletionScheduledFor DateTime?
+
+  // ── Moderation ───────────────────────────────────────────────────────────
+  warningCount Int       @default(0)
+  isSuspended  Boolean   @default(false)
+  suspendedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ── Relations ─────────────────────────────────────────────────────────────
+  analyses            Analysis[]
+  auditLogs           AuditLog[]
+  abuseReports        AbuseReport[]
+  discountUsages      DiscountUsage[]
+  followsReceived     Follow[]             @relation("FollowFollowing")
+  followsSent         Follow[]             @relation("FollowFollower")
+  goals               Goal[]
+  idempotencyKeys     IdempotencyKey[]
+  notifications       Notification[]
+  paymentTransactions PaymentTransaction[]
+  portfolios          Portfolio[]
+  predictionLikes     PredictionLike[]
+  predictions         Prediction[]
+  predictionStats     UserPredictionStats?
+  referralsSent       Referral[]           @relation("ReferralsSent")
+  referredReferral    Referral?            @relation("ReferralReceived")
+  refreshTokens       RefreshToken[]
+  supportTickets      SupportTicket[]
+  watchlists          Watchlist[]
+
+  @@index([isDeleted, deletionScheduledFor])
+  @@index([isDeleted, lastLoginAt])
+  @@index([isDeleted, plan, planExpiresAt])
+  @@index([googlePlayToken])
+  @@index([username])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admins
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Admin {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  phone        String?   @unique
+  passwordHash String
+  salt         String
+  fullName     String
+  role         AdminRole @default(ADMIN)
+  isActive     Boolean   @default(true)
+  isDeleted    Boolean   @default(false)
+  deletedAt    DateTime?
+  permissions  String[]  @default([])
+
+  // ── Authentication ──────────────────────────────────────────────────────
+  twoFactorEnabled   Boolean   @default(false)
+  twoFactorSecret    String?
+  mustChangePassword Boolean   @default(false)
+  mustSetup2FA       Boolean   @default(false)
+  // Password-policy flags set per-admin
+  pwdMinLength Boolean @default(false)
+  pwdUppercase Boolean @default(false)
+  pwdLowercase Boolean @default(false)
+  pwdSymbols   Boolean @default(false)
+  tokenVersion Int     @default(0)
+  lastLoginAt  DateTime?
+  lastLoginIp  String?
+
+  // ── Hierarchy ────────────────────────────────────────────────────────────
+  createdBy     Int?
+  managerId     Int?
+  manager       Admin?  @relation("SupportTeam", fields: [managerId], references: [id])
+  managedAgents Admin[] @relation("SupportTeam")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auditLogs      AdminAuditLog[]
+  quickReplies   QuickReply[]
+  reportedAbuses AbuseReport[] @relation("AbuseReporter")
+  reviewedAbuses AbuseReport[] @relation("AbuseReviewer")
+
+  @@index([managerId])
+  @@index([isDeleted])
+}
+
+model QuickReply {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  createdBy Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  admin     Admin    @relation(fields: [createdBy], references: [id])
+
+  @@index([createdBy])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Security & Audit
+// ─────────────────────────────────────────────────────────────────────────────
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  token      String   @unique // store SHA-256 hash, never raw value
+  userId     Int
+  expiresAt  DateTime
+  isRevoked  Boolean  @default(false)
+  deviceInfo String?
+  deviceType String?
+  browser    String?
+  os         String?
+  ipAddress  String?
+  city       String?
+  country    String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRevoked, expiresAt])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    Int?
+  action    String
+  details   String?
+  ipHash    String?  // hashed IP only — never store plain IP
+  userAgent String?
+  result    String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  adminId   Int
+  action    String
+  target    String?
+  details   String?
+  ipHash    String?  // hashed IP only — never store plain IP
+  userAgent String?
+  createdAt DateTime @default(now())
+  admin     Admin    @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model BlockedIdentifier {
+  id        String                @id @default(cuid())
+  type      BlockedIdentifierType
+  value     String
+  reason    String?
+  blockedBy Int?
+  createdAt DateTime              @default(now())
+
+  @@unique([type, value])
+  @@index([type])
+}
+
+model IdempotencyKey {
+  id             String            @id @default(cuid())
+  userId         Int
+  key            String
+  method         String
+  path           String
+  requestHash    String
+  status         IdempotencyStatus @default(PROCESSING)
+  responseStatus Int?
+  responseBody   Json?
+  lockedAt       DateTime
+  expiresAt      DateTime
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([userId, status, expiresAt])
+  @@index([expiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Portfolio & Goals
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Portfolio {
+  id        String   @id @default(uuid())
+  userId    Int
+  ticker    String
+  shares    Float
+  avgPrice  Float
+  buyDate   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, ticker])
+  @@index([ticker])
+}
+
+model Watchlist {
+  id                      String    @id @default(uuid())
+  userId                  Int
+  ticker                  String
+  targetPrice             Float?
+  targetReachedNotifiedAt DateTime?
+  createdAt               DateTime  @default(now())
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ticker])
+  @@index([userId])
+}
+
+model Goal {
+  id            String     @id @default(cuid())
+  userId        Int
+  title         String
+  targetAmount  Float
+  currentAmount Float      @default(0)
+  currency      String     @default("EGP")
+  deadline      DateTime?
+  category      String
+  status        GoalStatus @default(active)
+  achievedAt    DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([deadline])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Analysis
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Analysis {
+  id              String    @id @default(uuid())
+  userId          Int
+  ticker          String
+  content         String
+  priceAtAnalysis Float?
+  targetPrice     Float?
+  stopLoss        Float?
+  verdict         String?
+  priceAfter7d    Float?
+  priceAfter30d   Float?
+  accuracyScore   Float?
+  accuracyNote    String?
+  checkedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, ticker])
+  @@index([ticker, createdAt])
+  @@index([checkedAt])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Social & Predictions
+// ─────────────────────────────────────────────────────────────────────────────
+
 model Follow {
   id          String       @id @default(cuid())
   followerId  Int
@@ -426,21 +537,20 @@ model Prediction {
   timeframe       PredictionTime
   reason          String?
   expiresAt       DateTime
-  isPublic        Boolean         @default(true)
+  isPublic        Boolean          @default(true)
   status          PredictionStatus @default(ACTIVE)
   resolvedAt      DateTime?
   resolvedPrice   Float?
   pointsEarned    Int?
   accuracyPct     Float?
-  createdAt       DateTime        @default(now())
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now())
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes           PredictionLike[]
 
   @@index([userId])
   @@index([userId, status])
   @@index([ticker, status])
   @@index([status, isPublic])
-  @@index([resolvedAt])
   @@index([status, expiresAt])
   @@index([userId, createdAt])
 }
@@ -448,6 +558,7 @@ model Prediction {
 model PredictionLike {
   predictionId String
   userId       Int
+  createdAt    DateTime   @default(now())
   prediction   Prediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -456,42 +567,36 @@ model PredictionLike {
 }
 
 model UserPredictionStats {
-  userId            Int      @id
+  userId             Int      @id
   totalPredictions   Int      @default(0)
-  correctPredictions Int     @default(0)
+  correctPredictions Int      @default(0)
   totalPoints        Int      @default(0)
-  accuracyRate       Float   @default(0)
-  currentStreak      Int     @default(0)
-  bestStreak         Int     @default(0)
+  accuracyRate       Float    @default(0)
+  currentStreak      Int      @default(0)
+  bestStreak         Int      @default(0)
   rank               UserRank @default(BEGINNER)
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model DiscountUsage {
-  userId       Int
-  codeId       String
-  discountCode DiscountCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+// ─────────────────────────────────────────────────────────────────────────────
+// Referrals
+// ─────────────────────────────────────────────────────────────────────────────
 
-  @@id([userId, codeId])
-  @@index([codeId])
+model Referral {
+  id             String         @id @default(cuid())
+  referrerId     Int
+  referredUserId Int            @unique
+  status         ReferralStatus @default(pending)
+  createdAt      DateTime       @default(now())
+  referrer       User           @relation("ReferralsSent", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUser   User           @relation("ReferralReceived", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId, status, createdAt])
 }
 
-model DiscountCode {
-  id           String          @id @default(uuid())
-  code         String          @unique
-  type         String
-  value        Float
-  active       Boolean         @default(true)
-  expiresAt    DateTime?
-  maxUses      Int?
-  usedCount    Int             @default(0)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  discountUsages DiscountUsage[]
-
-  @@index([active, expiresAt])
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Notifications
+// ─────────────────────────────────────────────────────────────────────────────
 
 model Notification {
   id        String   @id @default(cuid())
@@ -509,6 +614,54 @@ model Notification {
   @@index([userId, createdAt])
   @@index([createdAt])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Billing & Discounts
+// ─────────────────────────────────────────────────────────────────────────────
+
+model PaymentTransaction {
+  id        String   @id @default(cuid())
+  paymobId  String   @unique
+  userId    Int
+  plan      String
+  amountEGP Float
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model DiscountCode {
+  id        String          @id @default(uuid())
+  code      String          @unique
+  type      String          // 'percentage' | 'fixed' | 'full'
+  value     Float
+  active    Boolean         @default(true)
+  expiresAt DateTime?
+  maxUses   Int?
+  usedCount Int             @default(0)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  usages    DiscountUsage[]
+
+  @@index([active, expiresAt])
+}
+
+model DiscountUsage {
+  userId       Int
+  codeId       String
+  usedAt       DateTime     @default(now())
+  discountCode DiscountCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, codeId])
+  @@index([codeId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// News
+// ─────────────────────────────────────────────────────────────────────────────
 
 model NewsItem {
   id           String         @id @default(cuid())
@@ -533,50 +686,85 @@ model NewsItem {
 }
 
 model NewsTicker {
-  newsId  String
-  ticker  String
-  news    NewsItem @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  newsId String
+  ticker String
+  news   NewsItem @relation(fields: [newsId], references: [id], onDelete: Cascade)
 
   @@id([newsId, ticker])
   @@index([ticker])
 }
 
-model IdempotencyKey {
-  id             String   @id @default(cuid())
-  userId         Int
-  key            String
-  method         String
-  path           String
-  requestHash    String
-  status         String   @default("PROCESSING")
-  responseStatus Int?
-  responseBody   Json?
-  lockedAt       DateTime
-  expiresAt      DateTime
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+// ─────────────────────────────────────────────────────────────────────────────
+// Support
+// ─────────────────────────────────────────────────────────────────────────────
 
-  @@unique([userId, key])
-  @@index([userId, status, expiresAt])
-  @@index([expiresAt])
-}
-
-model PaymentTransaction {
-  id            String   @id @default(cuid())
-  paymobId      String   @unique
-  userId        Int
-  plan          String
-  amountEGP     Float
-  createdAt     DateTime @default(now())
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model SupportTicket {
+  id                 String              @id @default(cuid())
+  userId             Int
+  subject            String
+  message            String
+  status             SupportTicketStatus @default(OPEN)
+  priority           TicketPriority      @default(NORMAL)
+  assignedTo         Int?
+  assignedAt         DateTime?
+  reply              String?
+  repliedAt          DateTime?
+  repliedBy          Int?
+  replyRead          Boolean             @default(false)
+  rating             Int?
+  ratedAt            DateTime?
+  escalatedAt        DateTime?
+  escalatedBy        Int?
+  escalationNote     String?
+  escalatedToManager Int?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  abuseReports       AbuseReport[]
 
   @@index([userId])
+  @@index([status])
+  @@index([assignedTo])
+  @@index([assignedTo, status])
   @@index([createdAt])
 }
 
+enum AbuseReportStatus {
+  PENDING
+  WARNED
+  DISMISSED
+}
+
+model AbuseReport {
+  id         Int               @id @default(autoincrement())
+  ticketId   String
+  userId     Int
+  reporterId Int
+  reviewerId Int?
+  reason     String
+  status     AbuseReportStatus @default(PENDING)
+  reviewNote String?
+  reviewedAt DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  ticket     SupportTicket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reporter   Admin             @relation("AbuseReporter", fields: [reporterId], references: [id])
+  reviewer   Admin?            @relation("AbuseReviewer", fields: [reviewerId], references: [id])
+
+  @@index([ticketId])
+  @@index([userId])
+  @@index([reporterId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Archive
+// ─────────────────────────────────────────────────────────────────────────────
+
 model ArchivedUser {
-  id         String   @id @default(uuid())
+  id         String   @id @default(cuid())
   originalId String   @unique
   email      String?
   phone      String?
@@ -584,24 +772,4 @@ model ArchivedUser {
   name       String?
   userData   Json
   archivedAt DateTime @default(now())
-}
-
-enum GicsSector {
-  INFORMATION_TECHNOLOGY
-  HEALTH_CARE
-  FINANCIALS
-  CONSUMER_DISCRETIONARY
-  CONSUMER_STAPLES
-  ENERGY
-  INDUSTRIALS
-  MATERIALS
-  UTILITIES
-  REAL_ESTATE
-  COMMUNICATION_SERVICES
-}
-
-enum NewsSourceType {
-  NEWS_API
-  GOOGLE_RSS
-  EGX_DISCLOSURE
 }

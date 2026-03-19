@@ -29,7 +29,7 @@ export const prisma =
           url: url,
         },
       },
-      log: process.env.NODE_ENV === 'production' ? ['error'] : ['query', 'error', 'warn'],
+      log: ['error', 'warn'],
     });
   })();
 

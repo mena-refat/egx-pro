@@ -61,17 +61,7 @@ export const UserService = {
       select: profileSelect,
     });
     if (!user) return null;
-    const interestedSectors =
-      typeof user.interestedSectors === 'string'
-        ? (() => {
-            try {
-              return JSON.parse(user.interestedSectors);
-            } catch {
-              return [];
-            }
-          })()
-        : user.interestedSectors;
-    return { ...user, interestedSectors };
+    return { ...user, interestedSectors: user.interestedSectors ?? [] };
   },
 
   async updateProfile(
@@ -111,7 +101,7 @@ export const UserService = {
       shariaMode,
       onboardingCompleted,
       isFirstLogin,
-      interestedSectors: Array.isArray(interestedSectors) ? JSON.stringify(interestedSectors) : interestedSectors,
+      interestedSectors: Array.isArray(interestedSectors) ? interestedSectors : undefined,
       twoFactorEnabled,
       language,
       theme,
@@ -226,8 +216,7 @@ export const UserService = {
 
     const responseUser = {
       ...user,
-      interestedSectors:
-        typeof user.interestedSectors === 'string' ? JSON.parse(user.interestedSectors) : user.interestedSectors,
+      interestedSectors: user.interestedSectors ?? [],
     };
     return { user: responseUser };
   },
@@ -660,15 +649,15 @@ export const UserService = {
       ReferralRepository.findByReferrer(userId, {
         take: 5,
         orderBy: { createdAt: 'asc' } as object,
-        include: { User_Referral_referredUserIdToUser: { select: { fullName: true, createdAt: true } } },
+        include: { referredUser: { select: { fullName: true, createdAt: true } } },
       }),
       ReferralRepository.countActiveByReferrerSince(userId, weekAgo),
     ]);
-    type RefWithUser = { referredUserId: number; User_Referral_referredUserIdToUser?: { fullName: string | null } };
+    type RefWithUser = { referredUserId: number; referredUser?: { fullName: string | null } };
     const completedReferrals = completedReferralsRaw as RefWithUser[];
     const friends = completedReferrals.map((ref, index) => ({
       id: ref.referredUserId,
-      name: ref.User_Referral_referredUserIdToUser?.fullName ?? null,
+      name: ref.referredUser?.fullName ?? null,
       order: index + 1,
     }));
     return {
