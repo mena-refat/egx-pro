@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatMoney } from '../../goals/goalsUtils';
+import { formatMoney } from './goalsUtils';
 
 type Props = { currentWealth: number; locale: string };
 

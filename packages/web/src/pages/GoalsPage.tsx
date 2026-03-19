@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Target } from 'lucide-react';
 import { Skeleton } from '../components/ui/Skeleton';
 import EmptyState from '../components/shared/EmptyState';
-import { GoalFormModal } from '../components/goals/GoalFormModal';
-import { GoalAmountModal } from '../components/goals/GoalAmountModal';
+import { GoalFormModal } from '../components/features/goals/GoalFormModal';
+import { GoalAmountModal } from '../components/features/goals/GoalAmountModal';
 import {
   GoalsWealthBanner,
   GoalsToolbar,

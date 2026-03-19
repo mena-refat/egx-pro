@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '../../ui/Button';
-import { GoalCard } from '../../goals/GoalCard';
+import { GoalCard } from './GoalCard';
 import type { GoalRecord } from '../../../hooks/useGoals';
 
 const noop = () => {};

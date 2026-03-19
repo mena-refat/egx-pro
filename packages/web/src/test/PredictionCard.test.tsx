@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { PredictionCard } from '../components/predictions/PredictionCard';
+import { PredictionCard } from '../components/features/predictions/PredictionCard';
 import type { FeedPrediction } from '../store/usePredictionsStore';
 
 vi.mock('react-i18next', () => ({

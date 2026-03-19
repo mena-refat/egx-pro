@@ -9,8 +9,8 @@ import { getStockInfo, searchStocks } from '../lib/egxStocks';
 import { useProfileGuard } from '../hooks/useProfileGuard';
 import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
 import type { CompareResult } from '../types';
-import { LearnSection } from '../components/analysis/LearnSection';
-import { AnalysisLoadingState } from '../components/analysis/AnalysisLoadingState';
+import { LearnSection } from '../components/features/analysis/LearnSection';
+import { AnalysisLoadingState } from '../components/features/analysis/AnalysisLoadingState';
 import { getSearchableTextFromCompare, getMatchedGlossaryCards } from '../lib/glossary';
 import styles from './AIComparePage.module.scss';
 

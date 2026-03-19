@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { getSector, isShariaCompliant } from '../lib/egxIndicesSectors';
 import { getStockInfo } from '../lib/egxStocks';
 import { Stock, AnalysisResult } from '../types';
-import { pivotPoints, fibonacciLevels } from '../components/analysis/analysisUtils';
+import { pivotPoints, fibonacciLevels } from '../components/features/analysis/analysisUtils';
 
 export interface NewsItem {
   title: string;

@@ -4,13 +4,13 @@ import { Moon } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
-import { MarketIndicesGrid } from '../components/market/MarketIndicesGrid';
-import { MarketPageHeader } from '../components/market/MarketPageHeader';
-import { MarketForexCommodities } from '../components/market/MarketForexCommodities';
-import { MarketGainersLosers } from '../components/market/MarketGainersLosers';
-import { MarketNewsSection } from '../components/market/MarketNewsSection';
+import { MarketIndicesGrid } from '../components/features/market/MarketIndicesGrid';
+import { MarketPageHeader } from '../components/features/market/MarketPageHeader';
+import { MarketForexCommodities } from '../components/features/market/MarketForexCommodities';
+import { MarketGainersLosers } from '../components/features/market/MarketGainersLosers';
+import { MarketNewsSection } from '../components/features/market/MarketNewsSection';
 import { useMarketPage } from '../hooks/useMarketPage';
-import { minutesAgo } from '../components/market/utils';
+import { minutesAgo } from '../components/features/market/utils';
 
 export default function MarketPage() {
   const { t, i18n } = useTranslation('common');

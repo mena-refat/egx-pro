@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Target } from 'lucide-react';
 import { Button } from '../../ui/Button';
-import { PredictionCard } from '../../predictions/PredictionCard';
+import { PredictionCard } from './PredictionCard';
 import EmptyState from '../../shared/EmptyState';
 import type { FeedPrediction } from '../../../store/usePredictionsStore';
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
-import { GoalCard } from '../../goals/GoalCard';
+import { GoalCard } from './GoalCard';
 import { Button } from '../../ui/Button';
 import type { GoalRecord } from '../../../hooks/useGoals';
 import type { TFunction } from 'i18next';

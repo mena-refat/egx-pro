@@ -7,8 +7,8 @@ import { Button } from '../components/ui/Button';
 import { useProfileGuard } from '../hooks/useProfileGuard';
 import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
 import type { RecommendationsResult } from '../types';
-import { LearnSection } from '../components/analysis/LearnSection';
-import { AnalysisLoadingState } from '../components/analysis/AnalysisLoadingState';
+import { LearnSection } from '../components/features/analysis/LearnSection';
+import { AnalysisLoadingState } from '../components/features/analysis/AnalysisLoadingState';
 import { getSearchableTextFromRecommendations, getMatchedGlossaryCards } from '../lib/glossary';
 import styles from './AIRecommendationsPage.module.scss';
 

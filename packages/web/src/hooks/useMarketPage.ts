@@ -2,9 +2,9 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
 import { cachedGet } from '../lib/queryCache';
-import type { MarketOverview } from '../components/market/types';
+import type { MarketOverview } from '../components/features/market/types';
 import type { Stock } from '../types';
-import type { MarketNewsItem } from '../components/market/types';
+import type { MarketNewsItem } from '../components/features/market/types';
 
 export function useMarketPage() {
   const { t } = useTranslation('common');

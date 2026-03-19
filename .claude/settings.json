@@ -93,7 +93,21 @@
       "Bash(find c:/Users/menar/Desktop/egx-pro -path */.vite* -name *.json)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\(''''optimized'''',{}\\).keys\\(\\)\\)[:20]\\)\")",
       "Bash(find c:/Users/menar/Desktop/egx-pro/admin -path */.vite*)",
-      "Bash(grep -v \"map$\")"
+      "Bash(grep -v \"map$\")",
+      "Bash(ls c:/Users/menar/Desktop/egx-pro/packages/web/src/components/*.tsx)",
+      "Bash(find c:/Users/menar/Desktop/egx-pro/packages/web/src/components -maxdepth 1 -name *.tsx -o -name *.ts)",
+      "Bash(grep -r \"from.*components/analysis/\\\\|from.*components/goals/\\\\|from.*components/stocks/\\\\|from.*components/market/\\\\|from.*components/predictions/\" c:/Users/menar/Desktop/egx-pro/packages/web/src/ --include=*.tsx --include=*.ts -l)",
+      "Bash(grep -r \"from.*components/analysis/\\\\|from.*components/goals/\\\\|from.*components/stocks/\\\\|from.*components/market/\\\\|from.*components/predictions/\" c:/Users/menar/Desktop/egx-pro/packages/web/src/ --include=*.tsx --include=*.ts -n)",
+      "Bash(grep -r from.*components/stocks/ c:/Users/menar/Desktop/egx-pro/packages/web/src/ --include=*.tsx --include=*.ts -n)",
+      "Read(//dev/**)",
+      "Bash(ls c:/Users/menar/Desktop/egx-pro/packages/web/src/components/features/predictions/ grep -r \"from.*predictions/PredictionCard\\\\|from.*predictions/NewPrediction\" c:/Users/menar/Desktop/egx-pro/packages/web/src/ --include=*.tsx --include=*.ts -n)",
+      "Bash(grep -r \"NewPredictionSheet\\\\|GoalCard\\\\|goalsUtils\\\\|components/stocks/\" c:/Users/menar/Desktop/egx-pro/packages/web/src/ --include=*.tsx --include=*.ts -n)",
+      "Bash(ANALYSIS=\"c:/Users/menar/Desktop/egx-pro/packages/web/src/components/features/analysis\")",
+      "Bash(__NEW_LINE_e87e3b16a44e00dc__ grep:*)",
+      "Bash(echo \":*)",
+      "Bash(\"c:/Users/menar/Desktop/egx-pro/packages/web/src/components/features/predictions/index.ts\")",
+      "Bash(__NEW_LINE_f84e11b8ebe3d0fc__ echo:*)",
+      "Bash(grep -r \"from.*components/analysis/\\\\|from.*components/goals/\\\\|from.*components/market/\\\\|from.*components/predictions/\\\\|from.*components/stocks/\" c:/Users/menar/Desktop/egx-pro/packages/web/src/ --include=*.tsx --include=*.ts -n)"
     ],
     "additionalDirectories": [
       "C:\\Users\\menar\\Desktop\\src\\lib\\lib"
