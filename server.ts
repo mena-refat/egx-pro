@@ -49,6 +49,7 @@ import { runNewsSyncJob } from './server/jobs/sync-news.ts';
 import { runArchiveUsersJob } from './server/jobs/archive-users.ts';
 import { runResetAiUsageJob } from './server/jobs/reset-ai-usage.ts';
 import { runDelayedPricesJob, DELAYED_PRICES_INTERVAL_MS } from './server/jobs/delayed-prices.ts';
+import { runScheduledNotificationsJob } from './server/jobs/scheduled-notifications.ts';
 
 async function startServer() {
   if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
@@ -397,6 +398,10 @@ async function startServer() {
     void safeRunNewsSyncJob();
   }, { timezone: 'Africa/Cairo' });
 
+  const scheduledNotifCron = cron.schedule('* * * * *', () => {
+    void runScheduledNotificationsJob().catch((err) => logger.error('Scheduled notifications job error', { error: err }));
+  }, { timezone: 'Africa/Cairo' });
+
   void safeRunNewsSyncJob();
 
   const shutdown = (signal: string) => {
@@ -408,6 +413,7 @@ async function startServer() {
     resolveCron.stop();
     trackRecordCron.stop();
     newsSyncCron.stop();
+    scheduledNotifCron.stop();
     clearInterval(pricesInterval);
     server.close(() => {
       logger.info('HTTP server closed');

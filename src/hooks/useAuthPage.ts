@@ -138,11 +138,13 @@ export function useAuthPage(refCode: string) {
         profileData = (payload.user as Record<string, unknown>) ?? profileData;
       }
       const userForAuth = ensureUserShape(profileData ?? (payload.user as Record<string, unknown>));
-      const successText = isLogin ? (payload.restored ? t('settings.welcomeBack') : t('auth.loginSuccess')) : t('auth.registerSuccess');
-      setAuthMessage({ text: successText, type: 'success' });
       if (userForAuth && payload.accessToken) {
-        const delay = isLogin ? 0 : 1500;
-        setTimeout(() => setAuth(userForAuth, payload.accessToken!), delay);
+        if (isLogin) {
+          setAuth(userForAuth, payload.accessToken);
+        } else {
+          setAuthMessage({ text: t('auth.registerSuccess'), type: 'success' });
+          setTimeout(() => setAuth(userForAuth, payload.accessToken!), 1500);
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Auth failed';

@@ -2,10 +2,12 @@ import React from 'react';
 
 interface State {
   hasError: boolean;
+  resetKey?: string;
 }
 
 interface Props {
   children: React.ReactNode;
+  resetKey?: string;
 }
 
 export class ErrorBoundary extends React.Component<Props, State> {
@@ -13,6 +15,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   static getDerivedStateFromError(): State {
     return { hasError: true };
+  }
+
+  static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
+    if (props.resetKey !== state.resetKey) {
+      return { hasError: false, resetKey: props.resetKey };
+    }
+    return null;
   }
 
   componentDidCatch(error: unknown, info: unknown) {

@@ -441,5 +441,41 @@ router.post(
   }
 );
 
+router.post(
+  '/notifications/schedule',
+  adminAuthenticate,
+  requirePermission('notifications.send'),
+  (req, res, next) => {
+    void AdminNotificationsController.schedule(req as any, res).catch(next);
+  }
+);
+
+router.get(
+  '/notifications/scheduled',
+  adminAuthenticate,
+  requirePermission('notifications.send'),
+  (req, res, next) => {
+    void AdminNotificationsController.listScheduled(req as any, res).catch(next);
+  }
+);
+
+router.patch(
+  '/notifications/scheduled/:id/cancel',
+  adminAuthenticate,
+  requirePermission('notifications.send'),
+  (req, res, next) => {
+    void AdminNotificationsController.cancelScheduled(req as any, res).catch(next);
+  }
+);
+
+router.delete(
+  '/notifications/scheduled/:id',
+  adminAuthenticate,
+  requirePermission('notifications.send'),
+  (req, res, next) => {
+    void AdminNotificationsController.deleteScheduled(req as any, res).catch(next);
+  }
+);
+
 export default router;
 

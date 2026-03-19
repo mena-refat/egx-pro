@@ -10,7 +10,7 @@ const CODE_REGEX = /^[A-Z0-9_-]{2,32}$/;
 function validateDiscountValue(type: DiscountType, value: number): string | null {
   if (type === 'percentage' && (value <= 0 || value > 100)) return 'INVALID_DISCOUNT_VALUE';
   if (type === 'fixed' && value <= 0) return 'INVALID_DISCOUNT_VALUE';
-  if (type === 'full' && value !== 0) return 'INVALID_DISCOUNT_VALUE';
+  if (type === 'full' && value !== 100) return 'INVALID_DISCOUNT_VALUE';
   return null;
 }
 

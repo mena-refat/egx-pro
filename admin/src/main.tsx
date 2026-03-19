@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAdminStore } from './store/adminAuthStore';
 import { AdminLayout } from './components/AdminLayout';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -19,27 +19,12 @@ const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const RevenuePage = lazy(() => import('./pages/RevenuePage'));
 const AdminAccountPage = lazy(() => import('./pages/AdminAccountPage'));
 
-function App() {
-  const admin = useAdminStore((s) => s.admin);
-
-  if (!admin) {
-    return (
-      <BrowserRouter basename="/admin">
-        <Suspense fallback={<div />}>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    );
-  }
-
+function AuthenticatedRoutes({ admin }: { admin: NonNullable<ReturnType<typeof useAdminStore.getState>['admin']> }) {
+  const { pathname } = useLocation();
   const perms = admin.permissions ?? [];
   const isSuperAdmin = admin.role === 'SUPER_ADMIN';
   const canSeeDashboard = isSuperAdmin || perms.includes('analytics.view');
 
-  // First accessible page for redirect
   const defaultRoute = canSeeDashboard ? '/'
     : perms.some((p) => ['support.view', 'support.manage', 'support.reply'].includes(p)) ? '/support'
     : perms.includes('users.view') ? '/users'
@@ -48,37 +33,49 @@ function App() {
     : '/account';
 
   return (
-    <BrowserRouter basename="/admin">
-      <ErrorBoundary>
-        <Suspense fallback={<div />}>
-          <Routes>
-            <Route element={<AdminLayout />}>
-              <Route path="/" element={canSeeDashboard ? <DashboardPage /> : <Navigate to={defaultRoute} replace />} />
-              <Route path="/users" element={<UsersPage />} />
-              <Route path="/users/:id" element={<UserDetailPage />} />
-              <Route path="/revenue" element={<RevenuePage />} />
-              <Route path="/discounts" element={<DiscountsPage />} />
-              <Route path="/support" element={<SupportPage />} />
-              <Route path="/account" element={<AdminAccountPage />} />
-              {isSuperAdmin && (
-                <Route path="/admins" element={<AdminsPage />} />
-              )}
-              {isSuperAdmin && (
-                <Route path="/audit" element={<AuditLogPage />} />
-              )}
-              <Route path="/notifications" element={<NotificationsPage />} />
-            </Route>
-            <Route path="*" element={<Navigate to={defaultRoute} replace />} />
-          </Routes>
-        </Suspense>
-      </ErrorBoundary>
-    </BrowserRouter>
+    <ErrorBoundary resetKey={pathname}>
+      <Suspense fallback={<div />}>
+        <Routes>
+          <Route element={<AdminLayout />}>
+            <Route path="/" element={canSeeDashboard ? <DashboardPage /> : <Navigate to={defaultRoute} replace />} />
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/users/:id" element={<UserDetailPage />} />
+            <Route path="/revenue" element={<RevenuePage />} />
+            <Route path="/discounts" element={<DiscountsPage />} />
+            <Route path="/support" element={<SupportPage />} />
+            <Route path="/account" element={<AdminAccountPage />} />
+            {isSuperAdmin && <Route path="/admins" element={<AdminsPage />} />}
+            {isSuperAdmin && <Route path="/audit" element={<AuditLogPage />} />}
+            <Route path="/notifications" element={<NotificationsPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to={defaultRoute} replace />} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
+}
+
+function App() {
+  const admin = useAdminStore((s) => s.admin);
+
+  if (!admin) {
+    return (
+      <Suspense fallback={<div />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
+  return <AuthenticatedRoutes admin={admin} />;
 }
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter basename="/admin">
+      <App />
+    </BrowserRouter>
   </React.StrictMode>
 );
-

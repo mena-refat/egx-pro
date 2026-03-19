@@ -22,7 +22,7 @@ export default function DiscountsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { const r = await adminApi.get('/discounts'); setRows(r.data.data ?? []); }
+    try { const r = await adminApi.get('/discounts'); setRows(r.data.data?.discounts ?? []); }
     catch { setRows([]); }
     finally { setLoading(false); }
   }, []);

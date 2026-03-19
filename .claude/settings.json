@@ -67,7 +67,11 @@
       "Bash(findstr LISTENING)",
       "Bash(taskkill /PID 16588 /F)",
       "Bash(cmd /c \"taskkill /PID 16588 /F\")",
-      "Bash(grep -E \"\\\\.\\(tsx|ts|scss\\)$\")"
+      "Bash(grep -E \"\\\\.\\(tsx|ts|scss\\)$\")",
+      "Bash(powershell -Command \"Get-Process -Id 6932 | Select-Object Name, Id, MainWindowTitle\")",
+      "Bash(powershell -Command \"Stop-Process -Id 6932 -Force; Write-Host ''killed''\")",
+      "Bash(grep -rn \"AdminAccountPage\\\\|AccountPage\" c:/Users/menar/Desktop/egx-pro/admin/src/ --include=*.tsx --include=*.ts)",
+      "Bash(cat c:/Users/menar/Desktop/egx-pro/server/jobs/*.ts)"
     ]
   }
 }

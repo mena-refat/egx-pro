@@ -316,8 +316,9 @@ model Admin {
 
   auditLogs      AdminAuditLog[]
   quickReplies   QuickReply[]
-  reportedAbuses AbuseReport[] @relation("AbuseReporter")
-  reviewedAbuses AbuseReport[] @relation("AbuseReviewer")
+  reportedAbuses         AbuseReport[]           @relation("AbuseReporter")
+  reviewedAbuses         AbuseReport[]           @relation("AbuseReviewer")
+  scheduledNotifications ScheduledNotification[]
 
   @@index([managerId])
   @@index([isDeleted])
@@ -772,4 +773,42 @@ model ArchivedUser {
   name       String?
   userData   Json
   archivedAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scheduled Notifications
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum NotificationRepeat {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ScheduledNotificationStatus {
+  PENDING
+  SENT
+  CANCELLED
+}
+
+model ScheduledNotification {
+  id          Int                         @id @default(autoincrement())
+  title       String
+  body        String
+  plans       String[]                    @default([])
+  scheduledAt DateTime
+  repeat      NotificationRepeat          @default(NONE)
+  nextSendAt  DateTime
+  lastSentAt  DateTime?
+  sentCount   Int                         @default(0)
+  status      ScheduledNotificationStatus @default(PENDING)
+  createdById Int
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
+
+  createdBy Admin @relation(fields: [createdById], references: [id])
+
+  @@index([status, nextSendAt])
+  @@index([createdById])
 }

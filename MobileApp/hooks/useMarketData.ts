@@ -97,6 +97,7 @@ export function usePortfolioData() {
       ticker: string;
       shares: number;
       avgPrice: number;
+      buyDate?: string;
       currentPrice?: number;
       currentValue?: number;
       gainLoss?: number;
