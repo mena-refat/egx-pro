@@ -45,7 +45,7 @@ export const AdminAdminsController = {
       sendError(res, 'ADMIN_FORBIDDEN', 403);
       return;
     }
-    const { email, phone, password, fullName, permissions = [], role, options = {}, confirmPassword } = req.body as {
+    const { email, phone, password, fullName, permissions = [], role, options = {}, confirmPassword, managerId } = req.body as {
       email?: string;
       phone?: string;
       password?: string;
@@ -53,6 +53,7 @@ export const AdminAdminsController = {
       permissions?: string[];
       role?: 'SUPER_ADMIN' | 'ADMIN';
       confirmPassword?: string;
+      managerId?: number | null;
       options?: {
         mustChangePassword?: boolean;
         mustSetup2FA?: boolean;
@@ -99,6 +100,7 @@ export const AdminAdminsController = {
           permissions,
           createdBy: req.admin?.id ?? null,
           role: role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'ADMIN',
+          managerId: managerId ?? null,
           mustChangePassword,
           mustSetup2FA,
           pwdMinLength,

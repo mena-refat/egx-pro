@@ -477,6 +477,16 @@ export const ar = {
     presetAuditorDesc: 'وصول للقراءة فقط للتحليلات والمستخدمين',
     presetModerator: 'مشرف',
     presetModeratorDesc: 'إدارة المستخدمين ومعالجة تذاكر الدعم',
+    fullNameRequired: 'الاسم الكامل مطلوب.',
+    fullNameEnglishOnly: 'يجب كتابة الاسم بالإنجليزية فقط (لا يسمح بالأحرف العربية).',
+    fullNameTwoWords: 'يجب أن يحتوي الاسم على الاسم الأول والأخير على الأقل.',
+    emailNoArabic: 'يجب أن يحتوي البريد الإلكتروني على أحرف إنجليزية فقط.',
+    phoneEgyptFormat: 'أدخل رقم هاتف مصري صالح (مثال: 01XXXXXXXXX — 11 رقم).',
+    managerLabel: 'يرفع لـ مدير الدعم',
+    noManagerAssigned: '— لا يوجد مدير معين —',
+    policyBlockedTitle: 'يلزم إعداد الأمان',
+    policyBlockedDesc: 'يجب إكمال إعداد الأمان المطلوب قبل الوصول إلى لوحة الإدارة.',
+    policyBlockedAction: 'إكمال الإعداد ←',
   },
 
   audit: {

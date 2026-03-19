@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAdminStore } from '../store/adminAuthStore';
 import { PermissionGuard } from './PermissionGuard';
@@ -16,6 +16,7 @@ import {
   ChevronRight,
   DollarSign,
   Languages,
+  Lock,
 } from 'lucide-react';
 
 export function AdminLayout() {
@@ -25,8 +26,17 @@ export function AdminLayout() {
   const setAuth = useAdminStore((s) => s.setAuth);
   const logout  = useAdminStore((s) => s.logout);
   const hasP    = useAdminStore((s) => s.hasPermission);
-  const nav     = useNavigate();
+  const nav      = useNavigate();
+  const location = useLocation();
   const [openTickets, setOpenTickets] = useState(0);
+
+  // Security policy enforcement — block ALL routes until policy is satisfied
+  const isBlocked = !!(admin?.mustChangePassword || admin?.mustSetup2FA);
+  useEffect(() => {
+    if (isBlocked && location.pathname !== '/account') {
+      nav('/account', { replace: true });
+    }
+  }, [isBlocked, location.pathname, nav]);
 
   // Refresh permissions from server on every mount so stale store data is corrected
   useEffect(() => {
@@ -100,65 +110,78 @@ export function AdminLayout() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {NAV.map((item) => {
-            if (item.permission && !hasP(item.permission)) return null;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group ${
-                    isActive
-                      ? 'bg-emerald-500/10 text-emerald-400 font-medium'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <item.icon
-                      size={15}
-                      className={
+          {isBlocked ? (
+            /* ── Locked sidebar ── */
+            <div className="px-3 py-3 rounded-xl bg-amber-500/5 border border-amber-500/15 space-y-2">
+              <div className="flex items-center gap-2 text-amber-400">
+                <Lock size={13} />
+                <span className="text-xs font-semibold">{t('admins.policyBlockedTitle')}</span>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">{t('admins.policyBlockedDesc')}</p>
+            </div>
+          ) : (
+            <>
+              {NAV.map((item) => {
+                if (item.permission && !hasP(item.permission)) return null;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group ${
                         isActive
-                          ? 'text-emerald-400'
-                          : 'text-slate-500 group-hover:text-slate-300'
-                      }
-                    />
-                    <span className="flex-1">{item.label}</span>
-                    {item.to === '/support' && openTickets > 0 && (
-                      <span className="ms-auto px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full">
-                        {openTickets}
-                      </span>
+                          ? 'bg-emerald-500/10 text-emerald-400 font-medium'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <item.icon
+                          size={15}
+                          className={
+                            isActive
+                              ? 'text-emerald-400'
+                              : 'text-slate-500 group-hover:text-slate-300'
+                          }
+                        />
+                        <span className="flex-1">{item.label}</span>
+                        {item.to === '/support' && openTickets > 0 && (
+                          <span className="ms-auto px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full">
+                            {openTickets}
+                          </span>
+                        )}
+                        {isActive && (
+                          <ChevronRight size={12} className={`text-emerald-500/60 ${isRtl ? 'rotate-180' : ''}`} />
+                        )}
+                      </>
                     )}
-                    {isActive && (
-                      <ChevronRight size={12} className={`text-emerald-500/60 ${isRtl ? 'rotate-180' : ''}`} />
-                    )}
-                  </>
-                )}
-              </NavLink>
-            );
-          })}
+                  </NavLink>
+                );
+              })}
 
-          {admin?.role === 'SUPER_ADMIN' && (
-            <NavLink
-              to="/admins"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group ${
-                  isActive
-                    ? 'bg-emerald-500/10 text-emerald-400 font-medium'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <ShieldCheck size={15} className={isActive ? 'text-emerald-400' : 'text-slate-500 group-hover:text-slate-300'} />
-                  <span className="flex-1">{t('nav.admins')}</span>
-                  {isActive && <ChevronRight size={12} className={`text-emerald-500/60 ${isRtl ? 'rotate-180' : ''}`} />}
-                </>
+              {admin?.role === 'SUPER_ADMIN' && (
+                <NavLink
+                  to="/admins"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group ${
+                      isActive
+                        ? 'bg-emerald-500/10 text-emerald-400 font-medium'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <ShieldCheck size={15} className={isActive ? 'text-emerald-400' : 'text-slate-500 group-hover:text-slate-300'} />
+                      <span className="flex-1">{t('nav.admins')}</span>
+                      {isActive && <ChevronRight size={12} className={`text-emerald-500/60 ${isRtl ? 'rotate-180' : ''}`} />}
+                    </>
+                  )}
+                </NavLink>
               )}
-            </NavLink>
+            </>
           )}
         </nav>
 
@@ -205,26 +228,17 @@ export function AdminLayout() {
 
       {/* ── Main content ── */}
       <main className="flex-1 overflow-auto">
-        {/* Security flags banner */}
-        {(admin?.mustChangePassword || admin?.mustSetup2FA) && (
-          <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xs text-amber-400">
-              <span>⚠️</span>
-              <span>
-                {admin.mustChangePassword && admin.mustSetup2FA
-                  ? t('admins.bannerBoth')
-                  : admin.mustChangePassword
-                  ? t('admins.bannerChangePassword')
-                  : t('admins.bannerSetup2FA')}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => nav('/account')}
-              className="text-xs font-semibold text-amber-400 hover:text-amber-300 underline shrink-0"
-            >
-              {t('admins.bannerAction')}
-            </button>
+        {/* Security policy banner */}
+        {isBlocked && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-3 flex items-center gap-3">
+            <Lock size={14} className="text-amber-400 shrink-0" />
+            <p className="flex-1 text-xs text-amber-300">
+              {admin?.mustChangePassword && admin?.mustSetup2FA
+                ? t('admins.bannerBoth')
+                : admin?.mustChangePassword
+                ? t('admins.bannerChangePassword')
+                : t('admins.bannerSetup2FA')}
+            </p>
           </div>
         )}
         <div className="max-w-6xl mx-auto px-6 py-6">

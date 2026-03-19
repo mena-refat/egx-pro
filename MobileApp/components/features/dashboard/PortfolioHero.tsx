@@ -1,18 +1,12 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
-import { View, Text, Pressable, PanResponder, type LayoutChangeEvent } from 'react-native';
+import { View, Text, ScrollView, Pressable, PanResponder, type LayoutChangeEvent } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Line, Circle } from 'react-native-svg';
-import { TrendingUp, TrendingDown } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react-native';
 import { Skeleton } from '../../ui/Skeleton';
 import { useTheme } from '../../../hooks/useTheme';
 
-// ─────────────────────── types ───────────────────────
-interface Holding { buyDate: string; shares: number; avgPrice: number }
-
-interface ChartPoint {
-  x: number;       // timestamp ms
-  value: number;   // portfolio value
-  label: string;   // x-axis label
-}
+interface Holding { buyDate?: string; shares: number; avgPrice: number }
+interface ChartPoint { x: number; value: number; label: string }
 
 interface Props {
   totalValue: number;
@@ -23,359 +17,312 @@ interface Props {
   holdings?: Holding[];
 }
 
-// ─────────────────────── constants ───────────────────────
-const RANGES = ['1أ', '1ش', '3ش', '6ش', '1س', '3س', '5س'] as const;
+const RANGE_LABELS = ['اليوم', 'أسبوع', 'شهر', '٦ أشهر', 'سنة', '٣ سنوات', '٥ سنوات'] as const;
 const RANGE_KEYS = ['1D', '1W', '1M', '6M', '1Y', '3Y', '5Y'] as const;
 type Range = (typeof RANGE_KEYS)[number];
+const CHART_H = 148;
 
-const CHART_H = 130;
-const PAD = { top: 10, bottom: 6, left: 0, right: 0 };
-
-// ─────────────────────── data helpers ───────────────────────
+// ─── timeline sampler ───
 function sampleTimeline(range: Range): Date[] {
   const now = new Date();
   const out: Date[] = [];
-
   if (range === '1D') {
     for (let h = 0; h <= now.getHours(); h++) {
       const d = new Date(now); d.setHours(h, 0, 0, 0); out.push(d);
     }
     return out;
   }
-
-  const days =
-    range === '1W' ? 7 :
-    range === '1M' ? 30 :
-    range === '6M' ? 180 :
-    range === '1Y' ? 365 :
-    range === '3Y' ? 365 * 3 :
-    365 * 5;
-
-  // sample to max ~80 points for perf
-  const step = Math.ceil(days / 80);
+  const days = range === '1W' ? 7 : range === '1M' ? 30 : range === '6M' ? 180 :
+    range === '1Y' ? 365 : range === '3Y' ? 365 * 3 : 365 * 5;
+  const step = Math.ceil(days / 90);
   for (let i = days - 1; i >= 0; i -= step) {
-    const d = new Date(now); d.setDate(now.getDate() - i); d.setHours(0, 0, 0, 0);
-    out.push(d);
+    const d = new Date(now); d.setDate(now.getDate() - i); d.setHours(0, 0, 0, 0); out.push(d);
   }
-  out.push(new Date()); // always end with "now"
+  out.push(new Date());
   return out;
 }
 
-function buildChartData(
-  holdings: Holding[],
-  totalCost: number,
-  totalValue: number,
-  range: Range,
-): ChartPoint[] {
+function buildChartData(holdings: Holding[], totalCost: number, totalValue: number, range: Range): ChartPoint[] {
   const now = new Date();
   const timeline = sampleTimeline(range);
   if (!timeline.length) return [];
-
-  const sorted = [...holdings].sort((a, b) => new Date(a.buyDate).getTime() - new Date(b.buyDate).getTime());
+  const sorted = [...holdings]
+    .filter(h => h.buyDate)
+    .sort((a, b) => new Date(a.buyDate!).getTime() - new Date(b.buyDate!).getTime());
 
   const getValueAt = (t: Date): number => {
     const tMs = t.getTime();
-    const nowMs = now.getTime();
-    if (tMs >= nowMs) return totalValue;
+    if (tMs >= now.getTime()) return totalValue;
     if (!sorted.length) return totalCost;
-    const firstMs = new Date(sorted[0].buyDate).getTime();
+    const firstMs = new Date(sorted[0].buyDate!).getTime();
     if (tMs < firstMs) return 0;
-    let cumulative = 0;
+    let cum = 0;
     for (const h of sorted) {
-      const dMs = new Date(h.buyDate).getTime();
-      if (tMs >= dMs) cumulative += h.shares * h.avgPrice;
+      if (tMs >= new Date(h.buyDate!).getTime()) cum += h.shares * h.avgPrice;
       else break;
     }
-    return cumulative;
+    return cum;
   };
 
-  return timeline.map((d, i) => {
-    const isLast = i === timeline.length - 1;
-    const value = isLast ? totalValue : getValueAt(d);
-    const label = fmtLabel(d, range);
-    return { x: d.getTime(), value, label };
-  });
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const fmtLabel = (d: Date): string => {
+    if (range === '1D') {
+      let h = d.getHours(); const ap = h < 12 ? 'ص' : 'م';
+      if (h === 0) h = 12; else if (h > 12) h -= 12;
+      return `${h}${ap}`;
+    }
+    if (range === '1W' || range === '1M') return `${d.getDate()}/${d.getMonth()+1}`;
+    if (range === '6M' || range === '1Y') return months[d.getMonth()]?.slice(0,3) ?? '';
+    return `${d.getFullYear()}`;
+  };
+
+  return timeline.map((d, i) => ({
+    x: d.getTime(),
+    value: i === timeline.length - 1 ? totalValue : getValueAt(d),
+    label: fmtLabel(d),
+  }));
 }
 
-function fmtLabel(d: Date, range: Range): string {
-  if (range === '1D') {
-    let h = d.getHours(); const ampm = h < 12 ? 'ص' : 'م';
-    if (h === 0) h = 12; else if (h > 12) h -= 12;
-    return `${h}${ampm}`;
-  }
-  if (range === '1W') return `${d.getDate()}/${d.getMonth() + 1}`;
-  if (range === '1M') return `${d.getDate()}`;
-  if (range === '6M' || range === '1Y') {
-    const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-    return months[d.getMonth()]?.slice(0, 3) ?? '';
-  }
-  return `${d.getFullYear()}`;
-}
-
-function fmtTooltipDate(x: number, range: Range): string {
-  const d = new Date(x);
-  if (range === '1D') return d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
-  if (range === '1W' || range === '1M') return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
-  return d.toLocaleDateString('ar-EG', { month: 'short', year: 'numeric' });
-}
-
-// ─────────────────────── SVG path builder ───────────────────────
-function buildPaths(data: ChartPoint[], width: number, height: number): { line: string; area: string } {
+function buildPaths(data: ChartPoint[], w: number, h: number): { line: string; area: string } {
   if (data.length < 2) return { line: '', area: '' };
-  const values = data.map((d) => d.value);
-  const minV = Math.min(...values);
-  const maxV = Math.max(...values);
+  const vals = data.map(d => d.value);
+  const minV = Math.min(...vals), maxV = Math.max(...vals);
   const range = maxV - minV || 1;
-
-  const toX = (i: number) => (i / (data.length - 1)) * width;
-  const toY = (v: number) => PAD.top + ((maxV - v) / range) * (height - PAD.top - PAD.bottom);
-
+  const PAD_T = 12, PAD_B = 8;
+  const toX = (i: number) => (i / (data.length - 1)) * w;
+  const toY = (v: number) => PAD_T + ((maxV - v) / range) * (h - PAD_T - PAD_B);
   const pts = data.map((d, i) => ({ x: toX(i), y: toY(d.value) }));
-
   let line = '';
   for (let i = 0; i < pts.length; i++) {
     const p = pts[i];
     if (i === 0) { line += `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`; continue; }
     const prev = pts[i - 1];
-    const cpX = ((prev.x + p.x) / 2).toFixed(1);
-    line += ` C ${cpX} ${prev.y.toFixed(1)} ${cpX} ${p.y.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+    const cx = ((prev.x + p.x) / 2).toFixed(1);
+    line += ` C ${cx} ${prev.y.toFixed(1)} ${cx} ${p.y.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
   }
-
-  const last = pts[pts.length - 1];
-  const first = pts[0];
-  const area = `${line} L ${last.x.toFixed(1)} ${height} L ${first.x.toFixed(1)} ${height} Z`;
-
+  const last = pts[pts.length - 1], first = pts[0];
+  const area = `${line} L ${last.x.toFixed(1)} ${h} L ${first.x.toFixed(1)} ${h} Z`;
   return { line, area };
 }
 
-// ─────────────────────── PortfolioChart ───────────────────────
-function PortfolioChart({
-  holdings, totalCost, totalValue, isProfit, colors,
-}: {
-  holdings: Holding[];
-  totalCost: number;
-  totalValue: number;
-  isProfit: boolean;
-  colors: ReturnType<typeof useTheme>['colors'];
+function fmtTooltipDate(x: number, range: Range): string {
+  const d = new Date(x);
+  if (range === '1D') return d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
+  if (range === '1W' || range === '1M') return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' });
+  return d.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
+}
+
+// ─── Chart component ───
+function PortfolioChart({ holdings, totalCost, totalValue, gainColor }: {
+  holdings: Holding[]; totalCost: number; totalValue: number; gainColor: string;
 }) {
+  const { colors } = useTheme();
   const [range, setRange] = useState<Range>('1M');
   const [width, setWidth] = useState(0);
   const [cursor, setCursor] = useState<{ idx: number; px: number; py: number } | null>(null);
 
-  const data = useMemo(
-    () => buildChartData(holdings, totalCost, totalValue, range),
-    [holdings, totalCost, totalValue, range],
-  );
-
+  const data = useMemo(() => buildChartData(holdings, totalCost, totalValue, range), [holdings, totalCost, totalValue, range]);
   const hasData = data.length > 1 && totalValue > 0;
-  const lineColor = isProfit ? '#4ade80' : '#f87171';
-  const gradId = `pgGrad_${range}`;
+
+  const vals = data.map(d => d.value);
+  const minV = Math.min(...vals), maxV = Math.max(...vals);
+  const vRange = maxV - minV || 1;
+  const PAD_T = 12, PAD_B = 8;
+  const toY = useCallback((v: number) => PAD_T + ((maxV - v) / vRange) * (CHART_H - PAD_T - PAD_B), [maxV, vRange]);
 
   const { line, area } = useMemo(
     () => width > 0 && hasData ? buildPaths(data, width, CHART_H) : { line: '', area: '' },
     [data, width, hasData],
   );
 
-  // ── cursor helpers ──
-  const values = data.map((d) => d.value);
-  const minV = Math.min(...values);
-  const maxV = Math.max(...values);
-  const vRange = maxV - minV || 1;
-  const toY = useCallback(
-    (v: number) => PAD.top + ((maxV - v) / vRange) * (CHART_H - PAD.top - PAD.bottom),
-    [maxV, vRange],
-  );
-
-  const panRef = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => hasData && width > 0,
-      onMoveShouldSetPanResponder: () => hasData && width > 0,
-      onPanResponderGrant: (e) => moveCursor(e.nativeEvent.locationX),
-      onPanResponderMove: (e) => moveCursor(e.nativeEvent.locationX),
-      onPanResponderRelease: () => setCursor(null),
-      onPanResponderTerminate: () => setCursor(null),
-    }),
-  );
-
-  const moveCursor = (lx: number) => {
+  const moveCursor = useCallback((lx: number) => {
     if (!data.length || width === 0) return;
-    const ratio = Math.max(0, Math.min(1, lx / width));
-    const idx = Math.round(ratio * (data.length - 1));
+    const idx = Math.round(Math.max(0, Math.min(1, lx / width)) * (data.length - 1));
     const pt = data[idx];
     if (!pt) return;
-    const px = (idx / (data.length - 1)) * width;
-    const py = toY(pt.value);
-    setCursor({ idx, px, py });
-  };
+    setCursor({ idx, px: (idx / (data.length - 1)) * width, py: toY(pt.value) });
+  }, [data, width, toY]);
 
-  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
+  const pan = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => hasData && width > 0,
+    onMoveShouldSetPanResponder: () => hasData && width > 0,
+    onPanResponderGrant: e => moveCursor(e.nativeEvent.locationX),
+    onPanResponderMove: e => moveCursor(e.nativeEvent.locationX),
+    onPanResponderRelease: () => setCursor(null),
+    onPanResponderTerminate: () => setCursor(null),
+  }));
 
-  const cursorPoint = cursor ? data[cursor.idx] : null;
+  const cursorPt = cursor ? data[cursor.idx] : null;
 
   return (
-    <View style={{ gap: 12 }}>
-      {/* Range selector */}
-      <View style={{ flexDirection: 'row', gap: 5, flexWrap: 'wrap' }}>
+    <View style={{ gap: 14 }}>
+      {/* Range pills */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: 0 }}>
         {RANGE_KEYS.map((r, i) => {
-          const isSelected = range === r;
+          const active = range === r;
           return (
             <Pressable
               key={r}
               onPress={() => { setRange(r); setCursor(null); }}
               style={{
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 8,
-                backgroundColor: isSelected ? '#8b5cf6' : colors.hover,
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+                backgroundColor: active ? gainColor : colors.hover,
+                borderWidth: active ? 0 : 1, borderColor: colors.border,
               }}
             >
-              <Text style={{ color: isSelected ? '#fff' : colors.textSub, fontSize: 12, fontWeight: '600' }}>
-                {RANGES[i]}
+              <Text style={{ color: active ? '#fff' : colors.textSub, fontSize: 12, fontWeight: active ? '700' : '500' }}>
+                {RANGE_LABELS[i]}
               </Text>
             </Pressable>
           );
         })}
+      </ScrollView>
+
+      {/* Tooltip row */}
+      <View style={{ height: 36, justifyContent: 'center' }}>
+        {cursorPt ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ color: colors.textMuted, fontSize: 12 }}>{fmtTooltipDate(cursorPt.x, range)}</Text>
+            <Text style={{ color: gainColor, fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
+              {cursorPt.value.toLocaleString('ar-EG', { maximumFractionDigits: 0 })} EGP
+            </Text>
+          </View>
+        ) : hasData ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            {[data[0], data[Math.floor(data.length / 2)], data[data.length - 1]].map((pt, i) => (
+              <Text key={i} style={{ color: colors.textMuted, fontSize: 10, fontVariant: ['tabular-nums'], flex: i === 1 ? 0 : 1, textAlign: i === 2 ? 'right' : 'left' }}>
+                {pt ? pt.label : ''}
+              </Text>
+            ))}
+          </View>
+        ) : null}
       </View>
 
-      {/* Tooltip */}
-      {cursorPoint && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-            {fmtTooltipDate(cursorPoint.x, range)}
-          </Text>
-          <Text style={{ color: lineColor, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
-            {cursorPoint.value.toLocaleString('ar-EG', { maximumFractionDigits: 0 })} EGP
-          </Text>
-        </View>
-      )}
-
-      {/* Chart */}
+      {/* SVG */}
       {!hasData ? (
-        <View style={{ height: CHART_H, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.hover, borderRadius: 10 }}>
+        <View style={{ height: CHART_H, backgroundColor: colors.hover, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ color: colors.textMuted, fontSize: 13 }}>لا توجد بيانات كافية</Text>
         </View>
       ) : (
-        <View onLayout={onLayout} style={{ height: CHART_H }}>
+        <View onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} style={{ height: CHART_H }}>
           {width > 0 && (
             <Svg width={width} height={CHART_H} style={{ position: 'absolute' }}>
               <Defs>
-                <LinearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={lineColor} stopOpacity="0.25" />
-                  <Stop offset="1" stopColor={lineColor} stopOpacity="0.02" />
+                <LinearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={gainColor} stopOpacity="0.22" />
+                  <Stop offset="1" stopColor={gainColor} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
-              {area ? <Path d={area} fill={`url(#${gradId})`} /> : null}
-              {line ? <Path d={line} stroke={lineColor} strokeWidth={2.5} fill="none" /> : null}
-
-              {/* Cursor vertical line */}
+              {area ? <Path d={area} fill="url(#pg)" /> : null}
+              {line ? <Path d={line} stroke={gainColor} strokeWidth={2} fill="none" /> : null}
               {cursor && (
                 <>
-                  <Line
-                    x1={cursor.px} y1={0} x2={cursor.px} y2={CHART_H}
-                    stroke={lineColor} strokeWidth={1} strokeDasharray="3,3"
-                    opacity={0.6}
-                  />
-                  <Circle cx={cursor.px} cy={cursor.py} r={5} fill={lineColor} />
-                  <Circle cx={cursor.px} cy={cursor.py} r={9} fill={lineColor} opacity={0.2} />
+                  <Line x1={cursor.px} y1={4} x2={cursor.px} y2={CHART_H - 4}
+                    stroke={gainColor} strokeWidth={1.5} strokeDasharray="4,4" opacity={0.5} />
+                  <Circle cx={cursor.px} cy={cursor.py} r={10} fill={gainColor} opacity={0.15} />
+                  <Circle cx={cursor.px} cy={cursor.py} r={5} fill={gainColor} />
+                  <Circle cx={cursor.px} cy={cursor.py} r={3} fill="#fff" />
                 </>
               )}
             </Svg>
           )}
-          {/* Touch overlay */}
-          <View
-            style={{ ...{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } }}
-            {...panRef.current.panHandlers}
-          />
-        </View>
-      )}
-
-      {/* X-axis labels */}
-      {hasData && width > 0 && !cursor && (
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 }}>
-          {[data[0], data[Math.floor(data.length / 2)], data[data.length - 1]].map((pt, i) => (
-            <Text key={i} style={{ color: colors.textMuted, fontSize: 10, fontVariant: ['tabular-nums'] }}>
-              {pt ? fmtLabel(new Date(pt.x), range) : ''}
-            </Text>
-          ))}
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} {...pan.current.panHandlers} />
         </View>
       )}
     </View>
   );
 }
 
-// ─────────────────────── PortfolioHero ───────────────────────
-function fmt(n: number) {
-  return n.toLocaleString('ar-EG', { maximumFractionDigits: 0 });
-}
-
-export function PortfolioHero({
-  totalValue, totalCost, totalGainLoss, totalGainLossPercent, loading, holdings = [],
-}: Props) {
+// ─── PortfolioHero ───
+export function PortfolioHero({ totalValue, totalCost, totalGainLoss, totalGainLossPercent, loading, holdings = [] }: Props) {
   const { colors } = useTheme();
 
   if (loading) {
     return (
-      <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl overflow-hidden">
-        <View className="px-5 pt-5 pb-4 gap-2">
-          <Skeleton height={11} className="w-24" />
-          <Skeleton height={36} className="w-40" />
-          <Skeleton height={14} className="w-32" />
+      <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 20, overflow: 'hidden' }}>
+        <View style={{ padding: 20, gap: 10 }}>
+          <Skeleton height={11} width={120} />
+          <Skeleton height={38} width={200} />
+          <Skeleton height={16} width={160} />
         </View>
-        <View style={{ borderTopColor: colors.border, borderTopWidth: 1 }} className="px-5 py-4">
-          <Skeleton height={CHART_H + 40} />
+        <View style={{ height: 1, backgroundColor: colors.border }} />
+        <View style={{ flexDirection: 'row' }}>
+          {[0, 1].map(i => (
+            <View key={i} style={{ flex: 1, padding: 16, gap: 6, borderRightWidth: i === 0 ? 1 : 0, borderRightColor: colors.border }}>
+              <Skeleton height={10} width={60} />
+              <Skeleton height={18} width={90} />
+            </View>
+          ))}
+        </View>
+        <View style={{ height: 1, backgroundColor: colors.border }} />
+        <View style={{ padding: 16 }}>
+          <Skeleton height={CHART_H + 80} />
         </View>
       </View>
     );
   }
 
-  const isProfit = totalGainLoss > 0;
-  const isLoss = totalGainLoss < 0;
-  const gainColor = isProfit ? '#4ade80' : isLoss ? '#f87171' : colors.textSub;
-  const hasChart = holdings.length > 0 && totalValue > 0;
+  const isUp = totalGainLoss > 0;
+  const isDown = totalGainLoss < 0;
+  const gainColor = isUp ? '#4ade80' : isDown ? '#f87171' : colors.textSub;
+  const hasChart = holdings.filter(h => h.buyDate).length > 0 && totalValue > 0;
 
   return (
-    <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl overflow-hidden">
-      {/* ── Stats header ── */}
-      <View className="px-5 pt-5 pb-4" style={{ borderBottomColor: colors.border, borderBottomWidth: hasChart ? 1 : 0 }}>
-        <Text style={{ color: colors.textMuted }} className="text-xs uppercase tracking-wider mb-1">
-          القيمة الإجمالية للمحفظة
+    <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 20, overflow: 'hidden' }}>
+
+      {/* ── Total value ── */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 18 }}>
+        <Text style={{ color: colors.textMuted, fontSize: 11, letterSpacing: 0.8, marginBottom: 6 }}>
+          إجمالي المحفظة
         </Text>
-        <View className="flex-row items-baseline gap-2">
-          <Text style={{ color: colors.text }} className="text-3xl font-bold tabular-nums">{fmt(totalValue)}</Text>
-          <Text style={{ color: colors.textMuted }} className="text-base">EGP</Text>
-        </View>
-        <View className="flex-row items-center gap-2 mt-2">
-          {isProfit ? <TrendingUp size={13} color={gainColor} /> : isLoss ? <TrendingDown size={13} color={gainColor} /> : null}
-          <Text className="text-sm font-semibold tabular-nums" style={{ color: gainColor }}>
-            {isProfit ? '+' : ''}{fmt(totalGainLoss)} EGP ({isProfit ? '+' : ''}{totalGainLossPercent.toFixed(2)}%)
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginBottom: 10 }}>
+          <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', fontVariant: ['tabular-nums'], lineHeight: 40 }}>
+            {totalValue.toLocaleString('ar-EG', { maximumFractionDigits: 0 })}
           </Text>
+          <Text style={{ color: colors.textMuted, fontSize: 15, fontWeight: '500', marginBottom: 4 }}>EGP</Text>
         </View>
 
-        {/* ── Cost row ── */}
-        <View className="flex-row gap-4 mt-3 pt-3" style={{ borderTopColor: colors.border, borderTopWidth: 1 }}>
-          <View className="flex-1">
-            <Text style={{ color: colors.textMuted }} className="text-xs mb-0.5">سعر الشراء</Text>
-            <Text style={{ color: colors.text }} className="text-sm font-semibold tabular-nums">{fmt(totalCost)} EGP</Text>
-          </View>
-          <View style={{ width: 1, backgroundColor: colors.border }} />
-          <View className="flex-1">
-            <Text style={{ color: colors.textMuted }} className="text-xs mb-0.5">الربح / الخسارة</Text>
-            <Text className="text-sm font-semibold tabular-nums" style={{ color: gainColor }}>
-              {isProfit ? '+' : ''}{fmt(totalGainLoss)} EGP
-            </Text>
-          </View>
+        {/* Gain/loss pill */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+          backgroundColor: isUp ? '#4ade8018' : isDown ? '#f8717118' : colors.hover,
+          paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 }}>
+          {isUp ? <TrendingUp size={13} color={gainColor} /> : isDown ? <TrendingDown size={13} color={gainColor} /> : <Minus size={13} color={gainColor} />}
+          <Text style={{ color: gainColor, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
+            {isUp ? '+' : ''}{totalGainLoss.toLocaleString('ar-EG', { maximumFractionDigits: 0 })} EGP
+          </Text>
+          <View style={{ width: 1, height: 12, backgroundColor: gainColor, opacity: 0.3 }} />
+          <Text style={{ color: gainColor, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
+            {isUp ? '+' : ''}{totalGainLossPercent.toFixed(2)}%
+          </Text>
+        </View>
+      </View>
+
+      {/* ── Cost / Gain row ── */}
+      <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border }}>
+        <View style={{ flex: 1, paddingHorizontal: 20, paddingVertical: 14, borderRightWidth: 1, borderRightColor: colors.border }}>
+          <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 4 }}>رأس المال</Text>
+          <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
+            {totalCost.toLocaleString('ar-EG', { maximumFractionDigits: 0 })}
+            <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '400' }}> EGP</Text>
+          </Text>
+        </View>
+        <View style={{ flex: 1, paddingHorizontal: 20, paddingVertical: 14 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 4 }}>الربح / الخسارة</Text>
+          <Text style={{ color: gainColor, fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
+            {isUp ? '+' : ''}{totalGainLoss.toLocaleString('ar-EG', { maximumFractionDigits: 0 })}
+            <Text style={{ fontSize: 11, fontWeight: '400' }}> EGP</Text>
+          </Text>
         </View>
       </View>
 
       {/* ── Chart ── */}
       {hasChart && (
-        <View className="px-4 pt-4 pb-4">
+        <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 }}>
           <PortfolioChart
             holdings={holdings}
             totalCost={totalCost}
             totalValue={totalValue}
-            isProfit={isProfit || (!isLoss)}
-            colors={colors}
+            gainColor={gainColor}
           />
         </View>
       )}

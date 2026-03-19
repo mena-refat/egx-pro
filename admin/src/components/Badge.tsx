@@ -14,6 +14,11 @@ const styles: Record<string, string> = {
   LOW:          'bg-slate-800 text-slate-500',
   SUPER_ADMIN:  'bg-purple-500/15 text-purple-400 ring-1 ring-purple-500/30',
   ADMIN:        'bg-slate-700/60 text-slate-300',
+  PENDING:      'bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/20',
+  SENT:         'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/20',
+  CANCELLED:    'bg-slate-700/60 text-slate-400',
+  WARNED:       'bg-orange-500/15 text-orange-400 ring-1 ring-orange-500/20',
+  DISMISSED:    'bg-slate-700/60 text-slate-400',
 };
 
 export function Badge({ label }: { label: string }) {

@@ -153,6 +153,7 @@ const EMPTY_FORM = {
   pwdUppercase: true,
   pwdLowercase: true,
   pwdSymbols: true,
+  managerId: '' as string,
 };
 
 function buildPassword(rules: { pwdUppercase: boolean; pwdLowercase: boolean; pwdSymbols: boolean }): string {
@@ -223,9 +224,10 @@ export default function AdminsPage() {
   const [showReset2FAPwd, setShowReset2FAPwd]     = useState(false);
 
   // Step 1 validation errors
-  const [step1EmailError, setStep1EmailError]   = useState('');
-  const [step1PhoneError, setStep1PhoneError]   = useState('');
-  const [step1PwdError, setStep1PwdError]       = useState('');
+  const [step1EmailError,    setStep1EmailError]    = useState('');
+  const [step1PhoneError,    setStep1PhoneError]    = useState('');
+  const [step1PwdError,      setStep1PwdError]      = useState('');
+  const [step1FullNameError, setStep1FullNameError] = useState('');
 
   // Edit profile validation errors
   const [editEmailError, setEditEmailError]     = useState('');
@@ -302,26 +304,29 @@ export default function AdminsPage() {
   useEffect(() => { void loadAdmins(); }, []); // eslint-disable-line
 
   /* ── validation helpers ── */
+  const validateFullName = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return t('admins.fullNameRequired');
+    if (!/^[a-zA-Z\s'\-]+$/.test(trimmed)) return t('admins.fullNameEnglishOnly');
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    if (words.length < 2) return t('admins.fullNameTwoWords');
+    return '';
+  };
+
   const validateEmail = (value: string) => {
+    // Block Arabic and non-ASCII characters
+    if (/[^\x00-\x7F]/.test(value)) return t('admins.emailNoArabic');
     if (!value.includes('@') || !value.includes('.')) return t('admins.emailInvalid');
     const domain = value.split('@')[1]?.toLowerCase() ?? '';
     const ALLOWED_DOMAINS = [
-      // Google
       'gmail.com', 'googlemail.com',
-      // Microsoft
       'outlook.com', 'hotmail.com', 'hotmail.co.uk', 'hotmail.fr',
       'live.com', 'live.co.uk', 'msn.com',
-      // Apple
       'icloud.com', 'me.com', 'mac.com',
-      // Yahoo
       'yahoo.com', 'yahoo.co.uk', 'yahoo.fr', 'yahoo.de', 'ymail.com',
-      // ProtonMail
       'proton.me', 'protonmail.com',
-      // Zoho
       'zoho.com', 'zohomail.com',
-      // AOL
       'aol.com',
-      // Arabic/regional
       'mail.ru', 'yandex.com', 'yandex.ru',
     ];
     if (!ALLOWED_DOMAINS.includes(domain)) return t('admins.emailDomainBlocked');
@@ -329,7 +334,8 @@ export default function AdminsPage() {
   };
 
   const validatePhone = (value: string) => {
-    if (value && !/^[+]?[0-9\s\-()]{7,15}$/.test(value)) return 'Invalid phone number';
+    if (!value) return '';
+    if (!/^01[0-9]{9}$/.test(value)) return t('admins.phoneEgyptFormat');
     return '';
   };
 
@@ -344,20 +350,23 @@ export default function AdminsPage() {
     setStep1EmailError('');
     setStep1PhoneError('');
     setStep1PwdError('');
+    setStep1FullNameError('');
     setShowConfirmPwd(false);
   };
 
   const goBack  = () => setStep((s) => Math.max(1, s - 1));
 
   const goNextFromStep1 = () => {
+    const nameErr  = validateFullName(form.fullName);
     const emailErr = validateEmail(form.email);
     const phoneErr = validatePhone(form.phone);
     const pwdErr   = form.password && form.password.length < 18 ? 'Password must be at least 18 characters' : '';
+    setStep1FullNameError(nameErr);
     setStep1EmailError(emailErr);
     setStep1PhoneError(phoneErr);
     setStep1PwdError(pwdErr);
-    if (emailErr || phoneErr || pwdErr) return;
-    if (!form.email.trim() || !form.password.trim()) return;
+    if (nameErr || emailErr || phoneErr || pwdErr) return;
+    if (!form.email.trim() || !form.password.trim() || !form.fullName.trim()) return;
     setStep((s) => Math.min(4, s + 1));
   };
 
@@ -380,6 +389,7 @@ export default function AdminsPage() {
         confirmPassword: confirmPwd,
         permissions: form.permissions,
         role: form.isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN',
+        managerId: form.managerId ? parseInt(form.managerId, 10) : null,
         options: {
           mustChangePassword: form.mustChangePassword,
           mustSetup2FA:       form.mustSetup2FA,
@@ -485,8 +495,14 @@ export default function AdminsPage() {
               <label className="text-xs text-slate-400 block mb-1.5">{t('admins.email')}</label>
               <input
                 value={form.email}
-                onChange={(e) => { setForm((f) => ({ ...f, email: e.target.value })); setStep1EmailError(''); }}
+                onChange={(e) => {
+                  // Strip any non-ASCII characters (blocks Arabic)
+                  const filtered = e.target.value.replace(/[^\x00-\x7F]/g, '');
+                  setForm((f) => ({ ...f, email: filtered }));
+                  setStep1EmailError('');
+                }}
                 onBlur={() => setStep1EmailError(validateEmail(form.email))}
+                placeholder="name@gmail.com"
                 className={`w-full px-3 py-2 text-sm bg-[#0d0d14] border rounded-lg text-white focus:outline-none focus:border-emerald-500/50 ${step1EmailError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
               />
               {step1EmailError && <p className="text-xs text-red-400 mt-1">{step1EmailError}</p>}
@@ -495,9 +511,15 @@ export default function AdminsPage() {
               <label className="text-xs text-slate-400 block mb-1.5">{t('admins.phone')}</label>
               <input
                 value={form.phone}
-                onChange={(e) => { setForm((f) => ({ ...f, phone: e.target.value })); setStep1PhoneError(''); }}
+                onChange={(e) => {
+                  // Allow only digits
+                  const digits = e.target.value.replace(/[^0-9]/g, '');
+                  setForm((f) => ({ ...f, phone: digits }));
+                  setStep1PhoneError('');
+                }}
                 onBlur={() => setStep1PhoneError(validatePhone(form.phone))}
-                placeholder="+201XXXXXXXXX"
+                placeholder="01XXXXXXXXX"
+                maxLength={11}
                 className={`w-full px-3 py-2 text-sm bg-[#0d0d14] border rounded-lg text-white focus:outline-none focus:border-emerald-500/50 ${step1PhoneError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
               />
               {step1PhoneError && <p className="text-xs text-red-400 mt-1">{step1PhoneError}</p>}
@@ -506,9 +528,17 @@ export default function AdminsPage() {
               <label className="text-xs text-slate-400 block mb-1.5">{t('admins.fullName')}</label>
               <input
                 value={form.fullName}
-                onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
-                className="w-full px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-emerald-500/50"
+                onChange={(e) => {
+                  // Block Arabic characters immediately
+                  const filtered = e.target.value.replace(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g, '');
+                  setForm((f) => ({ ...f, fullName: filtered }));
+                  setStep1FullNameError('');
+                }}
+                onBlur={() => setStep1FullNameError(validateFullName(form.fullName))}
+                placeholder="e.g. Ahmed Mohamed"
+                className={`w-full px-3 py-2 text-sm bg-[#0d0d14] border rounded-lg text-white focus:outline-none focus:border-emerald-500/50 ${step1FullNameError ? 'border-red-500/50' : 'border-white/[0.08]'}`}
               />
+              {step1FullNameError && <p className="text-xs text-red-400 mt-1">{step1FullNameError}</p>}
             </div>
             <div>
               <label className="text-xs text-slate-400 block mb-1.5">{t('admins.password')}</label>
@@ -562,7 +592,7 @@ export default function AdminsPage() {
               <button
                 type="button"
                 onClick={goNextFromStep1}
-                disabled={!form.email.trim() || !form.password.trim()}
+                disabled={!form.email.trim() || !form.password.trim() || !form.fullName.trim()}
                 className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all"
               >
                 {t('common.next')}
@@ -654,6 +684,27 @@ export default function AdminsPage() {
                 </div>
               ))}
             </div>
+
+            {/* Manager assignment — shown when Support Agent role (has reply but not manage) */}
+            {form.permissions.includes('support.reply') && !form.permissions.includes('support.manage') && (() => {
+              // Load managers lazily
+              if (supportManagers.length === 0) void loadSupportManagers();
+              return (
+                <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl px-3 py-3 space-y-1.5">
+                  <label className="text-xs font-medium text-blue-300 block">{t('admins.managerLabel')}</label>
+                  <select
+                    value={form.managerId}
+                    onChange={(e) => setForm((f) => ({ ...f, managerId: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm bg-[#111118] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-blue-500/40"
+                  >
+                    <option value="">{t('admins.noManagerAssigned')}</option>
+                    {supportManagers.map((m) => (
+                      <option key={m.id} value={String(m.id)}>{m.fullName || m.email}</option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })()}
 
             {/* Super Admin */}
             <div className="border border-amber-500/20 bg-amber-500/5 rounded-xl px-3 py-2.5">

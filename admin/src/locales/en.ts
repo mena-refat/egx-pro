@@ -477,6 +477,16 @@ export const en = {
     presetAuditorDesc: 'Read-only access to analytics and users',
     presetModerator: 'Moderator',
     presetModeratorDesc: 'Manage users and handle support tickets',
+    fullNameRequired: 'Full name is required.',
+    fullNameEnglishOnly: 'Full name must be in English only (no Arabic characters).',
+    fullNameTwoWords: 'Full name must include at least a first and last name.',
+    emailNoArabic: 'Email must contain English characters only.',
+    phoneEgyptFormat: 'Enter a valid Egyptian mobile number (e.g. 01XXXXXXXXX — 11 digits).',
+    managerLabel: 'Reports to Support Manager',
+    noManagerAssigned: '— No manager assigned —',
+    policyBlockedTitle: 'Security Setup Required',
+    policyBlockedDesc: 'You must complete the required security setup before accessing the admin portal.',
+    policyBlockedAction: 'Complete Setup →',
   },
 
   audit: {
