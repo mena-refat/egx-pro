@@ -12,6 +12,7 @@ export function useMarketPage() {
   const [overview, setOverview] = useState<MarketOverview | null>(null);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [news, setNews] = useState<MarketNewsItem[]>([]);
+  const [newsFilter, setNewsFilter] = useState<'all' | 'interests'>('all');
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [loadingStocks, setLoadingStocks] = useState(true);
   const [loadingNews, setLoadingNews] = useState(true);
@@ -49,10 +50,11 @@ export function useMarketPage() {
     }
   }, []);
 
-  const fetchNews = useCallback(async (signal?: AbortSignal) => {
+  const fetchNews = useCallback(async (filter: 'all' | 'interests' = 'all', signal?: AbortSignal) => {
     setLoadingNews(true);
     try {
-      const res = await api.get<MarketNewsItem[] | { data: MarketNewsItem[] }>('/news/market', { signal });
+      const endpoint = filter === 'interests' ? '/news/interests' : '/news/market';
+      const res = await api.get<MarketNewsItem[] | { data: MarketNewsItem[] }>(endpoint, { signal });
       const raw = (res.data as { data?: MarketNewsItem[] })?.data ?? res.data;
       if (!signal?.aborted) setNews(Array.isArray(raw) ? raw : []);
     } catch {
@@ -67,7 +69,7 @@ export function useMarketPage() {
     const controller = new AbortController();
     fetchOverview(controller.signal);
     fetchStocks(controller.signal);
-    fetchNews(controller.signal);
+    fetchNews('all', controller.signal);
     return () => {
       mountedRef.current = false;
       controller.abort();
@@ -76,14 +78,16 @@ export function useMarketPage() {
 
   const refreshAll = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchOverview(), fetchStocks(), fetchNews()]);
+    await Promise.all([fetchOverview(), fetchStocks(), fetchNews(newsFilter)]);
     setRefreshing(false);
-  }, [fetchOverview, fetchStocks, fetchNews]);
+  }, [fetchOverview, fetchStocks, fetchNews, newsFilter]);
 
   return {
     overview,
     stocks,
     news,
+    newsFilter,
+    setNewsFilter: (f: 'all' | 'interests') => { setNewsFilter(f); fetchNews(f); },
     loadingOverview,
     loadingStocks,
     loadingNews,

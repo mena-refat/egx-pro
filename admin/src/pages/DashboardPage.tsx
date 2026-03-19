@@ -12,11 +12,9 @@ import {
   Bell,
   DollarSign,
   Headphones,
-  ShieldCheck,
 } from 'lucide-react';
 import { StatsCard } from '../components/StatsCard';
 import { adminApi } from '../lib/adminApi';
-import { useAdminStore } from '../store/adminAuthStore';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Badge } from '../components/Badge';
 
@@ -24,7 +22,6 @@ type Overview = {
   users: { total: number; newToday: number; newThisMonth: number; activePaid: number; byPlan: { plan: string; _count: { plan: number } }[] };
   analyses: { total: number; thisMonth: number; bySingle: number; byCompare: number; byRecommendations: number };
   predictions: { total: number };
-  adminTeam: { superAdmins: number; managers: number; staff: number } | null;
 };
 
 type Health = {
@@ -39,7 +36,6 @@ type Health = {
 
 export default function DashboardPage() {
   const { t } = useTranslation();
-  const admin = useAdminStore((s) => s.admin);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [growth, setGrowth] = useState<{ date: string; count: number }[]>([]);
   const [health, setHealth] = useState<Health | null>(null);
@@ -186,31 +182,6 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
-
-      {/* Admin Team — Super Admin only */}
-      {admin?.role === 'SUPER_ADMIN' && overview?.adminTeam && (
-        <Link
-          to="/admins"
-          className="rounded-xl border border-white/[0.07] bg-[#111118] p-5 hover:border-white/[0.14] transition-all block"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <ShieldCheck size={14} className="text-emerald-400" />
-            <h2 className="text-sm font-semibold text-white">{t('dashboard.adminTeam')}</h2>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: t('dashboard.superAdmins'), value: overview.adminTeam.superAdmins, color: 'text-amber-400' },
-              { label: t('dashboard.managers'),    value: overview.adminTeam.managers,    color: 'text-violet-400' },
-              { label: t('dashboard.staff'),       value: overview.adminTeam.staff,       color: 'text-blue-400' },
-            ].map((item) => (
-              <div key={item.label} className="flex flex-col items-center gap-1 rounded-lg bg-white/[0.03] py-3 px-2">
-                <span className={`text-xl font-bold tabular-nums ${item.color}`}>{item.value}</span>
-                <span className="text-[11px] text-slate-500 text-center">{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </Link>
-      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[

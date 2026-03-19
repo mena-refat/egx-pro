@@ -955,7 +955,18 @@
     "karat14": "عيار 14",
     "purity999": "عيار 999",
     "purity925": "عيار 925",
-    "purity800": "عيار 800"
+    "purity800": "عيار 800",
+    "newsFilterAll": "كل الأخبار",
+    "newsFilterInterests": "اهتماماتي",
+    "newsEmptyInterests": "لا توجد أخبار لأسهمك المتابعة",
+    "newsEmptyInterestsDesc": "أضف أسهماً لقائمة المتابعة لتظهر أخبارها هنا",
+    "newsAddWatchlist": "إضافة أسهم للمتابعة",
+    "newsSentimentPositive": "إيجابي",
+    "newsSentimentNegative": "سلبي",
+    "newsSentimentNeutral": "محايد",
+    "newsMinAgo": "منذ {{m}} د",
+    "newsHoursAgo": "منذ {{h}} س",
+    "newsDaysAgo": "منذ {{d}} ي"
   },
   "delay": {
     "noticeTitle": "أسعار الأسهم متأخرة 10 دقائق",

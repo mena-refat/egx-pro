@@ -22,6 +22,8 @@ export default function MarketPage() {
     overview,
     stocks,
     news,
+    newsFilter,
+    setNewsFilter,
     loadingOverview,
     loadingStocks,
     loadingNews,
@@ -112,7 +114,7 @@ export default function MarketPage() {
 
       <MarketGainersLosers topGainers={topGainers} topLosers={topLosers} loading={loadingStocks} isAr={isAr} />
 
-      <MarketNewsSection news={news} loading={loadingNews} locale={i18n.language} />
+      <MarketNewsSection news={news} loading={loadingNews} locale={i18n.language} filter={newsFilter} onFilterChange={setNewsFilter} />
     </div>
   );
 }

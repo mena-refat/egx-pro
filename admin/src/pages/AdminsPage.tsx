@@ -762,6 +762,27 @@ export default function AdminsPage() {
         </button>
       </div>
 
+      {/* Team stats */}
+      {admins.length > 0 && (() => {
+        const superAdmins = admins.filter((a) => a.role === 'SUPER_ADMIN').length;
+        const managers    = admins.filter((a) => a.role === 'ADMIN' && a.permissions?.includes('support.manage')).length;
+        const staff       = admins.filter((a) => a.role === 'ADMIN' && !a.permissions?.includes('support.manage')).length;
+        return (
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: t('dashboard.superAdmins'), value: superAdmins, color: 'text-amber-400',  border: 'border-amber-500/15'  },
+              { label: t('dashboard.managers'),    value: managers,    color: 'text-violet-400', border: 'border-violet-500/15' },
+              { label: t('dashboard.staff'),       value: staff,       color: 'text-blue-400',   border: 'border-blue-500/15'   },
+            ].map((item) => (
+              <div key={item.label} className={`rounded-xl border ${item.border} bg-[#111118] py-4 flex flex-col items-center gap-1`}>
+                <span className={`text-2xl font-bold tabular-nums ${item.color}`}>{item.value}</span>
+                <span className="text-[11px] text-slate-500">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       <div className="overflow-x-auto rounded-xl border border-white/[0.07] bg-[#111118]">
         <table className="min-w-full text-sm">
           <thead className="text-slate-300 border-b border-white/[0.06] bg-[#0f0f17]">

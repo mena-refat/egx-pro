@@ -955,7 +955,18 @@
     "karat14": "14k",
     "purity999": "999",
     "purity925": "925",
-    "purity800": "800"
+    "purity800": "800",
+    "newsFilterAll": "All News",
+    "newsFilterInterests": "My Interests",
+    "newsEmptyInterests": "No news for your watchlist",
+    "newsEmptyInterestsDesc": "Add stocks to your watchlist to see their news here",
+    "newsAddWatchlist": "Add stocks to watchlist",
+    "newsSentimentPositive": "Positive",
+    "newsSentimentNegative": "Negative",
+    "newsSentimentNeutral": "Neutral",
+    "newsMinAgo": "{{m}}m ago",
+    "newsHoursAgo": "{{h}}h ago",
+    "newsDaysAgo": "{{d}}d ago"
   },
   "delay": {
     "noticeTitle": "Stock prices are delayed by 10 minutes",

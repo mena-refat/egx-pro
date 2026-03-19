@@ -4,6 +4,7 @@ import { EGX_STOCKS } from '../../src/lib/egxStocks.ts';
 import { logger } from '../lib/logger.ts';
 import { withRetry } from '../lib/retry.ts';
 import { NewsRepository } from '../repositories/news.repository.ts';
+import { prisma } from '../lib/prisma.ts';
 
 const NEWS_API_KEY = process.env.NEWS_API_KEY?.trim() ?? '';
 const GOOGLE_MARKET_QUERY = 'EGX OR "Egyptian Exchange" OR "البورصة المصرية"';
@@ -318,6 +319,16 @@ export const NewsService = {
       });
     }
     const items = await NewsRepository.findLatestMarket(limit);
+    return items.map(toNewsArticle);
+  },
+
+  async getForWatchlist(userId: number, limit = DEFAULT_LIMIT): Promise<NewsArticle[]> {
+    if (await isStale(MARKET_REFRESH_MS)) {
+      await this.syncMarketSources().catch(() => {});
+    }
+    const watchlist = await prisma.watchlist.findMany({ where: { userId }, select: { ticker: true } });
+    const tickers = watchlist.map(w => w.ticker);
+    const items = await NewsRepository.findLatestByWatchlist(tickers, limit);
     return items.map(toNewsArticle);
   },
 

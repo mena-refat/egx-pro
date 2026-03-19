@@ -9,6 +9,7 @@ const router = Router();
 
 router.post('/analyze', authenticate, idempotencyMiddleware, validate(analyzeNewsBodySchema, 'body'), NewsController.analyze);
 router.get('/market', NewsController.getMarket);
+router.get('/interests', authenticate, NewsController.getInterests);
 router.get('/:ticker', NewsController.getByTicker);
 
 router.use(newsErrorHandler);

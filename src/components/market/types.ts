@@ -29,6 +29,10 @@ export interface MarketNewsItem {
   title: string;
   summary?: string;
   source: string;
+  sourceType?: string;
   publishedAt: string;
   url: string;
+  sentiment?: string | null;
+  tickers?: string[];
+  isMarketWide?: boolean;
 }

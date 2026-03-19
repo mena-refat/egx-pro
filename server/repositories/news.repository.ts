@@ -78,7 +78,21 @@ export const NewsRepository = {
 
   findLatestMarket(limit: number) {
     return prisma.newsItem.findMany({
-      where: { isMarketWide: true },
+      include: newsInclude,
+      orderBy: { publishedAt: 'desc' },
+      take: limit,
+    });
+  },
+
+  findLatestByWatchlist(tickers: string[], limit: number) {
+    if (!tickers.length) return Promise.resolve([]);
+    return prisma.newsItem.findMany({
+      where: {
+        OR: [
+          { isMarketWide: true },
+          { tickers: { some: { ticker: { in: tickers.map(t => t.toUpperCase()) } } } },
+        ],
+      },
       include: newsInclude,
       orderBy: { publishedAt: 'desc' },
       take: limit,

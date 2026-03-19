@@ -17,6 +17,13 @@ export const NewsController = {
     sendSuccess(res, items);
   }),
 
+  getInterests: run(async (req, res) => {
+    const userId = req.user?.id ?? req.userId;
+    if (!userId) { sendError(res, 'UNAUTHORIZED', 401); return; }
+    const items = await NewsService.getForWatchlist(Number(userId));
+    sendSuccess(res, items);
+  }),
+
   getByTicker: run(async (req, res) => {
     const ticker = req.params.ticker ?? '';
     const items = await NewsService.getByTicker(ticker);
