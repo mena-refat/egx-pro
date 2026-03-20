@@ -1,92 +1,20 @@
 import { useEffect, useMemo } from 'react';
 import { View, Text } from 'react-native';
-import { Controller, useForm } from 'react-hook-form';
-import { z } from 'zod';
+import { Controller, useForm, type Control, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useTheme } from '../../hooks/useTheme';
-import { normalizePhone, isValidEgyptianPhone } from '../../lib/validations';
+import type { EditableField } from './EditValueCard.utils';
+import { EDIT_KEYBOARD_TYPES, EDIT_PLACEHOLDERS, getEditSchema, getFieldTitle } from './EditValueCard.utils';
+export type { EditableField } from './EditValueCard.utils';
 
-export type EditableField = 'fullName' | 'username' | 'email' | 'phone';
-
-function getFieldTitle(field: EditableField) {
-  switch (field) {
-    case 'fullName':
-      return 'الاسم الكامل';
-    case 'username':
-      return 'اسم المستخدم';
-    case 'email':
-      return 'البريد الإلكتروني';
-    case 'phone':
-      return 'رقم الموبايل';
-  }
-}
-
-function getEditSchema(field: EditableField) {
-  if (field === 'email') {
-    return z.object({
-      value: z
-        .string()
-        .transform((s) => s.trim().toLowerCase())
-        .refine((s) => s === '' || z.string().email().safeParse(s).success, {
-          message: 'البريد الإلكتروني غير صالح',
-        }),
-    });
-  }
-
-  if (field === 'phone') {
-    return z.object({
-      value: z
-        .string()
-        .transform((s) => s.trim())
-        .transform((s) => (s ? normalizePhone(s) : ''))
-        .refine((digits) => digits === '' || isValidEgyptianPhone(digits), { message: 'رقم الموبايل غير صالح' }),
-    });
-  }
-
-  if (field === 'username') {
-    return z.object({
-      value: z.preprocess(
-        (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v),
-        z
-          .string()
-          .min(6, 'اسم المستخدم مطلوب')
-          .max(18, 'اسم المستخدم طويل')
-          .regex(/^[a-zA-Z0-9_-]+$/, 'اسم المستخدم غير صالح'),
-      ),
-    });
-  }
-
-  return z.object({
-    value: z.preprocess(
-      (v) => (typeof v === 'string' ? v.trim() : v),
-      z
-        .string()
-        .min(3, 'الاسم مطلوب')
-        .max(50, 'الاسم طويل')
-        .regex(/^[a-zA-Z\s\u0600-\u06FF]+$/, 'الاسم غير صالح'),
-    ),
-  });
-}
-
-const EDIT_PLACEHOLDERS: Record<EditableField, string> = {
-  fullName: 'مثال: أحمد محمد',
-  username: 'مثال: ahmed_egypt',
-  email: 'example@email.com',
-  phone: 'مثال: 01012345678',
-};
-
-const EDIT_KEYBOARD_TYPES: Record<EditableField, any> = {
-  fullName: 'default',
-  username: 'default',
-  email: 'email-address',
-  phone: 'phone-pad',
-};
+type EditFormValues = { value: string };
 
 function EditValueHint({ field }: { field: EditableField }) {
+  const { colors } = useTheme();
   if (field !== 'email' && field !== 'phone') return null;
-  return <Text style={{ color: '#94a3b8', fontSize: 11 }}>اتركه فارغاً لإزالة القيمة</Text>;
+  return <Text style={{ color: colors.textMuted, fontSize: 11 }}>اتركه فارغاً لإزالة القيمة</Text>;
 }
 
 function EditValueActions({
@@ -120,8 +48,8 @@ function EditValueInput({
   errors,
 }: {
   field: EditableField;
-  control: ReturnType<typeof useForm<{ value: string }>>['control'];
-  errors: ReturnType<typeof useForm<{ value: string }>>['formState']['errors'];
+  control: Control<EditFormValues>;
+  errors: FieldErrors<EditFormValues>;
 }) {
   return (
     <Controller

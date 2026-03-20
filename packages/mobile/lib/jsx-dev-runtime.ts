@@ -1,5 +1,4 @@
 import { createElement } from 'react';
-import type { ComponentProps } from 'react';
 export { Fragment } from 'react';
 import { tw } from './tw';
 
@@ -28,21 +27,16 @@ function transformProps(props: AnyProps) {
   const containerClassName =
     typeof next.contentContainerClassName === 'string' ? next.contentContainerClassName : undefined;
   if (containerClassName) {
-    next.contentContainerStyle = mergeStyle(
-      next.contentContainerStyle,
-      tw(containerClassName),
-    );
+    next.contentContainerStyle = mergeStyle(next.contentContainerStyle, tw(containerClassName));
     delete next.contentContainerClassName;
   }
 
   return next;
 }
 
-export function jsx(type: unknown, props: AnyProps, key: string | undefined) {
+export function jsxDEV(type: unknown, props: AnyProps, key: string | undefined) {
   const finalProps = transformProps(props ?? ({} as AnyProps));
   if (key != null) finalProps.key = key;
   return createElement(type as never, finalProps as never);
 }
-
-export const jsxs = jsx;
 
