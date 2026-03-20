@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import { BillingService } from '../services/billing.service.ts';
 import { GooglePlayService } from '../services/googlePlay.service.ts';
+import { PaymobService } from '../services/paymob.service.ts';
 import { DiscountRepository } from '../repositories/discount.repository.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import type { AuthRequest } from '../routes/types.ts';
@@ -80,6 +81,40 @@ export const BillingController = {
       req: { ip: req.ip, headers: req.headers as { 'user-agent'?: string } },
     });
     sendSuccess(res, data);
+  }),
+
+  // ─── Paymob web checkout initiation ─────────────────────────────────────────
+  paymobInitiate: run(async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId) { sendError(res, 'UNAUTHORIZED', 401); return; }
+
+    const { plan, discountCode } = req.body as { plan?: string; discountCode?: string };
+    const PRICES: Record<string, number> = {
+      pro_monthly: 189, pro_yearly: 1890, ultra_monthly: 397, ultra_yearly: 3970,
+    };
+    if (!plan || !PRICES[plan]) { sendError(res, 'INVALID_PLAN', 400); return; }
+
+    let finalPrice = PRICES[plan];
+
+    // Apply discount if provided
+    if (discountCode?.trim()) {
+      try {
+        const d = await BillingService.validateDiscount(userId, discountCode.trim());
+        if (d.valid && typeof d.percent === 'number' && d.percent > 0) {
+          finalPrice = Math.round(PRICES[plan] * (1 - d.percent / 100));
+        }
+      } catch { /* invalid code — proceed at full price */ }
+    }
+
+    if (finalPrice <= 0) {
+      sendError(res, 'USE_FREE_UPGRADE', 400); return;
+    }
+
+    const appUrl = (process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+    const returnUrl = `${appUrl}/settings/subscription?paymob_return=1&plan=${encodeURIComponent(plan)}${discountCode ? `&dc=${encodeURIComponent(discountCode)}` : ''}`;
+
+    const result = await PaymobService.initiateWebCheckout(finalPrice, plan, returnUrl);
+    sendSuccess(res, result);
   }),
 
   // ─── Google Play: first purchase ────────────────────────────────────────────

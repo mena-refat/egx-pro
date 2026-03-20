@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Newspaper, ExternalLink, BookmarkPlus, TrendingUp, TrendingDown } from 'lucide-react';
+import { Newspaper, BookmarkPlus, TrendingUp, TrendingDown, X, Clock } from 'lucide-react';
 import type { MarketNewsItem } from './types';
 
 type Filter = 'all' | 'interests';
@@ -32,14 +32,6 @@ function sentimentBorder(sentiment?: string | null) {
   return 'border-l-[var(--border)]';
 }
 
-function sentimentIcon(sentiment?: string | null) {
-  if (!sentiment) return null;
-  const s = sentiment.toLowerCase();
-  if (s === 'positive' || s === 'bullish') return <TrendingUp className="w-3 h-3 text-green-500 shrink-0" />;
-  if (s === 'negative' || s === 'bearish') return <TrendingDown className="w-3 h-3 text-red-500 shrink-0" />;
-  return null;
-}
-
 function NewsCardSkeleton() {
   return (
     <div className="flex gap-4 p-4 border-b border-[var(--border)] animate-pulse last:border-b-0">
@@ -59,10 +51,131 @@ function NewsCardSkeleton() {
   );
 }
 
+type ModalProps = {
+  item: MarketNewsItem;
+  isRtl: boolean;
+  onClose: () => void;
+  t: ReturnType<typeof useTranslation<'common'>>['t'];
+};
+
+function NewsModal({ item, isRtl, onClose, t }: ModalProps) {
+  React.useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  const s = item.sentiment?.toLowerCase();
+  const isBullish = s === 'positive' || s === 'bullish';
+  const isBearish = s === 'negative' || s === 'bearish';
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+      {/* Sheet */}
+      <div
+        dir={isRtl ? 'rtl' : 'ltr'}
+        className="relative w-full sm:max-w-lg bg-[var(--bg-card)] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[88vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Drag handle on mobile */}
+        <div className="flex justify-center pt-3 sm:hidden">
+          <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
+        </div>
+
+        <div className="px-5 pt-4 pb-8 sm:pt-6">
+          {/* Top row: meta + close */}
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand-text)]">
+                {item.source}
+              </span>
+              {item.publishedAt && (
+                <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
+                  <Clock className="w-3 h-3" />
+                  {relativeTime(item.publishedAt, t)}
+                </span>
+              )}
+              {isBullish && (
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-green-600 bg-green-100 dark:bg-green-950/40 px-2 py-0.5 rounded-full">
+                  <TrendingUp className="w-3 h-3" />
+                  إيجابي
+                </span>
+              )}
+              {isBearish && (
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-100 dark:bg-red-950/40 px-2 py-0.5 rounded-full">
+                  <TrendingDown className="w-3 h-3" />
+                  سلبي
+                </span>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              className="shrink-0 w-8 h-8 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center hover:bg-[var(--bg-card-hover)] transition-colors"
+            >
+              <X className="w-4 h-4 text-[var(--text-muted)]" />
+            </button>
+          </div>
+
+          {/* Title */}
+          <h2 className="text-base font-bold text-[var(--text-primary)] leading-snug mb-4">
+            {item.title}
+          </h2>
+
+          {/* Summary */}
+          <div className="rounded-2xl bg-[var(--bg-secondary)] p-4 mb-4">
+            <p className="text-[11px] font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-wide">
+              ملخص الخبر
+            </p>
+            {item.summary ? (
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                {item.summary}
+              </p>
+            ) : (
+              <p className="text-sm text-[var(--text-muted)] text-center py-2">
+                لا يوجد ملخص متاح لهذا الخبر حالياً
+              </p>
+            )}
+          </div>
+
+          {/* Affected tickers */}
+          {item.tickers && item.tickers.length > 0 && (
+            <div>
+              <p className="text-[11px] font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-wide">
+                الأسهم المتأثرة
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {item.tickers.map(ticker => (
+                  <span
+                    key={ticker}
+                    className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border)]"
+                  >
+                    {ticker}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MarketNewsSection({ news, loading, locale, filter, onFilterChange }: Props) {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
   const isRtl = locale.startsWith('ar');
+  const [selected, setSelected] = useState<MarketNewsItem | null>(null);
 
   return (
     <section className="space-y-4">
@@ -136,12 +249,11 @@ export function MarketNewsSection({ news, loading, locale, filter, onFilterChang
 
         {/* News list */}
         {!loading && news.slice(0, 15).map((item, idx) => (
-          <a
+          <button
             key={idx}
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`group flex gap-0 hover:bg-[var(--bg-card-hover)] transition-colors duration-150 ${isRtl ? 'flex-row-reverse' : ''}`}
+            type="button"
+            onClick={() => setSelected(item)}
+            className={`group w-full text-start flex gap-0 hover:bg-[var(--bg-card-hover)] transition-colors duration-150 ${isRtl ? 'flex-row-reverse' : ''}`}
           >
             {/* Sentiment accent bar */}
             <div className={`w-[3px] shrink-0 ${sentimentBorder(item.sentiment)} border-l-[3px]`} />
@@ -153,7 +265,12 @@ export function MarketNewsSection({ news, loading, locale, filter, onFilterChang
                 <span className="text-[11px] font-semibold text-[var(--brand-text)] bg-[var(--brand-subtle)] px-2 py-0.5 rounded-full truncate max-w-[140px]">
                   {item.source}
                 </span>
-                {sentimentIcon(item.sentiment)}
+                {(() => {
+                  const sv = item.sentiment?.toLowerCase();
+                  if (sv === 'positive' || sv === 'bullish') return <TrendingUp className="w-3 h-3 text-green-500 shrink-0" />;
+                  if (sv === 'negative' || sv === 'bearish') return <TrendingDown className="w-3 h-3 text-red-500 shrink-0" />;
+                  return null;
+                })()}
                 <span className="text-[11px] text-[var(--text-muted)] ml-auto shrink-0">
                   {item.publishedAt ? relativeTime(item.publishedAt, t) : ''}
                 </span>
@@ -164,32 +281,40 @@ export function MarketNewsSection({ news, loading, locale, filter, onFilterChang
                 {item.title}
               </h3>
 
-              {/* Summary */}
+              {/* Summary preview */}
               {item.summary && (
                 <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2">
                   {item.summary}
                 </p>
               )}
 
-              {/* Bottom: tickers + read more */}
-              <div className={`flex items-center gap-2 flex-wrap ${isRtl ? 'flex-row-reverse' : ''}`}>
-                {item.tickers?.slice(0, 4).map(ticker => (
-                  <span
-                    key={ticker}
-                    className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border)]"
-                  >
-                    {ticker}
-                  </span>
-                ))}
-                <span className={`inline-flex items-center gap-1 text-xs font-medium text-[var(--brand)] ${isRtl ? 'mr-auto' : 'ml-auto'} shrink-0 group-hover:underline`}>
-                  {t('market.readMore')}
-                  <ExternalLink className="w-3 h-3" />
-                </span>
-              </div>
+              {/* Bottom: tickers */}
+              {item.tickers && item.tickers.length > 0 && (
+                <div className={`flex items-center gap-2 flex-wrap ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  {item.tickers.slice(0, 4).map(ticker => (
+                    <span
+                      key={ticker}
+                      className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border)]"
+                    >
+                      {ticker}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-          </a>
+          </button>
         ))}
       </div>
+
+      {/* News detail modal */}
+      {selected && (
+        <NewsModal
+          item={selected}
+          isRtl={isRtl}
+          onClose={() => setSelected(null)}
+          t={t}
+        />
+      )}
     </section>
   );
 }

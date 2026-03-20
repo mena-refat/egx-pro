@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { Check, Sparkles, ChevronDown, ChevronUp, Tag } from 'lucide-react';
 import api from '../../../lib/api';
 import { useAuthStore } from '../../../store/authStore';
@@ -45,6 +46,62 @@ export function SubscriptionTab() {
   const [validating, setValidating] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
   const [billingMessage, setBillingMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const handleUpgradeSuccess = useCallback(async () => {
+    try {
+      const res = await api.get('/user/profile');
+      const d = (res.data as { data?: unknown })?.data ?? res.data;
+      const nextUser = (d as { user?: typeof user })?.user ?? d;
+      if (nextUser && setUser) setUser(nextUser as NonNullable<typeof user>);
+    } catch { /* ignore */ }
+  }, [user, setUser]);
+
+  // Handle return from Paymob hosted checkout
+  useEffect(() => {
+    const isReturn   = searchParams.get('paymob_return') === '1';
+    const txnId      = searchParams.get('id');          // Paymob transaction ID
+    const success    = searchParams.get('success');
+    const plan       = searchParams.get('plan') as PaidPlanId | null;
+    const dc         = searchParams.get('dc');           // discount code
+
+    if (!isReturn || !txnId || !plan) return;
+
+    // Clean URL immediately
+    setSearchParams({}, { replace: true });
+
+    if (success !== 'true') {
+      setBillingMessage({ type: 'error', text: t('billing.upgradeFailed') });
+      return;
+    }
+
+    // Also check sessionStorage for pending upgrade info
+    const pending = (() => {
+      try { return JSON.parse(sessionStorage.getItem('paymob_pending') ?? 'null') as { plan: PaidPlanId; discountCode: string } | null; }
+      catch { return null; }
+    })();
+    sessionStorage.removeItem('paymob_pending');
+
+    const effectivePlan = (pending?.plan ?? plan) as PaidPlanId;
+    const effectiveDc   = pending?.discountCode || dc || '';
+
+    setUpgrading(true);
+    api.post('/billing/upgrade', {
+      plan: effectivePlan,
+      paymentToken: txnId,
+      ...(effectiveDc ? { discountCode: effectiveDc } : {}),
+    })
+      .then(() => {
+        setBillingMessage({ type: 'success', text: t('billing.upgradeSuccess') });
+        return handleUpgradeSuccess();
+      })
+      .catch(() => {
+        setBillingMessage({ type: 'error', text: t('billing.upgradeFailed') });
+      })
+      .finally(() => setUpgrading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -106,20 +163,11 @@ export function SubscriptionTab() {
     }
   };
 
-  const handleUpgradeSuccess = async () => {
-    try {
-      const res = await api.get('/user/profile');
-      const d = (res.data as { data?: unknown })?.data ?? res.data;
-      const nextUser = (d as { user?: typeof user })?.user ?? d;
-      if (nextUser && setUser) setUser(nextUser as NonNullable<typeof user>);
-    } catch { /* ignore */ }
-  };
-
   const plans = getPlansConfig();
   const isCurrent = (planId: string) =>
     (planId === 'free' && (currentPlan === 'free' || !currentPlan)) ||
-    (planId === 'pro' && (currentPlan === 'pro' || currentPlan === 'yearly' || currentPlan === 'annual')) ||
-    (planId === 'ultra' && (currentPlan === 'ultra' || currentPlan === 'ultra_yearly' || currentPlan === 'ultra_annual'));
+    (planId === 'pro' && (currentPlan === 'pro' || currentPlan === 'yearly')) ||
+    (planId === 'ultra' && (currentPlan === 'ultra' || currentPlan === 'ultra_yearly'));
 
   const planColor: Record<string, string> = {
     free:  'text-[var(--text-muted)]',

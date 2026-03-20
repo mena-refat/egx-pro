@@ -340,7 +340,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                     </div>
                     <p className="font-semibold text-[var(--text-primary)]">{t('predictions.exactUpgradeTitle')}</p>
                     <p className="text-sm text-[var(--text-secondary)] max-w-xs">{t('predictions.exactUpgradeDesc')}</p>
-                    <Button variant="outline" onClick={() => { onClose(); navigate('/settings/subscription'); }}>{t('predictions.upgradeNow')}</Button>
+                    <Button variant="secondary" onClick={() => { onClose(); navigate('/settings/subscription'); }}>{t('predictions.upgradeNow')}</Button>
                   </div>
                 )}
 

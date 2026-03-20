@@ -42,6 +42,7 @@ const webhookLimiter = rateLimit({
 });
 
 router.get('/plan', authenticate, BillingController.getPlan);
+router.post('/paymob/initiate', authenticate, BillingController.paymobInitiate);
 router.post('/discount/validate', authenticate, discountValidateLimiter, idempotencyMiddleware, validate(validateDiscountBodySchema, 'body'), BillingController.validateDiscount);
 router.post('/validate-discount', authenticate, discountValidateLimiter, idempotencyMiddleware, validate(validateDiscountBodySchema, 'body'), BillingController.validateDiscount);
 router.post('/upgrade', authenticate, upgradeLimiter, idempotencyMiddleware, validate(upgradeBodySchema, 'body'), BillingController.upgrade);
