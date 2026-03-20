@@ -1,15 +1,47 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../../ui/Button';
-import { usePredictionsStore } from '../../../store/usePredictionsStore';
+import { usePredictionsStore, type MoveTier } from '../../../store/usePredictionsStore';
 import { usePredictionsApi } from '../../../hooks/usePredictionsApi';
 import { useAuthStore } from '../../../store/authStore';
 import { searchStocks, getStockName } from '../../../lib/egxStocks';
 import api from '../../../lib/api';
 
 const TIMEFRAMES = ['WEEK', 'MONTH', 'THREE_MONTHS', 'SIX_MONTHS', 'NINE_MONTHS', 'YEAR'] as const;
+
+interface TierDef {
+  key: MoveTier;
+  labelKey: string;
+  rangeKey: string;
+  basePoints: number;
+  color: string;
+  bg: string;
+  border: string;
+}
+
+const TIERS: TierDef[] = [
+  { key: 'LIGHT',   labelKey: 'predictions.tierLight',   rangeKey: 'predictions.tierLightRange',   basePoints: 30,  color: 'text-sky-400',    bg: 'bg-sky-500/10',    border: 'border-sky-500/40' },
+  { key: 'MEDIUM',  labelKey: 'predictions.tierMedium',  rangeKey: 'predictions.tierMediumRange',  basePoints: 60,  color: 'text-green-400',  bg: 'bg-green-500/10',  border: 'border-green-500/40' },
+  { key: 'STRONG',  labelKey: 'predictions.tierStrong',  rangeKey: 'predictions.tierStrongRange',  basePoints: 100, color: 'text-amber-400',  bg: 'bg-amber-500/10',  border: 'border-amber-500/40' },
+  { key: 'EXTREME', labelKey: 'predictions.tierExtreme', rangeKey: 'predictions.tierExtremeRange', basePoints: 150, color: 'text-red-400',    bg: 'bg-red-500/10',    border: 'border-red-500/40' },
+];
+
+const TIMEFRAME_MULTIPLIER: Record<string, number> = {
+  WEEK: 1.0, MONTH: 1.4, THREE_MONTHS: 2.0, SIX_MONTHS: 2.8, NINE_MONTHS: 3.5, YEAR: 5.0,
+};
+
+function calcExpiresAt(timeframe: string): string {
+  const d = new Date();
+  if (timeframe === 'WEEK')          d.setDate(d.getDate() + 7);
+  else if (timeframe === 'MONTH')    d.setMonth(d.getMonth() + 1);
+  else if (timeframe === 'THREE_MONTHS') d.setMonth(d.getMonth() + 3);
+  else if (timeframe === 'SIX_MONTHS')  d.setMonth(d.getMonth() + 6);
+  else if (timeframe === 'NINE_MONTHS') d.setMonth(d.getMonth() + 9);
+  else if (timeframe === 'YEAR')     d.setFullYear(d.getFullYear() + 1);
+  return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
 
 export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
   const { t, i18n } = useTranslation('common');
@@ -36,19 +68,12 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
   const updateDropdownPosition = () => {
     if (!inputRef.current) return;
     const rect = inputRef.current.getBoundingClientRect();
-    setDropdownRect({
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
-    });
+    setDropdownRect({ top: rect.bottom + 4, left: rect.left, width: rect.width });
   };
 
   useEffect(() => {
     if (!showSuggestions) return;
-    const handleWindowChange = () => {
-      // لو حصل scroll أو resize نقفل الليست عشان متبقاش في مكان غلط
-      setShowSuggestions(false);
-    };
+    const handleWindowChange = () => setShowSuggestions(false);
     window.addEventListener('scroll', handleWindowChange, true);
     window.addEventListener('resize', handleWindowChange);
     return () => {
@@ -67,25 +92,19 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
       });
   }, [draft.ticker, accessToken]);
 
-  const price = currentPrice ?? draft.targetPrice ?? 0;
-  const changePct = price > 0 && draft.targetPrice ? (((draft.targetPrice - price) / price) * 100).toFixed(1) : '0';
-  const expiresAt = (() => {
-    const d = new Date();
-    if (draft.timeframe === 'MONTH') d.setMonth(d.getMonth() + 1);
-    else if (draft.timeframe === 'THREE_MONTHS') d.setMonth(d.getMonth() + 3);
-    else d.setDate(d.getDate() + 7);
-    return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  })();
+  const selectedTier = TIERS.find((t) => t.key === draft.moveTier) ?? null;
+  const multiplier = TIMEFRAME_MULTIPLIER[draft.timeframe ?? 'WEEK'] ?? 1.0;
+  const pointPotential = selectedTier ? Math.round(selectedTier.basePoints * multiplier) : null;
 
   const handleSubmit = async () => {
-    if (!draft.ticker || draft.direction == null || draft.targetPrice == null || draft.timeframe == null || !agreeTerms) return;
+    if (!draft.ticker || draft.direction == null || draft.moveTier == null || draft.timeframe == null || !agreeTerms) return;
     setError(null);
     setSubmitting(true);
     try {
       await createPrediction({
         ticker: draft.ticker,
         direction: draft.direction,
-        targetPrice: draft.targetPrice,
+        moveTier: draft.moveTier,
         timeframe: draft.timeframe,
         reason: draft.reason?.trim() || null,
         isPublic: draft.isPublic !== false,
@@ -93,7 +112,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
       onClose();
       fetchMy(1);
       fetchLimits();
-    } catch (e) {
+    } catch {
       setError(t('common.error'));
     } finally {
       setSubmitting(false);
@@ -128,15 +147,8 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                     ref={inputRef}
                     value={stockSearch}
                     aria-required="true"
-                    onFocus={() => {
-                      setShowSuggestions(true);
-                      updateDropdownPosition();
-                    }}
-                    onChange={(e) => {
-                      setStockSearch(e.target.value);
-                      setShowSuggestions(true);
-                      updateDropdownPosition();
-                    }}
+                    onFocus={() => { setShowSuggestions(true); updateDropdownPosition(); }}
+                    onChange={(e) => { setStockSearch(e.target.value); setShowSuggestions(true); updateDropdownPosition(); }}
                     placeholder={t('predictions.searchStock')}
                     className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] text-[var(--text-primary)]"
                   />
@@ -146,10 +158,14 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
             )}
 
             {step === 2 && (
-              <motion.div key="2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
+              <motion.div key="2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
                 <button type="button" onClick={() => setNewPredictionStep(1)} className="text-sm text-[var(--brand)]">← {t('common.back')}</button>
                 <p className="text-sm text-[var(--text-secondary)]">{t('predictions.step2Title')}</p>
-                {draft.ticker && <p className="font-medium">{draft.ticker} — {t('predictions.currentPrice')}: {price.toFixed(2)} ج.م</p>}
+                {draft.ticker && currentPrice != null && (
+                  <p className="font-medium text-sm">{draft.ticker} — {t('predictions.currentPrice')}: <span className="text-[var(--text-primary)]">{currentPrice.toFixed(2)} ج.م</span></p>
+                )}
+
+                {/* Direction */}
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -166,45 +182,79 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                     <TrendingDown className="w-6 h-6 text-red-500" /> {t('predictions.directionDown')}
                   </button>
                 </div>
+
                 {draft.direction && (
                   <>
-                    <label htmlFor="new-prediction-target-price" className="block text-sm font-medium text-[var(--text-secondary)]">{t('predictions.targetPrice')}</label>
-                    <input
-                      id="new-prediction-target-price"
-                      type="number"
-                      step="0.01"
-                      value={draft.targetPrice ?? ''}
-                      onChange={(e) => updateDraft({ targetPrice: e.target.value ? Number(e.target.value) : undefined })}
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-primary)]"
-                      aria-required="true"
-                    />
-                    <p className="text-xs text-[var(--text-muted)]">{t('predictions.expectedChange')}: {draft.targetPrice && price ? (Number(changePct) >= 0 ? '+' : '') + changePct + '%' : '—'}</p>
-                    <div className="flex gap-2">
-                      {TIMEFRAMES.map((tf) => (
-                        <button
-                          key={tf}
-                          type="button"
-                          onClick={() => updateDraft({ timeframe: tf })}
-                          className={`px-3 py-1.5 rounded-lg text-sm ${draft.timeframe === tf ? 'bg-[var(--brand)] text-white' : 'bg-[var(--bg-secondary)]'}`}
-                        >
-                          {t(
-                            tf === 'WEEK'
-                              ? 'predictions.timeframeWeek'
-                              : tf === 'MONTH'
-                                ? 'predictions.timeframeMonth'
-                                : tf === 'THREE_MONTHS'
-                                  ? 'predictions.timeframeThreeMonths'
-                                  : tf === 'SIX_MONTHS'
-                                    ? 'predictions.timeframeSixMonths'
-                                    : tf === 'NINE_MONTHS'
-                                      ? 'predictions.timeframeNineMonths'
-                                      : 'predictions.timeframeYear'
-                          )}
-                        </button>
-                      ))}
+                    {/* Move Tier selector */}
+                    <div>
+                      <p className="text-sm font-medium text-[var(--text-secondary)] mb-2">{t('predictions.selectTier')}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {TIERS.map((tier) => {
+                          const isSelected = draft.moveTier === tier.key;
+                          return (
+                            <button
+                              key={tier.key}
+                              type="button"
+                              onClick={() => updateDraft({ moveTier: tier.key })}
+                              className={`p-3 rounded-xl border-2 text-start transition-all ${isSelected ? `${tier.bg} ${tier.border}` : 'border-[var(--border)] bg-transparent hover:border-[var(--border-subtle)]'}`}
+                            >
+                              <p className={`text-sm font-semibold ${isSelected ? tier.color : 'text-[var(--text-primary)]'}`}>
+                                {t(tier.labelKey)}
+                              </p>
+                              <p className="text-xs text-[var(--text-muted)]">{t(tier.rangeKey)}</p>
+                              <p className={`text-xs font-medium mt-1 ${isSelected ? tier.color : 'text-[var(--text-muted)]'}`}>
+                                {tier.basePoints} {t('predictions.basePts')}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {selectedTier && (
+                        <p className="text-xs text-[var(--text-muted)] mt-2">{t('predictions.tierHint')}</p>
+                      )}
                     </div>
-                    <p className="text-xs">{t('predictions.endsOn')}: {expiresAt}</p>
-                    <Button onClick={() => setNewPredictionStep(3)}>{t('predictions.next')}</Button>
+
+                    {/* Timeframe */}
+                    <div>
+                      <p className="text-sm font-medium text-[var(--text-secondary)] mb-2">{t('predictions.timeframeLabel')}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {TIMEFRAMES.map((tf) => (
+                          <button
+                            key={tf}
+                            type="button"
+                            onClick={() => updateDraft({ timeframe: tf })}
+                            className={`px-3 py-1.5 rounded-lg text-sm ${draft.timeframe === tf ? 'bg-[var(--brand)] text-white' : 'bg-[var(--bg-secondary)]'}`}
+                          >
+                            {t(
+                              tf === 'WEEK' ? 'predictions.timeframeWeek'
+                              : tf === 'MONTH' ? 'predictions.timeframeMonth'
+                              : tf === 'THREE_MONTHS' ? 'predictions.timeframeThreeMonths'
+                              : tf === 'SIX_MONTHS' ? 'predictions.timeframeSixMonths'
+                              : tf === 'NINE_MONTHS' ? 'predictions.timeframeNineMonths'
+                              : 'predictions.timeframeYear'
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-[var(--text-muted)] mt-1">{t('predictions.endsOn')}: {calcExpiresAt(draft.timeframe ?? 'WEEK')}</p>
+                    </div>
+
+                    {/* Points preview */}
+                    {pointPotential != null && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                        <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span className="text-sm text-[var(--text-secondary)]">
+                          {t('predictions.pointPotential')}: <span className="font-semibold text-amber-400">{pointPotential} {t('predictions.pts')}</span>
+                        </span>
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={() => setNewPredictionStep(3)}
+                      disabled={!draft.moveTier}
+                    >
+                      {t('predictions.next')}
+                    </Button>
                   </>
                 )}
               </motion.div>
@@ -230,9 +280,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                       <p className={`text-xs font-medium ${hasMin ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {t('predictions.reasonMinWordsLabel', { count: words, required: 10 })}
                       </p>
-                      <p className="text-[10px] text-[var(--text-muted)]">
-                        {t('predictions.reasonHint')}
-                      </p>
+                      <p className="text-[10px] text-[var(--text-muted)]">{t('predictions.reasonHint')}</p>
                       <p className="text-xs text-[var(--text-muted)]">{text.length}/500</p>
                       <label className="flex items-center gap-2">
                         <input type="checkbox" checked={draft.isPublic !== false} onChange={(e) => updateDraft({ isPublic: e.target.checked })} />
@@ -253,28 +301,38 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
               <motion.div key="4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
                 <button type="button" onClick={() => setNewPredictionStep(3)} className="text-sm text-[var(--brand)]">← {t('common.back')}</button>
                 <p className="text-sm text-[var(--text-secondary)]">{t('predictions.step4Title')}</p>
-                <div className="p-3 rounded-xl bg-[var(--bg-secondary)] text-sm">
+                <div className="p-3 rounded-xl bg-[var(--bg-secondary)] text-sm space-y-1">
                   <p>
-                    {draft.ticker} · {draft.direction === 'UP' ? t('predictions.directionUp') : t('predictions.directionDown')}
-                    {' '}→ {draft.targetPrice} ج.م ·{' '}
-                    {t(
-                      draft.timeframe === 'WEEK'
-                        ? 'predictions.timeframeWeek'
-                        : draft.timeframe === 'MONTH'
-                          ? 'predictions.timeframeMonth'
-                          : draft.timeframe === 'THREE_MONTHS'
-                            ? 'predictions.timeframeThreeMonths'
-                            : draft.timeframe === 'SIX_MONTHS'
-                              ? 'predictions.timeframeSixMonths'
-                              : draft.timeframe === 'NINE_MONTHS'
-                                ? 'predictions.timeframeNineMonths'
-                                : 'predictions.timeframeYear'
-                    )}
+                    <span className="font-semibold">{draft.ticker}</span>
+                    {' · '}
+                    {draft.direction === 'UP' ? t('predictions.directionUp') : t('predictions.directionDown')}
+                    {' · '}
+                    {selectedTier ? (
+                      <span className={selectedTier.color}>{t(selectedTier.labelKey)} ({t(selectedTier.rangeKey)})</span>
+                    ) : '—'}
                   </p>
+                  <p className="text-[var(--text-muted)]">
+                    {t(
+                      draft.timeframe === 'WEEK' ? 'predictions.timeframeWeek'
+                      : draft.timeframe === 'MONTH' ? 'predictions.timeframeMonth'
+                      : draft.timeframe === 'THREE_MONTHS' ? 'predictions.timeframeThreeMonths'
+                      : draft.timeframe === 'SIX_MONTHS' ? 'predictions.timeframeSixMonths'
+                      : draft.timeframe === 'NINE_MONTHS' ? 'predictions.timeframeNineMonths'
+                      : 'predictions.timeframeYear'
+                    )}
+                    {' · '}
+                    {t('predictions.endsOn')}: {calcExpiresAt(draft.timeframe ?? 'WEEK')}
+                  </p>
+                  {pointPotential != null && (
+                    <p className="text-amber-400 font-medium flex items-center gap-1">
+                      <Zap className="w-3.5 h-3.5" />
+                      {t('predictions.pointPotential')}: {pointPotential} {t('predictions.pts')}
+                    </p>
+                  )}
                 </div>
                 {draft.reason && (
                   <div className="p-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-xs text-[var(--text-secondary)]">
-                    “{draft.reason}”
+                    "{draft.reason}"
                   </div>
                 )}
                 <p className="text-xs text-[var(--text-muted)]">{t('predictions.termsWarning')}</p>
@@ -288,7 +346,8 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
             )}
           </AnimatePresence>
         </div>
-        {/* Floating stock suggestions overlay (outside scroll flow) */}
+
+        {/* Floating stock suggestions overlay */}
         <AnimatePresence>
           {showSuggestions && dropdownRect && stockSuggestions.length > 0 && (
             <motion.div
@@ -297,11 +356,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
               exit={{ opacity: 0, y: -6 }}
               transition={{ type: 'spring', damping: 20 }}
               className="fixed z-[9999] max-h-64 overflow-y-auto bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-xl text-right"
-              style={{
-                top: dropdownRect.top,
-                left: dropdownRect.left,
-                width: dropdownRect.width,
-              }}
+              style={{ top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width }}
             >
               {stockSuggestions.map((eg) => (
                 <button

@@ -1,9 +1,16 @@
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, TrendingDown, Heart } from 'lucide-react';
+import { TrendingUp, TrendingDown, Heart, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
-import type { FeedPrediction } from '../../../store/usePredictionsStore';
+import type { FeedPrediction, MoveTier } from '../../../store/usePredictionsStore';
 import { Button } from '../../ui/Button';
+
+const TIER_STYLE: Record<MoveTier, { color: string; bg: string; labelKey: string; rangeKey: string }> = {
+  LIGHT:   { color: 'text-sky-400',   bg: 'bg-sky-500/10',   labelKey: 'predictions.tierLight',   rangeKey: 'predictions.tierLightRange' },
+  MEDIUM:  { color: 'text-green-400', bg: 'bg-green-500/10', labelKey: 'predictions.tierMedium',  rangeKey: 'predictions.tierMediumRange' },
+  STRONG:  { color: 'text-amber-400', bg: 'bg-amber-500/10', labelKey: 'predictions.tierStrong',  rangeKey: 'predictions.tierStrongRange' },
+  EXTREME: { color: 'text-red-400',   bg: 'bg-red-500/10',   labelKey: 'predictions.tierExtreme', rangeKey: 'predictions.tierExtremeRange' },
+};
 
 const RANK_COLORS: Record<string, string> = {
   BEGINNER: 'text-[var(--text-muted)]',
@@ -37,11 +44,7 @@ export const PredictionCard = memo(function PredictionCard({
   const [now] = React.useState(() => Date.now());
   const isUp = prediction.direction === 'UP';
   const priceAtCreation = prediction.priceAtCreation ?? 0;
-  const targetPrice = prediction.targetPrice ?? 0;
-  const changePct =
-    priceAtCreation > 0
-      ? (((targetPrice - priceAtCreation) / priceAtCreation) * 100).toFixed(1)
-      : '0';
+  const tier = prediction.moveTier ? TIER_STYLE[prediction.moveTier] : null;
   const daysLeft = Math.max(
     0,
     Math.ceil((new Date(prediction.expiresAt).getTime() - now) / (24 * 60 * 60 * 1000))
@@ -101,12 +104,12 @@ export const PredictionCard = memo(function PredictionCard({
         <span className={isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
           {t(isUp ? 'predictions.directionUp' : 'predictions.directionDown')}
         </span>
-        <span className="text-[var(--text-secondary)]">
-          {t('predictions.targetPrice')}: {targetPrice.toFixed(2)}
-        </span>
-        <span className="text-sm text-[var(--text-muted)]">
-          {t('predictions.changePct')}: {isUp ? '+' : ''}{changePct}%
-        </span>
+        {tier && (
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${tier.color} ${tier.bg}`}>
+            {t(tier.labelKey)}
+            <span className="opacity-70">{t(tier.rangeKey)}</span>
+          </span>
+        )}
       </div>
 
       <p className="text-xs text-[var(--text-muted)] mb-2">
@@ -137,6 +140,12 @@ export const PredictionCard = memo(function PredictionCard({
         {prediction.status === 'ACTIVE' && (
           <span className="text-xs text-[var(--text-muted)]">
             {t('predictions.daysLeft')} {daysLeft} {t('predictions.day')}
+          </span>
+        )}
+        {prediction.status === 'ACTIVE' && tier && (
+          <span className="text-xs text-amber-400 flex items-center gap-0.5">
+            <Zap className="w-3 h-3" aria-hidden />
+            {t('predictions.pointPotential')}
           </span>
         )}
         {prediction.status === 'HIT' && prediction.pointsEarned != null && (

@@ -122,8 +122,8 @@ export function usePredictionsApi() {
     async (body: {
       ticker: string;
       direction: 'UP' | 'DOWN';
-      targetPrice: number;
-      timeframe: 'WEEK' | 'MONTH' | 'THREE_MONTHS';
+      moveTier: 'LIGHT' | 'MEDIUM' | 'STRONG' | 'EXTREME';
+      timeframe: 'WEEK' | 'MONTH' | 'THREE_MONTHS' | 'SIX_MONTHS' | 'NINE_MONTHS' | 'YEAR';
       reason?: string | null;
       isPublic?: boolean;
     }) => {

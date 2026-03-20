@@ -4,13 +4,15 @@ export type PredictionStatus = 'ACTIVE' | 'HIT' | 'MISSED' | 'EXPIRED';
 export type PredictionDir = 'UP' | 'DOWN';
 export type PredictionTime = 'WEEK' | 'MONTH' | 'THREE_MONTHS' | 'SIX_MONTHS' | 'NINE_MONTHS' | 'YEAR';
 export type UserRank = 'BEGINNER' | 'ANALYST' | 'SENIOR' | 'EXPERT' | 'LEGEND';
+export type MoveTier = 'LIGHT' | 'MEDIUM' | 'STRONG' | 'EXTREME';
 
 export interface FeedPrediction {
   id: string;
   userId: string;
   ticker: string;
   direction: PredictionDir;
-  targetPrice: number;
+  moveTier: MoveTier;
+  targetPrice?: number;
   priceAtCreation: number;
   timeframe: PredictionTime;
   reason: string | null;
@@ -68,7 +70,7 @@ export type NewPredictionDraft = {
   ticker?: string;
   stockName?: string;
   direction?: PredictionDir;
-  targetPrice?: number;
+  moveTier?: MoveTier;
   timeframe?: PredictionTime;
   reason?: string;
   isPublic?: boolean;
@@ -115,7 +117,7 @@ const initialDraft: NewPredictionDraft = {
   ticker: undefined,
   stockName: undefined,
   direction: undefined,
-  targetPrice: undefined,
+  moveTier: undefined,
   timeframe: 'WEEK',
   reason: '',
   isPublic: true,

@@ -1,11 +1,11 @@
 import { prisma } from '../lib/prisma.ts';
-import type { PredictionDir, PredictionTime, PredictionStatus, UserRank } from '@prisma/client';
+import type { PredictionDir, PredictionTime, PredictionStatus, UserRank, MoveTier } from '@prisma/client';
 
 export type PredictionCreateInput = {
   userId: number;
   ticker: string;
   direction: PredictionDir;
-  targetPrice: number;
+  moveTier: MoveTier;
   priceAtCreation: number;
   timeframe: PredictionTime;
   reason: string | null;
@@ -20,7 +20,7 @@ export const PredictionRepository = {
         userId: data.userId,
         ticker: data.ticker.toUpperCase(),
         direction: data.direction,
-        targetPrice: data.targetPrice,
+        moveTier: data.moveTier,
         priceAtCreation: data.priceAtCreation,
         timeframe: data.timeframe,
         reason: data.reason ?? undefined,

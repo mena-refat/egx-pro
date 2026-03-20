@@ -88,6 +88,14 @@ enum PredictionStatus {
   EXPIRED
 }
 
+/// حجم التحرك المتوقع بدلاً من السعر المستهدف الدقيق
+enum MoveTier {
+  LIGHT    // خفيف  : تحرك 1-5%
+  MEDIUM   // متوسط : تحرك 5-15%
+  STRONG   // قوي   : تحرك 15-30%
+  EXTREME  // متطرف : تحرك >30%
+}
+
 enum UserRank {
   BEGINNER
   ANALYST
@@ -534,7 +542,8 @@ model Prediction {
   userId          Int
   ticker          String
   direction       PredictionDir
-  targetPrice     Float
+  moveTier        MoveTier         @default(MEDIUM)
+  targetPrice     Float?           // deprecated — kept for legacy data only
   priceAtCreation Float
   timeframe       PredictionTime
   reason          String?
@@ -544,7 +553,7 @@ model Prediction {
   resolvedAt      DateTime?
   resolvedPrice   Float?
   pointsEarned    Int?
-  accuracyPct     Float?
+  accuracyPct     Float?           // 0-100: tier accuracy score at resolution
   createdAt       DateTime         @default(now())
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes           PredictionLike[]

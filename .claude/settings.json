@@ -112,7 +112,8 @@
       "Bash(__NEW_LINE_d111b3eb9a38883c__ rm:*)",
       "Bash(rm -rf \"$BASE/goals\")",
       "Bash(rm -rf \"$BASE/market\")",
-      "Bash(rm -rf \"$BASE/predictions\")"
+      "Bash(rm -rf \"$BASE/predictions\")",
+      "Bash(python -c \":*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\menar\\Desktop\\src\\lib\\lib"
