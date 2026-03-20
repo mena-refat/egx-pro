@@ -7,7 +7,6 @@ import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import { useUnreadCount } from '../../hooks/useUnreadCount';
 import { BRAND } from '../../lib/theme';
-import { CustomTabBar } from '../../components/layout/CustomTabBar';
 
 const TAB_LABELS: Record<string, { ar: string; en: string }> = {
   index:     { ar: 'الرئيسية', en: 'Home' },
@@ -19,34 +18,39 @@ const TAB_LABELS: Record<string, { ar: string; en: string }> = {
 
 const TAB_HEIGHT = 60;
 
-// Tab icon: no dot/label/badge logic here.
-// CustomTabBar is the single place that controls layout to avoid icon shifting.
 function TabIcon({
   Icon,
   color,
-  focused: _focused,
+  focused,
 }: {
   Icon: React.ComponentType<{ size?: number; color?: string }>;
   color: string;
   focused: boolean;
 }) {
   return (
-    <View style={tabIconIconStyle}>
-      <Icon size={20} color={color} />
+    <View style={tabIconContainerStyle}>
+      <Icon size={22} color={color} />
+      {/* Always render the dot to avoid any layout shift when focused/unfocused */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: -1,
+          width: 4,
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: focused ? BRAND : 'transparent',
+        }}
+      />
     </View>
   );
 }
 
 const tabIconContainerStyle = {
-  alignItems: 'center' as const,
-  justifyContent: 'center' as const,
   width: 38,
-  height: 40,
-};
-
-const tabIconIconStyle = {
-  alignItems: 'center' as const,
-  justifyContent: 'center' as const,
+  height: 36,
+  alignItems: 'center',
+  justifyContent: 'center',
+  position: 'relative',
 };
 
 export default function TabsLayout() {
@@ -63,8 +67,9 @@ export default function TabsLayout() {
     backgroundColor:  colors.card,
     borderTopColor:   colors.border,
     borderTopWidth:   1,
-    height:           TAB_HEIGHT,
+    height:           TAB_HEIGHT + insets.bottom,
     paddingBottom:    insets.bottom,
+    paddingTop:       8,
     elevation:        0,
   };
 
@@ -75,12 +80,12 @@ export default function TabsLayout() {
     tabBarStyle,
     tabBarLabel:          TAB_LABELS[name]?.[lang] ?? name,
     tabBarHideOnKeyboard: true,
-    tabBarLabelStyle:     { fontSize: 10, fontWeight: '500' as const, marginTop: -2 },
+    tabBarLabelStyle:     { fontSize: 10, fontWeight: '500' as const },
     tabBarItemStyle:      { paddingVertical: 0 },
   });
 
   return (
-    <Tabs tabBar={(props) => <CustomTabBar {...props} />}>
+    <Tabs>
       <Tabs.Screen
         name="index"
         options={{

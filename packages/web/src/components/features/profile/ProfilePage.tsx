@@ -7,14 +7,11 @@ import {
   User as UserIcon,
   Trophy,
   Settings,
-  Target,
   BarChart2,
   CalendarCheck,
   Wallet,
   Star,
   Crosshair,
-  CreditCard,
-  Shield,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -357,32 +354,6 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-
-      {/* ── Quick actions ── */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { label: 'معلوماتي', desc: 'الاسم والصورة والبيانات',  icon: UserIcon,    color: 'text-[var(--brand)]',  bg: 'bg-[var(--brand)]/10',    path: '/settings/account' },
-          { label: 'الاشتراك', desc: 'ترقية الخطة والمزايا',    icon: CreditCard,  color: 'text-violet-400',      bg: 'bg-violet-400/10',         path: '/settings/perks' },
-          { label: 'ملف المستثمر', desc: 'أهدافك وشخصيتك الاستثمارية', icon: Target, color: 'text-emerald-400', bg: 'bg-emerald-400/10',       path: '/settings/investor' },
-          { label: 'الأمان',   desc: 'كلمة المرور والـ 2FA',    icon: Shield,      color: 'text-amber-400',       bg: 'bg-amber-400/10',          path: '/settings/security' },
-        ].map((action) => (
-          <button
-            key={action.path}
-            type="button"
-            onClick={() => navigate(action.path)}
-            className="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] transition-colors text-start group"
-          >
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${action.bg} transition-colors`}>
-              <action.icon className={`w-4.5 h-4.5 ${action.color}`} style={{ width: 18, height: 18 }} />
-            </div>
-            <div className="flex items-center justify-between gap-1">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{action.label}</p>
-              <ChevronEnd className="w-3.5 h-3.5 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-            </div>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">{action.desc}</p>
-          </button>
-        ))}
-      </div>
 
       <FollowersFollowingModal />
     </div>
