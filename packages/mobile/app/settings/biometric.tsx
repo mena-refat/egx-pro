@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { OTPInput } from '../../components/ui/OTPInput';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
+import { tw } from '../../lib/tw';
 
 const BIOMETRIC_CREDS_KEY = 'borsa_biometric_creds';
 const PIN_KEY = 'borsa_pin';
@@ -158,33 +159,37 @@ export default function BiometricPage() {
     <ScreenWrapper padded={false}>
       {/* Header */}
       <View
-        style={{ borderBottomColor: colors.border }}
-        className="flex-row items-center gap-3 px-4 pt-5 pb-4 border-b"
+        style={[
+          { borderBottomColor: colors.border },
+          tw('flex-row items-center gap-3 px-4 pt-5 pb-4 border-b'),
+        ]}
       >
         <Pressable
           onPress={() => pinStep !== 'idle' ? cancelPin() : router.back()}
-          style={{ backgroundColor: colors.hover, borderColor: colors.border }}
-          className="w-9 h-9 rounded-xl border items-center justify-center"
+          style={[
+            { backgroundColor: colors.hover, borderColor: colors.border },
+            tw('w-9 h-9 rounded-xl border items-center justify-center'),
+          ]}
         >
           {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textMuted} /> : <ArrowLeft size={16} color={colors.textMuted} />}
         </Pressable>
-        <View className="w-8 h-8 rounded-xl bg-brand/15 items-center justify-center">
+        <View style={tw('w-8 h-8 rounded-xl bg-brand/15 items-center justify-center')}>
           {pinStep !== 'idle' ? <Hash size={15} color="#8b5cf6" /> : <Fingerprint size={15} color="#8b5cf6" />}
         </View>
-        <Text style={{ color: colors.text }} className="text-base font-bold">
+        <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>
           {pinStep !== 'idle' ? 'إعداد PIN' : 'البصمة والـ PIN'}
         </Text>
       </View>
 
       {/* PIN entry screen */}
       {pinStep !== 'idle' ? (
-        <View className="flex-1 px-4 justify-center items-center gap-6">
-          <View className="w-20 h-20 rounded-full bg-brand/10 items-center justify-center">
+        <View style={tw('flex-1 px-4 justify-center items-center gap-6')}>
+          <View style={tw('w-20 h-20 rounded-full bg-brand/10 items-center justify-center')}>
             <Hash size={36} color="#8b5cf6" />
           </View>
-          <View className="items-center gap-1">
-            <Text style={{ color: colors.text }} className="text-xl font-bold">{pinStepTitle}</Text>
-            <Text style={{ color: colors.textMuted }} className="text-sm text-center">{pinStepSub}</Text>
+          <View style={tw('items-center gap-1')}>
+            <Text style={[{ color: colors.text }, tw('text-xl font-bold')]}>{pinStepTitle}</Text>
+            <Text style={[{ color: colors.textMuted }, tw('text-sm text-center')]}>{pinStepSub}</Text>
           </View>
 
           <OTPInput
@@ -194,33 +199,37 @@ export default function BiometricPage() {
           />
 
           {pinError && (
-            <Text className="text-sm text-red-400 bg-red-500/10 px-4 py-2.5 rounded-xl text-center">
+            <Text style={tw('text-sm text-red-400 bg-red-500/10 px-4 py-2.5 rounded-xl text-center')}>
               {pinError}
             </Text>
           )}
 
-          <Pressable onPress={cancelPin} className="py-3">
-            <Text style={{ color: colors.textMuted }} className="text-sm">إلغاء</Text>
+          <Pressable onPress={cancelPin} style={tw('py-3')}>
+            <Text style={[{ color: colors.textMuted }, tw('text-sm') ]}>إلغاء</Text>
           </Pressable>
         </View>
       ) : (
-        <View className="flex-1 px-4 pt-6 gap-5">
+        <View style={tw('flex-1 px-4 pt-6 gap-5')}>
           {/* ─── Biometric section ─── */}
           <View
-            style={{ backgroundColor: colors.card, borderColor: colors.border }}
-            className="border rounded-2xl p-5 items-center gap-4"
+            style={[
+              { backgroundColor: colors.card, borderColor: colors.border },
+              tw('border rounded-2xl p-5 items-center gap-4'),
+            ]}
           >
             <View
-              className="w-20 h-20 rounded-full items-center justify-center"
-              style={{ backgroundColor: biometricEnabled ? '#4ade8018' : colors.hover }}
+              style={[
+                tw('w-20 h-20 rounded-full items-center justify-center'),
+                { backgroundColor: biometricEnabled ? '#4ade8018' : colors.hover },
+              ]}
             >
               <Fingerprint size={36} color={biometricEnabled ? '#4ade80' : colors.textMuted} />
             </View>
-            <View className="items-center gap-1">
-              <Text style={{ color: colors.text }} className="text-base font-bold">
+            <View style={tw('items-center gap-1')}>
+              <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>
                 {biometricEnabled ? 'الدخول بالبصمة مفعّل' : 'الدخول بالبصمة معطّل'}
               </Text>
-              <Text style={{ color: colors.textSub }} className="text-sm text-center leading-5">
+              <Text style={[{ color: colors.textSub }, tw('text-sm text-center leading-5')]}>
                 {!supported
                   ? 'جهازك لا يدعم المصادقة البيومترية'
                   : !enrolled
@@ -253,20 +262,24 @@ export default function BiometricPage() {
 
           {/* ─── PIN section ─── */}
           <View
-            style={{ backgroundColor: colors.card, borderColor: colors.border }}
-            className="border rounded-2xl p-5 items-center gap-4"
+            style={[
+              { backgroundColor: colors.card, borderColor: colors.border },
+              tw('border rounded-2xl p-5 items-center gap-4'),
+            ]}
           >
             <View
-              className="w-20 h-20 rounded-full items-center justify-center"
-              style={{ backgroundColor: pinEnabled ? '#4ade8018' : colors.hover }}
+              style={[
+                tw('w-20 h-20 rounded-full items-center justify-center'),
+                { backgroundColor: pinEnabled ? '#4ade8018' : colors.hover },
+              ]}
             >
               <Hash size={36} color={pinEnabled ? '#4ade80' : colors.textMuted} />
             </View>
-            <View className="items-center gap-1">
-              <Text style={{ color: colors.text }} className="text-base font-bold">
+            <View style={tw('items-center gap-1')}>
+              <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>
                 {pinEnabled ? 'رمز PIN مفعّل' : 'رمز PIN معطّل'}
               </Text>
-              <Text style={{ color: colors.textSub }} className="text-sm text-center leading-5">
+              <Text style={[{ color: colors.textSub }, tw('text-sm text-center leading-5')]}>
                 {pinEnabled
                   ? 'يمكنك الدخول للتطبيق برمز 6 أرقام'
                   : 'فعّل للدخول برمز سري من 6 أرقام'}
@@ -292,10 +305,12 @@ export default function BiometricPage() {
           </View>
 
           <View
-            style={{ backgroundColor: colors.card, borderColor: colors.border }}
-            className="border rounded-2xl px-4 py-3"
+            style={[
+              { backgroundColor: colors.card, borderColor: colors.border },
+              tw('border rounded-2xl px-4 py-3'),
+            ]}
           >
-            <Text style={{ color: colors.textMuted }} className="text-xs leading-5 text-center">
+            <Text style={[{ color: colors.textMuted }, tw('text-xs leading-5 text-center')]}>
               بياناتك محفوظة في Keychain (iOS) أو Keystore (Android) — أمان تخزين على جهازك
             </Text>
           </View>

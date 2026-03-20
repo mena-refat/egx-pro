@@ -13,6 +13,7 @@ import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { Skeleton } from '../components/ui/Skeleton';
 import { useTheme } from '../hooks/useTheme';
 import apiClient from '../lib/api/client';
+import { BRAND, WEIGHT } from '../lib/theme';
 
 interface Notification {
   id: string;
@@ -135,54 +136,105 @@ export default function NotificationsPage() {
   }, [router]);
 
   const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
+  const isRTL = I18nManager.isRTL;
 
   return (
     <ScreenWrapper padded={false}>
       {/* Header */}
       <View
-        style={{ borderBottomColor: colors.border, borderBottomWidth: 0.5 }}
-        className="flex-row items-center justify-between px-4 pt-5 pb-4"
+        style={{
+          borderBottomColor: colors.border,
+          borderBottomWidth: 0.5,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 16,
+          paddingTop: 20,
+          paddingBottom: 16,
+        }}
       >
-        <View className="flex-row items-center gap-3">
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
           <Pressable
             onPress={() => router.back()}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={{ backgroundColor: colors.hover, borderColor: colors.border }}
-            className="w-9 h-9 rounded-xl border items-center justify-center"
+            style={{
+              backgroundColor: colors.hover,
+              borderColor: colors.border,
+              width: 36,
+              height: 36,
+              borderRadius: 12,
+              borderWidth: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
             <ArrowIcon size={16} color={colors.textSub} />
           </Pressable>
-          <View className="flex-row items-center gap-2">
-            <Text style={{ color: colors.text }} className="text-base font-bold">الإشعارات</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ color: colors.text, fontSize: 15, fontWeight: WEIGHT.bold }}>الإشعارات</Text>
             {unreadCount > 0 && (
-              <View className="bg-brand px-1.5 py-0.5 rounded-full min-w-[20px] items-center">
-                <Text className="text-[10px] font-bold text-white">{unreadCount > 99 ? '99+' : unreadCount}</Text>
+              <View
+                style={{
+                  backgroundColor: BRAND,
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  borderRadius: 999,
+                  minWidth: 20,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 10, fontWeight: WEIGHT.bold, color: '#fff' }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
               </View>
             )}
           </View>
         </View>
 
         {/* Actions */}
-        <View className="flex-row items-center gap-2">
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {unreadCount > 0 && (
             <Pressable
               onPress={markAllRead}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={{ backgroundColor: colors.hover, borderColor: colors.border }}
-              className="flex-row items-center gap-1.5 px-2.5 py-1.5 rounded-xl border"
+              style={{
+                backgroundColor: colors.hover,
+                borderColor: colors.border,
+                borderWidth: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 12,
+              }}
             >
               {markingAll
                 ? <ActivityIndicator size="small" color="#8b5cf6" />
                 : <CheckCheck size={13} color="#8b5cf6" />}
-              <Text className="text-xs text-brand font-medium">قراءة الكل</Text>
+              <Text style={{ fontSize: 11, color: BRAND, fontWeight: WEIGHT.medium }}>قراءة الكل</Text>
             </Pressable>
           )}
           {items.length > 0 && (
             <Pressable
               onPress={clearAll}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={{ backgroundColor: colors.hover, borderColor: colors.border }}
-              className="w-8 h-8 rounded-xl border items-center justify-center"
+              style={{
+                backgroundColor: colors.hover,
+                borderColor: colors.border,
+                borderWidth: 1,
+                width: 32,
+                height: 32,
+                borderRadius: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
               <Trash2 size={13} color={colors.textSub} />
             </Pressable>
@@ -190,8 +242,16 @@ export default function NotificationsPage() {
           <Pressable
             onPress={() => router.navigate('/settings/notifications')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={{ backgroundColor: colors.hover, borderColor: colors.border }}
-            className="w-8 h-8 rounded-xl border items-center justify-center"
+            style={{
+              backgroundColor: colors.hover,
+              borderColor: colors.border,
+              borderWidth: 1,
+              width: 32,
+              height: 32,
+              borderRadius: 12,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
             <Settings size={13} color={colors.textSub} />
           </Pressable>
@@ -202,15 +262,18 @@ export default function NotificationsPage() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" colors={['#8b5cf6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND} colors={[BRAND]} />
         }
       >
         {loading ? (
-          <View className="px-4 pt-4 gap-3">
+          <View style={{ paddingHorizontal: 16, paddingTop: 16, gap: 12 }}>
             {[1, 2, 3, 4, 5].map((i) => (
-              <View key={i} className="flex-row items-start gap-3">
+              <View
+                key={i}
+                style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}
+              >
                 <Skeleton.Circle size={40} />
-                <View className="flex-1 gap-2">
+                <View style={{ flex: 1, gap: 8 }}>
                   <Skeleton.Line height={14} width="75%" />
                   <Skeleton.Line height={12} />
                 </View>
@@ -218,74 +281,137 @@ export default function NotificationsPage() {
             ))}
           </View>
         ) : items.length === 0 ? (
-          <View className="flex-1 items-center justify-center py-24 gap-3">
+          <View
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: 96,
+              gap: 12,
+            }}
+          >
             <View
-              style={{ backgroundColor: colors.hover, borderColor: colors.border }}
-              className="w-16 h-16 rounded-full border items-center justify-center"
+              style={{
+                backgroundColor: colors.hover,
+                borderColor: colors.border,
+                width: 64,
+                height: 64,
+                borderRadius: 999,
+                borderWidth: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
               <Bell size={28} color={colors.textMuted} />
             </View>
-            <Text style={{ color: colors.textMuted }} className="text-sm text-center">
+            <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center' }}>
               لا توجد إشعارات
             </Text>
           </View>
         ) : (
           <View
-            style={{ backgroundColor: colors.card, borderColor: colors.border }}
-            className="mx-4 mt-4 border rounded-2xl overflow-hidden"
-          >
+            style={{
+              marginHorizontal: 16,
+              marginTop: 16,
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              borderWidth: 1,
+              borderRadius: 24,
+              overflow: 'hidden',
+            }}
+            >
             {items.map((notif, i) => {
               const hasRoute = !!notif.route;
-              const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
+              const ChevronIcon = isRTL ? ChevronRight : ChevronLeft;
               return (
                 <Pressable
                   key={notif.id}
                   onPress={() => markOneRead(notif)}
                   style={({ pressed }) => [
                     {
+                      position: 'relative',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
                       backgroundColor: pressed
                         ? colors.hover
                         : notif.isRead
-                        ? 'transparent'
-                        : `${colors.border}55`,
+                          ? 'transparent'
+                          : `${colors.border}55`,
                       borderBottomColor: colors.border2,
                     },
-                    i < items.length - 1 && { borderBottomWidth: 1 },
+                    i < items.length - 1 ? { borderBottomWidth: 1 } : null,
                   ]}
-                  className="flex-row items-center gap-3 px-4 py-3.5"
                 >
-                  {/* Unread indicator bar */}
                   {!notif.isRead && (
-                    <View className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-brand" />
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: 12,
+                        bottom: 12,
+                        width: 2,
+                        borderRadius: 999,
+                        backgroundColor: BRAND,
+                        ...(isRTL ? { right: 0 } : { left: 0 }),
+                      }}
+                    />
                   )}
 
                   {/* Icon */}
                   <View
-                    className="w-9 h-9 rounded-full items-center justify-center shrink-0"
-                    style={{ backgroundColor: iconBg(notif.type) }}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 999,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      backgroundColor: iconBg(notif.type),
+                    }}
                   >
                     <NotifIcon type={notif.type} />
                   </View>
 
                   {/* Content */}
-                  <View className="flex-1 gap-0.5">
-                    <View className="flex-row items-center gap-2">
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <Text
-                        style={{ color: colors.text }}
-                        className={`text-sm flex-1 ${notif.isRead ? '' : 'font-semibold'}`}
+                        style={{
+                          color: colors.text,
+                          fontSize: 13,
+                          flex: 1,
+                          fontWeight: notif.isRead ? WEIGHT.normal : WEIGHT.semibold,
+                        }}
                         numberOfLines={1}
                       >
                         {notif.title}
                       </Text>
-                      <Text style={{ color: colors.textMuted }} className="text-[10px] shrink-0">
+                      <Text
+                        style={{
+                          color: colors.textMuted,
+                          fontSize: 10,
+                          flexShrink: 0,
+                        }}
+                      >
                         {timeAgo(notif.createdAt)}
                       </Text>
                     </View>
-                    <Text style={{ color: colors.textSub }} className="text-xs leading-5" numberOfLines={2}>
+                    <Text
+                      style={{
+                        color: colors.textSub,
+                        fontSize: 11,
+                        lineHeight: 20,
+                      }}
+                      numberOfLines={2}
+                    >
                       {notif.body}
                     </Text>
                     {hasRoute && (
-                      <Text className="text-[10px] text-brand mt-0.5">اضغط للانتقال ←</Text>
+                      <Text style={{ fontSize: 10, color: BRAND, marginTop: 2 }}>
+                        اضغط للانتقال ←
+                      </Text>
                     )}
                   </View>
 
@@ -293,7 +419,15 @@ export default function NotificationsPage() {
                   {hasRoute ? (
                     <ChevronIcon size={14} color={colors.textMuted} />
                   ) : !notif.isRead ? (
-                    <View className="w-2 h-2 rounded-full bg-brand shrink-0" />
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 999,
+                        backgroundColor: BRAND,
+                        flexShrink: 0,
+                      }}
+                    />
                   ) : null}
                 </Pressable>
               );

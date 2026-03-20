@@ -16,6 +16,7 @@ import { AnalysisLoader } from '../../components/shared/AnalysisLoader';
 import { EGX_STOCKS, getStockInfo } from '../../lib/egxStocks';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
+import { tw } from '../../lib/tw';
 
 // ─────────────────────── types ───────────────────────
 interface OutlookData {
@@ -346,7 +347,12 @@ function TickerInput({ value, onChange, placeholder, disabled }: {
 
   return (
     <View>
-      <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="flex-row items-center border rounded-xl px-3 gap-2">
+      <View
+        style={[
+          { backgroundColor: colors.card, borderColor: colors.border },
+          tw('flex-row items-center border rounded-xl px-3 gap-2'),
+        ]}
+      >
         <Search size={15} color={colors.textMuted} />
         <TextInput
           value={value}
@@ -354,23 +360,33 @@ function TickerInput({ value, onChange, placeholder, disabled }: {
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
           placeholderTextColor={colors.textMuted}
-          style={{ color: colors.text }}
-          className="flex-1 py-3 text-sm"
+          style={[{ color: colors.text }, tw('flex-1 py-3 text-sm')]}
           autoCapitalize="characters"
           editable={!disabled}
         />
       </View>
       {open && suggestions.length > 0 && (
-        <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-xl mt-1 overflow-hidden">
+        <View
+          style={[
+            { backgroundColor: colors.card, borderColor: colors.border },
+            tw('border rounded-xl mt-1 overflow-hidden'),
+          ]}
+        >
           {suggestions.map((s) => (
             <Pressable
               key={s.ticker}
               onPress={() => { onChange(s.ticker); setOpen(false); }}
-              style={({ pressed }) => ({ borderBottomColor: colors.border, borderBottomWidth: 1, backgroundColor: pressed ? colors.hover : 'transparent' })}
-              className="flex-row items-center justify-between px-4 py-3"
+              style={({ pressed }) => ([
+                {
+                  borderBottomColor: colors.border,
+                  borderBottomWidth: 1,
+                  backgroundColor: pressed ? colors.hover : 'transparent',
+                },
+                tw('flex-row items-center justify-between px-4 py-3'),
+              ])}
             >
-              <Text style={{ color: colors.text }} className="text-sm font-bold">{s.ticker}</Text>
-              <Text style={{ color: colors.textSub }} className="text-xs">{s.nameAr}</Text>
+              <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>{s.ticker}</Text>
+              <Text style={[{ color: colors.textSub }, tw('text-xs')]}>{s.nameAr}</Text>
             </Pressable>
           ))}
         </View>
@@ -431,24 +447,50 @@ export default function AnalyzePage() {
   return (
     <ScreenWrapper padded={false}>
       {/* Header */}
-      <View style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }} className="flex-row items-center gap-3 px-4 pt-5 pb-4">
-        <Pressable onPress={() => router.back()} style={{ backgroundColor: colors.hover, borderColor: colors.border }} className="w-9 h-9 rounded-xl border items-center justify-center">
+      <View
+        style={[
+          { borderBottomColor: colors.border, borderBottomWidth: 1 },
+          tw('flex-row items-center gap-3 px-4 pt-5 pb-4'),
+        ]}
+      >
+        <Pressable
+          onPress={() => router.back()}
+          style={[
+            { backgroundColor: colors.hover, borderColor: colors.border },
+            tw('w-9 h-9 rounded-xl border items-center justify-center'),
+          ]}
+        >
           {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
-        <View className="w-8 h-8 rounded-xl bg-violet-500/15 items-center justify-center">
+        <View style={tw('w-8 h-8 rounded-xl bg-violet-500/15 items-center justify-center')}>
           <Brain size={16} color="#8b5cf6" />
         </View>
-        <Text style={{ color: colors.text }} className="text-base font-bold">تحليل سهم</Text>
+        <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>تحليل سهم</Text>
       </View>
 
-      <ScrollView contentContainerClassName="px-4 pt-4 pb-10 gap-4" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={tw('px-4 pt-4 pb-10 gap-4')}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
 
         {/* Input */}
         <TickerInput value={ticker} onChange={setTicker} placeholder="ابحث عن رمز السهم (مثال: COMI)" disabled={loading} />
 
         {/* Button */}
-        <Pressable onPress={run} disabled={loading || !ticker.trim()} className="bg-brand rounded-xl py-3.5 items-center" style={{ opacity: loading || !ticker.trim() ? 0.5 : 1 }}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-sm font-bold text-white">تحليل بالذكاء الاصطناعي</Text>}
+        <Pressable
+          onPress={run}
+          disabled={loading || !ticker.trim()}
+          style={[
+            tw('bg-brand rounded-xl py-3.5 items-center'),
+            { opacity: loading || !ticker.trim() ? 0.5 : 1 },
+          ]}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={tw('text-sm font-bold text-white')}>تحليل بالذكاء الاصطناعي</Text>
+          )}
         </Pressable>
 
         {/* Loader */}
@@ -456,8 +498,8 @@ export default function AnalyzePage() {
 
         {/* Error */}
         {error && (
-          <View className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-            <Text className="text-sm text-red-400 text-center">{error}</Text>
+          <View style={tw('bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3')}>
+            <Text style={tw('text-sm text-red-400 text-center')}>{error}</Text>
           </View>
         )}
 

@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Calculator, Wallet, TrendingUp, Crown, Trophy } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
+import { tw } from '../../lib/tw';
 
 const RETURN_OPTIONS = [
   { id: 'conservative' as const, label: 'محافظ',  rate: 15 },
@@ -41,11 +42,13 @@ function NumInput({
 }: { label: string; value: string; onChange: (v: string) => void; hint?: string }) {
   const { colors } = useTheme();
   return (
-    <View className="gap-1.5">
-      <Text style={{ color: colors.textSub }} className="text-sm">{label}</Text>
+    <View style={tw('gap-1.5')}>
+      <Text style={[{ color: colors.textSub }, tw('text-sm')]}>{label}</Text>
       <View
-        style={{ backgroundColor: colors.card, borderColor: colors.border }}
-        className="flex-row items-center border rounded-xl px-3 gap-2"
+        style={[
+          { backgroundColor: colors.card, borderColor: colors.border },
+          tw('flex-row items-center border rounded-xl px-3 gap-2'),
+        ]}
       >
         <TextInput
           value={value}
@@ -53,13 +56,12 @@ function NumInput({
           keyboardType="numeric"
           placeholder="0"
           placeholderTextColor={colors.textMuted}
-          style={{ color: colors.text }}
-          className="flex-1 py-3 text-sm"
+          style={[{ color: colors.text }, tw('flex-1 py-3 text-sm')]}
           textAlign="right"
         />
-        <Text style={{ color: colors.textMuted }} className="text-xs">ج.م</Text>
+        <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>ج.م</Text>
       </View>
-      {hint ? <Text style={{ color: colors.textMuted }} className="text-xs">{hint}</Text> : null}
+      {hint ? <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>{hint}</Text> : null}
     </View>
   );
 }
@@ -91,65 +93,77 @@ export default function CalculatorPage() {
     <ScreenWrapper padded={false}>
       {/* Header */}
       <View
-        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
-        className="flex-row items-center gap-3 px-4 pt-5 pb-4"
+        style={[
+          { borderBottomColor: colors.border, borderBottomWidth: 1 },
+          tw('flex-row items-center gap-3 px-4 pt-5 pb-4'),
+        ]}
       >
         <Pressable
           onPress={() => router.back()}
-          style={{ backgroundColor: colors.hover, borderColor: colors.border }}
-          className="w-9 h-9 rounded-xl border items-center justify-center"
+          style={[
+            { backgroundColor: colors.hover, borderColor: colors.border },
+            tw('w-9 h-9 rounded-xl border items-center justify-center'),
+          ]}
         >
           {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
-        <View className="w-8 h-8 rounded-xl bg-emerald-500/15 items-center justify-center">
+        <View style={tw('w-8 h-8 rounded-xl bg-emerald-500/15 items-center justify-center')}>
           <Calculator size={16} color="#10b981" />
         </View>
-        <Text style={{ color: colors.text }} className="text-base font-bold">حاسبة الاستثمار</Text>
+        <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>حاسبة الاستثمار</Text>
       </View>
 
       <ScrollView
-        contentContainerClassName="px-4 pt-4 pb-10 gap-4"
+        contentContainerStyle={tw('px-4 pt-4 pb-10 gap-4')}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {/* Intro */}
         <View
-          style={{ backgroundColor: colors.card, borderColor: colors.border }}
-          className="border rounded-2xl px-4 py-3 flex-row items-center gap-3"
+          style={[
+            { backgroundColor: colors.card, borderColor: colors.border },
+            tw('border rounded-2xl px-4 py-3 flex-row items-center gap-3'),
+          ]}
         >
           <TrendingUp size={18} color="#10b981" />
-          <Text style={{ color: colors.textSub }} className="flex-1 text-xs leading-5">
+          <Text style={[{ color: colors.textSub }, tw('flex-1 text-xs leading-5')]}>
             احسب كيف ينمو استثمارك في البورصة المصرية مع الوقت — أدخل بياناتك واستكشف السيناريوهات المختلفة.
           </Text>
         </View>
 
         {/* Inputs */}
         <View
-          style={{ backgroundColor: colors.card, borderColor: colors.border }}
-          className="border rounded-2xl p-4 gap-4"
+          style={[
+            { backgroundColor: colors.card, borderColor: colors.border },
+            tw('border rounded-2xl p-4 gap-4'),
+          ]}
         >
           <NumInput label="الاستثمار الشهري" value={monthly} onChange={setMonthly} hint="المبلغ الذي تستثمره كل شهر" />
           <NumInput label="رأس المال الابتدائي" value={initial} onChange={setInitial} hint="المبلغ الذي تبدأ به (اختياري)" />
 
           {/* Years */}
-          <View className="gap-1.5">
-            <Text style={{ color: colors.textSub }} className="text-sm">مدة الاستثمار</Text>
-            <View className="flex-row gap-2 flex-wrap">
+          <View style={tw('gap-1.5')}>
+            <Text style={[{ color: colors.textSub }, tw('text-sm')]}>مدة الاستثمار</Text>
+            <View style={tw('flex-row gap-2 flex-wrap')}>
               {YEAR_PRESETS.map((y) => (
                 <Pressable
                   key={y}
                   onPress={() => setYears(y)}
-                  className="flex-1 py-2.5 rounded-xl items-center"
-                  style={{
-                    backgroundColor: years === y ? '#10b981' : colors.hover,
-                    borderWidth: 1,
-                    borderColor: years === y ? '#10b981' : colors.border,
-                    minWidth: 60,
-                  }}
+                  style={[
+                    tw('flex-1 py-2.5 rounded-xl items-center'),
+                    {
+                      backgroundColor: years === y ? '#10b981' : colors.hover,
+                      borderWidth: 1,
+                      borderColor: years === y ? '#10b981' : colors.border,
+                      minWidth: 60,
+                    },
+                  ]}
                 >
                   <Text
-                    className="text-sm font-bold"
-                    style={{ color: years === y ? '#fff' : colors.textSub }}
+                    style={[
+                      { color: years === y ? '#fff' : colors.textSub },
+                      tw('text-sm font-bold'),
+                    ]}
                   >
                     {y} س
                   </Text>

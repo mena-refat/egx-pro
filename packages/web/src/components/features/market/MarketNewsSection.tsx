@@ -93,28 +93,28 @@ function NewsModal({ item, isRtl, onClose, t }: ModalProps) {
         </div>
 
         <div className="px-5 pt-4 pb-8 sm:pt-6">
-          {/* Top row: meta + close */}
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand-text)]">
-                {item.source}
-              </span>
+          {/* Top row: sentiment + time + close */}
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              {isBullish && (
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-green-600 bg-green-100 dark:bg-green-950/40 px-2.5 py-1 rounded-full">
+                  <TrendingUp className="w-3.5 h-3.5" /> إيجابي
+                </span>
+              )}
+              {isBearish && (
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-100 dark:bg-red-950/40 px-2.5 py-1 rounded-full">
+                  <TrendingDown className="w-3.5 h-3.5" /> سلبي
+                </span>
+              )}
+              {!isBullish && !isBearish && (
+                <span className="text-[11px] font-semibold text-[var(--text-muted)] bg-[var(--bg-secondary)] px-2.5 py-1 rounded-full">
+                  عام
+                </span>
+              )}
               {item.publishedAt && (
                 <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
                   <Clock className="w-3 h-3" />
                   {relativeTime(item.publishedAt, t)}
-                </span>
-              )}
-              {isBullish && (
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-green-600 bg-green-100 dark:bg-green-950/40 px-2 py-0.5 rounded-full">
-                  <TrendingUp className="w-3 h-3" />
-                  إيجابي
-                </span>
-              )}
-              {isBearish && (
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-100 dark:bg-red-950/40 px-2 py-0.5 rounded-full">
-                  <TrendingDown className="w-3 h-3" />
-                  سلبي
                 </span>
               )}
             </div>
@@ -127,17 +127,14 @@ function NewsModal({ item, isRtl, onClose, t }: ModalProps) {
           </div>
 
           {/* Title */}
-          <h2 className="text-base font-bold text-[var(--text-primary)] leading-snug mb-4">
+          <h2 className="text-sm font-semibold text-[var(--text-secondary)] leading-snug mb-3 line-clamp-2">
             {item.title}
           </h2>
 
           {/* Summary */}
           <div className="rounded-2xl bg-[var(--bg-secondary)] p-4 mb-4">
-            <p className="text-[11px] font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-wide">
-              ملخص الخبر
-            </p>
             {item.summary ? (
-              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+              <p className="text-base text-[var(--text-primary)] leading-7">
                 {item.summary}
               </p>
             ) : (
@@ -260,16 +257,25 @@ export function MarketNewsSection({ news, loading, locale, filter, onFilterChang
 
             {/* Content */}
             <div className="flex-1 min-w-0 px-4 py-4">
-              {/* Top row: source + time + sentiment icon */}
+                  {/* Top row: sentiment badge + time */}
               <div className={`flex items-center gap-2 mb-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                <span className="text-[11px] font-semibold text-[var(--brand-text)] bg-[var(--brand-subtle)] px-2 py-0.5 rounded-full truncate max-w-[140px]">
-                  {item.source}
-                </span>
                 {(() => {
                   const sv = item.sentiment?.toLowerCase();
-                  if (sv === 'positive' || sv === 'bullish') return <TrendingUp className="w-3 h-3 text-green-500 shrink-0" />;
-                  if (sv === 'negative' || sv === 'bearish') return <TrendingDown className="w-3 h-3 text-red-500 shrink-0" />;
-                  return null;
+                  if (sv === 'positive' || sv === 'bullish') return (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-600 bg-green-100 dark:bg-green-950/40 px-2 py-0.5 rounded-full shrink-0">
+                      <TrendingUp className="w-3 h-3" /> إيجابي
+                    </span>
+                  );
+                  if (sv === 'negative' || sv === 'bearish') return (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-100 dark:bg-red-950/40 px-2 py-0.5 rounded-full shrink-0">
+                      <TrendingDown className="w-3 h-3" /> سلبي
+                    </span>
+                  );
+                  return (
+                    <span className="text-[11px] font-semibold text-[var(--text-muted)] bg-[var(--bg-secondary)] px-2 py-0.5 rounded-full shrink-0">
+                      عام
+                    </span>
+                  );
                 })()}
                 <span className="text-[11px] text-[var(--text-muted)] ml-auto shrink-0">
                   {item.publishedAt ? relativeTime(item.publishedAt, t) : ''}
@@ -277,29 +283,15 @@ export function MarketNewsSection({ news, loading, locale, filter, onFilterChang
               </div>
 
               {/* Title */}
-              <h3 className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-2 group-hover:text-[var(--brand)] transition-colors mb-1.5">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-1 group-hover:text-[var(--brand)] transition-colors mb-1.5">
                 {item.title}
               </h3>
 
               {/* Summary preview */}
               {item.summary && (
-                <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2">
+                <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed">
                   {item.summary}
                 </p>
-              )}
-
-              {/* Bottom: tickers */}
-              {item.tickers && item.tickers.length > 0 && (
-                <div className={`flex items-center gap-2 flex-wrap ${isRtl ? 'flex-row-reverse' : ''}`}>
-                  {item.tickers.slice(0, 4).map(ticker => (
-                    <span
-                      key={ticker}
-                      className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border)]"
-                    >
-                      {ticker}
-                    </span>
-                  ))}
-                </div>
               )}
             </div>
           </button>

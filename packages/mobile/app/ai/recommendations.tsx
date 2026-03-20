@@ -9,6 +9,7 @@ import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
 import { AnalysisLoader } from '../../components/shared/AnalysisLoader';
+import { tw } from '../../lib/tw';
 
 interface RecommendedStock {
   ticker?: string;
@@ -41,52 +42,56 @@ function RecommendationCard({ stock, rank }: { stock: RecommendedStock; rank: nu
 
   return (
     <View
-      style={{ backgroundColor: colors.card, borderColor: colors.border }}
-      className="border rounded-2xl p-4 gap-3"
+      style={[
+        { backgroundColor: colors.card, borderColor: colors.border },
+        tw('border rounded-2xl p-4 gap-3'),
+      ]}
     >
-      <View className="flex-row items-center gap-3">
-        <View className="w-8 h-8 rounded-xl bg-brand/15 items-center justify-center">
-          <Text className="text-sm font-bold text-brand">#{rank}</Text>
+      <View style={tw('flex-row items-center gap-3')}>
+        <View style={tw('w-8 h-8 rounded-xl bg-brand/15 items-center justify-center')}>
+          <Text style={tw('text-sm font-bold text-brand')}>#{rank}</Text>
         </View>
-        <View className="flex-1">
-          <Text style={{ color: colors.text }} className="text-base font-bold">{stock.ticker ?? ''}</Text>
-          {stock.name ? <Text style={{ color: colors.textSub }} className="text-xs">{stock.name}</Text> : null}
+        <View style={tw('flex-1')}>
+          <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>{stock.ticker ?? ''}</Text>
+          {stock.name ? <Text style={[{ color: colors.textSub }, tw('text-xs')]}>{stock.name}</Text> : null}
         </View>
         {typeof stock.score === 'number' && (
           <View
-            className="w-10 h-10 rounded-full items-center justify-center border-2"
-            style={{ borderColor: scoreColor(score) }}
+            style={[
+              { borderColor: scoreColor(score) },
+              tw('w-10 h-10 rounded-full items-center justify-center border-2'),
+            ]}
           >
-            <Text className="text-sm font-bold tabular-nums" style={{ color: scoreColor(score) }}>{score}</Text>
+            <Text style={[{ color: scoreColor(score) }, tw('text-sm font-bold tabular-nums')]}>{score}</Text>
           </View>
         )}
         {verdict ? (
-          <View className="px-2 py-1 rounded-lg" style={{ backgroundColor: `${verdictColor}18` }}>
-            <Text className="text-xs font-bold" style={{ color: verdictColor }}>{verdict}</Text>
+          <View style={[tw('px-2 py-1 rounded-lg'), { backgroundColor: `${verdictColor}18` }]}>
+            <Text style={[{ color: verdictColor }, tw('text-xs font-bold')]}>{verdict}</Text>
           </View>
         ) : null}
       </View>
 
       {stock.reason ? (
-        <Text style={{ color: colors.textSub }} className="text-sm leading-5">{stock.reason}</Text>
+        <Text style={[{ color: colors.textSub }, tw('text-sm leading-5')]}>{stock.reason}</Text>
       ) : null}
 
-      <View className="gap-1.5">
+      <View style={tw('gap-1.5')}>
         {stock.strengths?.slice(0, 2).map((s, i) => {
           const t = typeof s === 'string' ? s : String(s ?? ''); if (!t) return null;
           return (
-            <View key={i} className="flex-row gap-2 items-start">
+            <View key={i} style={tw('flex-row gap-2 items-start')}>
               <CheckCircle size={12} color="#4ade80" style={{ marginTop: 2 }} />
-              <Text style={{ color: colors.text }} className="flex-1 text-xs leading-4">{t}</Text>
+              <Text style={[{ color: colors.text }, tw('flex-1 text-xs leading-4')]}>{t}</Text>
             </View>
           );
         })}
         {stock.risks?.slice(0, 1).map((r, i) => {
           const t = typeof r === 'string' ? r : String(r ?? ''); if (!t) return null;
           return (
-            <View key={i} className="flex-row gap-2 items-start">
+            <View key={i} style={tw('flex-row gap-2 items-start')}>
               <AlertTriangle size={12} color="#fbbf24" style={{ marginTop: 2 }} />
-              <Text style={{ color: colors.text }} className="flex-1 text-xs leading-4">{t}</Text>
+              <Text style={[{ color: colors.text }, tw('flex-1 text-xs leading-4')]}>{t}</Text>
             </View>
           );
         })}
@@ -130,32 +135,38 @@ export default function RecommendationsPage() {
   return (
     <ScreenWrapper padded={false}>
       <View
-        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
-        className="flex-row items-center gap-3 px-4 pt-5 pb-4"
+        style={[
+          { borderBottomColor: colors.border, borderBottomWidth: 1 },
+          tw('flex-row items-center gap-3 px-4 pt-5 pb-4'),
+        ]}
       >
         <Pressable
           onPress={() => router.back()}
-          style={{ backgroundColor: colors.hover, borderColor: colors.border }}
-          className="w-9 h-9 rounded-xl border items-center justify-center"
+          style={[
+            { backgroundColor: colors.hover, borderColor: colors.border },
+            tw('w-9 h-9 rounded-xl border items-center justify-center'),
+          ]}
         >
           {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
-        <View className="w-8 h-8 rounded-xl bg-amber-500/15 items-center justify-center">
+        <View style={tw('w-8 h-8 rounded-xl bg-amber-500/15 items-center justify-center')}>
           <Sparkles size={16} color="#f59e0b" />
         </View>
-        <Text style={{ color: colors.text }} className="text-base font-bold">توصيات شخصية</Text>
+        <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>توصيات شخصية</Text>
       </View>
 
-      <ScrollView contentContainerClassName="px-4 pt-4 pb-10 gap-4" showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={tw('px-4 pt-4 pb-10 gap-4')} showsVerticalScrollIndicator={false}>
         <View
-          style={{ backgroundColor: colors.card, borderColor: colors.border }}
-          className="border rounded-2xl px-4 py-4 gap-2"
+          style={[
+            { backgroundColor: colors.card, borderColor: colors.border },
+            tw('border rounded-2xl px-4 py-4 gap-2'),
+          ]}
         >
-          <View className="flex-row items-center gap-2">
+          <View style={tw('flex-row items-center gap-2')}>
             <TrendingUp size={16} color="#f59e0b" />
-            <Text style={{ color: colors.text }} className="text-sm font-bold">توصيات مخصصة لك</Text>
+            <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>توصيات مخصصة لك</Text>
           </View>
-          <Text style={{ color: colors.textSub }} className="text-xs leading-5">
+          <Text style={[{ color: colors.textSub }, tw('text-xs leading-5')]}>
             بناءً على محفظتك وقائمة المتابعة وأهدافك الاستثمارية، سيقترح الذكاء الاصطناعي أفضل الأسهم المناسبة لك الآن.
           </Text>
         </View>
@@ -163,44 +174,62 @@ export default function RecommendationsPage() {
         <Pressable
           onPress={run}
           disabled={loading}
-          className="bg-amber-500 rounded-xl py-3.5 items-center"
-          style={{ opacity: loading ? 0.5 : 1 }}
+          style={[
+            tw('bg-amber-500 rounded-xl py-3.5 items-center'),
+            { opacity: loading ? 0.5 : 1 },
+          ]}
         >
           {loading
             ? <ActivityIndicator color="#fff" />
-            : <Text className="text-sm font-bold text-white">احصل على التوصيات</Text>}
+            : <Text style={tw('text-sm font-bold text-white')}>احصل على التوصيات</Text>}
         </Pressable>
 
         {loading && <AnalysisLoader variant="recommendations" />}
 
         {error && (
-          <View className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-            <Text className="text-sm text-red-400 text-center">{error}</Text>
+          <View style={tw('bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3')}>
+            <Text style={tw('text-sm text-red-400 text-center')}>{error}</Text>
           </View>
         )}
 
         {result && !loading && (
-          <View className="gap-4">
+          <View style={tw('gap-4')}>
             {result.summary ? (
-              <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl px-4 py-3">
-                <Text style={{ color: colors.text }} className="text-sm leading-6">{result.summary}</Text>
+              <View
+                style={[
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  tw('border rounded-2xl px-4 py-3'),
+                ]}
+              >
+                <Text style={[{ color: colors.text }, tw('text-sm leading-6')]}>{result.summary}</Text>
               </View>
             ) : null}
 
             {recs.length > 0 ? (
-              <View className="gap-3">
+              <View style={tw('gap-3')}>
                 {recs.map((stock, i) => (
                   <RecommendationCard key={stock.ticker ?? i} stock={stock} rank={i + 1} />
                 ))}
               </View>
             ) : (
-              <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl px-4 py-6 items-center">
-                <Text style={{ color: colors.textSub }} className="text-sm text-center">لا توجد توصيات متاحة حالياً</Text>
+              <View
+                style={[
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  tw('border rounded-2xl px-4 py-6 items-center'),
+                ]}
+              >
+                <Text style={[{ color: colors.textSub }, tw('text-sm text-center')]}>
+                  لا توجد توصيات متاحة حالياً
+                </Text>
               </View>
             )}
 
             {result.disclaimer ? (
-              <Text style={{ color: colors.textMuted }} className="text-xs text-center leading-5 px-2">⚖️ {result.disclaimer}</Text>
+              <Text
+                style={[{ color: colors.textMuted }, tw('text-xs text-center leading-5 px-2')]}
+              >
+                ⚖️ {result.disclaimer}
+              </Text>
             ) : null}
           </View>
         )}

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, Pressable, ScrollView, Linking,
+  View, Text, Pressable, ScrollView, Modal,
   RefreshControl, I18nManager,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, ArrowRight, Newspaper, ExternalLink } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Newspaper, X, TrendingUp, TrendingDown, Clock } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useTheme } from '../../hooks/useTheme';
@@ -16,6 +16,153 @@ interface NewsItem {
   url: string;
   source: string;
   publishedAt: string;
+  summary?: string;
+  sentiment?: string | null;
+  tickers?: string[];
+}
+
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60_000);
+  const h = Math.floor(diff / 3_600_000);
+  const d = Math.floor(diff / 86_400_000);
+  if (m < 60) return `منذ ${Math.max(1, m)} د`;
+  if (h < 24) return `منذ ${h} س`;
+  return `منذ ${d} ي`;
+}
+
+function SentimentBadge({ sentiment, colors }: { sentiment?: string | null; colors: ReturnType<typeof useTheme>['colors'] }) {
+  const s = sentiment?.toLowerCase();
+  if (s === 'positive' || s === 'bullish') {
+    return (
+      <View style={{ backgroundColor: 'rgba(34,197,94,0.12)', borderRadius: 20 }} className="flex-row items-center gap-1 px-2 py-0.5">
+        <TrendingUp size={11} color="#16a34a" />
+        <Text style={{ color: '#16a34a' }} className="text-[11px] font-semibold">إيجابي</Text>
+      </View>
+    );
+  }
+  if (s === 'negative' || s === 'bearish') {
+    return (
+      <View style={{ backgroundColor: 'rgba(239,68,68,0.12)', borderRadius: 20 }} className="flex-row items-center gap-1 px-2 py-0.5">
+        <TrendingDown size={11} color="#dc2626" />
+        <Text style={{ color: '#dc2626' }} className="text-[11px] font-semibold">سلبي</Text>
+      </View>
+    );
+  }
+  return (
+    <View style={{ backgroundColor: colors.hover, borderRadius: 20 }} className="px-2 py-0.5">
+      <Text style={{ color: colors.textMuted }} className="text-[11px] font-semibold">عام</Text>
+    </View>
+  );
+}
+
+function NewsDetailModal({
+  item,
+  colors,
+  onClose,
+}: {
+  item: NewsItem;
+  colors: ReturnType<typeof useTheme>['colors'];
+  onClose: () => void;
+}) {
+  const s = item.sentiment?.toLowerCase();
+  const accentColor =
+    s === 'positive' || s === 'bullish' ? '#16a34a'
+    : s === 'negative' || s === 'bearish' ? '#dc2626'
+    : colors.brand ?? '#3b82f6';
+
+  return (
+    <Modal
+      visible
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <Pressable
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
+        onPress={onClose}
+      >
+        <Pressable
+          onPress={e => e.stopPropagation()}
+          style={{ backgroundColor: colors.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '88%' }}
+        >
+          {/* Drag handle */}
+          <View className="items-center pt-3 pb-1">
+            <View style={{ width: 40, height: 4, borderRadius: 4, backgroundColor: colors.border }} />
+          </View>
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 40 }}
+          >
+            {/* Top: sentiment + time + close */}
+            <View className="flex-row items-center justify-between gap-3 mb-4">
+              <View className="flex-row flex-wrap items-center gap-2 flex-1">
+                <SentimentBadge sentiment={item.sentiment} colors={colors} />
+                {item.publishedAt && (
+                  <View className="flex-row items-center gap-1">
+                    <Clock size={11} color={colors.textMuted} />
+                    <Text style={{ color: colors.textMuted }} className="text-[11px]">
+                      {relativeTime(item.publishedAt)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Pressable
+                onPress={onClose}
+                style={{ backgroundColor: colors.hover, borderRadius: 20, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <X size={16} color={colors.textMuted} />
+              </Pressable>
+            </View>
+
+            {/* Title */}
+            <Text
+              style={{ color: colors.textMuted ?? colors.text }}
+              className="text-sm font-semibold leading-5 mb-3"
+              numberOfLines={2}
+            >
+              {item.title}
+            </Text>
+
+            {/* Summary block */}
+            <View style={{ backgroundColor: colors.hover, borderRadius: 16, padding: 16, marginBottom: 16 }}>
+              {item.summary ? (
+                <Text style={{ color: colors.text }} className="text-base leading-7">
+                  {item.summary}
+                </Text>
+              ) : (
+                <Text style={{ color: colors.textMuted }} className="text-sm text-center py-2">
+                  لا يوجد ملخص متاح لهذا الخبر حالياً
+                </Text>
+              )}
+            </View>
+
+            {/* Affected tickers */}
+            {item.tickers && item.tickers.length > 0 && (
+              <View>
+                <Text style={{ color: colors.textMuted }} className="text-[11px] font-semibold uppercase tracking-wide mb-2">
+                  الأسهم المتأثرة
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {item.tickers.map(ticker => (
+                    <View
+                      key={ticker}
+                      style={{ backgroundColor: colors.hover, borderColor: colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}
+                    >
+                      <Text style={{ color: colors.text, fontFamily: 'monospace' }} className="text-xs font-bold">
+                        {ticker}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
 }
 
 export default function NewsPage() {
@@ -26,6 +173,7 @@ export default function NewsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<NewsItem | null>(null);
 
   const stockInfo = ticker ? getStockInfo(ticker) : null;
   const isStockNews = !!ticker;
@@ -66,6 +214,13 @@ export default function NewsPage() {
   };
 
   const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
+
+  function accentColor(sentiment?: string | null) {
+    const s = sentiment?.toLowerCase();
+    if (s === 'positive' || s === 'bullish') return '#16a34a';
+    if (s === 'negative' || s === 'bearish') return '#dc2626';
+    return colors.border;
+  }
 
   return (
     <ScreenWrapper padded={false}>
@@ -138,31 +293,52 @@ export default function NewsPage() {
           news.map((item, i) => (
             <Pressable
               key={i}
-              onPress={() => Linking.openURL(item.url).catch(() => null)}
+              onPress={() => setSelected(item)}
               style={({ pressed }) => [
                 { backgroundColor: pressed ? colors.hover : colors.card, borderColor: colors.border },
               ]}
-              className="border rounded-2xl p-4 gap-2"
+              className="border rounded-2xl overflow-hidden"
             >
-              <View className="flex-row items-center justify-between">
-                <Text style={{ color: colors.textMuted }} className="text-xs font-medium">
-                  {item.source}
+              {/* Sentiment accent strip */}
+              <View style={{ height: 3, backgroundColor: accentColor(item.sentiment) }} />
+
+              <View className="p-4 gap-2">
+                {/* Sentiment + time */}
+                <View className="flex-row items-center justify-between gap-2">
+                  <SentimentBadge sentiment={item.sentiment} colors={colors} />
+                  <View className="flex-row items-center gap-1">
+                    <Clock size={10} color={colors.textMuted} />
+                    <Text style={{ color: colors.textMuted }} className="text-xs">
+                      {relativeTime(item.publishedAt)}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Title */}
+                <Text style={{ color: colors.text }} className="text-sm font-semibold leading-5" numberOfLines={1}>
+                  {item.title}
                 </Text>
-                <Text style={{ color: colors.textMuted }} className="text-xs">
-                  {new Date(item.publishedAt).toLocaleDateString('ar-EG')}
-                </Text>
-              </View>
-              <Text style={{ color: colors.text }} className="text-sm font-semibold leading-5">
-                {item.title}
-              </Text>
-              <View className="flex-row items-center gap-1">
-                <Text className="text-xs text-blue-400 font-medium">اقرأ المزيد</Text>
-                <ExternalLink size={11} color="#60a5fa" />
+
+                {/* Summary preview */}
+                {item.summary && (
+                  <Text style={{ color: colors.textMuted }} className="text-xs leading-5" numberOfLines={3}>
+                    {item.summary}
+                  </Text>
+                )}
               </View>
             </Pressable>
           ))
         )}
       </ScrollView>
+
+      {/* News detail bottom sheet */}
+      {selected && (
+        <NewsDetailModal
+          item={selected}
+          colors={colors}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </ScreenWrapper>
   );
 }
