@@ -84,6 +84,24 @@ export function requireSuperAdmin(req: AdminRequest, res: Response, next: NextFu
   next();
 }
 
+async function geolocateIp(ip: string): Promise<string | null> {
+  const LOCAL = /^(::1|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip);
+  if (LOCAL) return null;
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 2000);
+    const res = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=regionName,city`, {
+      signal: ctrl.signal,
+    });
+    clearTimeout(tid);
+    if (!res.ok) return null;
+    const geo = await res.json() as { regionName?: string; city?: string };
+    return geo.regionName ?? geo.city ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function adminAudit(
   adminId: number,
   action: string,
@@ -96,6 +114,7 @@ export async function adminAudit(
     const ipHash = ip !== 'unknown'
       ? (await import('crypto')).createHash('sha256').update(ip, 'utf8').digest('hex')
       : null;
+    const city = ip !== 'unknown' ? await geolocateIp(ip) : null;
     await prisma.adminAuditLog.create({
       data: {
         adminId,
@@ -104,6 +123,7 @@ export async function adminAudit(
         details: details ?? null,
         ipHash,
         userAgent: (req?.headers['user-agent'] ?? '').slice(0, 500),
+        city,
       },
     });
   } catch {

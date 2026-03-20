@@ -505,6 +505,7 @@ export const en = {
     action: 'Action',
     target: 'What Happened',
     ip: 'IP / Device',
+    deviceLocation: 'Device / Location',
     noEvents: 'No audit events found',
     filterByAdmin: 'Search by admin email...',
     allActions: 'All Actions',

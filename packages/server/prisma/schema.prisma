@@ -387,6 +387,7 @@ model AdminAuditLog {
   details   String?
   ipHash    String?  // hashed IP only — never store plain IP
   userAgent String?
+  city      String?  // governorate/city from IP geolocation
   createdAt DateTime @default(now())
   admin     Admin    @relation(fields: [adminId], references: [id])
 

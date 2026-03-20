@@ -28,6 +28,8 @@ const AUDIT_ACTIONS: { value: string; label: string }[] = [
   { value: 'NOTIFICATIONS_BROADCAST',   label: 'Broadcast Sent' },
   { value: 'BLOCKLIST_ADDED',           label: 'Blocklist Added' },
   { value: 'BLOCKLIST_REMOVED',         label: 'Blocklist Removed' },
+  { value: 'USER_BANNED',               label: 'User Banned' },
+  { value: 'USER_UNBANNED',             label: 'User Unbanned' },
 ];
 
 function actionBadge(action: string) {
@@ -190,6 +192,12 @@ function formatTarget(
 
     case 'BLOCKLIST_REMOVED':
       return { primary: details ?? 'Identifier unblocked', secondary: 'Registration allowed again' };
+
+    case 'USER_BANNED':
+      return { primary: 'User account banned', secondary: details ?? 'Access revoked immediately' };
+
+    case 'USER_UNBANNED':
+      return { primary: 'User account unbanned', secondary: details ?? 'Access restored' };
 
     default:
       return { primary: details ?? target ?? '—' };
@@ -357,7 +365,7 @@ export default function AuditLogPage() {
           t('audit.admin'),
           t('audit.action'),
           t('audit.target'),
-          t('audit.ip'),
+          t('audit.deviceLocation'),
         ]}
         loading={loading}
         rowCount={logs.length}
@@ -413,16 +421,21 @@ export default function AuditLogPage() {
                 )}
               </td>
 
-              {/* IP + Device */}
+              {/* Device + Location */}
               <td className="px-4 py-3">
-                <p className="font-mono text-[11px] text-slate-400 tabular-nums">
-                  {l.ipAddress ?? '—'}
-                </p>
                 {l.userAgent && (
-                  <p className="text-[11px] text-slate-600 flex items-center gap-1 mt-0.5">
+                  <p className="text-[11px] text-slate-300 flex items-center gap-1">
                     <Monitor size={10} className="shrink-0" />
                     {parseUA(l.userAgent)}
                   </p>
+                )}
+                {l.city && (
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    📍 {l.city}
+                  </p>
+                )}
+                {!l.userAgent && !l.city && (
+                  <span className="text-slate-700">—</span>
                 )}
               </td>
             </tr>

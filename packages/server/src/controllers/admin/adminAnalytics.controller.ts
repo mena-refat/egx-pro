@@ -421,7 +421,7 @@ export const AdminAnalyticsController = {
     const escape = (s: string | null | undefined) =>
       `"${(s ?? '').replace(/"/g, '""')}"`;
 
-    const header = 'Date,Admin Email,Admin Name,Action,Target,Details,IP';
+    const header = 'Date,Admin Email,Admin Name,Action,Target,Details,IP Hash,City';
     const rows = logs.map((l) =>
       [
         escape(new Date(l.createdAt).toISOString()),
@@ -431,6 +431,7 @@ export const AdminAnalyticsController = {
         escape(l.target),
         escape(l.details),
         escape(l.ipHash),
+        escape((l as { city?: string | null }).city),
       ].join(',')
     );
 

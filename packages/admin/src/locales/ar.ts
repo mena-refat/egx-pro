@@ -505,6 +505,7 @@ export const ar = {
     action: 'الإجراء',
     target: 'ما الذي حدث',
     ip: 'IP / الجهاز',
+    deviceLocation: 'الجهاز / الموقع',
     noEvents: 'لا توجد أحداث',
     filterByAdmin: 'بحث بالبريد الإلكتروني...',
     allActions: 'كل الإجراءات',
