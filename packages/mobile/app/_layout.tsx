@@ -11,6 +11,7 @@ import i18n from '../i18n';
 import { useAuthStore } from '../store/authStore';
 import { useTheme } from '../hooks/useTheme';
 import { ErrorBoundary } from '../components/layout/ErrorBoundary';
+import { ToastProvider } from '../components/ui/Toast';
 import { I18nManager } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
@@ -66,6 +67,7 @@ export default function RootLayout() {
         style={{ flex: 1, backgroundColor: colors.bg }}
       >
         <SafeAreaProvider>
+          <ToastProvider>
           <StatusBar style={isDark ? 'light' : 'dark'} />
           <Stack
             screenOptions={{
@@ -158,6 +160,7 @@ export default function RootLayout() {
               options={{ animation: 'slide_from_right' }}
             />
           </Stack>
+          </ToastProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </I18nextProvider>

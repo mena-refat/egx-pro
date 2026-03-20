@@ -209,10 +209,10 @@ export default function NotificationsPage() {
           <View className="px-4 pt-4 gap-3">
             {[1, 2, 3, 4, 5].map((i) => (
               <View key={i} className="flex-row items-start gap-3">
-                <Skeleton height={40} width={40} className="rounded-full" />
+                <Skeleton.Circle size={40} />
                 <View className="flex-1 gap-2">
-                  <Skeleton height={14} className="w-3/4" />
-                  <Skeleton height={12} className="w-full" />
+                  <Skeleton.Line height={14} width="75%" />
+                  <Skeleton.Line height={12} />
                 </View>
               </View>
             ))}

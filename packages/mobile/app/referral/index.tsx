@@ -112,10 +112,10 @@ export default function ReferralPage() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 36 }}>
         {loading ? (
-          <View className="gap-4">
-            <Skeleton height={120} className="rounded-2xl" />
-            <Skeleton height={80} className="rounded-2xl" />
-            <Skeleton height={160} className="rounded-2xl" />
+          <View style={{ gap: 16 }}>
+            <Skeleton.Box height={120} radius={24} />
+            <Skeleton.Box height={80} radius={24} />
+            <Skeleton.Box height={160} radius={24} />
           </View>
         ) : !data ? (
           <View className="items-center py-24 gap-3">

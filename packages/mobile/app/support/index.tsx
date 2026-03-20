@@ -363,9 +363,9 @@ export default function SupportPage() {
           <View className="gap-3">
             {[1, 2, 3].map((i) => (
               <View key={i} style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-4 gap-2">
-                <Skeleton height={14} className="w-3/4" />
-                <Skeleton height={11} className="w-full" />
-                <Skeleton height={11} className="w-1/2" />
+                <Skeleton.Line height={14} width="75%" />
+                <Skeleton.Line height={11} />
+                <Skeleton.Line height={11} width="50%" />
               </View>
             ))}
           </View>

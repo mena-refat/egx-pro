@@ -141,12 +141,12 @@ export default function AchievementsPage() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 36 }}>
         {loading ? (
-          <View className="gap-4">
+          <View style={{ gap: 16 }}>
             {[1, 2, 3, 4].map((i) => (
-              <View key={i} className="gap-2">
-                <Skeleton height={16} className="w-1/3" />
-                <View className="gap-2">
-                  {[1, 2, 3, 4].map((j) => <Skeleton key={j} height={64} className="rounded-xl" />)}
+              <View key={i} style={{ gap: 8 }}>
+                <Skeleton.Line height={16} width="33%" />
+                <View style={{ gap: 8 }}>
+                  {[1, 2, 3, 4].map((j) => <Skeleton.Box key={j} height={64} radius={12} />)}
                 </View>
               </View>
             ))}

@@ -1,22 +1,200 @@
 {
   "auth": {
     "login": "Login",
-    "register": "Register",
+    "register": "Create Account",
     "logout": "Logout",
     "email": "Email",
-    "phone": "Phone",
+    "phone": "Phone Number",
     "password": "Password",
     "fullName": "Full Name",
-    "biometric": "Biometric Login"
+    "username": "Username",
+    "biometric": "Biometric Login",
+    "pin": "PIN Code",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "alreadyAccount": "Already have an account?",
+    "signIn": "Sign In",
+    "signUp": "Sign Up"
   },
-  "dashboard": { "portfolio": "My Portfolio", "watchlist": "Watchlist" },
-  "market": { "open": "Market Open", "closed": "Market Closed" },
-  "ai": { "analyze": "Analyze", "loading": "Analyzing..." },
+  "tabs": {
+    "home": "Home",
+    "market": "Market",
+    "portfolio": "Portfolio",
+    "ai": "Analytics",
+    "profile": "Profile"
+  },
+  "dashboard": {
+    "portfolio": "My Portfolio",
+    "watchlist": "Watchlist",
+    "totalValue": "Total Value",
+    "todayChange": "Today's Change",
+    "topMovers": "Top Movers",
+    "latestNews": "Latest News",
+    "seeAll": "See All"
+  },
+  "market": {
+    "open": "Market Open",
+    "closed": "Market Closed",
+    "search": "Search stocks",
+    "indices": "Indices",
+    "stocks": "Stocks",
+    "allSectors": "All Sectors",
+    "volume": "Volume",
+    "change": "Change",
+    "price": "Price"
+  },
+  "portfolio": {
+    "title": "Portfolio",
+    "addHolding": "Add Stock",
+    "noHoldings": "No stocks in portfolio",
+    "totalValue": "Total Value",
+    "totalReturn": "Total Return",
+    "gainLoss": "Gain / Loss",
+    "shares": "Shares",
+    "avgBuy": "Avg. Buy",
+    "currentPrice": "Current Price"
+  },
+  "ai": {
+    "title": "Analytics",
+    "analyze": "Analyze Stock",
+    "compare": "Compare Two Stocks",
+    "recommendations": "Personal Recommendations",
+    "calculator": "Investment Calculator",
+    "loading": "Analyzing...",
+    "analyzing": "AI is analyzing the stock...",
+    "quota": "Analyses used this month",
+    "disclaimer": "Analyses are for educational purposes only and are not investment advice."
+  },
+  "predictions": {
+    "title": "Predictions",
+    "myPredictions": "My Predictions",
+    "feed": "Market",
+    "add": "New Prediction",
+    "ticker": "Stock Symbol",
+    "direction": "Direction",
+    "up": "Up",
+    "down": "Down",
+    "timeframe": "Timeframe",
+    "targetPrice": "Target Price",
+    "reason": "Reason",
+    "publish": "Publish Prediction",
+    "status": {
+      "pending": "Pending",
+      "correct": "Correct",
+      "wrong": "Wrong",
+      "expired": "Expired"
+    }
+  },
+  "goals": {
+    "title": "Financial Goals",
+    "add": "Add Goal",
+    "noGoals": "No goals yet",
+    "active": "In Progress",
+    "completed": "Completed",
+    "progress": "Progress",
+    "target": "Target",
+    "current": "Current",
+    "deadline": "Deadline",
+    "addAmount": "Add Amount",
+    "complete": "Complete",
+    "delete": "Delete"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "markAllRead": "Mark All Read",
+    "clear": "Clear All",
+    "settings": "Notification Settings",
+    "signals": "Market Signals",
+    "portfolio": "Portfolio",
+    "news": "News",
+    "achievements": "Achievements",
+    "goalReminders": "Financial Goals"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Personal Information",
+    "subscription": "Subscription & Plan",
+    "referral": "Referral Program",
+    "achievements": "My Achievements",
+    "security": "Security & Privacy",
+    "biometric": "Biometrics & PIN",
+    "notificationsSettings": "Notification Settings",
+    "support": "Support",
+    "about": "About",
+    "theme": "Theme",
+    "dark": "Dark",
+    "light": "Light",
+    "system": "System",
+    "appearance": "Appearance"
+  },
+  "support": {
+    "title": "Support",
+    "newTicket": "New Ticket",
+    "subject": "Subject",
+    "message": "Message",
+    "send": "Send",
+    "noTickets": "No support tickets",
+    "responseTime": "Average response time: 24 hours",
+    "status": {
+      "open": "Open",
+      "inProgress": "In Progress",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    }
+  },
+  "subscription": {
+    "title": "Subscription & Plan",
+    "current": "Your current plan",
+    "upgrade": "Upgrade",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "free": "Free",
+    "freeMonths": "2 months free",
+    "promoCode": "Promo Code",
+    "applyPromo": "Apply",
+    "removePromo": "Remove"
+  },
+  "achievements": {
+    "title": "Achievements",
+    "total": "Total Achievements",
+    "unlocked": "Unlocked",
+    "locked": "Locked",
+    "allDone": "You've completed all achievements!"
+  },
+  "referral": {
+    "title": "Referral Program",
+    "invite": "Invite Friends",
+    "code": "Referral Code",
+    "copy": "Copy",
+    "share": "Share",
+    "copied": "Copied!",
+    "progress": "Progress Toward Reward",
+    "totalReferrals": "Total Referrals",
+    "activeReferrals": "Active Referrals",
+    "freeMonths": "Free Months"
+  },
   "common": {
     "error": "An error occurred",
     "retry": "Try again",
     "save": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "close": "Close",
+    "loading": "Loading...",
+    "noData": "No data available",
+    "refresh": "Refresh",
+    "seeAll": "See All",
+    "add": "Add",
+    "search": "Search",
+    "filter": "Filter",
+    "share": "Share",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "success": "Success",
+    "egp": "EGP"
   }
 }
-

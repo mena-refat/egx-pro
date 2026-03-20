@@ -109,7 +109,7 @@ export default function NewsPage() {
         {loading ? (
           <>
             {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} height={96} />
+              <Skeleton.Box key={i} height={96} />
             ))}
           </>
         ) : error ? (
