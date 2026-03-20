@@ -288,11 +288,15 @@ export async function getMe(req: Request, res: Response): Promise<void> {
         riskTolerance: true, investmentHorizon: true, monthlyBudget: true,
         interestedSectors: true, notifySignals: true, notifyPortfolio: true,
         notifyNews: true, notifyAchievements: true, notifyGoals: true,
-        loginStreak: true, userTitle: true, isDeleted: true,
+        loginStreak: true, userTitle: true, isDeleted: true, isSuspended: true,
       },
     });
     if (!user || (user as { isDeleted?: boolean }).isDeleted) {
       sendError(res, 'UNAUTHORIZED', 401);
+      return;
+    }
+    if ((user as { isSuspended?: boolean }).isSuspended) {
+      sendError(res, 'ACCOUNT_SUSPENDED', 403, 'هذا الحساب محظور');
       return;
     }
     sendSuccess(res, { user });

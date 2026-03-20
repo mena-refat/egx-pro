@@ -70,6 +70,11 @@ export async function login(
     data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date(), lastLoginIp: ctx.ip || null },
   });
 
+  if ((user as { isSuspended?: boolean }).isSuspended) {
+    await auditLog({ userId: user.id, action: 'LOGIN_FAILED', req: ctx.auditReq ?? undefined, result: 'failure', details: 'account_banned' });
+    throw new AppError('ACCOUNT_SUSPENDED', 403, 'هذا الحساب محظور');
+  }
+
   let restored = false;
   if (user.isDeleted) {
     if (user.deletionScheduledFor && user.deletionScheduledFor < now) {

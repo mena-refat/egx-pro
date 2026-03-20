@@ -46,6 +46,7 @@ const AIAnalyzePage          = lazy(() => import('./pages/AIAnalyzePage'));
 const AIComparePage          = lazy(() => import('./pages/AIComparePage'));
 const AIRecommendationsPage  = lazy(() => import('./pages/AIRecommendationsPage'));
 const SupportPage            = lazy(() => import('./pages/SupportPage'));
+const BannedPage             = lazy(() => import('./pages/BannedPage'));
 
 interface AppRoutesProps {
   currentWealth: number;
@@ -85,6 +86,7 @@ export function AppRoutes({ currentWealth }: AppRoutesProps) {
       <Route path="/ai/compare" element={<ErrorBoundary><Suspense fallback={<AIPageSkeleton />}><AIComparePage /></Suspense></ErrorBoundary>} />
       <Route path="/ai/recommendations" element={<ErrorBoundary><Suspense fallback={<AIPageSkeleton />}><AIRecommendationsPage /></Suspense></ErrorBoundary>} />
       <Route path="/support" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><SupportPage /></Suspense></ErrorBoundary>} />
+      <Route path="/banned" element={<Suspense fallback={<PageLoader />}><BannedPage /></Suspense>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

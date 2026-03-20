@@ -5,7 +5,7 @@ import { adminApi } from '../lib/adminApi';
 import { Badge } from '../components/Badge';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Modal } from '../components/Modal';
-import { ArrowLeft, ShieldOff, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ShieldOff, ShieldCheck, Ban, ShieldAlert } from 'lucide-react';
 
 const PLANS = ['free', 'pro', 'yearly', 'ultra', 'ultra_yearly'];
 
@@ -16,6 +16,7 @@ export default function UserDetailPage() {
   const [user, setUser]               = useState<any>(null);
   const [loading, setLoading]         = useState(true);
   const [confirmToggle, setConfirmToggle] = useState(false);
+  const [confirmBan, setConfirmBan]     = useState(false);
   const [planModal, setPlanModal]     = useState(false);
   const [newPlan, setNewPlan]         = useState('');
   const [planDate, setPlanDate]       = useState('');
@@ -39,6 +40,15 @@ export default function UserDetailPage() {
     try {
       await adminApi.patch(`/users/${id}/toggle-delete`);
       setConfirmToggle(false);
+      await load();
+    } finally { setSaving(false); }
+  };
+
+  const handleToggleBan = async () => {
+    setSaving(true);
+    try {
+      await adminApi.patch(`/users/${id}/toggle-ban`);
+      setConfirmBan(false);
       await load();
     } finally { setSaving(false); }
   };
@@ -87,6 +97,17 @@ export default function UserDetailPage() {
             {t('userDetail.changePlan')}
           </button>
           <button
+            onClick={() => setConfirmBan(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+              user.isSuspended
+                ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                : 'bg-orange-500/15 text-orange-400 hover:bg-orange-500/25'
+            }`}
+          >
+            {user.isSuspended ? <ShieldAlert size={12} /> : <Ban size={12} />}
+            {user.isSuspended ? t('userDetail.unban') : t('userDetail.ban')}
+          </button>
+          <button
             onClick={() => setConfirmToggle(true)}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
               user.isDeleted
@@ -104,7 +125,7 @@ export default function UserDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: t('userDetail.plan'),        value: <Badge label={user.plan} /> },
-          { label: t('userDetail.status'),      value: <span className={user.isDeleted ? 'text-red-400 text-sm' : 'text-emerald-400 text-sm'}>{user.isDeleted ? t('userDetail.deactivated') : t('userDetail.active')}</span> },
+          { label: t('userDetail.status'),      value: <span className={user.isSuspended ? 'text-orange-400 text-sm' : user.isDeleted ? 'text-red-400 text-sm' : 'text-emerald-400 text-sm'}>{user.isSuspended ? t('userDetail.banned') : user.isDeleted ? t('userDetail.deactivated') : t('userDetail.active')}</span> },
           { label: t('userDetail.aiUses'),      value: <span className="text-white text-sm">{user.aiAnalysisUsedThisMonth}</span> },
           { label: t('userDetail.verified'),    value: <span className={user.isEmailVerified ? 'text-emerald-400 text-sm' : 'text-slate-500 text-sm'}>{user.isEmailVerified ? t('common.yes') : t('common.no')}</span> },
           { label: t('userDetail.joined'),      value: <span className="text-slate-300 text-sm">{new Date(user.createdAt).toLocaleDateString()}</span> },
@@ -120,6 +141,17 @@ export default function UserDetailPage() {
       </div>
 
       {/* Modals */}
+      <ConfirmDialog
+        open={confirmBan}
+        title={user.isSuspended ? t('userDetail.unbanTitle') : t('userDetail.banTitle')}
+        message={user.isSuspended ? t('userDetail.unbanMsg') : t('userDetail.banMsg')}
+        confirmLabel={user.isSuspended ? t('userDetail.unban') : t('userDetail.ban')}
+        danger={!user.isSuspended}
+        loading={saving}
+        onConfirm={handleToggleBan}
+        onCancel={() => setConfirmBan(false)}
+      />
+
       <ConfirmDialog
         open={confirmToggle}
         title={user.isDeleted ? t('userDetail.reactivateTitle') : t('userDetail.deactivateTitle')}

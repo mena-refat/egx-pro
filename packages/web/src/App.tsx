@@ -108,6 +108,14 @@ export default function App() {
           if (userPayload && typeof accessToken === 'string') {
             useAuthStore.getState().setAuth(userPayload as import('./types').User, accessToken);
           }
+        } else if (res.status === 403) {
+          const data = await res.json().catch(() => ({}));
+          const error = (data as { error?: string })?.error ?? (data as { data?: { error?: string } })?.data?.error;
+          if (error === 'ACCOUNT_SUSPENDED') {
+            useAuthStore.getState().logout();
+            window.location.replace('/banned');
+            return;
+          }
         } else if (res.status === 401) {
           useAuthStore.getState().logout();
         }

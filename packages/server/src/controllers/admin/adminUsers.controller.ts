@@ -289,6 +289,41 @@ export const AdminUsersController = {
     sendSuccess(res, { total, byPlan, newToday, newThisMonth });
   },
 
+  async toggleBan(req: AdminRequest, res: Response): Promise<void> {
+    const userId = parseInt(req.params.id, 10);
+    if (isNaN(userId)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, isSuspended: true },
+    });
+    if (!user) { sendError(res, 'NOT_FOUND', 404); return; }
+
+    const newState = !user.isSuspended;
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        isSuspended: newState,
+        suspendedAt: newState ? new Date() : null,
+        ...(newState === false && { warningCount: 0 }),
+      },
+    });
+
+    await deleteCache(`auth:user:${userId}`).catch(() => null);
+
+    if (req.admin) {
+      await adminAudit(
+        req.admin.id,
+        newState ? 'USER_BANNED' : 'USER_UNBANNED',
+        String(userId),
+        undefined,
+        req
+      );
+    }
+
+    sendSuccess(res, { isSuspended: newState });
+  },
+
   async unsuspendUser(req: AdminRequest, res: Response): Promise<void> {
     if (req.admin?.role !== 'SUPER_ADMIN') {
       sendError(res, 'ADMIN_FORBIDDEN', 403);

@@ -118,6 +118,10 @@ export async function getMe(refreshTokenCookie: string | undefined): Promise<{ u
   const now = new Date();
   if (!rt || rt.isRevoked || rt.expiresAt < now) throw new AppError('invalid_or_expired_token', 401, 'Invalid or expired refresh token');
 
+  if ((rt.user as { isSuspended?: boolean }).isSuspended) {
+    throw new AppError('ACCOUNT_SUSPENDED', 403, 'هذا الحساب محظور');
+  }
+
   const loginId = rt.user.email ?? rt.user.phone ?? '';
   const accessToken = generateAccessToken({ id: rt.user.id, email: loginId });
   const userPayload = toUserPayload(rt.user as Parameters<typeof toUserPayload>[0]);

@@ -146,6 +146,10 @@ router.patch(
   }
 );
 
+router.patch('/users/:id/toggle-ban', adminAuthenticate, requirePermission('users.edit'), (req, res, next) => {
+  void AdminUsersController.toggleBan(req as any, res).catch(next);
+});
+
 router.patch('/users/:id/unsuspend', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
   void AdminUsersController.unsuspendUser(req as any, res).catch(next);
 });
