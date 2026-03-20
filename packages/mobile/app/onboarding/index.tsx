@@ -1,118 +1,120 @@
 import { useState, useRef } from 'react';
-import { View, Text, ScrollView, Pressable, Dimensions, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Dimensions,
+  Alert,
+  StatusBar,
+  I18nManager,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { Wallet, AlertTriangle, Target, ChevronLeft } from 'lucide-react-native';
-import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
+import { Wallet, AlertTriangle, Target, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../components/ui/Button';
 import apiClient from '../../lib/api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useTheme } from '../../hooks/useTheme';
+import {
+  BRAND, BRAND_BG_STRONG, BRAND_LIGHT,
+  FONT, WEIGHT, RADIUS, SPACE,
+} from '../../lib/theme';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_W } = Dimensions.get('window');
 
 type FormData = {
-  goal: string;
-  timeline: string;
-  riskTolerance: string;
-  shariaMode: boolean;
-  interestedSectors: string[];
-  level: string;
-  hearAboutUs: string;
+  goal:               string;
+  timeline:           string;
+  riskTolerance:      string;
+  shariaMode:         boolean;
+  interestedSectors:  string[];
+  level:              string;
+  hearAboutUs:        string;
 };
 
 const SECTORS = [
-  { id: 'banks_financial', label: 'البنوك والخدمات المالية' },
-  { id: 'real_estate', label: 'العقارات والإنشاءات' },
-  { id: 'food_beverages', label: 'الأغذية والمشروبات' },
+  { id: 'banks_financial',   label: 'البنوك والخدمات المالية' },
+  { id: 'real_estate',       label: 'العقارات والإنشاءات' },
+  { id: 'food_beverages',    label: 'الأغذية والمشروبات' },
   { id: 'healthcare_pharma', label: 'الرعاية الصحية والأدوية' },
-  { id: 'it_telecom', label: 'الاتصالات والتكنولوجيا' },
-  { id: 'industrial', label: 'الصناعات والسلع' },
-  { id: 'utilities', label: 'المرافق' },
-  { id: 'diversified', label: 'متنوع' },
+  { id: 'it_telecom',        label: 'الاتصالات والتكنولوجيا' },
+  { id: 'industrial',        label: 'الصناعات والسلع' },
+  { id: 'utilities',         label: 'المرافق' },
+  { id: 'diversified',       label: 'متنوع' },
 ];
 
 const GOALS = [
-  { id: 'wealth_growth', label: 'تنمية الثروة على المدى البعيد' },
+  { id: 'wealth_growth',  label: 'تنمية الثروة على المدى البعيد' },
   { id: 'passive_income', label: 'دخل شهري من التوزيعات' },
-  { id: 'short_gains', label: 'مكاسب قصيرة المدى' },
-  { id: 'learn', label: 'تعلّم الاستثمار' },
+  { id: 'short_gains',    label: 'مكاسب قصيرة المدى' },
+  { id: 'learn',          label: 'تعلّم الاستثمار' },
 ];
 
 const RISK_OPTIONS = [
   { id: 'conservative', label: 'محافظ — أفضل الأمان' },
-  { id: 'moderate', label: 'معتدل — توازن بين الأمان والعائد' },
-  { id: 'aggressive', label: 'مغامر — أقبل مخاطر أعلى للعائد' },
+  { id: 'moderate',     label: 'معتدل — توازن بين الأمان والعائد' },
+  { id: 'aggressive',   label: 'مغامر — أقبل مخاطر أعلى للعائد' },
 ];
 
 export default function OnboardingPage() {
-  const router = useRouter();
-  const updateUser = useAuthStore((s) => s.updateUser);
-  const scrollRef = useRef<ScrollView>(null);
-  const [step, setStep] = useState(0);
+  const router      = useRouter();
+  const updateUser  = useAuthStore((s) => s.updateUser);
+  const scrollRef   = useRef<ScrollView>(null);
+  const insets      = useSafeAreaInsets();
+  const { colors }  = useTheme();
+  const BackIcon    = I18nManager.isRTL ? ChevronRight : ChevronLeft;
+
+  const [step,   setStep]   = useState(0);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<FormData>({
-    goal: '',
-    timeline: '',
-    riskTolerance: 'moderate',
-    shariaMode: false,
-    interestedSectors: [],
-    level: '',
-    hearAboutUs: '',
+  const [form,   setForm]   = useState<FormData>({
+    goal: '', timeline: '', riskTolerance: 'moderate',
+    shariaMode: false, interestedSectors: [], level: '', hearAboutUs: '',
   });
 
   const STEPS = [
     {
-      id: 'goal',
-      icon: Wallet,
+      id: 'goal', icon: Wallet,
       title: 'ما هدفك من الاستثمار؟',
       subtitle: 'نحدد لك توصيات تناسب أهدافك',
-      options: GOALS,
-      field: 'goal' as const,
+      options: GOALS, field: 'goal' as const,
     },
     {
-      id: 'risk',
-      icon: AlertTriangle,
+      id: 'risk', icon: AlertTriangle,
       title: 'ما مستوى المخاطرة المقبول لديك؟',
       subtitle: 'هذا يؤثر على التحليلات والتوصيات',
-      options: RISK_OPTIONS,
-      field: 'riskTolerance' as const,
+      options: RISK_OPTIONS, field: 'riskTolerance' as const,
     },
     {
-      id: 'sectors',
-      icon: Target,
+      id: 'sectors', icon: Target,
       title: 'ما القطاعات التي تهمك؟',
       subtitle: 'اختر أكثر من قطاع',
-      options: SECTORS,
-      field: 'interestedSectors' as const,
-      multi: true,
+      options: SECTORS, field: 'interestedSectors' as const, multi: true,
     },
     {
-      id: 'sharia',
-      icon: Target,
+      id: 'sharia', icon: Target,
       title: 'هل تفضل الاستثمار الإسلامي؟',
       subtitle: 'سنعرض لك الأسهم المتوافقة مع الشريعة فقط',
       options: [
-        { id: 'true', label: 'نعم، أريد الأسهم المتوافقة مع الشريعة' },
+        { id: 'true',  label: 'نعم، أريد الأسهم المتوافقة مع الشريعة' },
         { id: 'false', label: 'لا، أريد كل الأسهم' },
       ],
       field: 'shariaMode' as const,
     },
   ];
 
-  const total = STEPS.length;
+  const total   = STEPS.length;
   const current = STEPS[step];
 
   const scrollToStep = (idx: number) => {
-    scrollRef.current?.scrollTo({ x: SCREEN_WIDTH * idx, animated: true });
+    scrollRef.current?.scrollTo({ x: SCREEN_W * idx, animated: true });
     setStep(idx);
   };
 
   const selectOption = (field: keyof FormData, value: string, multi?: boolean) => {
     if (multi) {
-      const currentValues = (form[field] as string[]) ?? [];
-      const next = currentValues.includes(value)
-        ? currentValues.filter((v) => v !== value)
-        : [...currentValues, value];
-      setForm((p) => ({ ...p, [field]: next }));
+      const cur = (form[field] as string[]) ?? [];
+      setForm((p) => ({ ...p, [field]: cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value] }));
     } else if (field === 'shariaMode') {
       setForm((p) => ({ ...p, shariaMode: value === 'true' }));
     } else {
@@ -155,89 +157,127 @@ export default function OnboardingPage() {
     else void handleFinish();
   };
 
-  const handleBack = () => {
-    if (step > 0) scrollToStep(step - 1);
-  };
-
   return (
-    <ScreenWrapper>
-      <View className="flex-1">
-        <View className="px-6 pt-4 pb-2 flex-row gap-1.5">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>
+      <StatusBar barStyle="light-content" />
+
+      {/* Skip button */}
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: SPACE.lg, paddingTop: SPACE.sm }}>
+        <Pressable
+          onPress={() => void handleFinish()}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, paddingVertical: SPACE.sm, paddingHorizontal: SPACE.md })}
+        >
+          <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>تخطي</Text>
+        </Pressable>
+      </View>
+
+      {/* Step icon + title */}
+      <View style={{ alignItems: 'center', gap: SPACE.md, paddingHorizontal: SPACE.xl, paddingVertical: SPACE.xl }}>
+        <View style={{
+          width: 96, height: 96, borderRadius: RADIUS['2xl'],
+          backgroundColor: BRAND_BG_STRONG,
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <current.icon size={44} color={BRAND} />
+        </View>
+        <Text style={{ color: colors.text, fontSize: FONT['2xl'], fontWeight: WEIGHT.bold, textAlign: 'center' }}>
+          {current.title}
+        </Text>
+        <Text style={{ color: colors.textSub, fontSize: FONT.sm, textAlign: 'center', lineHeight: 20 }}>
+          {current.subtitle}
+        </Text>
+      </View>
+
+      {/* Options */}
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        scrollEnabled={false}
+        showsHorizontalScrollIndicator={false}
+        style={{ flex: 1 }}
+      >
+        {STEPS.map((stepDef) => (
+          <ScrollView
+            key={stepDef.id}
+            contentContainerStyle={{ paddingHorizontal: SPACE.lg, gap: SPACE.sm, paddingBottom: SPACE.lg }}
+            showsVerticalScrollIndicator={false}
+            style={{ width: SCREEN_W }}
+          >
+            {stepDef.options.map((opt) => {
+              const selected = isSelected(stepDef.field, opt.id);
+              return (
+                <Pressable
+                  key={opt.id}
+                  onPress={() => selectOption(stepDef.field, opt.id, stepDef.multi)}
+                  style={({ pressed }) => ({
+                    padding: SPACE.lg,
+                    borderRadius: RADIUS.lg,
+                    borderWidth: 1.5,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: SPACE.md,
+                    borderColor:     selected ? BRAND : colors.border,
+                    backgroundColor: selected ? BRAND_BG_STRONG : colors.card,
+                    opacity: pressed ? 0.85 : 1,
+                  })}
+                >
+                  <View style={{
+                    width: 20, height: 20, borderRadius: 10, borderWidth: 2,
+                    alignItems: 'center', justifyContent: 'center',
+                    borderColor:     selected ? BRAND : colors.border2,
+                    backgroundColor: selected ? BRAND : 'transparent',
+                  }}>
+                    {selected && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' }} />}
+                  </View>
+                  <Text style={{
+                    flex: 1, fontSize: FONT.sm, fontWeight: WEIGHT.medium,
+                    color: selected ? colors.text : colors.textSub,
+                  }}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ))}
+      </ScrollView>
+
+      {/* Bottom: nav + progress dots */}
+      <View style={{ paddingHorizontal: SPACE.lg, paddingBottom: Math.max(insets.bottom, SPACE.lg), gap: SPACE.lg }}>
+        {/* Progress dots */}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: SPACE.sm }}>
           {STEPS.map((_, i) => (
             <View
               key={i}
-              className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-brand' : 'bg-white/10'}`}
+              style={{
+                width:           i === step ? 20 : 6,
+                height:          6,
+                borderRadius:    3,
+                backgroundColor: i === step ? BRAND : colors.border2,
+              }}
             />
           ))}
         </View>
 
-        <View className="items-center gap-3 py-8 px-6">
-          <View className="w-16 h-16 rounded-2xl bg-brand/10 items-center justify-center">
-            <current.icon size={30} color="#10b981" />
-          </View>
-          <Text className="text-xl font-bold text-white text-center">{current.title}</Text>
-          <Text className="text-sm text-slate-400 text-center">{current.subtitle}</Text>
-        </View>
-
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled
-          scrollEnabled={false}
-          showsHorizontalScrollIndicator={false}
-        >
-          {STEPS.map((stepDef) => (
-            <ScrollView
-              key={stepDef.id}
-              contentContainerClassName="px-6 gap-3 pb-6"
-              showsVerticalScrollIndicator={false}
-              style={{ width: SCREEN_WIDTH }}
-            >
-              {stepDef.options.map((opt) => {
-                const selected = isSelected(stepDef.field, opt.id);
-                return (
-                  <Pressable
-                    key={opt.id}
-                    onPress={() => selectOption(stepDef.field, opt.id, stepDef.multi)}
-                    className={`
-                      p-4 rounded-xl border flex-row items-center gap-3
-                      ${selected ? 'border-brand bg-brand/10' : 'border-white/[0.07] bg-[#111118]'}
-                    `}
-                  >
-                    <View
-                      className={`
-                        w-5 h-5 rounded-full border-2 items-center justify-center
-                        ${selected ? 'border-brand bg-brand' : 'border-white/20'}
-                      `}
-                    >
-                      {selected && <View className="w-2 h-2 rounded-full bg-white" />}
-                    </View>
-                    <Text
-                      className={`text-sm font-medium flex-1 ${
-                        selected ? 'text-white' : 'text-slate-300'
-                      }`}
-                    >
-                      {opt.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          ))}
-        </ScrollView>
-
-        <View className="px-6 pb-6 flex-row gap-3">
+        {/* Nav buttons */}
+        <View style={{ flexDirection: 'row', gap: SPACE.md }}>
           {step > 0 && (
             <Pressable
-              onPress={handleBack}
-              className="w-12 h-12 rounded-xl bg-white/[0.06] border border-white/[0.07] items-center justify-center"
+              onPress={() => scrollToStep(step - 1)}
+              style={({ pressed }) => ({
+                width: 48, height: 48, borderRadius: RADIUS.md,
+                backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+                alignItems: 'center', justifyContent: 'center',
+                opacity: pressed ? 0.7 : 1,
+              })}
             >
-              <ChevronLeft size={20} color="#94a3b8" />
+              <BackIcon size={20} color={colors.textSub} />
             </Pressable>
           )}
-          <View className="flex-1">
+          <View style={{ flex: 1 }}>
             <Button
-              label={saving ? 'جارٍ الحفظ...' : step === total - 1 ? 'ابدأ الاستثمار ✨' : 'التالي'}
+              label={saving ? 'جارٍ الحفظ...' : step === total - 1 ? 'ابدأ الآن' : 'التالي'}
               loading={saving}
               onPress={handleNext}
               disabled={!canNext() || saving}
@@ -247,7 +287,6 @@ export default function OnboardingPage() {
           </View>
         </View>
       </View>
-    </ScreenWrapper>
+    </SafeAreaView>
   );
 }
-

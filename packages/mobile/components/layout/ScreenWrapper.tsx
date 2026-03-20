@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import {
   View,
   ScrollView,
@@ -10,40 +10,64 @@ import {
 import { SafeAreaView, useSafeAreaInsets, type Edge } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
 import { ErrorBoundary } from './ErrorBoundary';
+import { Skeleton } from '../ui/Skeleton';
+import { SPACE } from '../../lib/theme';
 
 interface Props {
-  children: ReactNode;
-  scrollable?: boolean;
-  refreshing?: boolean;
-  onRefresh?: () => void;
-  padded?: boolean;
+  children?:     ReactNode;
+  scrollable?:   boolean;
+  refreshing?:   boolean;
+  onRefresh?:    () => void;
+  padded?:       boolean;
   withKeyboard?: boolean;
-  edges?: Edge[];
+  edges?:        Edge[];
   contentStyle?: ViewStyle;
+  header?:       ReactNode;
+  footer?:       ReactNode;
+  loading?:      boolean;
 }
 
 export function ScreenWrapper({
   children,
-  scrollable = false,
-  refreshing = false,
+  scrollable   = false,
+  refreshing   = false,
   onRefresh,
-  padded = true,
+  padded       = true,
   withKeyboard = false,
-  edges = ['top'],
+  edges        = ['top'],
   contentStyle,
+  header,
+  footer,
+  loading      = false,
 }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+
+  // Full-screen loading skeleton
+  if (loading) {
+    return (
+      <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor: colors.bg }}>
+        <View style={{ flex: 1, padding: SPACE.lg, gap: SPACE.md }}>
+          <Skeleton.Box height={120} radius={16} />
+          <Skeleton.Line width="80%" height={16} />
+          <Skeleton.Line width="60%" height={14} />
+          <Skeleton.Box height={80} radius={12} />
+          <Skeleton.Box height={80} radius={12} />
+          <Skeleton.Box height={80} radius={12} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const content = scrollable ? (
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={[
         {
-          paddingHorizontal: padded ? 16 : 0,
-          paddingTop: padded ? 8 : 0,
-          paddingBottom: Math.max(24, insets.bottom + 16),
-          flexGrow: 1,
+          paddingHorizontal: padded ? SPACE.lg : 0,
+          paddingTop:        padded ? SPACE.sm  : 0,
+          paddingBottom:     Math.max(SPACE['2xl'], insets.bottom + SPACE.lg),
+          flexGrow:          1,
         },
         contentStyle,
       ]}
@@ -65,10 +89,7 @@ export function ScreenWrapper({
   ) : (
     <View
       style={[
-        {
-          flex: 1,
-          paddingHorizontal: padded ? 16 : 0,
-        },
+        { flex: 1, paddingHorizontal: padded ? SPACE.lg : 0 },
         contentStyle,
       ]}
     >
@@ -77,20 +98,21 @@ export function ScreenWrapper({
   );
 
   const inner = withKeyboard ? (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {content}
     </KeyboardAvoidingView>
-  ) : (
-    content
-  );
+  ) : content;
 
   return (
     <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor: colors.bg }}>
       <ErrorBoundary>
+        {header && <View>{header}</View>}
         {inner}
+        {footer && (
+          <View style={{ paddingBottom: insets.bottom || SPACE.sm }}>
+            {footer}
+          </View>
+        )}
       </ErrorBoundary>
     </SafeAreaView>
   );
