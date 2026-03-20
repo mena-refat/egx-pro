@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, FileQuestion, ShieldOff, ServerCrash, LockKeyhole, ArrowRight, RefreshCw, LogIn } from 'lucide-react';
-import { Button } from './ui/Button';
+import { Button } from '../ui/Button';
 
 type ErrorCode = 401 | 403 | 404 | 500;
 

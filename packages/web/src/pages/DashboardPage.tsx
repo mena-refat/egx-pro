@@ -2,7 +2,7 @@ import React, { useMemo, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '../components/ui/Skeleton';
-const PortfolioPerformanceChart = lazy(() => import('../components/PortfolioPerformanceChart'));
+const PortfolioPerformanceChart = lazy(() => import('../components/features/portfolio/PortfolioPerformanceChart'));
 import {
   DashboardMarketBar,
   DashboardPortfolioHero,

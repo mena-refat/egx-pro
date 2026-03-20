@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from './ui/Button';
+import { Button } from '../ui/Button';
 
 const STORAGE_KEY = 'delayNoticeShown';
 

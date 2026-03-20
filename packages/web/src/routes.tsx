@@ -30,13 +30,13 @@ import {
 } from './components/features/settings';
 import SettingsLayout from './components/layout/SettingsLayout';
 
-const PortfolioTracker       = lazy(() => import('./components/PortfolioTracker'));
-const StockScreener          = lazy(() => import('./components/StockScreener'));
+const PortfolioTracker       = lazy(() => import('./components/features/portfolio/PortfolioTracker'));
+const StockScreener          = lazy(() => import('./components/features/stocks/StockScreener'));
 const MarketPage             = lazy(() => import('./pages/MarketPage'));
 const GoalsPage              = lazy(() => import('./pages/GoalsPage'));
-const InvestmentCalculator   = lazy(() => import('./components/InvestmentCalculator'));
+const InvestmentCalculator   = lazy(() => import('./components/features/calculator/InvestmentCalculator'));
 const StockDetailPage        = lazy(() => import('./pages/StockDetailPage'));
-const ProfilePage            = lazy(() => import('./components/ProfilePage'));
+const ProfilePage            = lazy(() => import('./components/features/profile/ProfilePage'));
 const UsernameSetupPage      = lazy(() => import('./pages/UsernameSetupPage'));
 const SocialProfilePage      = lazy(() => import('./pages/SocialProfilePage'));
 const DiscoverPage           = lazy(() => import('./pages/DiscoverPage'));

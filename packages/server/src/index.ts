@@ -321,7 +321,10 @@ async function startServer() {
 
   // Vite Integration
   if (process.env.NODE_ENV !== 'production') {
+    const webRoot = path.resolve(__dirname, '..', '..', 'web');
     const vite = await createViteServer({
+      root: webRoot,
+      configFile: path.resolve(webRoot, 'vite.config.ts'),
       server: { middlewareMode: true },
       appType: 'spa',
     });
