@@ -1,5 +1,5 @@
 /**
- * Debounced search with AbortController — cancels previous request when query changes.
+ * Debounced search with AbortController - cancels previous request when query changes.
  * Use for stock search, discover/username search. Returns { query, setQuery, results, isSearching }.
  */
 import { useState, useCallback, useRef, useEffect } from 'react';

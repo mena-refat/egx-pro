@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, Zap, HelpCircle, Lock, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../../ui/Button';
@@ -51,6 +52,7 @@ function toDateInputValue(d: Date): string {
 
 export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
   const { t, i18n } = useTranslation('common');
+  const navigate = useNavigate();
   const step = usePredictionsStore((s) => s.newPredictionStep);
   const draft = usePredictionsStore((s) => s.newPredictionDraft);
   const { setNewPredictionStep, updateDraft } = usePredictionsStore();
@@ -205,7 +207,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                 <button type="button" onClick={() => setNewPredictionStep(1)} className="text-sm text-[var(--brand)]">← {t('common.back')}</button>
 
                 {draft.ticker && currentPrice != null && (
-                  <p className="font-medium text-sm">{draft.ticker} — {t('predictions.currentPrice')}: <span className="text-[var(--text-primary)] font-semibold">{currentPrice.toFixed(2)} ج.م</span></p>
+                  <p className="font-medium text-sm">{draft.ticker} - {t('predictions.currentPrice')}: <span className="text-[var(--text-primary)] font-semibold">{currentPrice.toFixed(2)} ج.م</span></p>
                 )}
 
                 {/* Mode toggle */}
@@ -330,7 +332,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                   </>
                 )}
 
-                {/* ── EXACT mode — upgrade gate ── */}
+                {/* ── EXACT mode - upgrade gate ── */}
                 {currentMode === 'EXACT' && !isPaid && (
                   <div className="flex flex-col items-center gap-3 py-6 text-center">
                     <div className="w-12 h-12 rounded-full bg-amber-500/15 flex items-center justify-center">
@@ -338,11 +340,11 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                     </div>
                     <p className="font-semibold text-[var(--text-primary)]">{t('predictions.exactUpgradeTitle')}</p>
                     <p className="text-sm text-[var(--text-secondary)] max-w-xs">{t('predictions.exactUpgradeDesc')}</p>
-                    <Button variant="outline">{t('predictions.upgradeNow')}</Button>
+                    <Button variant="outline" onClick={() => { onClose(); navigate('/settings/subscription'); }}>{t('predictions.upgradeNow')}</Button>
                   </div>
                 )}
 
-                {/* ── EXACT mode — form ── */}
+                {/* ── EXACT mode - form ── */}
                 {currentMode === 'EXACT' && isPaid && (
                   <div className="space-y-4">
                     <p className="text-sm text-[var(--text-secondary)]">{t('predictions.exactModeDesc')}</p>
@@ -485,7 +487,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                         {' · '}
                         {selectedTier ? (
                           <span className={selectedTier.color}>{t(selectedTier.labelKey)} ({formatRange(selectedTier.key, currentTf)})</span>
-                        ) : '—'}
+                        ) : '-'}
                       </p>
                       <p className="text-[var(--text-muted)]">
                         {t(
@@ -523,7 +525,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                         )}
                       </p>
                       <p className="text-[var(--text-muted)]">
-                        {t('predictions.exactExpiryDate')}: {exactExpiresAt ? new Date(exactExpiresAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
+                        {t('predictions.exactExpiryDate')}: {exactExpiresAt ? new Date(exactExpiresAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
                       </p>
                       {exactMaxPoints != null && (
                         <p className="text-emerald-400 font-medium flex items-center gap-1">

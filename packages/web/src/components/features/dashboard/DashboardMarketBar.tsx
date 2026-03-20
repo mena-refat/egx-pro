@@ -74,7 +74,7 @@ export function DashboardMarketBar({ egx30, locale }: Props) {
             )}
           </>
         ) : (
-          <span className="text-white/40">—</span>
+          <span className="text-white/40">-</span>
         )}
       </span>
       <span className="text-white/10 select-none mx-4" aria-hidden>|</span>

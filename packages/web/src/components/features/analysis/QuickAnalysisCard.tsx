@@ -64,7 +64,7 @@ export function QuickAnalysisCard({ data, onDeepAnalysis, loading }: QuickAnalys
       <div className={styles.grid}>
         <div className={styles.cell}>
           <p className={styles.cellLabel}>RSI</p>
-          <p className={styles.cellValue}>{data.rsiValue ?? '—'} · {data.rsiSignal}</p>
+          <p className={styles.cellValue}>{data.rsiValue ?? '-'} · {data.rsiSignal}</p>
         </div>
         <div className={styles.cell}>
           <p className={styles.cellLabel}>MACD</p>
@@ -82,8 +82,8 @@ export function QuickAnalysisCard({ data, onDeepAnalysis, loading }: QuickAnalys
 
       {(data.support != null || data.resistance != null) && (
         <div className={styles.levels}>
-          <span className={styles.support}>دعم: {data.support ?? '—'}</span>
-          <span className={styles.resistance}>مقاومة: {data.resistance ?? '—'}</span>
+          <span className={styles.support}>دعم: {data.support ?? '-'}</span>
+          <span className={styles.resistance}>مقاومة: {data.resistance ?? '-'}</span>
         </div>
       )}
 

@@ -68,10 +68,10 @@ export function LearnSection({ cards }: { cards: LearnCard[] }) {
         <div>
           <h4 className={styles.title}>
             <GraduationCap className={styles.titleIcon} aria-hidden />
-            {t('learn.title', 'اتعلّم — إيه المصطلحات دي؟')}
+            {t('learn.title', 'اتعلّم - إيه المصطلحات دي؟')}
           </h4>
           <p className={styles.subtitle}>
-            {t('learn.subtitle', 'مصطلحات وردت في التقرير — شرحها بلغة بسيطة من عندنا، بدون أي تكلفة إضافية.')}
+            {t('learn.subtitle', 'مصطلحات وردت في التقرير - شرحها بلغة بسيطة من عندنا، بدون أي تكلفة إضافية.')}
           </p>
         </div>
         {cards.length > 2 && (

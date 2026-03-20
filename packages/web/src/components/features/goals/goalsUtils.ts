@@ -31,7 +31,7 @@ export function formatTimeLeft(
   t: (key: string, opts?: object) => string,
   locale: string
 ): string {
-  if (!deadline) return '—';
+  if (!deadline) return '-';
   const end = new Date(deadline);
   const now = new Date();
   if (end.getTime() <= now.getTime()) return t('goals.daysLeft', { d: 0 });
@@ -48,6 +48,6 @@ export function formatTimeLeft(
 }
 
 export function formatDeadline(deadline: string | null, locale: string): string {
-  if (!deadline) return '—';
+  if (!deadline) return '-';
   return new Date(deadline).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
 }

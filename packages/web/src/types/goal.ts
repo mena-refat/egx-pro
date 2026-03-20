@@ -1,4 +1,4 @@
-/** Goal — from Prisma (API: dates as ISO string) */
+/** Goal - from Prisma (API: dates as ISO string) */
 export interface Goal {
   id: string;
   userId: string;

@@ -232,7 +232,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
       {/* Tab: Details */}
       {activeTab === 'details' && (
         <div className="space-y-6">
-          {/* Chart — TradingView */}
+          {/* Chart - TradingView */}
           <section className={styles.chartSection}>
             <div className={styles.chartSectionHeader}>
               <span className={styles.chartSectionTitle}>{t('stockDetail.chartTitle', { defaultValue: 'الرسم البياني' })}</span>
@@ -272,7 +272,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 [t('stockDetail.dayHigh'), formatNum(high)],
                 [t('stockDetail.dayLow'), formatNum(low)],
                 [t('stockDetail.volume'), formatBig(volume)],
-                [t('stockDetail.turnover'), volume && price ? formatBig(volume * price) + ' EGP' : '—'],
+                [t('stockDetail.turnover'), volume && price ? formatBig(volume * price) + ' EGP' : '-'],
               ].map(([label, val], i) => (
                 <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
                   <p className="text-xs text-[var(--text-muted)] ">{label}</p>
@@ -294,9 +294,9 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
               <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.high52w')}</span><span>{formatNum(high52w)} ج</span></div>
               <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.low52w')}</span><span>{formatNum(low52w)} ج</span></div>
               <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.marketCap')}</span><span>{formatBig(stock.marketCap)}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.dividendYield')}</span><span>{(financials as { dividendYield?: number })?.dividendYield != null ? `${((financials as { dividendYield?: number }).dividendYield * 100).toFixed(2)}%` : '—'}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.dividendYield')}</span><span>{(financials as { dividendYield?: number })?.dividendYield != null ? `${((financials as { dividendYield?: number }).dividendYield * 100).toFixed(2)}%` : '-'}</span></div>
               <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.eps')}</span><span>{formatNum((financials as { eps?: number })?.eps)}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.pe')}</span><span>{(financials as { pe?: number })?.pe != null ? `${Number((financials as { pe?: number }).pe).toFixed(1)}x` : '—'}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.pe')}</span><span>{(financials as { pe?: number })?.pe != null ? `${Number((financials as { pe?: number }).pe).toFixed(1)}x` : '-'}</span></div>
               <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.avgDailyVolume')}</span><span>{formatBig(volume)} ج</span></div>
                   </div>
           </section>
@@ -317,11 +317,11 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             </button>
           </section>
 
-          {/* Order depth — Pro for full data */}
+          {/* Order depth - Pro for full data */}
           <section className="relative">
             <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">{t('stockDetail.orderDepth')} {!isPro && <Lock className="w-4 h-4 text-[var(--text-muted)]" />}</h3>
             {orderDepthAvailable ? (
-              <div className="rounded-xl border border-[var(--border)] p-4 text-[var(--text-muted)]  text-sm">—</div>
+              <div className="rounded-xl border border-[var(--border)] p-4 text-[var(--text-muted)]  text-sm">-</div>
             ) : (
               <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4 text-[var(--text-muted)]  text-sm">{t('stockDetail.orderDepthUnavailable')}</div>
             )}
@@ -373,10 +373,10 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             </div>
           </section>
 
-          {/* أسهم من نفس القطاع — حتى 5 أسهم */}
+          {/* أسهم من نفس القطاع - حتى 5 أسهم */}
           <section>
             <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.similarSector')}</h3>
-            <p className="text-xs text-[var(--text-muted)] mb-3">{effectiveSectorLabel ? t('stockDetail.sameSectorDesc', { sector: effectiveSectorLabel, defaultValue: `أسهم أخرى من قطاع: ${effectiveSectorLabel}` }) : '—'}</p>
+            <p className="text-xs text-[var(--text-muted)] mb-3">{effectiveSectorLabel ? t('stockDetail.sameSectorDesc', { sector: effectiveSectorLabel, defaultValue: `أسهم أخرى من قطاع: ${effectiveSectorLabel}` }) : '-'}</p>
             {sameSectorStocks.length > 0 ? (
               <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'thin' }}>
                 {sameSectorStocks.map((s) => {
@@ -406,14 +406,14 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
         </div>
       )}
 
-      {/* Tab: Statistics — advanced stats Pro */}
+      {/* Tab: Statistics - advanced stats Pro */}
       {activeTab === 'stats' && (
         <div className="space-y-6">
           <section className="relative">
             <h3 className="text-sm font-bold text-[var(--text-primary)] mb-1 flex items-center gap-2">{t('stockDetail.investorCategories')} {!isPro && <Lock className="w-4 h-4 text-[var(--text-muted)]" />}</h3>
             <p className="text-xs text-[var(--text-muted)]  mb-3">{t('stockDetail.investorCategoriesDesc')}</p>
             {investorCategoriesAvailable ? (
-              <div className="rounded-xl border border-[var(--border)] p-4 text-sm">—</div>
+              <div className="rounded-xl border border-[var(--border)] p-4 text-sm">-</div>
             ) : (
               <p className="text-sm text-[var(--text-muted)]  rounded-xl border border-[var(--border)] p-4">{t('stockDetail.investorCategoriesUnavailable')}</p>
             )}
@@ -428,7 +428,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           <section className="relative">
             <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">{t('stockDetail.tradingStats')} {!isPro && <Lock className="w-4 h-4 text-[var(--text-muted)]" />}</h3>
             {tradingStatsAvailable ? (
-              <div className="rounded-xl border border-[var(--border)] p-4 text-sm">—</div>
+              <div className="rounded-xl border border-[var(--border)] p-4 text-sm">-</div>
             ) : (
               <p className="text-sm text-[var(--text-muted)]  rounded-xl border border-[var(--border)] p-4">{t('stockDetail.tradingStatsUnavailable')}</p>
             )}
@@ -481,7 +481,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
         </div>
       )}
 
-      {/* Analysis limit reached — Pro upsell modal */}
+      {/* Analysis limit reached - Pro upsell modal */}
       {showAnalysisLimitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowAnalysisLimitModal(false)}>
           <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>

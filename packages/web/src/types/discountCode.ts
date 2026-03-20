@@ -1,4 +1,4 @@
-/** DiscountCode — from Prisma (API: dates as ISO string) */
+/** DiscountCode - from Prisma (API: dates as ISO string) */
 export interface DiscountCode {
   id: string;
   code: string;

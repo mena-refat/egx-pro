@@ -10,7 +10,7 @@ export type Language = 'ar' | 'en';
 /** User title (ناشئ | مستثمر | محترف | أسطورة) */
 export type UserTitle = 'ناشئ' | 'مستثمر' | 'محترف' | 'أسطورة';
 
-/** User — aligned with Prisma User model (API: dates as ISO string) */
+/** User - aligned with Prisma User model (API: dates as ISO string) */
 export interface User {
   id: string;
   email: string | null;
@@ -68,7 +68,7 @@ export interface User {
   updatedAt: string;
 }
 
-/** Session row (from RefreshToken + device/location) — for UI */
+/** Session row (from RefreshToken + device/location) - for UI */
 export interface Session {
   id: string;
   deviceType: 'desktop' | 'mobile' | 'tablet';
@@ -81,7 +81,7 @@ export interface Session {
   isCurrent: boolean;
 }
 
-/** RefreshToken — from Prisma (API: dates as ISO string) */
+/** RefreshToken - from Prisma (API: dates as ISO string) */
 export interface RefreshToken {
   id: string;
   token: string;

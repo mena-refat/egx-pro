@@ -31,7 +31,7 @@ export const useToastStore = create<ToastState>((set, get) => ({
   removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }));
 
-/** Legacy type alias and helpers — map to new variant. */
+/** Legacy type alias and helpers - map to new variant. */
 export type ToastType = 'success' | 'error' | 'info';
 export const toast = {
   success: (message: string, durationMs?: number) =>

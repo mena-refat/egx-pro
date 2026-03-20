@@ -196,16 +196,16 @@ export default function AIComparePage() {
             </div>
             <div className={styles.quickRow}>
               <span className={styles.quickLabel}>الحكم</span>
-              <span className={styles.quickValue}>{getVerdict(s1) || '—'}</span>
+              <span className={styles.quickValue}>{getVerdict(s1) || '-'}</span>
               <span className={styles.quickVs}>vs</span>
-              <span className={styles.quickValue}>{getVerdict(s2) || '—'}</span>
+              <span className={styles.quickValue}>{getVerdict(s2) || '-'}</span>
             </div>
             {(s1?.priceTarget || s2?.priceTarget) && (
               <div className={styles.quickRow}>
                 <span className={styles.quickLabel}>الهدف</span>
-                <span className={styles.quickValue}>{(s1?.priceTarget as { target?: number })?.target ?? '—'}</span>
+                <span className={styles.quickValue}>{(s1?.priceTarget as { target?: number })?.target ?? '-'}</span>
                 <span className={styles.quickVs}>vs</span>
-                <span className={styles.quickValue}>{(s2?.priceTarget as { target?: number })?.target ?? '—'}</span>
+                <span className={styles.quickValue}>{(s2?.priceTarget as { target?: number })?.target ?? '-'}</span>
               </div>
             )}
           </div>

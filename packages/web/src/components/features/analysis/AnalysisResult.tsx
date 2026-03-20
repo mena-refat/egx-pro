@@ -129,7 +129,7 @@ export function AnalysisResult({ analysis: raw }: AnalysisResultProps) {
                 <span className={`${styles.severityBadge} ${r.severity === 'عالي' ? styles.severityHigh : r.severity === 'متوسط' ? styles.severityMid : styles.severityLow}`}>
                   {r.severity}
                 </span>
-                <span className={styles.riskText}>{r.risk}{r.explain ? ` — ${r.explain}` : ''}</span>
+                <span className={styles.riskText}>{r.risk}{r.explain ? ` - ${r.explain}` : ''}</span>
               </div>
             ))}
           </div>

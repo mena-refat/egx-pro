@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useBlocker } from 'react-router-dom';
 import { useAuthStore } from '../../../store/authStore';
 import { useProfileStore } from '../../../store/profileStore';
+import { SettingsDirtyProvider, useSettingsDirty } from '../settings/SettingsDirtyContext';
+import { UnsavedChangesDialog } from '../../shared/UnsavedChangesDialog';
 import {
   User as UserIcon,
   Trophy,
@@ -79,7 +81,8 @@ const PROFILE_TABS: { id: ProfileTab; label: string; icon: typeof UserIcon }[] =
   { id: 'referral',     label: 'الإحالة',       icon: Gift      },
 ];
 
-export default function ProfilePage() {
+// ── Inner component (consumes dirty context + handles navigation blocking) ────
+function ProfilePageInner() {
   const { t, i18n } = useTranslation('common');
   const { user: authUser, accessToken } = useAuthStore();
   const [profileUser, setProfileUser] = useState<ProfileUser | null>(
@@ -90,6 +93,13 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { fetchMyStats } = usePredictionsApi();
+  const { isDirty, clearAll } = useSettingsDirty();
+
+  // Block navigation away from the page when there are unsaved changes
+  const blocker = useBlocker(isDirty);
+
+  // Pending tab switch — held until user confirms or cancels
+  const [pendingTab, setPendingTab] = useState<ProfileTab | null>(null);
 
   const rawTab = searchParams.get('tab') as ProfileTab | null;
   const activeTab: ProfileTab = rawTab === 'achievements' || rawTab === 'referral' || rawTab === 'investor' ? rawTab : 'overview';
@@ -200,11 +210,19 @@ export default function ProfilePage() {
     ? `predictions.rank${predictionStats.rank.charAt(0)}${predictionStats.rank.slice(1).toLowerCase()}`
     : '';
 
-  const setTab = (tab: ProfileTab) => {
+  function applyTab(tab: ProfileTab) {
     if (tab === 'overview') {
       setSearchParams({});
     } else {
       setSearchParams({ tab });
+    }
+  }
+
+  const setTab = (tab: ProfileTab) => {
+    if (isDirty) {
+      setPendingTab(tab);
+    } else {
+      applyTab(tab);
     }
   };
 
@@ -234,7 +252,7 @@ export default function ProfilePage() {
                     {planBadge.label}
                   </span>
                 </div>
-                <p className="text-sm text-[var(--text-muted)] mt-0.5">@{profileUser.username ?? '—'}</p>
+                <p className="text-sm text-[var(--text-muted)] mt-0.5">@{profileUser.username ?? '-'}</p>
                 {stats?.daysSinceJoined != null && (
                   <p className="text-xs text-[var(--text-muted)] mt-1.5 flex items-center gap-1">
                     <CalendarCheck className="w-3.5 h-3.5" />
@@ -298,7 +316,7 @@ export default function ProfilePage() {
             {[
               {
                 label: 'قيمة المحفظة',
-                value: stats?.portfolioValue ? `${Math.round(stats.portfolioValue).toLocaleString('en-US')}` : '—',
+                value: stats?.portfolioValue ? `${Math.round(stats.portfolioValue).toLocaleString('en-US')}` : '-',
                 unit: stats?.portfolioValue ? 'EGP' : undefined,
                 icon: Wallet,
                 color: 'text-[var(--brand)]',
@@ -306,21 +324,21 @@ export default function ProfilePage() {
               },
               {
                 label: 'تحليلات AI',
-                value: stats?.analysesCount ?? '—',
+                value: stats?.analysesCount ?? '-',
                 icon: BarChart2,
                 color: 'text-violet-400',
                 bg: 'bg-violet-400/8',
               },
               {
                 label: 'المراقبة',
-                value: stats?.watchlistCount ?? '—',
+                value: stats?.watchlistCount ?? '-',
                 icon: Star,
                 color: 'text-amber-400',
                 bg: 'bg-amber-400/8',
               },
               {
                 label: 'إجمالي التوقعات',
-                value: predictionStats?.totalPredictions ?? '—',
+                value: predictionStats?.totalPredictions ?? '-',
                 icon: Crosshair,
                 color: 'text-emerald-400',
                 bg: 'bg-emerald-400/8',
@@ -391,9 +409,9 @@ export default function ProfilePage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {[
                   { label: 'المستوى', value: t(rankKey, { defaultValue: predictionStats.rank }) },
-                  { label: 'الدقة', value: predictionStats.accuracyRate != null ? `${Math.round(predictionStats.accuracyRate)}%` : '—' },
-                  { label: 'النقاط', value: predictionStats.totalPoints != null ? predictionStats.totalPoints.toLocaleString('en-US') : '—' },
-                  { label: 'أفضل سلسلة', value: predictionStats.bestStreak ? `${predictionStats.bestStreak} ✓` : '—' },
+                  { label: 'الدقة', value: predictionStats.accuracyRate != null ? `${Math.round(predictionStats.accuracyRate)}%` : '-' },
+                  { label: 'النقاط', value: predictionStats.totalPoints != null ? predictionStats.totalPoints.toLocaleString('en-US') : '-' },
+                  { label: 'أفضل سلسلة', value: predictionStats.bestStreak ? `${predictionStats.bestStreak} ✓` : '-' },
                 ].map((item) => (
                   <div key={item.label} className="p-3 rounded-xl bg-[var(--bg-secondary)] text-center">
                     <p className="text-base font-bold text-[var(--text-primary)]">{item.value}</p>
@@ -411,6 +429,37 @@ export default function ProfilePage() {
       {activeTab === 'referral'     && <ReferralTab />}
 
       <FollowersFollowingModal />
+
+      {/* Unsaved changes — tab switch */}
+      <UnsavedChangesDialog
+        isOpen={pendingTab !== null}
+        onStay={() => setPendingTab(null)}
+        onLeave={() => {
+          clearAll();
+          const tab = pendingTab!;
+          setPendingTab(null);
+          applyTab(tab);
+        }}
+      />
+
+      {/* Unsaved changes — navigation away (back button / sidebar) */}
+      <UnsavedChangesDialog
+        isOpen={blocker.state === 'blocked'}
+        onStay={() => blocker.reset?.()}
+        onLeave={() => {
+          clearAll();
+          blocker.proceed?.();
+        }}
+      />
     </div>
+  );
+}
+
+// ── Outer wrapper providing dirty state context ───────────────────────────────
+export default function ProfilePage() {
+  return (
+    <SettingsDirtyProvider>
+      <ProfilePageInner />
+    </SettingsDirtyProvider>
   );
 }

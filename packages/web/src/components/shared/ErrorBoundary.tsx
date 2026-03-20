@@ -9,7 +9,7 @@ export interface ErrorBoundaryProps {
   fallback?: React.ReactNode;
 }
 
-/** Never expose error.message to users — Sentry captures the full error. */
+/** Never expose error.message to users - Sentry captures the full error. */
 function ErrorFallback({ resetError }: { resetError: () => void }) {
   const { t } = useTranslation('common');
   return (

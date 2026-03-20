@@ -110,7 +110,7 @@ export function AnalysisLoadingState({ loading, variant }: AnalysisLoadingStateP
           <span className={styles.percent}>{progress}%</span>
         </div>
       </div>
-      <p className={styles.hint}>قد يستغرق دقيقة أو دقيقتين — لا تغلق الصفحة حتى يكتمل التحليل</p>
+      <p className={styles.hint}>قد يستغرق دقيقة أو دقيقتين - لا تغلق الصفحة حتى يكتمل التحليل</p>
     </div>
   );
 }

@@ -15,7 +15,7 @@ export function StepBudget({ formData, onSelect }: Props) {
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold">قدر تخصص كام جنيه للاستثمار شهرياً؟</h2>
-        <p className="text-[var(--text-secondary)] text-sm">مش لازم يبقى كتير — المهم الانتظام</p>
+        <p className="text-[var(--text-secondary)] text-sm">مش لازم يبقى كتير - المهم الانتظام</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {OPTIONS.map((opt) => (

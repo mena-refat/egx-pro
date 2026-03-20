@@ -26,7 +26,7 @@ function fireBrowserNotification(ticker: string, currentPrice: number, targetPri
   if (Notification.permission !== 'granted') return;
   const dirSymbol = direction === 'DOWN' ? '↓' : '↑';
   const title = `${ticker} وصل للسعر المستهدف ${dirSymbol}`;
-  const body = `السعر الحالي ${currentPrice.toFixed(2)} ج.م — وصل للهدف ${targetPrice.toFixed(2)} ج.م`;
+  const body = `السعر الحالي ${currentPrice.toFixed(2)} ج.م - وصل للهدف ${targetPrice.toFixed(2)} ج.م`;
   try {
     new Notification(title, { body, icon: '/logo192.png' });
   } catch {

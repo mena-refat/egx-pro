@@ -23,7 +23,7 @@ export function StepReferral({ formData, referralState, saving, finishError, onC
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold">هل دعاك أحد للانضمام؟</h2>
-        <p className="text-[var(--text-secondary)] text-sm">اكتب كود الدعوة إن وجد — اختياري</p>
+        <p className="text-[var(--text-secondary)] text-sm">اكتب كود الدعوة إن وجد - اختياري</p>
       </div>
       <div className="space-y-4">
         <Input

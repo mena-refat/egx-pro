@@ -87,7 +87,7 @@ export function PriceAlertDialog({
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5 text-[var(--brand)]" />
             <h2 className="font-bold text-[var(--text-primary)] text-base">
-              {t('stockDetail.priceAlertTitle')} — {ticker}
+              {t('stockDetail.priceAlertTitle')} - {ticker}
             </h2>
           </div>
           <button type="button" onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">

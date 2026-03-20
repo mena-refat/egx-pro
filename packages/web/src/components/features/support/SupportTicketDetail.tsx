@@ -187,12 +187,12 @@ export function SupportTicketDetail({
         )}
       </div>
 
-      {/* Rating — show only when resolved/closed */}
+      {/* Rating - show only when resolved/closed */}
       {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && (
         <RatingWidget ticket={ticket} isAr={isAr} onRated={onRated} />
       )}
 
-      {/* Cancel ticket — only when open/in-progress */}
+      {/* Cancel ticket - only when open/in-progress */}
       {canCancel && (
         <div className="border border-[var(--border)] rounded-2xl p-4">
           {!confirmCancel ? (

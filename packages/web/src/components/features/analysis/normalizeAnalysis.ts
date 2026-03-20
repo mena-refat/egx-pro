@@ -27,7 +27,7 @@ function makeOutlook(
 }
 
 export function normalizeAnalysis(raw: AnalysisResult): AnalysisResult {
-  // Fundamental — backward compat: if score is not a number, convert old format
+  // Fundamental - backward compat: if score is not a number, convert old format
   let fundamental = raw.fundamental;
   if (fundamental && typeof (fundamental as { score?: unknown }).score !== 'number') {
     const old = fundamental as { outlook?: string; ratios?: string; verdict?: string };
@@ -41,7 +41,7 @@ export function normalizeAnalysis(raw: AnalysisResult): AnalysisResult {
     fundamental = undefined;
   }
 
-  // Technical — same
+  // Technical - same
   let technical = raw.technical;
   if (technical && typeof (technical as { score?: unknown }).score !== 'number') {
     const old = technical as { signal?: string; indicators?: string; levels?: string };

@@ -1,4 +1,4 @@
-/** Stock — list/card view */
+/** Stock - list/card view */
 export interface Stock {
   id?: string;
   ticker: string;
@@ -23,7 +23,7 @@ export interface Stock {
   low52w?: number;
 }
 
-/** Stock details — full quote / depth view */
+/** Stock details - full quote / depth view */
 export interface StockDetails extends Stock {
   open: number;
   high: number;

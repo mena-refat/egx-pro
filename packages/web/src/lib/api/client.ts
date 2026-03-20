@@ -20,7 +20,7 @@ type Queued = { resolve: (token: string) => void; reject: (err: unknown) => void
 let isRefreshing = false;
 let failedQueue: Queued[] = [];
 
-// REQUEST INTERCEPTOR — يضيف الـ access token لكل request تلقائياً
+// REQUEST INTERCEPTOR - يضيف الـ access token لكل request تلقائياً
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = getAccessToken();
@@ -32,7 +32,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// RESPONSE INTERCEPTOR — فكّ { ok, data } ورفض عند { ok: false }
+// RESPONSE INTERCEPTOR - فكّ { ok, data } ورفض عند { ok: false }
 apiClient.interceptors.response.use(
   (response) => {
     const body = response.data;

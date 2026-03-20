@@ -39,7 +39,7 @@ function formatDateLabelShort(date: Date, range: string, locale: string): string
   return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
-/** إنشاء تواريخ يومية/ساعة للرسم (في الخفاء) — دقة أعلى */
+/** إنشاء تواريخ يومية/ساعة للرسم (في الخفاء) - دقة أعلى */
 function getTimelineDatesDaily(range: string): { dates: Date[]; showTickAt: (d: Date, i: number) => boolean } {
   const now = new Date();
   const out: Date[] = [];

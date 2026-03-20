@@ -27,7 +27,7 @@ export function CommunityFeedSection({ predictions, t }: CommunityFeedSectionPro
                 onClick={() => p.user?.username && navigate(`/profile/${p.user.username}`)}
                 className={styles.feedUser}
               >
-                @{p.user?.username ?? '—'}
+                @{p.user?.username ?? '-'}
               </button>
               <span className={`${styles.feedDirection} ${p.direction === 'UP' ? styles.feedUp : styles.feedDown}`}>
                 {p.direction === 'UP'

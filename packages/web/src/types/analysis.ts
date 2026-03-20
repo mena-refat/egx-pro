@@ -6,7 +6,7 @@ export interface LearnCard {
   inThisStock?: string;
 }
 
-/** Analysis — from Prisma (API: createdAt as ISO string) */
+/** Analysis - from Prisma (API: createdAt as ISO string) */
 export interface Analysis {
   id: string;
   userId: string;

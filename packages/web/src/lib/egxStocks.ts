@@ -1,4 +1,4 @@
-// EGX Stocks — 269 companies
+// EGX Stocks - 269 companies
 // Auto-generated from official EGX data
 // Usage: import { EGX_STOCKS, getStockName } from './egxStocks'
 

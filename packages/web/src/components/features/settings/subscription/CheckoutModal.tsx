@@ -101,7 +101,7 @@ export function CheckoutModal({
             {t('billing.completePayment')}
           </h2>
           <p className="text-sm text-[var(--text-secondary)] mb-4">
-            {planLabel} — {finalPrice} {t('billing.egp')}
+            {planLabel} - {finalPrice} {t('billing.egp')}
           </p>
           <Button
             type="button"

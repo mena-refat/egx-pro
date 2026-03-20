@@ -145,7 +145,7 @@ export function Header({
           </div>
         )}
 
-        {/* Theme switcher — macOS-style segmented control */}
+        {/* Theme switcher - macOS-style segmented control */}
         <div className="flex items-center gap-0.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--border)] p-1">
           {([
             { value: 'light',  Icon: Sun,     label: 'Light',  activeClass: 'text-amber-400' },
@@ -216,8 +216,8 @@ export function Header({
             {userDropdownOpen && (
               <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="absolute left-0 ltr:right-0 ltr:-left-40 top-full mt-2 w-[200px] rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] overflow-hidden">
                 <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
-                  <p className="font-medium text-[var(--text-secondary)] truncate">{user?.fullName || '—'}</p>
-                  <p className="text-sm text-[var(--text-muted)] truncate">{user?.username ? `@${user.username}` : '—'}</p>
+                  <p className="font-medium text-[var(--text-secondary)] truncate">{user?.fullName || '-'}</p>
+                  <p className="text-sm text-[var(--text-muted)] truncate">{user?.username ? `@${user.username}` : '-'}</p>
                 </div>
                 <a href="#" onClick={(e) => { e.preventDefault(); goToSettings(); }} className="flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]">
                   <SettingsIcon className="w-4 h-4" />

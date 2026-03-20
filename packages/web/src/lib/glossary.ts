@@ -1,5 +1,5 @@
 /**
- * قاموس المصطلحات — مخزّن في الكود، بدون أي استدعاء لـ AI.
+ * قاموس المصطلحات - مخزّن في الكود، بدون أي استدعاء لـ AI.
  * عندما يرد أحد هذه المصطلحات في تقرير التحليل نعرض شرحه هنا.
  * كل عنصر: كلمات مفتاحية للبحث في النص + شرح بسيط للمستخدم.
  */
@@ -18,7 +18,7 @@ export interface GlossaryEntry {
   detail?: string;
 }
 
-/** القاموس الثابت — مصطلحات صعبة قد ترد في تقارير التحليل */
+/** القاموس الثابت - مصطلحات صعبة قد ترد في تقارير التحليل */
 export const GLOSSARY: GlossaryEntry[] = [
   {
     term: 'نسبة السعر للربح (P/E)',
@@ -169,7 +169,7 @@ function buildSearchableText(parts: (string | undefined | null)[]): string {
 
 /**
  * يحدد أي مصطلحات القاموس وردت في النص ويرجعها كـ LearnCard[].
- * بدون أي استدعاء AI — كلّ شيء من القاموس الثابت.
+ * بدون أي استدعاء AI - كلّ شيء من القاموس الثابت.
  */
 export function getMatchedGlossaryCards(searchableText: string): LearnCard[] {
   if (!searchableText || searchableText.length < 2) return [];

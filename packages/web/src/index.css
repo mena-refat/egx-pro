@@ -163,7 +163,7 @@ body {
 }
 
 @layer components {
-  /* Typography — fintech scale */
+  /* Typography - fintech scale */
   .text-title { font-size: 32px; font-weight: 700; }
   .text-header { font-size: 18px; font-weight: 600; }
   .text-body { font-size: 14px; }

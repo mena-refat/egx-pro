@@ -117,7 +117,7 @@ export function ScoringInfoCard({ onClose }: { onClose: () => void }) {
             {/* ── Section 2: 4-tier cards (interactive) ── */}
             <div>
               <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-                {isAr ? 'المراحل الأربعة — اضغط لترى المثال' : '4 Tiers — tap to see example'}
+                {isAr ? 'المراحل الأربعة - اضغط لترى المثال' : '4 Tiers - tap to see example'}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {TIER_ORDER.map((tier) => {

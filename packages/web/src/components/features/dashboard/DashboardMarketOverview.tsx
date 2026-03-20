@@ -73,7 +73,7 @@ export function DashboardMarketOverview({ overview, loading, error, onRetry }: P
           <p className="text-label uppercase tracking-wider mb-1">{item.label}</p>
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-body font-number text-[var(--text-primary)]">
-              {item.value != null ? Number(item.value).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
+              {item.value != null ? Number(item.value).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-'}
             </span>
             {item.change != null && (
               <span className={`text-label font-bold tabular-nums ${item.change >= 0 ? 'text-[var(--positive)]' : 'text-[var(--negative)]'}`}>

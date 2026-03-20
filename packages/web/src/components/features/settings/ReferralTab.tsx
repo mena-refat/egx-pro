@@ -355,7 +355,7 @@ function ReferralTabInner() {
         </div>
       </motion.div>
 
-      {/* Recent Referrals — دايماً نعرض القسم: إما القائمة أو EmptyState */}
+      {/* Recent Referrals - دايماً نعرض القسم: إما القائمة أو EmptyState */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}

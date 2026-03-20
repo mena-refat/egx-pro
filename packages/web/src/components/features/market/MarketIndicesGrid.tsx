@@ -5,12 +5,12 @@ type DataPoint = { value?: number; change?: number; changePercent?: number };
 type IndexItem = { key: string; label: string; data?: DataPoint | null; icon: React.ComponentType<{ className?: string }> | null };
 
 function formatValue(n: number): string {
-  if (!Number.isFinite(n) || n === 0) return '—';
+  if (!Number.isFinite(n) || n === 0) return '-';
   return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
 function formatPct(v: number): string {
-  if (!Number.isFinite(v) || v === 0) return '—';
+  if (!Number.isFinite(v) || v === 0) return '-';
   return `${v > 0 ? '+' : ''}${v.toFixed(2)}%`;
 }
 

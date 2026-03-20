@@ -47,7 +47,7 @@ export function AchievementCongratsCard({
         exit={{ opacity: 0 }}
         transition={{ duration: ENTER_DURATION_S }}
       >
-        {/* Overlay — النقر برا الكارت يعدّ تخطي ويظهر التالي */}
+        {/* Overlay - النقر برا الكارت يعدّ تخطي ويظهر التالي */}
         <div
           className="absolute inset-0 bg-black/60 dark:bg-black/60 backdrop-blur-sm cursor-pointer"
           aria-hidden

@@ -1,10 +1,10 @@
 export function formatNum(n: number | undefined | null): string {
-  if (n == null || !Number.isFinite(n)) return '—';
+  if (n == null || !Number.isFinite(n)) return '-';
   return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
 export function formatBig(n: number | undefined | null): string {
-  if (n == null || !Number.isFinite(n)) return '—';
+  if (n == null || !Number.isFinite(n)) return '-';
   if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
   if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
   return n.toLocaleString(undefined, { maximumFractionDigits: 0 });

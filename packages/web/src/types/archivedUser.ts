@@ -1,4 +1,4 @@
-/** ArchivedUser — from Prisma (API: archivedAt as ISO string) */
+/** ArchivedUser - from Prisma (API: archivedAt as ISO string) */
 export interface ArchivedUser {
   id: string;
   originalId: string;

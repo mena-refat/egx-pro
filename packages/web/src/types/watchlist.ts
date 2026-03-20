@@ -1,4 +1,4 @@
-/** Watchlist — from Prisma (API: dates as ISO string) */
+/** Watchlist - from Prisma (API: dates as ISO string) */
 export interface Watchlist {
   id: string;
   userId: string;
@@ -8,7 +8,7 @@ export interface Watchlist {
   createdAt: string;
 }
 
-/** Watchlist item — for UI */
+/** Watchlist item - for UI */
 export interface WatchlistItem {
   id: string;
   ticker: string;

@@ -76,7 +76,7 @@ export const PredictionCard = memo(function PredictionCard({
           </div>
           <div className="min-w-0">
             <p className="font-medium text-[var(--text-primary)] truncate">
-              @{prediction.user?.username ?? '—'}
+              @{prediction.user?.username ?? '-'}
             </p>
             <p className={`text-xs ${RANK_COLORS[prediction.userRank ?? 'BEGINNER'] ?? 'text-[var(--text-muted)]'}`}>
               {rankLabel} · {t('predictions.accuracyHistory')}: {Math.round(prediction.userAccuracyRate ?? 0)}% ({prediction.userTotalPredictions ?? 0} {t('predictions.predictionsCount')})
@@ -120,7 +120,7 @@ export const PredictionCard = memo(function PredictionCard({
       </div>
 
       <p className="text-xs text-[var(--text-muted)] mb-2">
-        {t('predictions.reason')}: {prediction.reason || '—'}
+        {t('predictions.reason')}: {prediction.reason || '-'}
       </p>
 
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--border-subtle)]">

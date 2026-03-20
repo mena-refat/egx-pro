@@ -1,4 +1,4 @@
-/** Referral — from Prisma (API: createdAt as ISO string) */
+/** Referral - from Prisma (API: createdAt as ISO string) */
 export interface Referral {
   id: string;
   referrerId: string;

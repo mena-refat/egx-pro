@@ -6,7 +6,7 @@ export function PredictionsStockTab() {
 
   return (
     <p className="text-[var(--text-muted)] py-8 text-center">
-      {t('predictions.selectStock')} — قريباً
+      {t('predictions.selectStock')} - قريباً
     </p>
   );
 }

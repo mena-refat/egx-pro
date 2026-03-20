@@ -1,4 +1,4 @@
-/** AuditLog — from Prisma (API: dates as ISO string) */
+/** AuditLog - from Prisma (API: dates as ISO string) */
 export interface AuditLog {
   id: string;
   userId: string | null;

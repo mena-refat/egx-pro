@@ -104,7 +104,7 @@ export function verify2FATempToken(token: string): { userId: string } {
   return { userId: decoded.sub };
 }
 
-/** Refresh token: 64 bytes, not JWT — not decodable. */
+/** Refresh token: 64 bytes, not JWT - not decodable. */
 export function generateRefreshToken() {
   return crypto.randomBytes(64).toString('hex');
 }

@@ -1,7 +1,7 @@
 import { Check, X, Sparkles } from 'lucide-react';
 
 const COMPARISON_ROWS = [
-  { featureKey: 'compareWatchlist',         free: '—',  pro: '5',         ultra: 'unlimited' },
+  { featureKey: 'compareWatchlist',         free: '-',  pro: '5',         ultra: 'unlimited' },
   { featureKey: 'comparePortfolio',         free: '3',  pro: '10',        ultra: 'unlimited' },
   { featureKey: 'compareGoals',             free: '1',  pro: '3',         ultra: 'unlimited' },
   { featureKey: 'compareAi',               free: '3',  pro: '20',        ultra: '45'        },

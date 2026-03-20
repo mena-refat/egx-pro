@@ -1,4 +1,4 @@
-/** Portfolio — from Prisma (API: dates as ISO string) */
+/** Portfolio - from Prisma (API: dates as ISO string) */
 export interface Portfolio {
   id: string;
   userId: string;
@@ -10,7 +10,7 @@ export interface Portfolio {
   updatedAt: string;
 }
 
-/** Portfolio holding — for UI / API response */
+/** Portfolio holding - for UI / API response */
 export interface PortfolioHolding {
   id: string;
   ticker: string;

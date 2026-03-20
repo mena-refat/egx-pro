@@ -170,7 +170,7 @@ export default function InvestmentCalculator() {
     >
       {/* 50/50 column: Chart + Results (left in LTR, left in RTL) */}
       <div className={`space-y-6 min-w-0 ${isRTL ? 'lg:col-start-2' : 'lg:col-start-1'}`}>
-        {/* Result cards — same size, full numbers visible (no truncation) */}
+        {/* Result cards - same size, full numbers visible (no truncation) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 flex items-center gap-3 h-[88px]">
             <div className="w-10 h-10 rounded-lg bg-[var(--bg-secondary)] flex items-center justify-center shrink-0">
@@ -221,7 +221,7 @@ export default function InvestmentCalculator() {
           </motion.p>
         </AnimatePresence>
 
-        {/* Chart — 400px height, full width */}
+        {/* Chart - 400px height, full width */}
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
@@ -339,7 +339,7 @@ export default function InvestmentCalculator() {
           <p className="text-[var(--text-muted)] text-sm mt-1">{t('calculator.subtitle')}</p>
         </div>
 
-        {/* [1] Monthly — slider + numeric input */}
+        {/* [1] Monthly - slider + numeric input */}
         <div>
           <label className="block text-sm text-[var(--text-muted)] mb-2">{t('calculator.monthly')}</label>
           <div className="flex items-center gap-3">
@@ -371,7 +371,7 @@ export default function InvestmentCalculator() {
           </div>
         </div>
 
-        {/* [2] Initial — 0 left, 500,000 right (dir=ltr so slider never reversed) */}
+        {/* [2] Initial - 0 left, 500,000 right (dir=ltr so slider never reversed) */}
         <div dir="ltr">
           <label className="block text-sm text-[var(--text-muted)] mb-2">{t('calculator.initialLabel')}</label>
           <div className="flex items-center gap-3">
@@ -403,7 +403,7 @@ export default function InvestmentCalculator() {
           </div>
         </div>
 
-        {/* [3] Years — slider + numeric input */}
+        {/* [3] Years - slider + numeric input */}
         <div>
           <label className="block text-sm text-[var(--text-muted)] mb-2">{t('calculator.years')}</label>
           <div className="flex items-center gap-3">

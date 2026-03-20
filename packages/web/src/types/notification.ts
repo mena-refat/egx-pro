@@ -1,4 +1,4 @@
-/** Notification type — from Prisma + API */
+/** Notification type - from Prisma + API */
 export type NotificationType =
   | 'achievement'
   | 'stock_target'
@@ -9,7 +9,7 @@ export type NotificationType =
   | 'goal'
   | 'portfolio';
 
-/** Notification — from Prisma (API: createdAt as ISO string) */
+/** Notification - from Prisma (API: createdAt as ISO string) */
 export interface Notification {
   id: string;
   userId?: string;

@@ -216,7 +216,7 @@
     "next": "Next",
     "modeTabTier": "Move size",
     "modeTabExact": "Exact price",
-    "exactUpgradeTitle": "Exact price mode — Pro & Ultra",
+    "exactUpgradeTitle": "Exact price mode - Pro & Ultra",
     "exactUpgradeDesc": "Predict an exact target price and set your own expiry date. Higher points for higher precision.",
     "upgradeNow": "Upgrade now",
     "exactModeDesc": "Set a target price and an expiry date. Direction is derived automatically.",
@@ -290,7 +290,7 @@
     "no_internet": "No internet connection",
     "server_busy": "Service is busy. Try again in a minute.",
     "server_error": "Server error. Try again later.",
-    "analysis_empty": "Analysis returned empty — try again or try another stock.",
+    "analysis_empty": "Analysis returned empty - try again or try another stock.",
     "unexpected": "An unexpected error occurred. Try again later.",
     "buy_date_future": "Buy date cannot be in the future"
   },
@@ -1176,14 +1176,14 @@
     }
   },
   "learn": {
-    "title": "Learn — What are these terms?",
-    "subtitle": "Terms that appeared in the report — we explain them in simple language, at no extra cost.",
+    "title": "Learn - What are these terms?",
+    "subtitle": "Terms that appeared in the report - we explain them in simple language, at no extra cost.",
     "showLess": "Less",
     "showAllCount": "Show all ({{count}})"
   },
   "referral": {
     "title": "Invite your friends",
-    "subtitle": "Share your code — 15 successful referrals = 1 free Pro month",
+    "subtitle": "Share your code - 15 successful referrals = 1 free Pro month",
     "totalReferrals": "Total referrals",
     "activeReferrals": "Active referrals",
     "monthsEarned": "Free months",
@@ -1211,7 +1211,7 @@
   "plan": {
     "analysisLimitTitle": "You're a serious investor!",
     "analysisLimitBody": "You've used all your monthly analyses. Pro gives you 20 per month, Ultra 45.",
-    "subscribeNow": "Subscribe now — 189 EGP/month",
+    "subscribeNow": "Subscribe now - 189 EGP/month",
     "waitNextMonth": "Wait for next month",
     "portfolioLimitMessage": "You've reached the limit of 10 stocks in your portfolio. Pro gives you an unlimited portfolio.",
     "watchlistLimitMessage": "You've reached the limit of 20 stocks in your watchlist. Pro gives you an unlimited watchlist.",

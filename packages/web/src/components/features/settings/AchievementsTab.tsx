@@ -17,7 +17,7 @@ import api from '../../../lib/api';
 import { Button } from '../../ui/Button';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ACHIEVEMENTS DATA — 4 LEVELS (backendId maps to API /user/achievements)
+// ACHIEVEMENTS DATA - 4 LEVELS (backendId maps to API /user/achievements)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 interface AchievementDef {
@@ -309,7 +309,7 @@ const LevelSection = memo(function LevelSection({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-bold text-[var(--text-primary)] text-base">
-              {t('achievements.level')} {level.level} — {isAr ? level.titleAr : level.titleEn}
+              {t('achievements.level')} {level.level} - {isAr ? level.titleAr : level.titleEn}
             </h3>
             {allUnlocked && (
               <span

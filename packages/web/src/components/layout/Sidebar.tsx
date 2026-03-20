@@ -19,7 +19,7 @@ export type SidebarProps = {
 
 type NavItem = { id: string; path: string; icon: React.ElementType };
 
-// 4 sections — each maps to a clear user mental model
+// 4 sections - each maps to a clear user mental model
 const SECTIONS: { groupKey: string; items: NavItem[] }[] = [
   {
     groupKey: 'overview',
@@ -53,7 +53,7 @@ const SECTIONS: { groupKey: string; items: NavItem[] }[] = [
   },
 ];
 
-// Always pinned at bottom — separated visually from main nav
+// Always pinned at bottom - separated visually from main nav
 const BOTTOM_ITEMS: NavItem[] = [
   { id: 'settings', path: '/settings', icon: Settings  },
   { id: 'support',  path: '/support',          icon: LifeBuoy  },
@@ -142,7 +142,7 @@ export function Sidebar({ activeRoute, collapsed, onToggle, supportUnreadCount =
       <nav className="flex-1 px-2 py-3 space-y-4 overflow-y-auto overflow-x-hidden">
         {SECTIONS.map((section, i) => (
           <div key={section.groupKey}>
-            {/* Section label — hidden when collapsed */}
+            {/* Section label - hidden when collapsed */}
             {!collapsed && i > 0 && (
               <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] select-none">
                 {t(`nav_group.${section.groupKey}`)}

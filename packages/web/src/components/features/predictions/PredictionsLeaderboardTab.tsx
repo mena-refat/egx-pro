@@ -21,7 +21,7 @@ export function PredictionsLeaderboardTab({ entries, loading }: Props) {
   }
 
   if (entries.length === 0) {
-    return <p className="text-[var(--text-muted)] py-8 text-center">—</p>;
+    return <p className="text-[var(--text-muted)] py-8 text-center">-</p>;
   }
 
   return (
@@ -35,7 +35,7 @@ export function PredictionsLeaderboardTab({ entries, loading }: Props) {
           <div className="w-8 h-8 rounded-full bg-[var(--brand)]/20 flex items-center justify-center text-sm font-medium">
             {(entry.user?.username ?? '?').slice(0, 1).toUpperCase()}
           </div>
-          <span className="font-medium truncate flex-1">@{entry.user?.username ?? '—'}</span>
+          <span className="font-medium truncate flex-1">@{entry.user?.username ?? '-'}</span>
           <span className="text-sm text-[var(--text-muted)]">{(entry.accuracyRate ?? 0).toFixed(0)}%</span>
           <span className="text-sm font-medium">{entry.totalPoints} {t('predictions.pointsShort')}</span>
         </li>

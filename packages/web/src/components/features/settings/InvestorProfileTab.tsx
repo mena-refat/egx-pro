@@ -21,17 +21,17 @@ const GOAL_OPTIONS = [
 ] as const;
 
 const TIMELINE_OPTIONS = [
-  { id: 'lt1', title: '⚡ أقل من سنة',          desc: 'هدف قريب — استراتيجية محافظة', years: 1 },
-  { id: '1_3', title: '📅 من 1 إلى 3 سنوات',    desc: 'أفق قصير — توازن بين الأمان والنمو', years: 3 },
-  { id: '3_7', title: '📆 من 3 إلى 7 سنوات',    desc: 'متوسط الأجل — نمو تدريجي ومستقر', years: 5 },
-  { id: 'gt7', title: '🏆 أكثر من 7 سنوات',     desc: 'طويل الأجل — أعلى عائد على المدى البعيد', years: 10 },
+  { id: 'lt1', title: '⚡ أقل من سنة',          desc: 'هدف قريب - استراتيجية محافظة', years: 1 },
+  { id: '1_3', title: '📅 من 1 إلى 3 سنوات',    desc: 'أفق قصير - توازن بين الأمان والنمو', years: 3 },
+  { id: '3_7', title: '📆 من 3 إلى 7 سنوات',    desc: 'متوسط الأجل - نمو تدريجي ومستقر', years: 5 },
+  { id: 'gt7', title: '🏆 أكثر من 7 سنوات',     desc: 'طويل الأجل - أعلى عائد على المدى البعيد', years: 10 },
 ] as const;
 
 const RISK_OPTIONS = [
   { id: 'sell_immediately', risk: 'conservative' as const, title: '😰 هبيع فوراً وأوقف الخسارة', desc: 'سلامتي أهم من أي ربح' },
   { id: 'wait_and_see',    risk: 'moderate' as const,     title: '🤔 هستنى وأشوف السوق',        desc: 'مش هتصرف إلا لو الوضع اتضح' },
-  { id: 'buy_more',        risk: 'aggressive' as const,   title: '😎 فرصة ذهبية — هشتري أكتر', desc: 'انخفاض السعر يعني صفقة أفضل' },
-  { id: 'long_term_calm',  risk: 'moderate' as const,     title: '🧘 مش هتأثر — استثماري طويل المدى', desc: 'التقلبات طبيعية ومش بتقلقني' },
+  { id: 'buy_more',        risk: 'aggressive' as const,   title: '😎 فرصة ذهبية - هشتري أكتر', desc: 'انخفاض السعر يعني صفقة أفضل' },
+  { id: 'long_term_calm',  risk: 'moderate' as const,     title: '🧘 مش هتأثر - استثماري طويل المدى', desc: 'التقلبات طبيعية ومش بتقلقني' },
 ] as const;
 
 const BUDGET_OPTIONS = [

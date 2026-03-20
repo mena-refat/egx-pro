@@ -78,7 +78,7 @@ export default function DiscoverPage() {
         setRequestsCount(list.length);
       }
     } catch {
-      // ignore — cancelled or network error
+      // ignore - cancelled or network error
     } finally {
       setListLoading(false);
     }

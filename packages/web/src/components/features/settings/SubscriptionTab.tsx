@@ -14,7 +14,7 @@ import { Input } from '../../ui/Input';
 const DISCOUNT_CODE_REGEX = /^[A-Z0-9]{18,30}$/;
 
 const COMPARISON_ROWS = [
-  { featureKey: 'compareWatchlist',         free: '—',    pro: '5',         ultra: '∞'    },
+  { featureKey: 'compareWatchlist',         free: '-',    pro: '5',         ultra: '∞'    },
   { featureKey: 'comparePortfolio',         free: '3',    pro: '10',        ultra: '∞'    },
   { featureKey: 'compareGoals',             free: '1',    pro: '3',         ultra: '∞'    },
   { featureKey: 'compareAi',               free: '3',    pro: '20',        ultra: '45'   },
@@ -418,7 +418,7 @@ export function SubscriptionTab() {
                       return (
                         <td key={col} className="text-center py-2.5 px-2">
                           {val === true  ? <Check className="w-3.5 h-3.5 text-[var(--success)] mx-auto" /> :
-                           val === false ? <span className="text-[var(--text-muted)]">—</span> :
+                           val === false ? <span className="text-[var(--text-muted)]">-</span> :
                            val === 'standard' ? <span className="text-[var(--text-muted)]">{t('billing.supportStandard', { defaultValue: 'عادي' })}</span> :
                            val === 'priority' ? <span className="text-amber-400 font-semibold">{t('billing.supportPriority', { defaultValue: 'أولوية' })}</span> :
                            <span>{val}</span>}

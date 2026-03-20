@@ -1,4 +1,4 @@
-// Scoring constants — mirrors the backend service exactly.
+// Scoring constants - mirrors the backend service exactly.
 // Source of truth: packages/server/src/services/predictions.service.ts
 
 export type MoveTier = 'LIGHT' | 'MEDIUM' | 'STRONG' | 'EXTREME';
@@ -17,7 +17,7 @@ export const TIMEFRAME_MULTIPLIER: Record<PredictionTime, number> = {
   SIX_MONTHS: 2.4, NINE_MONTHS: 3.0, YEAR: 4.0,
 };
 
-// Timeframe-specific tier ranges [min%, max%) — calibrated to EGX 40-year history.
+// Timeframe-specific tier ranges [min%, max%) - calibrated to EGX 40-year history.
 // Individual stock σ_annual ≈ 55%; tiers are at 0-0.5σ / 0.5-1.5σ / 1.5-2.5σ / >2.5σ
 export const TIMEFRAME_TIER_RANGES: Record<PredictionTime, Record<MoveTier, [number, number]>> = {
   WEEK:         { LIGHT: [1, 5],   MEDIUM: [5, 11],  STRONG: [11, 19],  EXTREME: [19, Infinity] },

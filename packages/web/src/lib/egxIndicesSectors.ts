@@ -4,7 +4,7 @@
  * EGX30/70/100 = مؤشرات تمثيلية؛ EGX33 = مؤشر الشرعية.
  */
 
-/** مؤشر EGX 30 — من عمود المؤشر (EGX 30 / 100 / 33 أو EGX 30) */
+/** مؤشر EGX 30 - من عمود المؤشر (EGX 30 / 100 / 33 أو EGX 30) */
 export const INDEX_EGX30 = [
   'ABUK', 'ADIB', 'AMOC', 'EFID', 'EGAL', 'ARCC', 'ECAP', 'ESRS', 'FAIT', 'FAITA',
   'AUTO', 'SWDY', 'EMFD', 'TMGH', 'PHDC', 'OCDI', 'ETEL', 'CLHO', 'OLFI', 'MTIE',
@@ -26,10 +26,10 @@ export const INDEX_EGX100 = [
   ...INDEX_EGX70.filter(t => !(INDEX_EGX30 as readonly string[]).includes(t)),
 ] as const;
 
-/** EGX 35 LV — low volatility index (Aug 2025); extend as official list is confirmed */
+/** EGX 35 LV - low volatility index (Aug 2025); extend as official list is confirmed */
 export const INDEX_EGX35_LV: readonly string[] = [];
 
-/** EGX 33 / متوافق مع الشريعة — من عمود «متوافق مع الشريعة: نعم» في الجدول الرسمي */
+/** EGX 33 / متوافق مع الشريعة - من عمود «متوافق مع الشريعة: نعم» في الجدول الرسمي */
 export const INDEX_EGX33_SHARIA = [
   'ABUK', 'ADIB', 'ACRO', 'APPC', 'AJWA', 'SAUD', 'FNAR', 'AMPI', 'ATLC', 'ALCN',
   'AFMC', 'AMOC', 'AMES', 'AXPH', 'SPIN', 'AMEC', 'AMER', 'ALUM', 'CERA', 'ACGC',
