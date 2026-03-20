@@ -34,7 +34,7 @@ export async function verifyPassword(password: string, hash: string, salt: strin
   return crypto.timingSafeEqual(a, b);
 }
 
-export function generateAccessToken(user: { id: number | string; email: string }) {
+export function generateAccessToken(user: { id: number | string }) {
   const rawKey = process.env.JWT_PRIVATE_KEY;
   const isRealKey = rawKey && rawKey.includes('BEGIN RSA PRIVATE KEY') && !rawKey.includes('...');
 
@@ -50,10 +50,10 @@ export function generateAccessToken(user: { id: number | string; email: string }
   const algorithm = isRealKey ? 'RS256' : 'HS256';
 
   return jwt.sign(
-    { sub: String(user.id), email: user.email },
+    { sub: String(user.id) },
     effectiveSecret,
-    { 
-      expiresIn: '15m', 
+    {
+      expiresIn: '15m',
       algorithm: algorithm as jwt.Algorithm
     }
   );

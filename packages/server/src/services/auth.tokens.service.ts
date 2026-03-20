@@ -29,8 +29,7 @@ export async function refresh(
   );
   await RefreshTokenRepository.create(refreshData);
 
-  const loginId = rt.user.email ?? rt.user.phone ?? '';
-  const accessToken = generateAccessToken({ id: rt.user.id, email: loginId });
+  const accessToken = generateAccessToken({ id: rt.user.id });
   return { accessToken, refreshToken: newRefreshToken };
 }
 
@@ -122,8 +121,7 @@ export async function getMe(refreshTokenCookie: string | undefined): Promise<{ u
     throw new AppError('ACCOUNT_SUSPENDED', 403, 'هذا الحساب محظور');
   }
 
-  const loginId = rt.user.email ?? rt.user.phone ?? '';
-  const accessToken = generateAccessToken({ id: rt.user.id, email: loginId });
+  const accessToken = generateAccessToken({ id: rt.user.id });
   const userPayload = toUserPayload(rt.user as Parameters<typeof toUserPayload>[0]);
   return { user: userPayload, accessToken };
 }

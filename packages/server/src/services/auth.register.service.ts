@@ -110,8 +110,7 @@ export async function register(
     );
   }
 
-  const loginId = user.email ?? user.phone ?? '';
-  const accessToken = generateAccessToken({ id: user.id, email: loginId });
+  const accessToken = generateAccessToken({ id: user.id });
   const refreshToken = generateRefreshToken();
   const refreshHash = hashRefreshToken(refreshToken);
   const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
