@@ -166,7 +166,7 @@ function AgentCard(_props: { key?: string; s: AgentStat; t: (k: string) => strin
             onClick={onViewTickets}
             className="w-full mt-2.5 text-[10px] text-blue-400 hover:text-blue-300 text-center transition-colors flex items-center justify-center gap-1"
           >
-            {t('support.viewTeam')} <ChevronRight size={9} />
+            {t('support.viewAgentTickets')} <ChevronRight size={9} />
           </button>
         )}
       </div>

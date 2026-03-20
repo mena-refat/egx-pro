@@ -507,6 +507,15 @@ router.patch(
   }
 );
 
+router.patch(
+  '/notifications/scheduled/:id/resume',
+  adminAuthenticate,
+  requirePermission('notifications.send'),
+  (req, res, next) => {
+    void AdminNotificationsController.resumeScheduled(req as any, res).catch(next);
+  }
+);
+
 router.delete(
   '/notifications/scheduled/:id',
   adminAuthenticate,

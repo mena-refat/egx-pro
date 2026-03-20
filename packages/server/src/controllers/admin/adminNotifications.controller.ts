@@ -145,6 +145,32 @@ export const AdminNotificationsController = {
     sendSuccess(res, { ok: true });
   },
 
+  async resumeScheduled(req: AdminRequest, res: Response): Promise<void> {
+    if (!req.admin) { sendError(res, 'UNAUTHORIZED', 401); return; }
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+
+    const notif = await prisma.scheduledNotification.findUnique({ where: { id } });
+    if (!notif) { sendError(res, 'NOT_FOUND', 404); return; }
+    if (notif.status !== 'CANCELLED') { sendError(res, 'ALREADY_PROCESSED', 400); return; }
+
+    // Calculate next valid send time
+    let nextSendAt = new Date(notif.scheduledAt);
+    const now = new Date();
+    if (notif.repeat !== 'NONE') {
+      while (nextSendAt <= now) {
+        if (notif.repeat === 'DAILY')        nextSendAt.setDate(nextSendAt.getDate() + 1);
+        else if (notif.repeat === 'WEEKLY')  nextSendAt.setDate(nextSendAt.getDate() + 7);
+        else if (notif.repeat === 'MONTHLY') nextSendAt.setMonth(nextSendAt.getMonth() + 1);
+      }
+    }
+
+    await prisma.scheduledNotification.update({ where: { id }, data: { status: 'PENDING', nextSendAt } });
+    await adminAudit(req.admin.id, 'NOTIFICATION_SCHEDULE_RESUMED', String(id), undefined, req);
+
+    sendSuccess(res, { ok: true });
+  },
+
   async deleteScheduled(req: AdminRequest, res: Response): Promise<void> {
     if (!req.admin) { sendError(res, 'UNAUTHORIZED', 401); return; }
     const id = parseInt(req.params.id, 10);

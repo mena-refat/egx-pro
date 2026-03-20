@@ -5,7 +5,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import {
-  Send, Clock, CalendarClock, Trash2, XCircle,
+  Send, Clock, CalendarClock, Trash2, XCircle, PlayCircle,
   RefreshCw, Users, Repeat2, CheckCircle2, Bell,
 } from 'lucide-react';
 
@@ -105,7 +105,7 @@ export default function NotificationsPage() {
   const [listLoading,   setListLoading]   = useState(false);
   const [listFilter,    setListFilter]    = useState<'ALL' | 'PENDING'>('PENDING');
   const [confirmId,     setConfirmId]     = useState<number | null>(null);
-  const [confirmAction, setConfirmAction] = useState<'cancel' | 'delete'>('cancel');
+  const [confirmAction, setConfirmAction] = useState<'cancel' | 'resume' | 'delete'>('cancel');
   const [actionLoading, setActionLoading] = useState(false);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -196,6 +196,8 @@ export default function NotificationsPage() {
     try {
       if (confirmAction === 'cancel') {
         await adminApi.patch(`/notifications/scheduled/${confirmId}/cancel`);
+      } else if (confirmAction === 'resume') {
+        await adminApi.patch(`/notifications/scheduled/${confirmId}/resume`);
       } else {
         await adminApi.delete(`/notifications/scheduled/${confirmId}`);
       }
@@ -489,19 +491,28 @@ export default function NotificationsPage() {
                     <div className="flex items-center gap-1 justify-end">
                       {row.status === 'PENDING' && (
                         <button
-                          title={t('notifications.cancelSchedule')}
                           onClick={() => { setConfirmId(row.id); setConfirmAction('cancel'); }}
-                          className="p-1.5 rounded-lg text-slate-600 hover:text-amber-400 hover:bg-amber-400/10 transition-all"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-amber-400 hover:bg-amber-400/10 transition-all"
                         >
-                          <XCircle size={14} />
+                          <XCircle size={13} />
+                          {t('notifications.cancelSchedule')}
+                        </button>
+                      )}
+                      {row.status === 'CANCELLED' && (
+                        <button
+                          onClick={() => { setConfirmId(row.id); setConfirmAction('resume'); }}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all"
+                        >
+                          <PlayCircle size={13} />
+                          {t('notifications.resumeSchedule')}
                         </button>
                       )}
                       <button
-                        title={t('notifications.deleteSchedule')}
                         onClick={() => { setConfirmId(row.id); setConfirmAction('delete'); }}
-                        className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-400/10 transition-all"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-all"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={13} />
+                        {t('notifications.deleteSchedule')}
                       </button>
                     </div>
                   </td>
@@ -515,9 +526,21 @@ export default function NotificationsPage() {
       {/* Confirm dialog */}
       <ConfirmDialog
         open={confirmId != null}
-        title={confirmAction === 'cancel' ? t('notifications.cancelSchedule') : t('notifications.deleteSchedule')}
-        message={confirmAction === 'cancel' ? t('notifications.confirmCancel') : t('notifications.confirmDelete')}
-        confirmLabel={confirmAction === 'cancel' ? t('notifications.cancelSchedule') : t('notifications.deleteSchedule')}
+        title={
+          confirmAction === 'cancel' ? t('notifications.cancelScheduleTitle') :
+          confirmAction === 'resume' ? t('notifications.resumeScheduleTitle') :
+          t('notifications.deleteScheduleTitle')
+        }
+        message={
+          confirmAction === 'cancel' ? t('notifications.confirmCancel') :
+          confirmAction === 'resume' ? t('notifications.confirmResume') :
+          t('notifications.confirmDelete')
+        }
+        confirmLabel={
+          confirmAction === 'cancel' ? t('notifications.confirmCancelBtn') :
+          confirmAction === 'resume' ? t('notifications.confirmResumeBtn') :
+          t('notifications.confirmDeleteBtn')
+        }
         danger={confirmAction === 'delete'}
         loading={actionLoading}
         onConfirm={handleConfirmedAction}
