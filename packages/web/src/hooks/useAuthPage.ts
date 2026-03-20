@@ -180,7 +180,7 @@ export function useAuthPage(refCode: string) {
       if (!res.ok) {
         let msg = 'Verification failed';
         if (data.error === 'invalid_code' || data.error === 'INVALID_CODE') msg = t('settings.invalidCodeLong');
-        else if (data.error === 'invalid_or_expired_token') msg = t('auth.sessionExpired');
+        else if (data.error === 'invalid_or_expired_token' || data.error === 'INVALID_OR_EXPIRED_TOKEN') msg = t('auth.sessionExpired');
         else if (data.message) msg = data.message;
         throw new Error(msg);
       }

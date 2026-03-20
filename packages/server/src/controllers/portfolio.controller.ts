@@ -49,7 +49,7 @@ export const PortfolioController = {
       return;
     }
     await PortfolioService.deleteHolding(userId, req.params.id);
-    res.status(204).send();
+    sendSuccess(res, { success: true });
   }),
 
   performance: async (_req: AuthRequest, res: Response) => {

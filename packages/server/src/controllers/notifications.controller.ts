@@ -61,7 +61,7 @@ export const NotificationsController = {
     if (!userId) return sendError(res, 'UNAUTHORIZED', 401);
     try {
       await NotificationService.clearAll(userId);
-      res.status(204).send();
+      sendSuccess(res, { success: true });
     } catch (err) {
       logger.error('Clear all notifications error', { err });
       sendError(res, 'INTERNAL_ERROR', 500);
@@ -75,7 +75,7 @@ export const NotificationsController = {
     try {
       const deleted = await NotificationService.deleteOne(userId, id);
       if (!deleted) return sendError(res, 'NOT_FOUND', 404);
-      res.status(204).send();
+      sendSuccess(res, { success: true });
     } catch (err) {
       logger.error('Delete notification error', { err });
       sendError(res, 'INTERNAL_ERROR', 500);

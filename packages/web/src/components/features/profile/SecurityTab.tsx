@@ -221,7 +221,7 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
     try {
       const res = await api.post('/auth/2fa/setup');
       const data = res.data;
-      if ((data as { error?: string })?.error === '2fa_already_enabled') {
+      if ((data as { error?: string })?.error === '2fa_already_enabled' || (data as { error?: string })?.error === 'TWO_FA_ALREADY_ENABLED') {
         setEnable2FAError(t('settings.twoFaAlreadyEnabled'));
         return;
       }
@@ -254,8 +254,8 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
       if ((data as { error?: string })?.error) {
         const err = (data as { error?: string }).error;
         if (err === 'invalid_code' || err === 'INVALID_CODE') setEnable2FAError(t('settings.invalidCodeLong'));
-        else if (err === 'no_secret') setEnable2FAError(t('settings.noSecret'));
-        else if (err === '2fa_already_enabled') setEnable2FAError(t('settings.twoFaAlreadyEnabled'));
+        else if (err === 'no_secret' || err === 'NO_SECRET') setEnable2FAError(t('settings.noSecret'));
+        else if (err === '2fa_already_enabled' || err === 'TWO_FA_ALREADY_ENABLED') setEnable2FAError(t('settings.twoFaAlreadyEnabled'));
         else setEnable2FAError(t('settings.twoFaInvalidCodeTryAgain'));
         return;
       }
@@ -281,7 +281,7 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
       const data = res.data;
       if ((data as { error?: string })?.error) {
         const err = (data as { error?: string }).error;
-        if (err === 'wrong_password') setDisable2FAError(t('settings.wrongPassword'));
+        if (err === 'wrong_password' || err === 'WRONG_PASSWORD') setDisable2FAError(t('settings.wrongPassword'));
         else if (err === 'invalid_code' || err === 'INVALID_CODE') setDisable2FAError(t('settings.invalidCode'));
         else setDisable2FAError(err || 'Failed');
         return;

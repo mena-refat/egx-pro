@@ -174,7 +174,7 @@ export const UserController = {
     try {
       const sessionId = req.params.id;
       await UserService.revokeSession(id, sessionId);
-      res.status(204).send();
+      sendSuccess(res, { success: true });
     } catch (err) {
       logger.error('End session error', { err });
       sendError(res, 'INTERNAL_ERROR', 500);

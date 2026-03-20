@@ -59,6 +59,6 @@ export const WatchlistController = {
       return;
     }
     await WatchlistService.remove(userId, req.params.ticker ?? '');
-    res.status(204).send();
+    sendSuccess(res, { success: true });
   }),
 };

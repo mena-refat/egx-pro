@@ -9,9 +9,9 @@ import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
 import { BRAND_BG_STRONG, GREEN_BG, RED_BG, RED, BRAND } from '../../lib/theme';
-import { Button } from '../../components/ui/Button';
 import { EditValueCard, type EditableField } from './EditValueCard';
 import { AccountHeader } from './AccountHeader';
+import { AvatarEditorCard } from './AvatarEditorCard';
 
 interface FieldRowProps {
   label: string;
@@ -112,26 +112,7 @@ export default function AccountPage() {
         showsVerticalScrollIndicator={false}
       >
         {/* Avatar */}
-        <View style={{ alignItems: 'center', marginBottom: 8 }}>
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: `${BRAND}20`,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 12,
-            }}
-          >
-            <Text style={{ fontSize: 30, fontWeight: '800', color: BRAND }}>
-              {user?.fullName?.[0]?.toUpperCase() ?? 'U'}
-            </Text>
-          </View>
-          <Text style={{ color: colors.textMuted, fontSize: 11 }}>
-            تغيير الصورة قريباً
-          </Text>
-        </View>
+        <AvatarEditorCard />
 
         {/* Fields */}
         <View

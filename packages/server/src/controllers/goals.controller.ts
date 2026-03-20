@@ -69,6 +69,6 @@ export const GoalsController = {
       return;
     }
     await GoalsService.delete(userId, req.params.id);
-    res.status(204).send();
+    sendSuccess(res, { success: true });
   }),
 };

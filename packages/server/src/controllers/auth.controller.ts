@@ -241,7 +241,7 @@ export async function revokeSession(req: Request, res: Response): Promise<void> 
     const token = req.cookies?.refreshToken;
     const { tokenId } = req.params;
     await AuthService.revokeSession(token, tokenId, authContext(req));
-    res.status(204).send();
+    sendSuccess(res, { success: true });
   } catch (e) {
     handleError(e, res, 'Failed to revoke session');
   }

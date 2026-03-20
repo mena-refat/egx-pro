@@ -29,7 +29,7 @@ export const SocialController = {
     }
     const username = req.params.username ?? '';
     await SocialService.unfollow(userId, username);
-    res.status(204).send();
+    sendSuccess(res, { success: true });
   }),
 
   followers: run(async (req, res) => {

@@ -15,6 +15,8 @@ import { useLivePrices } from '../../hooks/useLivePrices';
 import { usePortfolioData } from '../../hooks/useMarketData';
 import { getStockName, getStockInfo } from '../../lib/egxStocks';
 import apiClient from '../../lib/api/client';
+import { StockHistoryChart } from './StockHistoryChart';
+import { useStockHistory } from './useStockHistory';
 import {
   BRAND, BRAND_BG_STRONG, BRAND_LIGHT,
   FONT, WEIGHT, RADIUS, SPACE,
@@ -46,42 +48,6 @@ function StatRow({ label, value, valueColor }: { label: string; value: string; v
   );
 }
 
-// ─── ChartPlaceholder ───────────────────────────────────────────────────────
-
-function ChartPlaceholder({ changePercent }: { changePercent: number }) {
-  const { colors } = useTheme();
-  const isUp = changePercent >= 0;
-  const lineColor = isUp ? GREEN : RED;
-  // Draw a simple SVG-like path using Views
-  const pts = [0.5, 0.4, 0.55, 0.35, 0.45, 0.3, 0.38, 0.25, 0.42, 0.2];
-  return (
-    <View style={{
-      backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
-      borderRadius: RADIUS.xl, padding: SPACE.lg, marginBottom: SPACE.md,
-    }}>
-      <Text style={{ color: colors.textMuted, fontSize: FONT.xs, textAlign: 'center', marginBottom: SPACE.md }}>
-        الرسم البياني — قريباً
-      </Text>
-      <View style={{ height: 80, flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
-        {pts.map((h, i) => (
-          <View
-            key={i}
-            style={{
-              flex: 1,
-              height: `${(1 - h) * 100}%`,
-              backgroundColor: lineColor + '40',
-              borderTopLeftRadius: 3,
-              borderTopRightRadius: 3,
-              borderTopWidth: 2,
-              borderTopColor: lineColor,
-            }}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
-
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function StockDetailPage() {
@@ -108,6 +74,7 @@ export default function StockDetailPage() {
   // ─── live price ─────────────────────────────────────────────
   const { prices } = useLivePrices(ticker ? [ticker] : []);
   const livePrice  = ticker ? prices[ticker] : undefined;
+  const { history, range, changeRange, loadingHistory } = useStockHistory(ticker);
 
   // ─── portfolio ───────────────────────────────────────────────
   const { holdings } = usePortfolioData();
@@ -298,8 +265,14 @@ export default function StockDetailPage() {
 
         <View style={{ paddingHorizontal: SPACE.lg, gap: SPACE.md }}>
 
-          {/* ─── Chart placeholder ──────────────────────── */}
-          <ChartPlaceholder changePercent={changePercent} />
+          {/* ─── Price chart ─────────────────────────────── */}
+          <StockHistoryChart
+            history={history}
+            range={range}
+            onRangeChange={changeRange}
+            loading={loadingHistory}
+            changePercent={changePercent}
+          />
 
           {/* ─── My Position ────────────────────────────── */}
           {totalShares > 0 && (

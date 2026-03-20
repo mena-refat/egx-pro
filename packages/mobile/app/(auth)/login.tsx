@@ -63,7 +63,13 @@ export default function LoginPage() {
               <Text style={{ color: '#ef4444', fontSize: FONT.sm, textAlign: 'center' }}>{error}</Text>
             </View>
           )}
-          <Button label={loading ? 'جارٍ التحقق...' : 'تأكيد'} loading={loading} onPress={handle2FA} fullWidth size="lg" />
+          <Button
+            label={loading ? 'جارٍ التحقق...' : 'تأكيد'}
+            loading={loading}
+            onPress={() => { void handle2FA(); }}
+            fullWidth
+            size="lg"
+          />
         </View>
       </SafeAreaView>
     );
