@@ -9,7 +9,7 @@ async function cachedGet<T>(url: string, ttl = 30_000, signal?: AbortSignal): Pr
   const hit = CACHE[url];
   if (hit && Date.now() - hit.ts < ttl) return hit.data as T;
   const res = await apiClient.get<T>(url, { signal });
-  const data = (res.data as { data?: T })?.data ?? res.data;
+  const data = res.data as T;
   CACHE[url] = { data, ts: Date.now() };
   return data as T;
 }

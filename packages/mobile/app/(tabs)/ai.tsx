@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, Pressable, ScrollView, I18nManager } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   Brain, GitCompare, Sparkles, Zap, Calculator,
   Target, TrendingUp, TrendingDown, ChevronLeft, ChevronRight,
 } from 'lucide-react-native';
-import { I18nManager } from 'react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import apiClient from '../../lib/api/client';
+import {
+  BRAND, BRAND_BG_STRONG,
+  FONT, WEIGHT, RADIUS, SPACE,
+} from '../../lib/theme';
 
 interface Prediction {
   id: string;
@@ -21,46 +24,46 @@ interface Prediction {
 }
 
 function usePredictionsPreview() {
-  const [preds, setPreds] = useState<Prediction[]>([]);
+  const [preds, setPreds]     = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const res = await apiClient.get('/api/predictions');
+      const res  = await apiClient.get('/api/predictions');
       const data = res.data as { items?: Prediction[] };
-      setPreds(data.items ?? (Array.isArray(res.data) ? res.data : []));
+      setPreds(data.items ?? (Array.isArray(res.data) ? (res.data as Prediction[]) : []));
     } catch { setPreds([]); }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
 
-  const total = preds.length;
+  const total   = preds.length;
   const correct = preds.filter((p) => p.status === 'CORRECT').length;
-  const wrong = preds.filter((p) => p.status === 'WRONG').length;
+  const wrong   = preds.filter((p) => p.status === 'WRONG').length;
   const winRate = correct + wrong > 0 ? Math.round((correct / (correct + wrong)) * 100) : null;
-  const recent = preds.filter((p) => p.status === 'PENDING').slice(0, 3);
+  const recent  = preds.filter((p) => p.status === 'PENDING').slice(0, 3);
 
   return { total, winRate, recent, loading };
 }
 
-const AI_CARDS = [
+const AI_TOOLS = [
   {
     id: 'analyze',
     icon: Brain,
     title: 'تحليل سهم',
-    desc: 'تحليل شامل — فني وأساسي مع توصية',
+    desc: 'تحليل شامل فني وأساسي',
     href: '/ai/analyze',
     cost: '1 تحليل',
-    color: '#8b5cf6',
-    bg: '#8b5cf610',
-    border: '#8b5cf620',
+    color: BRAND,
+    bg: BRAND + '10',
+    border: BRAND + '20',
   },
   {
     id: 'compare',
     icon: GitCompare,
     title: 'مقارنة سهمين',
-    desc: 'اعرف أيهما أفضل للاستثمار الآن',
+    desc: 'أيهما أفضل الآن؟',
     href: '/ai/compare',
     cost: '2 تحليل',
     color: '#3b82f6',
@@ -71,22 +74,32 @@ const AI_CARDS = [
     id: 'recommendations',
     icon: Sparkles,
     title: 'توصيات شخصية',
-    desc: 'مخصصة لمحفظتك وأهدافك',
+    desc: 'مخصصة لمحفظتك',
     href: '/ai/recommendations',
     cost: '1 تحليل',
     color: '#f59e0b',
     bg: '#f59e0b10',
     border: '#f59e0b20',
   },
+  {
+    id: 'calculator',
+    icon: Calculator,
+    title: 'حاسبة الاستثمار',
+    desc: 'نمو بنك ذهب بورصة',
+    href: '/calculator',
+    cost: 'مجاني',
+    color: '#10b981',
+    bg: '#10b98110',
+    border: '#10b98120',
+  },
 ] as const;
 
 export default function AnalyticsPage() {
   const router = useRouter();
   const { colors } = useTheme();
-  const user = useAuthStore((s) => s.user);
-  const used = user?.aiAnalysisUsedThisMonth ?? 0;
+  const user   = useAuthStore((s) => s.user);
+  const used   = user?.aiAnalysisUsedThisMonth ?? 0;
   const { total, winRate, recent, loading: predsLoading } = usePredictionsPreview();
-
   const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
 
   return (
@@ -94,64 +107,59 @@ export default function AnalyticsPage() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
 
         {/* ─── Header ─── */}
-        <View style={{ borderBottomColor: colors.border, borderBottomWidth: 1, paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14 }}>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '800' }}>تحليلات</Text>
-          <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 3 }}>
+        <View style={{ borderBottomColor: colors.border, borderBottomWidth: 1, paddingHorizontal: SPACE.lg, paddingTop: 18, paddingBottom: 14 }}>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: WEIGHT.extrabold }}>تحليلات</Text>
+          <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 3 }}>
             ذكاء اصطناعي وتوقعات البورصة المصرية
           </Text>
         </View>
 
-        <View style={{ paddingHorizontal: 16, paddingTop: 16, gap: 16 }}>
+        <View style={{ paddingHorizontal: SPACE.lg, paddingTop: SPACE.lg, gap: SPACE.xl }}>
 
           {/* ─── AI Quota ─── */}
           {user && (
             <View style={{
               backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1,
-              borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12,
+              borderRadius: RADIUS.xl, paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
               flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
             }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Zap size={14} color="#8b5cf6" />
-                <Text style={{ color: colors.textSub, fontSize: 13 }}>التحليلات المستخدمة هذا الشهر</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
+                <Zap size={14} color={BRAND} />
+                <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>التحليلات المستخدمة هذا الشهر</Text>
               </View>
-              <View style={{ backgroundColor: '#8b5cf618', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10 }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#8b5cf6' }}>{used}</Text>
+              <View style={{ backgroundColor: BRAND_BG_STRONG, paddingHorizontal: SPACE.md, paddingVertical: 4, borderRadius: RADIUS.md }}>
+                <Text style={{ fontSize: FONT.sm, fontWeight: WEIGHT.bold, color: BRAND }}>{used}</Text>
               </View>
             </View>
           )}
 
-          {/* ─── AI Tools ─── */}
+          {/* ─── AI Tools (2-column grid) ─── */}
           <View>
-            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700', marginBottom: 12 }}>
-              الذكاء الاصطناعي
+            <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold, marginBottom: SPACE.md }}>
+              الذكاء الاصطناعي والأدوات
             </Text>
-            <View style={{ gap: 12 }}>
-              {AI_CARDS.map((card) => (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm }}>
+              {AI_TOOLS.map((card) => (
                 <Pressable
                   key={card.id}
-                  onPress={() => router.push(card.href)}
+                  onPress={() => router.push(card.href as never)}
                   style={({ pressed }) => ({
                     backgroundColor: card.bg,
-                    borderWidth: 1,
-                    borderColor: card.border,
-                    borderRadius: 16,
-                    padding: 16,
+                    borderWidth: 1, borderColor: card.border,
+                    borderRadius: RADIUS.xl,
+                    padding: SPACE.lg,
+                    width: '48%',
                     opacity: pressed ? 0.8 : 1,
                   })}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                    <View style={{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: `${card.color}22` }}>
-                      <card.icon size={20} color={card.color} />
-                    </View>
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{card.title}</Text>
-                      <Text style={{ color: colors.textSub, fontSize: 12, lineHeight: 18 }}>{card.desc}</Text>
-                      <View style={{ marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Zap size={10} color={card.color} />
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: card.color }}>{card.cost}</Text>
-                      </View>
-                    </View>
-                    <ChevronIcon size={16} color={colors.textMuted} />
+                  <View style={{ width: 40, height: 40, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', backgroundColor: card.color + '22', marginBottom: SPACE.sm }}>
+                    <card.icon size={18} color={card.color} />
+                  </View>
+                  <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{card.title}</Text>
+                  <Text style={{ color: colors.textSub, fontSize: FONT.xs, marginTop: 3, lineHeight: 16 }}>{card.desc}</Text>
+                  <View style={{ marginTop: SPACE.sm, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Zap size={10} color={card.color} />
+                    <Text style={{ fontSize: FONT.xs, fontWeight: WEIGHT.semibold, color: card.color }}>{card.cost}</Text>
                   </View>
                 </Pressable>
               ))}
@@ -160,30 +168,30 @@ export default function AnalyticsPage() {
 
           {/* ─── My Predictions ─── */}
           <View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>توقعاتي</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.md }}>
+              <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>توقعاتي</Text>
               <Pressable onPress={() => router.push('/predictions')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={{ fontSize: 12, color: '#8b5cf6' }}>عرض الكل</Text>
-                <ChevronIcon size={12} color="#8b5cf6" />
+                <Text style={{ fontSize: FONT.xs, color: BRAND }}>عرض الكل</Text>
+                <ChevronIcon size={12} color={BRAND} />
               </Pressable>
             </View>
 
-            <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 16, overflow: 'hidden' }}>
+            <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
               {/* Stats row */}
               <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderRightWidth: 1, borderRightColor: colors.border }}>
-                  <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{total}</Text>
+                <View style={{ flex: 1, alignItems: 'center', paddingVertical: SPACE.md, borderRightWidth: 1, borderRightColor: colors.border }}>
+                  <Text style={{ color: colors.text, fontSize: FONT.xl, fontWeight: WEIGHT.bold }}>{total}</Text>
                   <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>إجمالي التوقعات</Text>
                 </View>
-                <View style={{ flex: 1, alignItems: 'center', paddingVertical: 12 }}>
+                <View style={{ flex: 1, alignItems: 'center', paddingVertical: SPACE.md }}>
                   {winRate !== null ? (
                     <>
-                      <Text style={{ color: '#4ade80', fontSize: 18, fontWeight: '700' }}>{winRate}%</Text>
+                      <Text style={{ color: '#4ade80', fontSize: FONT.xl, fontWeight: WEIGHT.bold }}>{winRate}%</Text>
                       <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>نسبة الإصابة</Text>
                     </>
                   ) : (
                     <>
-                      <Text style={{ color: colors.textMuted, fontSize: 18, fontWeight: '700' }}>—</Text>
+                      <Text style={{ color: colors.textMuted, fontSize: FONT.xl, fontWeight: WEIGHT.bold }}>—</Text>
                       <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>لا نتائج بعد</Text>
                     </>
                   )}
@@ -192,14 +200,14 @@ export default function AnalyticsPage() {
 
               {/* Recent pending predictions */}
               {predsLoading ? (
-                <View style={{ padding: 16, gap: 12 }}>
-                  {[1, 2].map((i) => <View key={i} style={{ backgroundColor: colors.border, height: 40, borderRadius: 8 }} />)}
+                <View style={{ padding: SPACE.lg, gap: SPACE.md }}>
+                  {[1, 2].map((i) => <View key={i} style={{ backgroundColor: colors.border, height: 40, borderRadius: RADIUS.sm }} />)}
                 </View>
               ) : recent.length === 0 ? (
-                <Pressable onPress={() => router.push('/predictions')} style={{ paddingVertical: 32, alignItems: 'center', gap: 8 }}>
+                <Pressable onPress={() => router.push('/predictions')} style={{ paddingVertical: 32, alignItems: 'center', gap: SPACE.sm }}>
                   <Target size={22} color={colors.textMuted} />
-                  <Text style={{ color: colors.textMuted, fontSize: 13 }}>لا توجد توقعات نشطة</Text>
-                  <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '600' }}>أضف توقعاتك للسوق</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>لا توجد توقعات نشطة</Text>
+                  <Text style={{ color: BRAND, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>أضف توقعاتك للسوق</Text>
                 </Pressable>
               ) : (
                 recent.map((p, i) => (
@@ -207,25 +215,29 @@ export default function AnalyticsPage() {
                     key={p.id}
                     onPress={() => router.push('/predictions')}
                     style={({ pressed }) => [
-                      { borderBottomColor: colors.border2, backgroundColor: pressed ? colors.hover : 'transparent', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
+                      {
+                        borderBottomColor: colors.border, backgroundColor: pressed ? colors.hover : 'transparent',
+                        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                        paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
+                      },
                       i < recent.length - 1 && { borderBottomWidth: 1 },
                     ]}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <View style={{ width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: p.direction === 'UP' ? '#4ade8018' : '#f8717118' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.md }}>
+                      <View style={{ width: 32, height: 32, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', backgroundColor: p.direction === 'UP' ? '#4ade8018' : '#f8717118' }}>
                         {p.direction === 'UP'
-                          ? <TrendingUp size={14} color="#4ade80" />
+                          ? <TrendingUp   size={14} color="#4ade80" />
                           : <TrendingDown size={14} color="#f87171" />}
                       </View>
                       <View>
-                        <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{p.ticker}</Text>
+                        <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{p.ticker}</Text>
                         <Text style={{ color: colors.textMuted, fontSize: 11 }}>
                           {new Date(p.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </Text>
                       </View>
                     </View>
-                    <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: p.direction === 'UP' ? '#4ade8018' : '#f8717118' }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: p.direction === 'UP' ? '#4ade80' : '#f87171' }}>
+                    <View style={{ paddingHorizontal: SPACE.sm, paddingVertical: 4, borderRadius: RADIUS.md, backgroundColor: p.direction === 'UP' ? '#4ade8018' : '#f8717118' }}>
+                      <Text style={{ fontSize: FONT.xs, fontWeight: WEIGHT.bold, color: p.direction === 'UP' ? '#4ade80' : '#f87171' }}>
                         {p.direction === 'UP' ? '▲ صعود' : '▼ هبوط'}
                       </Text>
                     </View>
@@ -235,34 +247,8 @@ export default function AnalyticsPage() {
             </View>
           </View>
 
-          {/* ─── Calculator ─── */}
-          <View>
-            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700', marginBottom: 12 }}>أدوات</Text>
-            <Pressable
-              onPress={() => router.push('/calculator')}
-              style={({ pressed }) => ({
-                backgroundColor: '#10b98110',
-                borderWidth: 1, borderColor: '#10b98120',
-                borderRadius: 16, padding: 16, opacity: pressed ? 0.8 : 1,
-              })}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                <View style={{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#10b98120' }}>
-                  <Calculator size={20} color="#10b981" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>حاسبة الاستثمار</Text>
-                  <Text style={{ color: colors.textSub, fontSize: 12, marginTop: 2 }}>
-                    احسب نمو استثمارك — مقارنة البنك والذهب والبورصة
-                  </Text>
-                </View>
-                <ChevronIcon size={16} color={colors.textMuted} />
-              </View>
-            </Pressable>
-          </View>
-
           {/* ─── Disclaimer ─── */}
-          <Text style={{ color: colors.textMuted, fontSize: 11, textAlign: 'center', lineHeight: 18, paddingHorizontal: 8 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 11, textAlign: 'center', lineHeight: 18, paddingHorizontal: SPACE.sm }}>
             التحليلات للأغراض التعليمية فقط وليست توصيات استثمارية.
           </Text>
 
