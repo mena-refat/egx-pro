@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import {
   User, Shield, Bell, CreditCard, LogOut,
   ChevronRight, ChevronLeft, Moon, Sun, Monitor,
-  LifeBuoy, Gift, Trophy, Fingerprint,
+  LifeBuoy, Gift, Trophy, Fingerprint, Users, Globe,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
@@ -234,15 +234,25 @@ export default function ProfilePage() {
           <MenuItem icon={Trophy}      label="إنجازاتي"           sub="اكتشف ما أنجزته حتى الآن"         onPress={() => router.push('/achievements' as never)}   iconColor="#f59e0b" />
         </Section>
 
+        {/* ─── Community ─── */}
+        <Section title="المجتمع">
+          <MenuItem icon={Users}       label="مجتمع بورصة"        sub="المتداولون والتوقعات والمتصدرون"  onPress={() => router.push('/discover' as never)}       iconColor="#3b82f6" />
+        </Section>
+
         {/* ─── Security ─── */}
         <Section title="الأمان">
           <MenuItem icon={Shield}      label="الأمان والخصوصية"  sub="كلمة المرور و2FA"                 onPress={() => router.push('/settings/security')}      iconColor="#f59e0b" />
           <MenuItem icon={Fingerprint} label="البصمة والـ PIN"    sub="ادخل بسرعة بالبصمة أو PIN"       onPress={() => router.push('/settings/biometric')}     iconColor="#3b82f6" />
         </Section>
 
+        {/* ─── Preferences ─── */}
+        <Section title="التفضيلات">
+          <MenuItem icon={Globe}       label="اللغة والخصوصية"   sub="اللغة، الوضع الإسلامي، إعدادات الظهور" onPress={() => router.push('/settings/preferences' as never)} iconColor="#8b5cf6" />
+          <MenuItem icon={Bell}        label="الإشعارات"          sub="تخصيص ما تستقبله"                onPress={() => router.push('/settings/notifications')} iconColor={BRAND} />
+        </Section>
+
         {/* ─── Support ─── */}
         <Section title="المساعدة">
-          <MenuItem icon={Bell}        label="الإشعارات"          sub="تخصيص ما تستقبله"                onPress={() => router.push('/settings/notifications')} iconColor={BRAND} />
           <MenuItem icon={LifeBuoy}    label="الدعم الفني"         sub="تواصل مع فريق الدعم"             onPress={() => router.push('/support' as never)}        iconColor="#38bdf8" />
         </Section>
 

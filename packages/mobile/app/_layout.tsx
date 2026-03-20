@@ -159,6 +159,22 @@ export default function RootLayout() {
               name="news/index"
               options={{ animation: 'slide_from_right' }}
             />
+            <Stack.Screen
+              name="discover/index"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="profile/[username]"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="settings/preferences"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="settings/danger"
+              options={{ animation: 'slide_from_right' }}
+            />
           </Stack>
           </ToastProvider>
         </SafeAreaProvider>

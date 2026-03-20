@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import {
   User, Shield, Bell, CreditCard, Fingerprint,
   ChevronRight, ChevronLeft, Info, LogOut, Trash2, Moon, Sun, Monitor,
-  Gift, Trophy, LifeBuoy,
+  Gift, Trophy, LifeBuoy, Globe, Users,
 } from 'lucide-react-native';
 import { I18nManager } from 'react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
@@ -158,12 +158,17 @@ export default function SettingsPage() {
         </Section>
 
         <Section title="الأمان">
-          <MenuItem icon={Shield}      label="الأمان والخصوصية"  sub="البصمة والـ PIN"                        onPress={() => router.push('/settings/security')} />
+          <MenuItem icon={Shield}      label="الأمان والخصوصية"  sub="كلمة المرور والمصادقة الثنائية"          onPress={() => router.push('/settings/security')} />
           <MenuItem icon={Fingerprint} label="البصمة والـ PIN"    sub="ادخل بسرعة بالبصمة أو PIN"             onPress={() => router.push('/settings/biometric')} last />
         </Section>
 
-        <Section title="الإشعارات والدعم">
-          <MenuItem icon={Bell}        label="إعدادات الإشعارات" sub="تخصيص ما تستقبله"                       onPress={() => router.push('/settings/notifications')} />
+        <Section title="التفضيلات والخصوصية">
+          <MenuItem icon={Globe}       label="اللغة والخصوصية"   sub="اللغة والوضع الإسلامي وإعدادات الظهور"  onPress={() => router.push('/settings/preferences' as never)} />
+          <MenuItem icon={Bell}        label="إعدادات الإشعارات" sub="تخصيص ما تستقبله"                       onPress={() => router.push('/settings/notifications')} last />
+        </Section>
+
+        <Section title="المجتمع والدعم">
+          <MenuItem icon={Users}       label="مجتمع بورصة"        sub="متابعة المتداولين والتوقعات"             onPress={() => router.push('/discover' as never)} />
           <MenuItem icon={LifeBuoy}    label="الدعم الفني"        sub="تواصل مع الفريق — متوسط الرد 24س"       onPress={() => router.push('/support' as never)} last />
         </Section>
 
@@ -188,16 +193,8 @@ export default function SettingsPage() {
           <MenuItem
             icon={Trash2}
             label="حذف الحساب"
-            onPress={() =>
-              Alert.alert(
-                'حذف الحساب',
-                'لحذف حسابك بشكل نهائي تواصل معنا عبر الدعم الفني.',
-                [
-                  { text: 'إلغاء', style: 'cancel' },
-                  { text: 'تواصل مع الدعم', onPress: () => router.push('/support' as never) },
-                ],
-              )
-            }
+            sub="المنطقة الخطرة — إجراء لا يمكن التراجع عنه"
+            onPress={() => router.push('/settings/danger' as never)}
             danger
             last
           />
