@@ -28,6 +28,10 @@ export function validateEnv(): void {
     missing.push('JWT_PRIVATE_KEY + JWT_PUBLIC_KEY أو JWT_ACCESS_TOKEN_SECRET');
   }
 
+  if (!process.env.ADMIN_JWT_SECRET?.trim()) {
+    missing.push('ADMIN_JWT_SECRET');
+  }
+
   const frontendUrl = process.env.FRONTEND_URL?.trim() || process.env.APP_URL?.trim();
   if (!frontendUrl) {
     missing.push('FRONTEND_URL أو APP_URL');

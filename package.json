@@ -7,7 +7,8 @@
     "packages/shared",
     "packages/server",
     "packages/web",
-    "packages/admin"
+    "packages/admin",
+    "packages/mobile"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=@borsa/server",
