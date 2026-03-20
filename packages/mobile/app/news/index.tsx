@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, Pressable, ScrollView, Modal,
   RefreshControl, I18nManager,
@@ -174,6 +174,10 @@ export default function NewsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<NewsItem | null>(null);
+  const isRTL = I18nManager.isRTL;
+
+  type NewsScope = 'twoDays' | 'today' | 'yesterday' | 'all';
+  const [scope, setScope] = useState<NewsScope>('twoDays');
 
   const stockInfo = ticker ? getStockInfo(ticker) : null;
   const isStockNews = !!ticker;
@@ -222,6 +226,48 @@ export default function NewsPage() {
     return colors.border;
   }
 
+  const scopeTabs: { id: NewsScope; labelAr: string; labelEn: string }[] = [
+    { id: 'twoDays', labelAr: 'اليومين', labelEn: 'Last 2 days' },
+    { id: 'today', labelAr: 'اليوم', labelEn: 'Today' },
+    { id: 'yesterday', labelAr: 'أمس', labelEn: 'Yesterday' },
+    { id: 'all', labelAr: 'الكل', labelEn: 'All' },
+  ];
+
+  const sortedNews = useMemo(() => {
+    return [...news].sort((a, b) => {
+      const ta = new Date(a.publishedAt).getTime();
+      const tb = new Date(b.publishedAt).getTime();
+      return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
+    });
+  }, [news]);
+
+  const filteredNews = useMemo(() => {
+    if (scope === 'all') return sortedNews;
+
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(todayStart.getDate() - 1);
+
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(todayStart.getDate() + 1);
+
+    const msToday = todayStart.getTime();
+    const msYesterday = yesterdayStart.getTime();
+    const msTomorrow = tomorrowStart.getTime();
+
+    return sortedNews.filter((item) => {
+      const t = new Date(item.publishedAt).getTime();
+      if (!Number.isFinite(t)) return false;
+      if (scope === 'today') return t >= msToday && t < msTomorrow;
+      if (scope === 'yesterday') return t >= msYesterday && t < msToday;
+      // twoDays
+      return t >= msYesterday && t < msTomorrow;
+    });
+  }, [scope, sortedNews]);
+
   return (
     <ScreenWrapper padded={false}>
       {/* Header */}
@@ -247,6 +293,52 @@ export default function NewsPage() {
             <Text style={{ color: colors.textMuted }} className="text-xs">{ticker}</Text>
           )}
         </View>
+      </View>
+
+      {/* News scope tabs */}
+      <View
+        style={{
+          marginHorizontal: 16,
+          marginTop: 12,
+          marginBottom: 6,
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          borderWidth: 1,
+          borderRadius: RADIUS.lg,
+          padding: 4,
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          gap: 4,
+        }}
+      >
+        {scopeTabs.map((t) => {
+          const active = scope === t.id;
+          return (
+            <Pressable
+              key={t.id}
+              onPress={() => setScope(t.id)}
+              style={{
+                flex: 1,
+                backgroundColor: active ? BRAND + '18' : 'transparent',
+                borderRadius: RADIUS.md - 4,
+                paddingVertical: 8,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: active ? 1 : 0,
+                borderColor: active ? BRAND + '44' : 'transparent',
+              }}
+            >
+              <Text
+                style={{
+                  color: active ? BRAND : colors.textMuted,
+                  fontSize: 11,
+                  fontWeight: WEIGHT.semibold,
+                }}
+              >
+                {isRTL ? t.labelAr : t.labelEn}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <ScrollView
@@ -277,7 +369,7 @@ export default function NewsPage() {
             </View>
             <Text style={{ color: colors.textMuted }} className="text-sm text-center px-4">{error}</Text>
           </View>
-        ) : news.length === 0 ? (
+        ) : filteredNews.length === 0 ? (
           <View className="items-center py-16 gap-3">
             <View
               style={{ backgroundColor: colors.card, borderColor: colors.border }}
@@ -290,7 +382,7 @@ export default function NewsPage() {
             </Text>
           </View>
         ) : (
-          news.map((item, i) => (
+          filteredNews.map((item, i) => (
             <Pressable
               key={i}
               onPress={() => setSelected(item)}

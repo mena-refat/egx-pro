@@ -47,7 +47,11 @@ function IndexCard({ label, value, changePercent }: { label: string; value: numb
   return (
     <View style={{
       backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1,
-      borderRadius: RADIUS.lg, paddingHorizontal: SPACE.md, paddingVertical: SPACE.md, flex: 1,
+      borderRadius: RADIUS.lg,
+      paddingHorizontal: SPACE.md,
+      paddingVertical: SPACE.md,
+      width: '100%',
+      minHeight: 76,
     }}>
       <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 5 }}>{label}</Text>
       <Text style={{ color: colors.text, fontSize: FONT.md, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>
@@ -229,15 +233,19 @@ function IndicesSection({ overview, loading }: { overview: MarketOverview | null
       </View>
       {visible && (
         loading ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm }}>
-            {[1,2,3,4,5,6].map((i) => <View key={i} style={{ flex: 1, minWidth: '45%' }}><Skeleton.Box height={76} radius={RADIUS.lg} /></View>)}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, alignItems: 'stretch' }}>
+            {[1,2,3,4,5,6].map((i) => (
+              <View key={i} style={{ width: '48%' }}>
+                <Skeleton.Box height={76} radius={RADIUS.lg} />
+              </View>
+            ))}
           </View>
         ) : (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, alignItems: 'stretch' }}>
             {EGX_INDICES.map(({ key, label }) => {
               const data = overview?.[key];
               return (
-                <View key={key} style={{ flex: 1, minWidth: '45%' }}>
+                <View key={key} style={{ width: '48%' }}>
                   <IndexCard label={label} value={data?.value ?? 0} changePercent={data?.changePercent ?? 0} />
                 </View>
               );

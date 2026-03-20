@@ -120,6 +120,7 @@ export default function HomePage() {
   const { colors, isDark }  = useTheme();
   const { width }   = useWindowDimensions();
   const isCompact   = width < 380;
+  const isRTL       = I18nManager.isRTL;
   const user        = useAuthStore((s) => s.user);
   const unreadCount = useUnreadCount();
 
@@ -168,6 +169,35 @@ export default function HomePage() {
     () => [...stocks].filter((s) => s.changePercent < 0).sort((a, b) => a.changePercent - b.changePercent).slice(0, 6),
     [stocks],
   );
+
+  const lastTwoDaysNews = useMemo(() => {
+    const sorted = [...news].sort((a, b) => {
+      const ta = new Date(a.publishedAt).getTime();
+      const tb = new Date(b.publishedAt).getTime();
+      return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
+    });
+
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(todayStart.getDate() - 1);
+
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(todayStart.getDate() + 1);
+
+    const msToday = todayStart.getTime();
+    const msYesterday = yesterdayStart.getTime();
+    const msTomorrow = tomorrowStart.getTime();
+
+    return sorted.filter((item) => {
+      const t = new Date(item.publishedAt).getTime();
+      if (!Number.isFinite(t)) return false;
+      // last 2 days (yesterday + today)
+      return t >= msYesterday && t < msTomorrow;
+    });
+  }, [news]);
 
   const isPositive = liveSummary.totalGainLoss >= 0;
   const gainColor  = isPositive ? GREEN : RED;
@@ -400,7 +430,11 @@ export default function HomePage() {
               {topGainers.length > 0 && (
                 <View style={{ marginBottom: SPACE.md }}>
                   <Text style={{ color: GREEN, fontSize: FONT.xs, fontWeight: WEIGHT.semibold, marginBottom: SPACE.sm }}>الصاعدة</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: SPACE.sm }}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: SPACE.sm, flexDirection: isRTL ? 'row-reverse' : 'row' }}
+                  >
                     {topGainers.map((s) => (
                       <MoverChip key={s.ticker} s={s} onPress={() => router.push(`/stocks/${s.ticker}`)} />
                     ))}
@@ -410,7 +444,11 @@ export default function HomePage() {
               {topLosers.length > 0 && (
                 <View>
                   <Text style={{ color: RED, fontSize: FONT.xs, fontWeight: WEIGHT.semibold, marginBottom: SPACE.sm }}>الهابطة</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: SPACE.sm }}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: SPACE.sm, flexDirection: isRTL ? 'row-reverse' : 'row' }}
+                  >
                     {topLosers.map((s) => (
                       <MoverChip key={s.ticker} s={s} onPress={() => router.push(`/stocks/${s.ticker}`)} />
                     ))}
@@ -421,11 +459,11 @@ export default function HomePage() {
           )}
 
           {/* ─── 5. News preview ────────────────────────── */}
-          {news.length > 0 && (
+          {lastTwoDaysNews.length > 0 && (
             <View style={{ paddingHorizontal: SPACE.lg }}>
               <SectionHdr title="آخر الأخبار" icon={Newspaper} />
               <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
-                {news.slice(0, 3).map((item, i) => (
+                {lastTwoDaysNews.slice(0, 3).map((item, i) => (
                   <View
                     // Some items might not have a stable `id`; fallback to index to avoid React key warnings.
                     key={item.id ?? i}
@@ -438,7 +476,8 @@ export default function HomePage() {
                       {item.title}
                     </Text>
                     <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 4 }}>
-                      {item.source} · {new Date(item.publishedAt).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' })}
+                      {item.source} ·{' '}
+                      {new Date(item.publishedAt).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
                     </Text>
                   </View>
                 ))}

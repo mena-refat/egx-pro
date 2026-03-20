@@ -81,18 +81,19 @@ const AI_TOOLS = [
     bg: '#f59e0b10',
     border: '#f59e0b20',
   },
-  {
-    id: 'calculator',
-    icon: Calculator,
-    title: 'حاسبة الاستثمار',
-    desc: 'نمو بنك ذهب بورصة',
-    href: '/calculator',
-    cost: 'مجاني',
-    color: '#10b981',
-    bg: '#10b98110',
-    border: '#10b98120',
-  },
 ] as const;
+
+const CALCULATOR_CARD = {
+  id: 'calculator',
+  icon: Calculator,
+  title: 'حاسبة الاستثمار',
+  desc: 'احسب سيناريوهات العائد بدقة',
+  href: '/calculator',
+  cost: 'مجاني',
+  color: '#10b981',
+  bg: '#10b98110',
+  border: '#10b98120',
+} as const;
 
 export default function AnalyticsPage() {
   const router = useRouter();
@@ -136,7 +137,7 @@ export default function AnalyticsPage() {
           {/* ─── AI Tools (2-column grid) ─── */}
           <View>
             <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold, marginBottom: SPACE.md }}>
-              الذكاء الاصطناعي والأدوات
+              الذكاء الاصطناعي
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm }}>
               {AI_TOOLS.map((card) => (
@@ -164,6 +165,41 @@ export default function AnalyticsPage() {
                 </Pressable>
               ))}
             </View>
+          </View>
+
+          {/* ─── Calculator (separate from AI) ─── */}
+          <View>
+            <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold, marginTop: SPACE.xl, marginBottom: SPACE.md }}>
+              الحاسبة
+            </Text>
+            <Pressable
+              onPress={() => router.push(CALCULATOR_CARD.href as never)}
+              style={({ pressed }) => ({
+                backgroundColor: CALCULATOR_CARD.bg,
+                borderWidth: 1,
+                borderColor: CALCULATOR_CARD.border,
+                borderRadius: RADIUS.xl,
+                padding: SPACE.lg,
+                width: '100%',
+                opacity: pressed ? 0.85 : 1,
+              })}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.md }}>
+                <View style={{ width: 44, height: 44, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', backgroundColor: CALCULATOR_CARD.color + '22' }}>
+                  <CALCULATOR_CARD.icon size={20} color={CALCULATOR_CARD.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{CALCULATOR_CARD.title}</Text>
+                  <Text style={{ color: colors.textSub, fontSize: FONT.xs, marginTop: 3, lineHeight: 16 }}>
+                    {CALCULATOR_CARD.desc}
+                  </Text>
+                  <View style={{ marginTop: SPACE.sm, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Zap size={10} color={CALCULATOR_CARD.color} />
+                    <Text style={{ fontSize: FONT.xs, fontWeight: WEIGHT.semibold, color: CALCULATOR_CARD.color }}>{CALCULATOR_CARD.cost}</Text>
+                  </View>
+                </View>
+              </View>
+            </Pressable>
           </View>
 
           {/* ─── My Predictions ─── */}
