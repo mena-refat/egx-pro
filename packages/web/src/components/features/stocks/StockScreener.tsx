@@ -82,7 +82,7 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps = {}
         onSelectStock={(s: StockWithMeta) => handleSelectStock(s)}
         onToggleWatchlist={screener.toggleWatchlist}
         t={screener.t}
-        lang={screener.lang}
+        lang={screener.isAr ? 'ar' : 'en'}
       />
       {screener.sorted.length === 0 && (
         <EmptyState

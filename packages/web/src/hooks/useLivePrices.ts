@@ -8,7 +8,7 @@ export function useLivePrices(subscribedTickers?: string[]) {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectDelayRef = useRef(1000);
   const tickersRef = useRef<string[]>([]);
   const subscribeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

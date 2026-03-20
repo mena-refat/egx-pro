@@ -21,7 +21,7 @@ export const useLiveStockPrices = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const socketRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connect = useCallback(() => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;

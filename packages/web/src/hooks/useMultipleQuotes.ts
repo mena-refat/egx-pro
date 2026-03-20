@@ -34,9 +34,12 @@ export function useMultipleQuotes(tickers: string[]) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.post<{ data: Record<string, QuoteResult | null> }>('/stocks/quotes', { tickers: list }, { signal });
-      const data = res.data?.data ?? res.data ?? {};
-      setQuotes(typeof data === 'object' ? data : {});
+      const res = await api.post('/stocks/quotes', { tickers: list }, { signal });
+      const payload = res.data as unknown;
+      const data = payload && typeof payload === 'object' && !Array.isArray(payload)
+        ? payload as Record<string, QuoteResult | null>
+        : {};
+      setQuotes(data);
     } catch (err: unknown) {
       if ((err as { code?: string }).code === 'ERR_CANCELED') return;
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;

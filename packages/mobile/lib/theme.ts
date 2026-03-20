@@ -34,7 +34,7 @@ export const LIGHT = {
   statusBar: 'dark' as const,
 } as const;
 
-export type AppColors = typeof DARK;
+export type AppColors = typeof DARK | typeof LIGHT;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Semantic Color Constants

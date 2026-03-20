@@ -149,7 +149,7 @@ export default function PortfolioTracker() {
   const chartTotal = useMemo(() => chartData.reduce((s, d) => s + d.value, 0), [chartData]);
 
   const renderChartTooltip = useCallback(
-    ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { name: string; value: number } }> }) => {
+    ({ active, payload }: { active?: boolean; payload?: ReadonlyArray<{ payload: { name: string; value: number } }> }) => {
       if (!active || !payload?.length) return null;
       const { name, value } = payload[0].payload;
       const percent = chartTotal > 0 ? ((value / chartTotal) * 100).toFixed(1) : '0';

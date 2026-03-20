@@ -309,7 +309,6 @@ export default function PredictionsPage() {
           <View style={tw('gap-1')}>
             <Text style={[{ color: colors.textSub }, tw('text-xs')]}>رمز السهم</Text>
             <View
-              style={{ backgroundColor: colors.bg, borderColor: colors.border }}
               style={[
                 { backgroundColor: colors.bg, borderColor: colors.border },
                 tw('flex-row items-center border rounded-xl px-3 gap-2'),
@@ -328,7 +327,6 @@ export default function PredictionsPage() {
             </View>
             {tickerOpen && tickerSuggestions.length > 0 && (
               <View
-                style={{ backgroundColor: colors.bg, borderColor: colors.border }}
                 style={[
                   { backgroundColor: colors.bg, borderColor: colors.border },
                   tw('border rounded-xl overflow-hidden'),
@@ -338,11 +336,6 @@ export default function PredictionsPage() {
                   <Pressable
                     key={s.ticker}
                     onPress={() => { setTicker(s.ticker); setTickerOpen(false); }}
-                    style={({ pressed }) => ({
-                      borderBottomColor: colors.border,
-                      borderBottomWidth: 1,
-                      backgroundColor: pressed ? colors.hover : 'transparent',
-                    })}
                     style={({ pressed }) => [
                       {
                         borderBottomColor: colors.border,

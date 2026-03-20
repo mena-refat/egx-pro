@@ -5,7 +5,7 @@ import styles from '../../../pages/DiscoverPage.module.scss';
 
 interface CommunityFeedSectionProps {
   predictions: FeedPrediction[];
-  t: (k: string) => string;
+  t: (k: string, opts?: Record<string, unknown>) => string;
 }
 
 export function CommunityFeedSection({ predictions, t }: CommunityFeedSectionProps) {

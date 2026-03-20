@@ -276,7 +276,7 @@ function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number
         flexDirection: 'row', alignItems: 'center', gap: SPACE.md,
         paddingHorizontal: SPACE.lg, paddingVertical: 12,
         backgroundColor: pressed ? colors.hover : 'transparent',
-        borderBottomWidth: 1, borderBottomColor: colors.border2 ?? colors.border,
+        borderBottomWidth: 1, borderBottomColor: colors.border2 ?? '#243047',
       })}
     >
       <Text style={{ color: rank <= 3 ? '#f59e0b' : colors.textMuted, fontSize: FONT.sm, fontWeight: WEIGHT.extrabold, width: 28, textAlign: 'center' }}>

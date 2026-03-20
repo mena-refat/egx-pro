@@ -35,10 +35,13 @@ export function useStockQuote(ticker: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get<{ data: QuoteResult }>(`/stocks/quote/${encodeURIComponent(ticker.trim())}`, {
+      const res = await api.get(`/stocks/quote/${encodeURIComponent(ticker.trim())}`, {
         signal,
       });
-      const data = res.data?.data ?? res.data;
+      const payload = res.data as unknown;
+      const data = payload && typeof payload === 'object' && 'ticker' in (payload as Record<string, unknown>)
+        ? payload as QuoteResult
+        : null;
       if (data) setQuote(data);
       else setQuote(null);
     } catch (err: unknown) {

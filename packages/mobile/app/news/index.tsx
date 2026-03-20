@@ -10,6 +10,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { useTheme } from '../../hooks/useTheme';
 import { getStockInfo } from '../../lib/egxStocks';
 import apiClient from '../../lib/api/client';
+import { BRAND, RADIUS, WEIGHT } from '../../lib/theme';
 
 interface NewsItem {
   title: string;
@@ -69,7 +70,7 @@ function NewsDetailModal({
   const accentColor =
     s === 'positive' || s === 'bullish' ? '#16a34a'
     : s === 'negative' || s === 'bearish' ? '#dc2626'
-    : colors.brand ?? '#3b82f6';
+    : BRAND;
 
   return (
     <Modal
@@ -118,7 +119,7 @@ function NewsDetailModal({
 
             {/* Title */}
             <Text
-              style={{ color: colors.textMuted ?? colors.text }}
+              style={{ color: colors.textMuted }}
               className="text-sm font-semibold leading-5 mb-3"
               numberOfLines={2}
             >

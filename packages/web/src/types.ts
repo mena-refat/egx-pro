@@ -40,6 +40,7 @@ export interface User {
   avatarUrl?: string | null;
   plan?: 'free' | 'pro' | 'yearly' | 'ultra' | 'ultra_yearly';
   planExpiresAt?: string | null;
+  referralProExpiresAt?: string | null;
   aiAnalysisUsedThisMonth?: number;
   aiAnalysisResetDate?: string | null;
   notifySignals?: boolean;

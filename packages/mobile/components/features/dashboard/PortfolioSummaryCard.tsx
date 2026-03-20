@@ -30,15 +30,15 @@ export function PortfolioSummaryCard({
     return (
       <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 20, marginHorizontal: 16, overflow: 'hidden' }}>
         <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 20, alignItems: 'center', gap: 12 }}>
-          <Skeleton height={10} style={{ width: 128 }} />
-          <Skeleton height={52} style={{ width: 224 }} />
-          <Skeleton height={22} style={{ width: 176 }} />
+          <Skeleton.Box height={10} style={{ width: 128 }} />
+          <Skeleton.Box height={52} style={{ width: 224 }} />
+          <Skeleton.Box height={22} style={{ width: 176 }} />
         </View>
         <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border }}>
           {[1, 2].map((i) => (
             <View key={i} style={{ flex: 1, paddingHorizontal: 20, paddingVertical: 14, alignItems: 'center', gap: 6 }}>
-              <Skeleton height={10} style={{ width: 80 }} />
-              <Skeleton height={14} style={{ width: 112 }} />
+              <Skeleton.Box height={10} style={{ width: 80 }} />
+              <Skeleton.Box height={14} style={{ width: 112 }} />
             </View>
           ))}
         </View>

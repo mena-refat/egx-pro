@@ -17,7 +17,7 @@ interface DiscoverSearchBarProps {
   highlightedIndex: number;
   inputRef: React.RefObject<HTMLInputElement | null>;
   dropdownRef: React.RefObject<HTMLDivElement | null>;
-  handleSelect: (s: AutocompleteSuggestion) => void;
+  handleSelect: (username: string) => void;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   minUsernameLength: number;
   t: TFunction;

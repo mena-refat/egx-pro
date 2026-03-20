@@ -3,6 +3,19 @@ import { Platform } from 'react-native';
 import apiClient from '../lib/api/client';
 
 export type IAPPlanKey = 'pro_monthly' | 'pro_yearly' | 'ultra_monthly' | 'ultra_yearly';
+type SubscriptionLike = { productId?: string; subscriptionOfferDetails?: Array<{ offerToken?: string }> };
+type IapModuleLike = {
+  initConnection: () => Promise<void>;
+  getSubscriptions: (args: { skus: string[] }) => Promise<SubscriptionLike[]>;
+  purchaseUpdatedListener: (cb: (purchase: unknown) => void | Promise<void>) => { remove: () => void };
+  purchaseErrorListener: (cb: (err: unknown) => void) => { remove: () => void };
+  requestSubscription: (args: {
+    sku: string;
+    subscriptionOffers?: Array<{ sku: string; offerToken: string }>;
+  }) => Promise<unknown>;
+  finishTransaction: (args: { purchase: unknown; isConsumable: boolean }) => Promise<void>;
+  endConnection: () => void;
+};
 
 const PRODUCT_IDS: Record<IAPPlanKey, string> = {
   pro_monthly: 'borsa_pro_monthly',
@@ -13,10 +26,10 @@ const PRODUCT_IDS: Record<IAPPlanKey, string> = {
 
 // Lazy-load react-native-iap so the app doesn't crash when running in Expo Go
 // (react-native-iap requires a native build via EAS Build)
-let RNIap: typeof import('react-native-iap') | null = null;
+let RNIap: IapModuleLike | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  RNIap = require('react-native-iap');
+  RNIap = require('react-native-iap') as IapModuleLike;
 } catch {
   // Not available in Expo Go or when not yet installed — billing will fall back to email
 }
@@ -24,7 +37,7 @@ try {
 export function useGooglePlayBilling() {
   const [connected, setConnected] = useState(false);
   const [purchasing, setPurchasing] = useState<IAPPlanKey | null>(null);
-  const [subscriptions, setSubscriptions] = useState<import('react-native-iap').Subscription[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionLike[]>([]);
 
   useEffect(() => {
     if (Platform.OS !== 'android' || !RNIap) return;
@@ -43,11 +56,11 @@ export function useGooglePlayBilling() {
       }
     };
 
-    purchaseUpdateSub = RNIap!.purchaseUpdatedListener(async (purchase) => {
+    purchaseUpdateSub = RNIap!.purchaseUpdatedListener(async (purchase: unknown) => {
       void purchase; // handled inside purchasePlan
     });
 
-    purchaseErrorSub = RNIap!.purchaseErrorListener((err) => {
+    purchaseErrorSub = RNIap!.purchaseErrorListener((err: unknown) => {
       console.warn('IAP error', err);
     });
 
@@ -68,7 +81,7 @@ export function useGooglePlayBilling() {
 
     try {
       const sub = subscriptions.find((s) => s.productId === productId);
-      const offerToken = (sub as any)?.subscriptionOfferDetails?.[0]?.offerToken as string | undefined;
+      const offerToken = sub?.subscriptionOfferDetails?.[0]?.offerToken;
 
       const purchase = await RNIap!.requestSubscription({
         sku: productId,
@@ -90,7 +103,7 @@ export function useGooglePlayBilling() {
 
       return 'success';
     } catch (err: unknown) {
-      const code = (err as any)?.code as string | undefined;
+      const code = (err as { code?: string })?.code;
       if (code === 'E_USER_CANCELLED') return 'cancelled';
       return 'error';
     } finally {

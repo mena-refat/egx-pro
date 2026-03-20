@@ -280,7 +280,7 @@ export default function GoalsPage() {
           <ActivityIndicator color="#8b5cf6" />
         </View>
       ) : (
-        <ScrollView contentContainerClassName="px-4 pt-4 pb-10 gap-4" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40, gap: 16 }} showsVerticalScrollIndicator={false}>
           {active.length === 0 && completed.length === 0 && (
             <View className="items-center gap-3 py-12">
               <View className="w-16 h-16 rounded-2xl bg-brand/10 items-center justify-center">
@@ -363,7 +363,7 @@ export default function GoalsPage() {
 
           <View className="gap-1">
             <Text style={{ color: colors.textSub }} className="text-xs">الفئة</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="flex-row gap-2">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row', gap: 8 }}>
               {(Object.entries(CATEGORIES) as [Category, typeof CATEGORIES.home][]).map(([key, val]) => {
                 const CatIcon = val.icon;
                 const isSelected = category === key;

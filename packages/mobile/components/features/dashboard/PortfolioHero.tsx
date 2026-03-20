@@ -241,22 +241,22 @@ export function PortfolioHero({ totalValue, totalCost, totalGainLoss, totalGainL
     return (
       <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 20, overflow: 'hidden' }}>
         <View style={{ padding: 20, gap: 10 }}>
-          <Skeleton height={11} width={120} />
-          <Skeleton height={38} width={200} />
-          <Skeleton height={16} width={160} />
+          <Skeleton.Box height={11} width={120} />
+          <Skeleton.Box height={38} width={200} />
+          <Skeleton.Box height={16} width={160} />
         </View>
         <View style={{ height: 1, backgroundColor: colors.border }} />
         <View style={{ flexDirection: 'row' }}>
           {[0, 1].map(i => (
             <View key={i} style={{ flex: 1, padding: 16, gap: 6, borderRightWidth: i === 0 ? 1 : 0, borderRightColor: colors.border }}>
-              <Skeleton height={10} width={60} />
-              <Skeleton height={18} width={90} />
+              <Skeleton.Box height={10} width={60} />
+              <Skeleton.Box height={18} width={90} />
             </View>
           ))}
         </View>
         <View style={{ height: 1, backgroundColor: colors.border }} />
         <View style={{ padding: 16 }}>
-          <Skeleton height={CHART_H + 80} />
+          <Skeleton.Box height={CHART_H + 80} />
         </View>
       </View>
     );

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, Pressable, RefreshControl,
-  I18nManager, ActivityIndicator, Alert,
+  I18nManager, ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -438,6 +438,18 @@ export default function StockDetailPage() {
               {news.map((item, i) => (
                 <Pressable
                   key={item.id}
+                  onPress={async () => {
+                    try {
+                      const canOpen = await Linking.canOpenURL(item.url);
+                      if (canOpen) {
+                        await Linking.openURL(item.url);
+                        return;
+                      }
+                    } catch {
+                      // fall through to alert
+                    }
+                    Alert.alert('تعذر فتح الرابط', 'لا يمكن فتح رابط الخبر حالياً.');
+                  }}
                   style={({ pressed }) => ({
                     backgroundColor: pressed ? colors.hover : 'transparent',
                     paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
