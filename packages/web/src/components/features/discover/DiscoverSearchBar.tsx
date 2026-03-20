@@ -56,6 +56,7 @@ export function DiscoverSearchBar({
         }}
         placeholder={t('social.discoverPage.searchPlaceholder')}
         aria-label={t('social.discoverPage.searchAria')}
+        dir="rtl"
         icon={
           autoLoading || searchLoading ? (
             <Loader2 className={styles.spinner} aria-hidden />

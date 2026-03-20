@@ -35,7 +35,7 @@ export function SubscriptionTab() {
   const planExpiresAt = user?.planExpiresAt;
 
   const [loading, setLoading] = useState(true);
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly');
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
   const [modalPlan, setModalPlan] = useState<PaidPlanId | null>(null);
   const [compareFeatureModal, setCompareFeatureModal] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(true);

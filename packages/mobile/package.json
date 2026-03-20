@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "type": "commonjs",
+  "exports": {
+    "./lib/jsx-runtime": "./lib/jsx-runtime.ts",
+    "./lib/jsx-dev-runtime": "./lib/jsx-dev-runtime.ts"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",

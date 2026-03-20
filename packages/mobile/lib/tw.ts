@@ -52,7 +52,9 @@ const BASE_COLORS: Record<string, string> = {
   'red-400': RED,
   'violet-500': BRAND,
   'yellow-500': YELLOW,
+  'yellow-400': '#facc15',
   'amber-500': YELLOW,
+  'amber-400': '#fbbf24',
   black: '#000000',
   white: '#ffffff',
 };
@@ -81,6 +83,7 @@ export function tw(className: string): Style {
     if (token === 'flex-col') out.flexDirection = 'column';
     if (token === 'items-center') out.alignItems = 'center';
     if (token === 'items-start') out.alignItems = 'flex-start';
+    if (token === 'items-end') out.alignItems = 'flex-end';
     if (token === 'justify-center') out.justifyContent = 'center';
     if (token === 'justify-between') out.justifyContent = 'space-between';
     if (token === 'justify-start') out.justifyContent = 'flex-start';
@@ -90,7 +93,9 @@ export function tw(className: string): Style {
     // flex sizing
     if (token === 'flex-1') out.flex = 1;
     if (token === 'shrink-0') out.flexShrink = 0;
+    if (token === 'grow') out.flexGrow = 1;
     if (token === 'self-start') out.alignSelf = 'flex-start';
+    if (token === 'self-end') out.alignSelf = 'flex-end';
 
     // absolute positioning
     if (token === 'absolute') out.position = 'absolute';
@@ -99,6 +104,9 @@ export function tw(className: string): Style {
     if (token === 'border') out.borderWidth = 1;
     if (token === 'border-2') out.borderWidth = 2;
     if (token === 'border-b') out.borderBottomWidth = 1;
+    if (token === 'border-t') out.borderTopWidth = 1;
+    if (token === 'border-l') out.borderLeftWidth = 1;
+    if (token === 'border-r') out.borderRightWidth = 1;
     if (token === 'rounded-sm') out.borderRadius = 8;
     if (token === 'rounded-md') out.borderRadius = 12;
     if (token === 'rounded-lg') out.borderRadius = 16;
@@ -164,6 +172,11 @@ export function tw(className: string): Style {
     }
 
     // width/height
+    if (token === 'w-full') out.width = '100%';
+    if (token === 'h-full') out.height = '100%';
+    if (token === 'w-screen') out.width = '100%';
+    if (token === 'h-screen') out.height = '100%';
+
     const w = token.match(/^w-(\d+(?:\.\d+)?)$/);
     if (w) {
       const v = spacingFromTailwindNumber(w[1]);
@@ -211,9 +224,11 @@ export function tw(className: string): Style {
     if (token === 'text-xs') out.fontSize = 11;
     if (token === 'text-sm') out.fontSize = 13;
     if (token === 'text-base') out.fontSize = 15;
-    if (token === 'text-sm' || token === 'text-base') {
-      // already handled
-    }
+    if (token === 'text-lg') out.fontSize = 18;
+    if (token === 'text-xl') out.fontSize = 20;
+    if (token === 'text-2xl') out.fontSize = 24;
+    if (token === 'text-3xl') out.fontSize = 28;
+    if (token === 'text-4xl') out.fontSize = 32;
 
     const textArb = token.match(/^text-\[(\d+(?:\.\d+)?)px\]$/);
     if (textArb) {
@@ -237,6 +252,20 @@ export function tw(className: string): Style {
     if (token === 'leading-6') out.lineHeight = 24;
 
     if (token === 'tabular-nums') out.fontVariant = ['tabular-nums'];
+
+    if (token === 'line-through') out.textDecorationLine = 'line-through';
+    if (token === 'underline') out.textDecorationLine = 'underline';
+    if (token === 'uppercase') out.textTransform = 'uppercase';
+    if (token === 'lowercase') out.textTransform = 'lowercase';
+    if (token === 'capitalize') out.textTransform = 'capitalize';
+
+    // letter-spacing (tracking)
+    const tracking = token.match(/^tracking-(tight|normal|wide|wider|widest)$/);
+    if (tracking) {
+      const map: Record<string, number> = { tight: -0.5, normal: 0, wide: 0.5, wider: 1, widest: 2 };
+      const v = map[tracking[1] ?? ''];
+      if (v != null) out.letterSpacing = v;
+    }
 
     // colors: bg-*/text-*/border-*
     if (token.startsWith('bg-') || token.startsWith('text-')) {

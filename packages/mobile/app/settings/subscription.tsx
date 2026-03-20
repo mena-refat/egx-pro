@@ -93,7 +93,6 @@ export default function SubscriptionPage() {
   const { colors } = useTheme();
   const [billing, setBilling] = useState<BillingPeriod>('monthly');
   const { connected, purchasing, purchasePlan } = useGooglePlayBilling();
-  const isRTL = I18nManager.isRTL;
 
   // Promo code state
   const [promoOpen, setPromoOpen] = useState(false);
@@ -103,7 +102,7 @@ export default function SubscriptionPage() {
   const [promoResult, setPromoResult] = useState<DiscountResult | null>(null);
 
   const currentPlan = user?.plan ?? 'free';
-  const billingOptions: BillingPeriod[] = isRTL ? ['yearly', 'monthly'] : ['monthly', 'yearly'];
+  const billingOptions: BillingPeriod[] = ['monthly', 'yearly'];
 
   // ── isActive: compares with server's effective plan values ──────────────────
   const isActive = (plan: typeof PLANS[number]) => {
@@ -246,11 +245,12 @@ export default function SubscriptionPage() {
     <ScreenWrapper padded={false}>
       {/* Header */}
       <View
-        style={{ borderBottomColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }}
-        className="items-center gap-3 px-4 pt-5 pb-4 border-b"
+        style={{ borderBottomColor: colors.border }}
+        className="flex-row items-center gap-3 px-4 pt-5 pb-4 border-b"
       >
         <Pressable
           onPress={() => router.back()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={{ backgroundColor: colors.hover, borderColor: colors.border }}
           className="w-9 h-9 rounded-xl border items-center justify-center"
         >
@@ -267,10 +267,7 @@ export default function SubscriptionPage() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
 
         {/* Current plan badge */}
-        <View
-          className="bg-brand/10 border border-brand/25 rounded-2xl px-4 py-3 items-center gap-2"
-          style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
-        >
+        <View className="flex-row bg-brand/10 border border-brand/25 rounded-2xl px-4 py-3 items-center gap-2">
           <Crown size={16} color={BRAND} />
           <Text className="text-sm font-semibold text-brand flex-1">
             خطتك الحالية: {PLAN_LABELS[currentPlan] ?? currentPlan.toUpperCase()}
@@ -284,8 +281,8 @@ export default function SubscriptionPage() {
 
         {/* Billing toggle */}
         <View
-          style={{ backgroundColor: colors.card, borderColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }}
-          className="border rounded-2xl p-1.5 gap-1"
+          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          className="flex-row border rounded-2xl p-1.5 gap-1"
         >
           {billingOptions.map((b) => {
             const active = billing === b;
@@ -293,8 +290,8 @@ export default function SubscriptionPage() {
               <Pressable
                 key={b}
                 onPress={() => setBilling(b)}
-                className="flex-1 items-center justify-center gap-1.5 py-2.5 rounded-xl"
-                style={{ flexDirection: isRTL ? 'row-reverse' : 'row', backgroundColor: active ? BRAND : 'transparent' }}
+                className="flex-row flex-1 items-center justify-center gap-1.5 py-2.5 rounded-xl"
+                style={{ backgroundColor: active ? BRAND : 'transparent' }}
               >
                 <Text className="text-sm font-semibold" style={{ color: active ? '#fff' : colors.textMuted }}>
                   {b === 'monthly' ? 'شهري' : 'سنوي'}
@@ -310,7 +307,7 @@ export default function SubscriptionPage() {
         </View>
 
         {/* Plan cards */}
-        {(isRTL ? [...PLANS].reverse() : PLANS).map((plan) => {
+        {PLANS.map((plan) => {
           const active = isActive(plan);
           const price = getPrice(plan);
           const savings = getSavings(plan);
@@ -328,14 +325,8 @@ export default function SubscriptionPage() {
               }}
             >
               {/* Plan header */}
-              <View
-                className="items-center justify-between"
-                style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
-              >
-                <View
-                  className="items-center gap-2"
-                  style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
-                >
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center gap-2">
                   {plan.id !== 'free' && <Zap size={16} color={plan.color} />}
                   <Text className="text-base font-bold" style={{ color: plan.color }}>{plan.label}</Text>
                   {active && (
@@ -396,11 +387,7 @@ export default function SubscriptionPage() {
               {/* Features */}
               <View className="gap-2">
                 {plan.features.map((f, i) => (
-                  <View
-                    key={i}
-                    className="items-center gap-2"
-                    style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
-                  >
+                  <View key={i} className="flex-row items-center gap-2">
                     <Check size={13} color={GREEN} />
                     <Text style={{ color: colors.textSub }} className="text-xs">{f}</Text>
                   </View>
@@ -412,11 +399,10 @@ export default function SubscriptionPage() {
                 <Pressable
                   onPress={() => handleUpgrade(plan)}
                   disabled={isPurchasing}
-                  className="py-2.5 rounded-xl items-center mt-1 justify-center gap-2"
+                  className="flex-row py-2.5 rounded-xl items-center mt-1 justify-center gap-2"
                   style={{
                     backgroundColor: plan.color,
                     opacity: isPurchasing ? 0.7 : 1,
-                    flexDirection: isRTL ? 'row-reverse' : 'row',
                   }}
                 >
                   {isPurchasing && <ActivityIndicator size="small" color="#fff" />}
@@ -438,8 +424,7 @@ export default function SubscriptionPage() {
         >
           <Pressable
             onPress={() => { setPromoOpen((v) => !v); if (promoOpen) clearPromo(); }}
-            className="items-center gap-3 px-4 py-3.5"
-            style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
+            className="flex-row items-center gap-3 px-4 py-3.5"
           >
             <Tag size={15} color={promoResult ? '#4ade80' : colors.textMuted} />
             <Text style={{ color: promoResult ? '#4ade80' : colors.text }} className="text-sm font-medium flex-1">
@@ -452,10 +437,10 @@ export default function SubscriptionPage() {
 
           {promoOpen && (
             <View style={{ borderTopColor: colors.border }} className="border-t px-4 py-3 gap-3">
-              <View className="gap-2" style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+              <View className="flex-row gap-2">
                 <View
-                  style={{ backgroundColor: colors.hover, borderColor: promoError ? '#f87171' : promoResult ? '#4ade80' : colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }}
-                  className="flex-1 items-center border rounded-xl px-3 gap-2"
+                  style={{ backgroundColor: colors.hover, borderColor: promoError ? '#f87171' : promoResult ? '#4ade80' : colors.border }}
+                  className="flex-row flex-1 items-center border rounded-xl px-3 gap-2"
                 >
                   <TextInput
                     value={promoCode}
@@ -499,10 +484,7 @@ export default function SubscriptionPage() {
               )}
 
               {promoResult && (
-                <View
-                  className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2.5 items-center gap-2"
-                  style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
-                >
+                <View className="flex-row bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2.5 items-center gap-2">
                   <Tag size={13} color="#4ade80" />
                   <Text className="text-xs text-emerald-400 font-medium flex-1">
                     تم تطبيق الكود — ستحصل على خصم {promoResult.percent}% على الاشتراك
