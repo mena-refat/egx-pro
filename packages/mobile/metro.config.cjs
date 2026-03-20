@@ -17,7 +17,7 @@ if (!fs.existsSync(dstPkg) && fs.existsSync(srcPkg)) {
 }
 
 const { getDefaultConfig } = require('expo/metro-config');
-const { withNativeWind } = require('nativewind/metro');
 
-const config = getDefaultConfig(__dirname);
-module.exports = withNativeWind(config, { input: './global.css' });
+// NativeWind is disabled for stability.
+// Tailwind/NW `className` mappings can produce incorrect layout in this monorepo.
+module.exports = getDefaultConfig(__dirname);

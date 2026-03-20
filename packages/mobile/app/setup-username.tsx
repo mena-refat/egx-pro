@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import apiClient from '../lib/api/client';
 import { useAuthStore } from '../store/authStore';
+import { useTheme } from '../hooks/useTheme';
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 
@@ -61,14 +62,16 @@ export default function SetupUsernamePage() {
     }
   };
 
+  const { colors } = useTheme();
+
   const statusColor =
     {
-      available: 'text-green-400',
-      taken: 'text-red-400',
-      error: 'text-red-400',
-      checking: 'text-slate-400',
-      idle: 'text-slate-400',
-    }[status] ?? 'text-slate-400';
+      available: '#4ade80',
+      taken: '#f87171',
+      error: '#f87171',
+      checking: colors.textMuted,
+      idle: colors.textMuted,
+    }[status] ?? colors.textMuted;
 
   const statusMsg =
     {
@@ -81,15 +84,17 @@ export default function SetupUsernamePage() {
 
   return (
     <ScreenWrapper padded>
-      <View className="flex-1 justify-center gap-6 px-2">
-        <View className="items-center gap-2 mb-4">
-          <Text className="text-2xl font-bold text-white">اختار اسم مستخدم</Text>
-          <Text className="text-sm text-slate-400 text-center">
+      <View style={{ flex: 1, justifyContent: 'center', gap: 24, paddingHorizontal: 8 }}>
+        <View style={{ alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <Text style={{ color: colors.text, fontSize: 24, fontWeight: '800' }}>
+            اختار اسم مستخدم
+          </Text>
+          <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center' }}>
             اسم مميز يعرفك به المتابعون — يمكن تغييره مرة واحدة فقط لاحقاً
           </Text>
         </View>
 
-        <View className="gap-3">
+        <View style={{ gap: 12 }}>
           <Input
             label="اسم المستخدم"
             placeholder="egx_trader"
@@ -101,7 +106,11 @@ export default function SetupUsernamePage() {
             error={fmtErr ?? undefined}
           />
 
-          {statusMsg ? <Text className={`text-xs ${statusColor}`}>{statusMsg}</Text> : null}
+          {statusMsg ? (
+            <Text style={{ color: statusColor, fontSize: 11, fontWeight: '500' }}>
+              {statusMsg}
+            </Text>
+          ) : null}
         </View>
 
         <Button

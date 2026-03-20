@@ -99,33 +99,53 @@ export function AnalysisLoader({ variant }: Props) {
 
   return (
     <View
-      style={{ backgroundColor: colors.card, borderColor: colors.border }}
-      className="border rounded-2xl p-5 gap-4"
+      style={{
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        borderWidth: 1,
+        borderRadius: 24,
+        padding: 20,
+        gap: 16,
+      }}
     >
       {/* Header */}
-      <View className="flex-row items-center gap-3">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <Animated.View
-          className="w-11 h-11 rounded-xl items-center justify-center"
-          style={{ backgroundColor: bg, opacity: sparkleAnim }}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: bg,
+            opacity: sparkleAnim,
+          }}
         >
           <Icon size={20} color={color} />
         </Animated.View>
-        <View className="flex-1 gap-0.5">
-          <View className="flex-row items-center gap-1.5">
+        <View style={{ flex: 1, gap: 2 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Sparkles size={13} color={color} />
-            <Text style={{ color: colors.text }} className="text-sm font-bold">جاري التحليل</Text>
+            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>جاري التحليل</Text>
           </View>
-          <Text style={{ color: colors.textSub }} className="text-xs" key={msgIndex}>
+          <Text style={{ color: colors.textSub, fontSize: 11 }} key={msgIndex}>
             {messages[msgIndex]}
           </Text>
         </View>
-        <Text className="text-base font-bold tabular-nums" style={{ color: progressColor }}>
+        <Text
+          style={{
+            color: progressColor,
+            fontSize: 16,
+            fontWeight: '700',
+            fontVariant: ['tabular-nums'],
+          }}
+        >
           {progress}%
         </Text>
       </View>
 
       {/* Progress bar */}
-      <View className="gap-1.5">
+      <View style={{ gap: 6 }}>
         <View
           style={{ height: 8, backgroundColor: colors.hover, borderRadius: 999, overflow: 'hidden' }}
         >
@@ -138,13 +158,13 @@ export function AnalysisLoader({ variant }: Props) {
             }}
           />
         </View>
-        <Text style={{ color: colors.textMuted }} className="text-xs text-center">
+        <Text style={{ color: colors.textMuted, fontSize: 11, textAlign: 'center' }}>
           لا تغلق الشاشة — قد يستغرق دقيقة أو دقيقتين
         </Text>
       </View>
 
       {/* Steps */}
-      <View className="flex-row justify-around pt-1">
+      <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingTop: 4 }}>
         {[
           { label: 'جمع البيانات', threshold: 20 },
           { label: 'التحليل',      threshold: 50 },
@@ -152,12 +172,16 @@ export function AnalysisLoader({ variant }: Props) {
         ].map(({ label, threshold }) => {
           const done = progress >= threshold;
           return (
-            <View key={label} className="items-center gap-1">
+            <View key={label} style={{ alignItems: 'center', gap: 4 }}>
               <View
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: done ? '#4ade80' : colors.border }}
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 999,
+                  backgroundColor: done ? '#4ade80' : colors.border,
+                }}
               />
-              <Text className="text-xs" style={{ color: done ? '#4ade80' : colors.textMuted }}>
+              <Text style={{ color: done ? '#4ade80' : colors.textMuted, fontSize: 11 }}>
                 {label}
               </Text>
             </View>

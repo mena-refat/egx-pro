@@ -8,7 +8,6 @@ import { useAuthStore } from '../../../store/authStore';
 import api from '../../../lib/api';
 import { Button } from '../../ui/Button';
 import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
-import { UnsavedChangesDialog } from '../../shared/UnsavedChangesDialog';
 
 // ─── Constants (mirror of OnboardingWizard) ──────────────────────────────────
 
@@ -169,7 +168,7 @@ export function InvestorProfileTab() {
   const [status, setStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [dirty, setDirty] = useState(false);
 
-  const blocker = useUnsavedChanges(dirty);
+  useUnsavedChanges(dirty);
 
   function update(patch: Partial<InvestorFormState>) {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -238,8 +237,23 @@ export function InvestorProfileTab() {
   }
 
   return (
-    <div className="space-y-5 max-w-2xl">
-      <UnsavedChangesDialog blocker={blocker} />
+    <div className="space-y-5 max-w-2xl mx-auto" dir="rtl">
+
+      {/* Header */}
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
+        <div className="relative bg-gradient-to-br from-violet-400/10 via-transparent to-transparent p-5">
+          <div className="absolute -top-8 -end-8 w-32 h-32 rounded-full bg-violet-400/6 blur-3xl pointer-events-none" />
+          <div className="relative flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-violet-400/10 flex items-center justify-center shrink-0">
+              <TrendingUp className="w-5 h-5 text-violet-400" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-[var(--text-primary)]">ملف المستثمر</h2>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">حدّد أهدافك وشخصيتك الاستثمارية</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Goal */}
       <Section icon={Target} title="هدف الاستثمار">

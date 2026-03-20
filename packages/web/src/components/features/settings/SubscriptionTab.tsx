@@ -37,7 +37,7 @@ export function SubscriptionTab() {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly');
   const [modalPlan, setModalPlan] = useState<PaidPlanId | null>(null);
   const [compareFeatureModal, setCompareFeatureModal] = useState<string | null>(null);
-  const [showComparison, setShowComparison] = useState(false);
+  const [showComparison, setShowComparison] = useState(true);
   const [showDiscount, setShowDiscount] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [discountCodeError, setDiscountCodeError] = useState<string | null>(null);
@@ -180,92 +180,116 @@ export function SubscriptionTab() {
       </div>
 
       {/* ── Plan cards ── */}
-      <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-4">
         {plans.map((plan) => {
-          const isFree = plan.id === 'free';
-          const paidId = !isFree ? getPaidPlanId(plan.id as 'pro' | 'ultra', billingPeriod) : null;
+          const isFree  = plan.id === 'free';
+          const paidId  = !isFree ? getPaidPlanId(plan.id as 'pro' | 'ultra', billingPeriod) : null;
           const current = isCurrent(plan.id);
-          const basePrice = paidId ? getBasePriceForPlan(paidId) : 0;
+          const basePrice  = paidId ? getBasePriceForPlan(paidId) : 0;
           const finalPrice = paidId ? getFinalPrice(paidId) : 0;
-          const isYearly = billingPeriod === 'yearly';
-          const monthly = isYearly && paidId ? monthlyEquivalent(finalPrice) : 0;
-          const savePct = plan.id === 'pro' ? YEARLY_SAVINGS_PERCENT.pro : plan.id === 'ultra' ? YEARLY_SAVINGS_PERCENT.ultra : 0;
+          const isYearly   = billingPeriod === 'yearly';
+          const monthly    = isYearly && paidId ? monthlyEquivalent(finalPrice) : 0;
+          const savePct    = plan.id === 'pro' ? YEARLY_SAVINGS_PERCENT.pro : plan.id === 'ultra' ? YEARLY_SAVINGS_PERCENT.ultra : 0;
+
+          const accentBorder = plan.id === 'ultra' ? 'border-amber-400/50' : plan.id === 'pro' ? 'border-[var(--brand)]/50' : 'border-[var(--border)]';
+          const accentGlow   = plan.id === 'ultra' ? 'shadow-[0_0_24px_rgba(251,191,36,0.08)]' : plan.id === 'pro' ? 'shadow-[0_0_24px_rgba(124,58,237,0.08)]' : '';
+          const headerGrad   = plan.id === 'ultra'
+            ? 'from-amber-400/10 to-transparent'
+            : plan.id === 'pro'
+            ? 'from-[var(--brand)]/10 to-transparent'
+            : 'from-[var(--bg-secondary)] to-[var(--bg-secondary)]';
 
           return (
             <div
               key={plan.id}
-              className={`relative rounded-xl border p-4 transition-all ${planBg[plan.id]} ${
-                current ? 'ring-2 ring-[var(--brand)]' : ''
-              }`}
+              className={`relative rounded-2xl border overflow-hidden transition-all bg-[var(--bg-card)] flex flex-col
+                ${current ? `ring-2 ${plan.id === 'ultra' ? 'ring-amber-400' : 'ring-[var(--brand)]'}` : accentBorder}
+                ${accentGlow}
+              `}
             >
-              {/* Badge */}
-              {plan.badgeKey && (
-                <span className={`absolute top-3 start-3 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  plan.id === 'ultra'
-                    ? 'bg-amber-400/15 text-amber-400'
-                    : 'bg-[var(--brand)]/15 text-[var(--brand)]'
-                }`}>
-                  {t(`billing.${plan.badgeKey}`)}
-                </span>
-              )}
-
-              <div className="flex items-center justify-between gap-4">
-                {/* Plan info */}
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {plan.badgeKey && <span className="w-20" />}{/* spacer for badge */}
-                    <span className={`text-base font-bold ${planColor[plan.id]}`}>
-                      {t(plan.nameKey)}
-                    </span>
-                    {current && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--brand)] text-white">
-                        {t('billing.currentPlan')}
+              {/* ── Header band ── */}
+              <div className={`bg-gradient-to-b ${headerGrad} px-5 pt-5 pb-4`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className={`text-lg font-bold ${planColor[plan.id]}`}>
+                        {t(plan.nameKey)}
                       </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-baseline gap-1.5 mt-1 flex-wrap">
-                    {isFree ? (
-                      <span className="text-2xl font-bold text-[var(--text-primary)]">
-                        {t('billing.free')}
-                      </span>
-                    ) : (
-                      <>
-                        <span className="text-2xl font-bold text-[var(--text-primary)]">
-                          {finalPrice.toLocaleString()}
-                        </span>
-                        <span className="text-sm text-[var(--text-muted)]">
-                          {t('billing.egp')} / {isYearly ? t('billing.perYear') : t('billing.perMonth')}
-                        </span>
-                        {discountPercent != null && discountPercent > 0 && discountPercent < 100 && (
-                          <span className="text-sm line-through text-[var(--text-muted)]">{basePrice.toLocaleString()}</span>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Yearly monthly equivalent */}
-                  {isYearly && !isFree && monthly > 0 && (
-                    <p className="text-xs text-[var(--success)] mt-0.5">
-                      ≈ {monthly} {t('billing.egp')} / {t('billing.perMonth')}
-                      {savePct > 0 && (
-                        <span className="ms-1.5 px-1.5 py-0.5 rounded-full bg-[var(--success-bg)] text-[var(--success)] font-semibold">
-                          -{savePct}%
+                      {current && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full
+                          ${plan.id === 'ultra' ? 'bg-amber-400 text-black' : 'bg-[var(--brand)] text-white'}`}>
+                          {t('billing.currentPlan')}
                         </span>
                       )}
-                    </p>
-                  )}
+                    </div>
 
-                  {/* Expiry */}
-                  {current && planExpiresAt && !isFree && (
-                    <p className="text-xs text-[var(--text-muted)] mt-1">
-                      {t('billing.expiresOn', { date: new Date(planExpiresAt).toLocaleDateString('ar-EG') })}
-                    </p>
+                    {/* Price */}
+                    {isFree ? (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-black text-[var(--text-primary)]">{t('billing.free')}</span>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="text-4xl font-black text-[var(--text-primary)] tabular-nums">
+                            {finalPrice.toLocaleString()}
+                          </span>
+                          <span className="text-sm text-[var(--text-muted)]">
+                            {t('billing.egp')} / {isYearly ? t('billing.perYear') : t('billing.perMonth')}
+                          </span>
+                          {discountPercent != null && discountPercent > 0 && discountPercent < 100 && (
+                            <span className="text-sm line-through text-[var(--text-muted)]">{basePrice.toLocaleString()}</span>
+                          )}
+                        </div>
+                        {isYearly && monthly > 0 && (
+                          <p className="text-xs text-[var(--success)] mt-1 flex items-center gap-1.5">
+                            ≈ {monthly} {t('billing.egp')} / {t('billing.perMonth')}
+                            {savePct > 0 && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-[var(--success-bg)] font-bold">
+                                -{savePct}%
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Badge pill */}
+                  {plan.badgeKey && (
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 mt-0.5
+                      ${plan.id === 'ultra' ? 'bg-amber-400/15 text-amber-400' : 'bg-[var(--brand)]/15 text-[var(--brand)]'}`}>
+                      {t(`billing.${plan.badgeKey}`)}
+                    </span>
                   )}
                 </div>
 
-                {/* CTA */}
-                {!isFree && (
+                {/* Expiry */}
+                {current && planExpiresAt && !isFree && (
+                  <p className="text-xs text-[var(--text-muted)] mt-2">
+                    {t('billing.expiresOn', { date: new Date(planExpiresAt).toLocaleDateString('ar-EG') })}
+                  </p>
+                )}
+              </div>
+
+              {/* ── Features list ── */}
+              <div className="px-5 py-4 border-t border-[var(--border)]/60 space-y-2.5 flex-1">
+                {plan.features.map((f) => (
+                  <div key={f.key} className="flex items-center gap-2.5 text-sm">
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0
+                      ${f.unavailable ? 'bg-[var(--bg-secondary)]' : plan.id === 'ultra' ? 'bg-amber-400/15' : 'bg-[var(--success-bg)]'}`}>
+                      <Check className={`w-2.5 h-2.5 ${f.unavailable ? 'text-[var(--text-muted)]' : plan.id === 'ultra' ? 'text-amber-400' : 'text-[var(--success)]'}`} />
+                    </span>
+                    <span className={f.unavailable ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text-secondary)]'}>
+                      {t(`billing.features.${f.key}`)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── CTA ── */}
+              {!isFree && (
+                <div className="px-5 pb-5 mt-auto">
                   <button
                     type="button"
                     disabled={current || upgrading}
@@ -274,16 +298,17 @@ export function SubscriptionTab() {
                       if (discountPercent === 100) handleUpgrade(paidId);
                       else setModalPlan(paidId);
                     }}
-                    className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                      current
-                        ? 'bg-[var(--bg-secondary)] text-[var(--text-muted)] cursor-default flex items-center gap-1.5'
+                    className={`w-full py-3 rounded-xl text-sm font-bold transition-all
+                      ${current
+                        ? 'bg-[var(--bg-secondary)] text-[var(--text-muted)] cursor-default'
                         : plan.id === 'ultra'
-                        ? 'bg-amber-400 text-black hover:bg-amber-300'
-                        : 'bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)]'
-                    }`}
+                        ? 'bg-amber-400 text-black hover:bg-amber-300 active:scale-[0.98]'
+                        : 'bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)] active:scale-[0.98]'
+                      }
+                    `}
                   >
                     {current
-                      ? <><Check className="w-3.5 h-3.5 inline" /> {t('billing.currentPlan')}</>
+                      ? <span className="flex items-center justify-center gap-1.5"><Check className="w-4 h-4" />{t('billing.currentPlan')}</span>
                       : discountPercent === 100
                         ? t('billing.activateNow')
                         : plan.id === 'ultra'
@@ -291,21 +316,8 @@ export function SubscriptionTab() {
                           : t('billing.ctaUpgradePro', { defaultValue: 'ترقية لـ Pro' })
                     }
                   </button>
-                )}
-              </div>
-
-              {/* Key features — short list */}
-              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 pt-3 border-t border-[var(--border)]/50">
-                {plan.features.slice(0, 4).map((f) => (
-                  <span key={f.key} className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-                    <Check className="w-3 h-3 text-[var(--success)]" />
-                    {t(`billing.features.${f.key}`)}
-                  </span>
-                ))}
-                {plan.features.length > 4 && (
-                  <span className="text-xs text-[var(--text-muted)]">+{plan.features.length - 4} {t('billing.moreFeatures', { defaultValue: 'مزايا إضافية' })}</span>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           );
         })}

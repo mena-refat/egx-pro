@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
+import { SettingsDirtyProvider, useSettingsDirty } from '../features/settings/SettingsDirtyContext';
+import { UnsavedChangesDialog } from '../shared/UnsavedChangesDialog';
 import {
   User,
   Shield,
@@ -43,15 +45,7 @@ const CARDS: SettingCard[] = [
     iconBg: 'bg-emerald-400/10',
     iconColor: 'text-emerald-400',
   },
-  {
-    id: 'investor',
-    path: '/settings/investor',
-    label: 'ملف المستثمر',
-    desc: 'أهدافك وشخصيتك الاستثمارية',
-    icon: BarChart2,
-    iconBg: 'bg-violet-400/10',
-    iconColor: 'text-violet-400',
-  },
+
   {
     id: 'preferences',
     path: '/settings/preferences',
@@ -173,8 +167,18 @@ function SettingsIndex() {
 
 // ── Sub-page wrapper with back button ───────────────────────────────────────
 function SettingsSubPage({ card }: { card: SettingCard }) {
-  const navigate  = useNavigate();
-  const Icon      = card.icon;
+  const navigate = useNavigate();
+  const Icon = card.icon;
+  const { isDirty, clearAll } = useSettingsDirty();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  function handleBack() {
+    if (isDirty) {
+      setConfirmOpen(true);
+    } else {
+      navigate('/settings');
+    }
+  }
 
   return (
     <div className="space-y-5" dir="rtl">
@@ -182,7 +186,7 @@ function SettingsSubPage({ card }: { card: SettingCard }) {
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => navigate('/settings')}
+          onClick={handleBack}
           className="w-8 h-8 flex items-center justify-center rounded-xl bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors shrink-0"
           aria-label="رجوع"
         >
@@ -197,6 +201,16 @@ function SettingsSubPage({ card }: { card: SettingCard }) {
       </div>
 
       <Outlet />
+
+      <UnsavedChangesDialog
+        isOpen={confirmOpen}
+        onStay={() => setConfirmOpen(false)}
+        onLeave={() => {
+          clearAll();
+          setConfirmOpen(false);
+          navigate('/settings');
+        }}
+      />
     </div>
   );
 }
@@ -208,13 +222,15 @@ export default function SettingsLayout() {
   const activeCard = getActiveCard(location.pathname);
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {isIndex
-        ? <SettingsIndex />
-        : activeCard
-          ? <SettingsSubPage card={activeCard} />
-          : <Outlet />
-      }
-    </div>
+    <SettingsDirtyProvider>
+      <div className="max-w-4xl mx-auto">
+        {isIndex
+          ? <SettingsIndex />
+          : activeCard
+            ? <SettingsSubPage card={activeCard} />
+            : <Outlet />
+        }
+      </div>
+    </SettingsDirtyProvider>
   );
 }

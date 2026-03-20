@@ -184,7 +184,6 @@ export default function DiscoverPage() {
         handleSelect={handleSelect}
         handleKeyDown={handleKeyDown}
         minUsernameLength={DISCOVER.minUsernameLength}
-        isRtl={isRtl}
         t={t}
       />
 

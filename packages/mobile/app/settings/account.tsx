@@ -9,6 +9,7 @@ import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
+import { BRAND, BRAND_BG_STRONG } from '../../lib/theme';
 
 interface FieldRowProps {
   label: string;
@@ -20,13 +21,22 @@ interface FieldRowProps {
 function FieldRow({ label, value, onEdit, editable = true }: FieldRowProps) {
   const { colors } = useTheme();
   return (
-    <View style={{ borderBottomColor: colors.border }} className="flex-row items-center justify-between py-3.5 border-b">
-      <View className="flex-1">
-        <Text style={{ color: colors.textMuted }} className="text-xs mb-0.5">{label}</Text>
-        <Text style={{ color: colors.text }} className="text-sm">{value || '—'}</Text>
+    <View
+      style={{
+        borderBottomColor: colors.border,
+        borderBottomWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 14,
+      }}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 2 }}>{label}</Text>
+        <Text style={{ color: colors.text, fontSize: 13, fontWeight: '500' }}>{value || '—'}</Text>
       </View>
       {editable && (
-        <Pressable onPress={onEdit} className="p-2">
+        <Pressable onPress={onEdit} style={{ padding: 8 }}>
           <Pencil size={14} color={colors.textSub} />
         </Pressable>
       )}
@@ -74,43 +84,93 @@ export default function AccountPage() {
     <ScreenWrapper padded={false}>
       <View
         style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
-        className="flex-row items-center gap-3 px-4 pt-5 pb-4"
+        // header: flex-row items-center gap-3 px-4 pt-5 pb-4
+        // (gap works on RN >= 0.71; used elsewhere in this project)
+        // If it doesn't, spacing can be tuned quickly.
       >
-        <Pressable
-          onPress={() => router.back()}
-          style={{ backgroundColor: colors.hover, borderColor: colors.border }}
-          className="w-9 h-9 rounded-xl border items-center justify-center"
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            paddingHorizontal: 16,
+            paddingTop: 20,
+            paddingBottom: 16,
+          }}
         >
+          <Pressable
+            onPress={() => router.back()}
+            style={{
+              backgroundColor: colors.hover,
+              borderColor: colors.border,
+              borderWidth: 1,
+              width: 36,
+              height: 36,
+              borderRadius: 12,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
           {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
-        </Pressable>
-        <View className="w-8 h-8 rounded-xl bg-brand/15 items-center justify-center">
-          <User size={15} color="#8b5cf6" />
+          </Pressable>
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 12,
+              backgroundColor: BRAND_BG_STRONG,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <User size={15} color={BRAND} />
+          </View>
+          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>
+            البيانات الشخصية
+          </Text>
         </View>
-        <Text style={{ color: colors.text }} className="text-base font-bold">البيانات الشخصية</Text>
       </View>
 
-      <ScrollView contentContainerClassName="px-4 py-5 gap-4" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 20, gap: 16 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Avatar */}
-        <View className="items-center mb-2">
-          <View className="w-20 h-20 rounded-full bg-brand/20 items-center justify-center mb-3">
-            <Text className="text-3xl font-bold text-brand">
+        <View style={{ alignItems: 'center', marginBottom: 8 }}>
+          <View
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: `${BRAND}20`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 12,
+            }}
+          >
+            <Text style={{ fontSize: 30, fontWeight: '800', color: BRAND }}>
               {user?.fullName?.[0]?.toUpperCase() ?? 'U'}
             </Text>
           </View>
-          <Text style={{ color: colors.textMuted }} className="text-xs">تغيير الصورة قريباً</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+            تغيير الصورة قريباً
+          </Text>
         </View>
 
         {/* Fields */}
         <View
           style={{ backgroundColor: colors.card, borderColor: colors.border }}
-          className="border rounded-2xl px-4"
+          // border rounded-2xl px-4
+          // rounded-2xl = 24, px-4 = 16
         >
-          <FieldRow label="الاسم الكامل" value={user?.fullName ?? ''} onEdit={() => startEdit('fullName')} />
-          <FieldRow label="اسم المستخدم" value={user?.username ? `@${user.username}` : ''} onEdit={() => startEdit('username')} />
-          <FieldRow label="البريد الإلكتروني" value={user?.email ?? ''} editable={false} onEdit={() => {}} />
-          <View className="py-3.5">
-            <Text style={{ color: colors.textMuted }} className="text-xs mb-0.5">رقم الموبايل</Text>
-            <Text style={{ color: colors.text }} className="text-sm">{user?.phone || '—'}</Text>
+          <View style={{ borderWidth: 1, borderRadius: 24, paddingHorizontal: 16, overflow: 'hidden' }}>
+            <FieldRow label="الاسم الكامل" value={user?.fullName ?? ''} onEdit={() => startEdit('fullName')} />
+            <FieldRow label="اسم المستخدم" value={user?.username ? `@${user.username}` : ''} onEdit={() => startEdit('username')} />
+            <FieldRow label="البريد الإلكتروني" value={user?.email ?? ''} editable={false} onEdit={() => {}} />
+            <View style={{ paddingVertical: 14, paddingHorizontal: 0 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 2 }}>رقم الموبايل</Text>
+              <Text style={{ color: colors.text, fontSize: 13, fontWeight: '500' }}>{user?.phone || '—'}</Text>
+            </View>
           </View>
         </View>
 
@@ -118,15 +178,25 @@ export default function AccountPage() {
         {editing && (
           <View
             style={{ backgroundColor: colors.card, borderColor: colors.border }}
-            className="border rounded-2xl p-4 gap-3"
+            // border rounded-2xl p-4 gap-3
           >
-            <Text style={{ color: colors.text }} className="text-sm font-semibold">
+            <View style={{ borderWidth: 1, borderRadius: 24, padding: 16, gap: 12 }}>
+            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>
               تعديل {editing === 'fullName' ? 'الاسم' : 'اسم المستخدم'}
             </Text>
 
             {error && (
-              <View className="bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
-                <Text className="text-xs text-red-400">{error}</Text>
+              <View
+                style={{
+                  backgroundColor: '#f8717112',
+                  borderColor: '#f8717130',
+                  borderWidth: 1,
+                  borderRadius: 16,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                }}
+              >
+                <Text style={{ color: '#f87171', fontSize: 11, fontWeight: '600' }}>{error}</Text>
               </View>
             )}
 
@@ -141,31 +211,53 @@ export default function AccountPage() {
                 color: colors.text,
                 borderColor: colors.border,
                 backgroundColor: colors.hover,
+                borderWidth: 1,
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                fontSize: 14,
               }}
-              className="border rounded-xl px-4 py-3 text-sm"
             />
 
-            <View className="flex-row gap-2">
+            <View style={{ flexDirection: 'row', gap: 8 }}>
               <Pressable
                 onPress={() => setEditing(null)}
-                style={{ borderColor: colors.border }}
-                className="flex-1 py-2.5 rounded-xl border items-center"
+                style={{
+                  flex: 1,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  borderRadius: 12,
+                  paddingVertical: 10,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
-                <Text style={{ color: colors.textSub }} className="text-sm">إلغاء</Text>
+                <Text style={{ color: colors.textSub, fontSize: 13, fontWeight: '600' }}>إلغاء</Text>
               </Pressable>
               <Pressable
                 onPress={save}
                 disabled={saving}
-                className="flex-1 py-2.5 rounded-xl bg-brand items-center justify-center flex-row gap-2"
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  backgroundColor: BRAND,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'row',
+                  gap: 8,
+                  opacity: saving ? 0.6 : 1,
+                }}
               >
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : success ? (
                   <Check size={16} color="#fff" />
                 ) : (
-                  <Text className="text-sm font-semibold text-white">حفظ</Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>حفظ</Text>
                 )}
               </Pressable>
+            </View>
             </View>
           </View>
         )}

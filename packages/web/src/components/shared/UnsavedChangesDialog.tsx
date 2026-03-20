@@ -1,16 +1,17 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Blocker } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 
 interface UnsavedChangesDialogProps {
-  blocker: Blocker;
+  isOpen: boolean;
+  onStay: () => void;
+  onLeave: () => void;
 }
 
-export function UnsavedChangesDialog({ blocker }: UnsavedChangesDialogProps) {
+export function UnsavedChangesDialog({ isOpen, onStay, onLeave }: UnsavedChangesDialogProps) {
   const { t } = useTranslation('common');
 
-  if (blocker.state !== 'blocked') return null;
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60">
@@ -30,14 +31,14 @@ export function UnsavedChangesDialog({ blocker }: UnsavedChangesDialogProps) {
         <div className="flex flex-col gap-2 mt-6">
           <button
             type="button"
-            onClick={() => blocker.proceed?.()}
+            onClick={onLeave}
             className="w-full py-2.5 rounded-xl border border-[var(--danger)] text-[var(--danger)] text-sm font-semibold hover:bg-[var(--danger-bg)] transition-colors"
           >
             {t('common.unsavedLeave')}
           </button>
           <button
             type="button"
-            onClick={() => blocker.reset?.()}
+            onClick={onStay}
             className="w-full py-2.5 rounded-xl bg-[var(--brand)] text-white text-sm font-bold hover:bg-[var(--brand-hover)] transition-colors"
           >
             {t('common.unsavedStay')}

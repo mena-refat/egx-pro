@@ -14,6 +14,7 @@ import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
+import { BRAND } from '../../lib/theme';
 
 const NOTIF_KEYS = [
   { key: 'notifySignals',      label: 'إشارات السوق',     sub: 'تنبيهات عند وصول الأسعار لأهدافك' },
@@ -48,59 +49,104 @@ export default function NotificationsPage() {
     <ScreenWrapper padded={false}>
       {/* Header */}
       <View
-        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
-        className="flex-row items-center gap-3 px-4 pt-5 pb-4"
+        style={{
+          borderBottomColor: colors.border,
+          borderBottomWidth: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+          paddingHorizontal: 16,
+          paddingTop: 20,
+          paddingBottom: 16,
+        }}
       >
         <Pressable
           onPress={() => router.back()}
-          style={{ backgroundColor: colors.hover, borderColor: colors.border }}
-          className="w-9 h-9 rounded-xl border items-center justify-center"
+          style={{
+            backgroundColor: colors.hover,
+            borderColor: colors.border,
+            borderWidth: 1,
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
           {I18nManager.isRTL
             ? <ArrowRight size={16} color={colors.textSub} />
             : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
-        <View className="w-8 h-8 rounded-xl bg-brand/20 items-center justify-center">
-          <Bell size={15} color="#8b5cf6" />
+        <View
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 12,
+            backgroundColor: `${BRAND}33`,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Bell size={15} color={BRAND} />
         </View>
-        <Text style={{ color: colors.text }} className="text-base font-bold">إعدادات الإشعارات</Text>
+        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>
+          إعدادات الإشعارات
+        </Text>
       </View>
 
       <ScrollView
-        contentContainerClassName="px-4 py-5"
+        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 20 }}
         showsVerticalScrollIndicator={false}
       >
         <View
           style={{ backgroundColor: colors.card, borderColor: colors.border }}
-          className="border rounded-2xl overflow-hidden"
         >
-          {NOTIF_KEYS.map(({ key, label, sub }, i) => {
-            const value =
-              (user?.[key as keyof typeof user] as boolean | undefined) ?? true;
-            return (
-              <View
-                key={key}
-                style={i < NOTIF_KEYS.length - 1 ? { borderBottomColor: colors.border, borderBottomWidth: 1 } : undefined}
-                className="flex-row items-center gap-3 px-4 py-4"
-              >
-                <View className="flex-1">
-                  <Text style={{ color: colors.text }} className="text-sm font-medium">{label}</Text>
-                  <Text style={{ color: colors.textMuted }} className="text-xs mt-0.5">{sub}</Text>
+          <View style={{ borderWidth: 1, borderRadius: 24, overflow: 'hidden' }}>
+            {NOTIF_KEYS.map(({ key, label, sub }, i) => {
+              const value =
+                (user?.[key as keyof typeof user] as boolean | undefined) ?? true;
+              return (
+                <View
+                  key={key}
+                  style={
+                    i < NOTIF_KEYS.length - 1
+                      ? { borderBottomColor: colors.border, borderBottomWidth: 1 }
+                      : undefined
+                  }
+                >
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      paddingHorizontal: 16,
+                      paddingVertical: 16,
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '500' }}>
+                        {label}
+                      </Text>
+                      <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
+                        {sub}
+                      </Text>
+                    </View>
+                    {saving === key ? (
+                      <ActivityIndicator size="small" color={BRAND} />
+                    ) : (
+                      <Switch
+                        value={value}
+                        onValueChange={() => toggle(key)}
+                        trackColor={{ false: colors.border, true: BRAND }}
+                        thumbColor="#fff"
+                        ios_backgroundColor={colors.border}
+                      />
+                    )}
+                  </View>
                 </View>
-                {saving === key ? (
-                  <ActivityIndicator size="small" color="#8b5cf6" />
-                ) : (
-                  <Switch
-                    value={value}
-                    onValueChange={() => toggle(key)}
-                    trackColor={{ false: colors.border, true: '#8b5cf6' }}
-                    thumbColor="#fff"
-                    ios_backgroundColor={colors.border}
-                  />
-                )}
-              </View>
-            );
-          })}
+              );
+            })}
+          </View>
         </View>
       </ScrollView>
     </ScreenWrapper>

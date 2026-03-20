@@ -20,7 +20,6 @@ interface DiscoverSearchBarProps {
   handleSelect: (s: AutocompleteSuggestion) => void;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   minUsernameLength: number;
-  isRtl: boolean;
   t: TFunction;
 }
 
@@ -38,7 +37,6 @@ export function DiscoverSearchBar({
   handleSelect,
   handleKeyDown,
   minUsernameLength,
-  isRtl,
   t,
 }: DiscoverSearchBarProps) {
   return (
@@ -65,7 +63,7 @@ export function DiscoverSearchBar({
             <Search style={{ width: '1.25rem', height: '1.25rem' }} aria-hidden />
           )
         }
-        iconPosition={isRtl ? 'right' : 'left'}
+        iconPosition="left"
         wrapperClassName={styles.inputWrapper}
       />
       {showDrop && (

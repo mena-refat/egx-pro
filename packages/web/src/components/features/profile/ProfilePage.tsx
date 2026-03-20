@@ -16,11 +16,13 @@ import {
   ChevronRight,
   Gift,
   Award,
+  TrendingUp,
 } from 'lucide-react';
 import { FollowersFollowingModal, ProfileCounterRow } from '.';
 import { usePredictionsApi } from '../../../hooks/usePredictionsApi';
 import { ReferralTab } from '../settings/ReferralTab';
 import { AchievementsTab } from '../settings/AchievementsTab';
+import { InvestorProfileTab } from '../settings/InvestorProfileTab';
 import api from '../../../lib/api';
 import type { User } from '../../../types';
 import type { ProfileUser } from '.';
@@ -68,12 +70,13 @@ function fieldLabel(field: string): string {
   return map[field] ?? field;
 }
 
-type ProfileTab = 'overview' | 'achievements' | 'referral';
+type ProfileTab = 'overview' | 'investor' | 'achievements' | 'referral';
 
 const PROFILE_TABS: { id: ProfileTab; label: string; icon: typeof UserIcon }[] = [
-  { id: 'overview',      label: 'نظرة عامة', icon: UserIcon },
-  { id: 'achievements',  label: 'الإنجازات', icon: Award    },
-  { id: 'referral',      label: 'الإحالة',   icon: Gift     },
+  { id: 'overview',     label: 'نظرة عامة',     icon: UserIcon  },
+  { id: 'investor',     label: 'ملف المستثمر',  icon: TrendingUp },
+  { id: 'achievements', label: 'الإنجازات',     icon: Award     },
+  { id: 'referral',     label: 'الإحالة',       icon: Gift      },
 ];
 
 export default function ProfilePage() {
@@ -89,7 +92,7 @@ export default function ProfilePage() {
   const { fetchMyStats } = usePredictionsApi();
 
   const rawTab = searchParams.get('tab') as ProfileTab | null;
-  const activeTab: ProfileTab = rawTab === 'achievements' || rawTab === 'referral' ? rawTab : 'overview';
+  const activeTab: ProfileTab = rawTab === 'achievements' || rawTab === 'referral' || rawTab === 'investor' ? rawTab : 'overview';
 
   const [predictionStats, setPredictionStats] = useState<{
     rank: string;
@@ -403,6 +406,7 @@ export default function ProfilePage() {
         </>
       )}
 
+      {activeTab === 'investor'     && <InvestorProfileTab />}
       {activeTab === 'achievements' && <AchievementsTab />}
       {activeTab === 'referral'     && <ReferralTab />}
 

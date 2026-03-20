@@ -18,7 +18,6 @@ import {
 } from './components/skeletons';
 import {
   SubscriptionTab,
-  InvestorProfileTab,
   AccountSettingsTab,
   SecuritySettingsTab,
   PreferencesSettingsTab,
@@ -65,13 +64,13 @@ export function AppRoutes({ currentWealth }: AppRoutesProps) {
         <Route path="account"      element={<AccountSettingsTab />} />
         <Route path="security"     element={<SecuritySettingsTab />} />
         <Route path="preferences"  element={<PreferencesSettingsTab />} />
-        <Route path="investor"     element={<InvestorProfileTab />} />
         <Route path="subscription" element={<SubscriptionTab />} />
         <Route path="danger"       element={<DangerSettingsTab />} />
         {/* Redirects for old/moved routes */}
         <Route path="notifications" element={<Navigate to="/settings/preferences"              replace />} />
         <Route path="perks"         element={<Navigate to="/settings/subscription"             replace />} />
         <Route path="overview"      element={<Navigate to="/settings/subscription"             replace />} />
+        <Route path="investor"      element={<Navigate to="/profile?tab=investor"             replace />} />
         <Route path="referral"      element={<Navigate to="/profile?tab=referral"              replace />} />
         <Route path="referrals"     element={<Navigate to="/profile?tab=referral"              replace />} />
         <Route path="achievements"  element={<Navigate to="/profile?tab=achievements"          replace />} />
