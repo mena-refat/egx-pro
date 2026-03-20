@@ -5,7 +5,7 @@ import { adminAudit, type AdminRequest } from '../../middleware/adminAuth.middle
 
 const VALID_DISCOUNT_TYPES = ['percentage', 'fixed', 'full'] as const;
 type DiscountType = (typeof VALID_DISCOUNT_TYPES)[number];
-const CODE_REGEX = /^[A-Z0-9_-]{2,32}$/;
+const CODE_REGEX = /^[A-Z0-9]{18,30}$/;
 
 function validateDiscountValue(type: DiscountType, value: number): string | null {
   if (type === 'percentage' && (value <= 0 || value > 100)) return 'INVALID_DISCOUNT_VALUE';

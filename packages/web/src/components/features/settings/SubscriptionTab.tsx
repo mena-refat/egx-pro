@@ -619,6 +619,7 @@ export function SubscriptionTab() {
   const [planData, setPlanData] = useState<unknown>(null);
   const [showDiscount, setShowDiscount] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
+  const [discountCodeError, setDiscountCodeError] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState<number | null>(null);
   const [validating, setValidating] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
@@ -645,12 +646,23 @@ export function SubscriptionTab() {
     return () => controller.abort();
   }, []);
 
+  const DISCOUNT_CODE_REGEX = /^[A-Z0-9]{18,30}$/;
+  const validateDiscountCode = (code: string): string | null => {
+    if (code.length < 18) return t('billing.codeErrorTooShort', { defaultValue: 'الكود لازم يكون 18 حرف على الأقل' });
+    if (code.length > 30) return t('billing.codeErrorTooLong', { defaultValue: 'الكود لازم يكون 30 حرف على الأكثر' });
+    if (!DISCOUNT_CODE_REGEX.test(code)) return t('billing.codeErrorInvalidChars', { defaultValue: 'الكود يحتوي على رموز غير مسموح بها' });
+    return null;
+  };
+
   const handleValidateCode = async () => {
-    if (!discountCode.trim()) return;
+    const code = discountCode.trim();
+    if (!code) return;
+    const err = validateDiscountCode(code);
+    if (err) { setDiscountCodeError(err); return; }
     setValidating(true);
     setBillingMessage(null);
     try {
-      const res = await api.post('/billing/validate-discount', { code: discountCode.trim() });
+      const res = await api.post('/billing/validate-discount', { code });
       const data = (res.data as { data?: { percent?: number } })?.data ?? res.data;
       const percent = (data as { percent?: number }).percent ?? 0;
       setDiscountPercent(percent);
@@ -789,22 +801,34 @@ export function SubscriptionTab() {
             <div className="flex gap-2 w-full">
               <Input
                 value={discountCode}
-                onChange={(e) => setDiscountCode(e.target.value)}
-                placeholder={t('billing.placeholderCode')}
+                onChange={(e) => {
+                  const sanitized = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 30);
+                  setDiscountCode(sanitized);
+                  setDiscountCodeError(sanitized.length > 0 ? (sanitized.length < 18 ? t('billing.codeErrorTooShort', { defaultValue: 'الكود لازم يكون 18 حرف على الأقل' }) : null) : null);
+                  if (discountPercent !== null) setDiscountPercent(null);
+                }}
+                placeholder={t('billing.placeholderCode', { defaultValue: 'XXXXXXXXXXXXXXXXXX' })}
                 wrapperClassName="flex-1"
-                inputClassName="flex-1 rounded-xl"
+                inputClassName="flex-1 rounded-xl font-mono tracking-wider"
+                maxLength={30}
               />
               <Button
                 type="button"
                 variant="secondary"
                 onClick={handleValidateCode}
                 loading={validating}
-                disabled={validating}
+                disabled={validating || discountCode.length < 18}
                 className="rounded-xl h-12 font-semibold"
               >
                 {t('billing.applyCode')}
               </Button>
             </div>
+            {discountCodeError && (
+              <p className="text-[var(--danger)] text-xs w-full text-start">{discountCodeError}</p>
+            )}
+            {discountCode.length > 0 && !discountCodeError && (
+              <p className="text-[var(--text-muted)] text-xs w-full text-start">{discountCode.length}/30</p>
+            )}
             {discountPercent != null && (
               <div className="flex items-center gap-2 text-[var(--success)] text-sm font-medium">
                 <Check className="w-4 h-4" aria-hidden />

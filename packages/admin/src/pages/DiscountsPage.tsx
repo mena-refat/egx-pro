@@ -8,8 +8,18 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Plus, Trash2, ToggleLeft, ToggleRight, RefreshCw } from 'lucide-react';
 
 const CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const CODE_MIN = 18;
+const CODE_MAX = 30;
+const CODE_REGEX = /^[A-Z0-9]{18,30}$/;
 const generateCode = () =>
   Array.from({ length: 20 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
+
+function validateCode(code: string): string | null {
+  if (code.length < CODE_MIN) return `الكود لازم يكون ${CODE_MIN} حرف على الأقل`;
+  if (code.length > CODE_MAX) return `الكود لازم يكون ${CODE_MAX} حرف على الأكثر`;
+  if (!CODE_REGEX.test(code)) return 'الكود يحتوي على أحرف غير مسموح بها (حروف إنجليزية وأرقام فقط)';
+  return null;
+}
 
 export default function DiscountsPage() {
   const { t } = useTranslation();
@@ -19,6 +29,7 @@ export default function DiscountsPage() {
   const [delId, setDelId]     = useState<string | null>(null);
   const [saving, setSaving]   = useState(false);
   const [form, setForm]       = useState({ code: '', type: 'percentage', value: '', maxUses: '', expiresAt: '' });
+  const [codeError, setCodeError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -32,6 +43,8 @@ export default function DiscountsPage() {
   const handleCreate = async () => {
     const effectiveValue = form.type === 'full' ? 100 : Number(form.value);
     if (!form.code || !form.maxUses || (form.type !== 'full' && !form.value)) return;
+    const err = validateCode(form.code.toUpperCase());
+    if (err) { setCodeError(err); return; }
     setSaving(true);
     try {
       await adminApi.post('/discounts', {
@@ -43,6 +56,7 @@ export default function DiscountsPage() {
       });
       setModal(false);
       setForm({ code: '', type: 'percentage', value: '', maxUses: '', expiresAt: '' });
+      setCodeError(null);
       await load();
     } finally { setSaving(false); }
   };
@@ -57,7 +71,8 @@ export default function DiscountsPage() {
     saving ||
     !form.code ||
     !form.maxUses ||
-    (form.type !== 'full' && !form.value);
+    (form.type !== 'full' && !form.value) ||
+    !!validateCode(form.code.toUpperCase());
 
   const handleToggleActive = async (id: string, active: boolean) => {
     await adminApi.patch(`/discounts/${id}`, { active: !active });
@@ -142,18 +157,32 @@ export default function DiscountsPage() {
 
             {/* Code + Generate */}
             <div>
-              <label className="text-xs text-slate-400 block mb-1">{t('discounts.code')}</label>
+              <label className="text-xs text-slate-400 block mb-1">
+                {t('discounts.code')}
+                <span className="text-slate-600 ml-1">(18–30 حرف وأرقام إنجليزية)</span>
+              </label>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="PROMO20"
+                  placeholder="PROMO20SUMMER2024AB"
                   value={form.code}
-                  onChange={(e) => setForm((p) => ({ ...p, code: e.target.value.toUpperCase() }))}
-                  className="flex-1 px-3 py-2 text-sm bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500/50"
+                  maxLength={30}
+                  onChange={(e) => {
+                    const sanitized = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 30);
+                    setForm((p) => ({ ...p, code: sanitized }));
+                    setCodeError(validateCode(sanitized));
+                  }}
+                  className={`flex-1 px-3 py-2 text-sm bg-[#0d0d14] border rounded-lg text-white font-mono focus:outline-none transition-colors ${
+                    codeError && form.code ? 'border-red-500/60 focus:border-red-500' : 'border-white/[0.08] focus:border-emerald-500/50'
+                  }`}
                 />
                 <button
                   type="button"
-                  onClick={() => setForm((p) => ({ ...p, code: generateCode() }))}
+                  onClick={() => {
+                    const code = generateCode();
+                    setForm((p) => ({ ...p, code }));
+                    setCodeError(null);
+                  }}
                   className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] rounded-lg text-slate-300 transition-all whitespace-nowrap"
                   title={t('discounts.generate')}
                 >
@@ -161,6 +190,16 @@ export default function DiscountsPage() {
                   {t('discounts.generate')}
                 </button>
               </div>
+              {form.code && (
+                <div className="flex items-center justify-between mt-1">
+                  {codeError ? (
+                    <p className="text-xs text-red-400">{codeError}</p>
+                  ) : (
+                    <p className="text-xs text-emerald-500">✓ الكود صالح</p>
+                  )}
+                  <span className="text-xs text-slate-600">{form.code.length}/30</span>
+                </div>
+              )}
             </div>
 
             {/* Type */}
