@@ -51,12 +51,12 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isExpoGo) {
       import('../lib/notifications')
         .then(({ registerPushToken }) => registerPushToken())
         .catch(() => null);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isExpoGo]);
 
   if (isLoading) return null;
 

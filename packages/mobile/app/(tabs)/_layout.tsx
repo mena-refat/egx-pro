@@ -3,11 +3,11 @@ import { Tabs, Redirect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { House, Briefcase, BarChart3, Sparkles, User } from 'lucide-react-native';
-import { ViewStyle } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import { useUnreadCount } from '../../hooks/useUnreadCount';
 import { BRAND } from '../../lib/theme';
+import { CustomTabBar } from '../../components/layout/CustomTabBar';
 
 const TAB_LABELS: Record<string, { ar: string; en: string }> = {
   index:     { ar: 'الرئيسية', en: 'Home' },
@@ -19,53 +19,34 @@ const TAB_LABELS: Record<string, { ar: string; en: string }> = {
 
 const TAB_HEIGHT = 60;
 
-// Tab icon with optional active dot indicator
+// Tab icon: no dot/label/badge logic here.
+// CustomTabBar is the single place that controls layout to avoid icon shifting.
 function TabIcon({
   Icon,
   color,
-  focused,
+  focused: _focused,
 }: {
   Icon: React.ComponentType<{ size?: number; color?: string }>;
   color: string;
   focused: boolean;
 }) {
   return (
-    // Important: keep a stable height for the icon across focused/unfocused.
-    // React Navigation centers tab icons based on the returned element size,
-    // so adding/removing the dot can visually "shift" icons.
-    <View style={tabIconContainerStyle as ViewStyle}>
-      <View style={tabIconIconStyle}>
-        <Icon size={20} color={color} />
-      </View>
-      <View
-        style={[
-          tabIconDotStyle,
-          focused ? { backgroundColor: BRAND } : { backgroundColor: 'transparent' },
-        ]}
-      />
+    <View style={tabIconIconStyle}>
+      <Icon size={20} color={color} />
     </View>
   );
 }
 
 const tabIconContainerStyle = {
-  alignItems: 'center',
-  justifyContent: 'center',
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
   width: 38,
-  height: 36,
-  position: 'relative' as const,
+  height: 40,
 };
 
 const tabIconIconStyle = {
-  alignItems: 'center',
-  justifyContent: 'center',
-};
-
-const tabIconDotStyle = {
-  position: 'absolute' as const,
-  bottom: -1,
-  width: 4,
-  height: 4,
-  borderRadius: 2,
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
 };
 
 export default function TabsLayout() {
@@ -99,7 +80,7 @@ export default function TabsLayout() {
   });
 
   return (
-    <Tabs>
+    <Tabs tabBar={(props) => <CustomTabBar {...props} />}>
       <Tabs.Screen
         name="index"
         options={{

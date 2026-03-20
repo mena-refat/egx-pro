@@ -468,6 +468,7 @@ model Watchlist {
   userId                  Int
   ticker                  String
   targetPrice             Float?
+  targetDirection         String?   @default("UP")   // "UP" | "DOWN"
   targetReachedNotifiedAt DateTime?
   createdAt               DateTime  @default(now())
   user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)

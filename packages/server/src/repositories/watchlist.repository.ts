@@ -29,12 +29,13 @@ export const WatchlistRepository = {
     });
   },
 
-  create(data: { userId: number; ticker: string; targetPrice?: number }) {
+  create(data: { userId: number; ticker: string; targetPrice?: number; targetDirection?: string }) {
     return prisma.watchlist.create({
       data: {
         userId: data.userId,
         ticker: data.ticker,
         targetPrice: data.targetPrice ?? undefined,
+        targetDirection: data.targetDirection ?? 'UP',
       },
     });
   },
@@ -42,7 +43,7 @@ export const WatchlistRepository = {
   updateMany(
     userId: number,
     ticker: string,
-    data: { targetPrice?: number | null; targetReachedNotifiedAt?: Date | null }
+    data: { targetPrice?: number | null; targetDirection?: string | null; targetReachedNotifiedAt?: Date | null }
   ) {
     return prisma.watchlist.updateMany({
       where: { userId, ticker },

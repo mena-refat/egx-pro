@@ -122,7 +122,9 @@
       "Bash(powershell -Command \"New-Item -ItemType Junction -Path ''c:\\\\Users\\\\menar\\\\Desktop\\\\egx-pro\\\\node_modules\\\\nativewind\\\\node_modules\\\\tailwindcss'' -Target ''c:\\\\Users\\\\menar\\\\Desktop\\\\egx-pro\\\\packages\\\\mobile\\\\node_modules\\\\tailwindcss'' -Force\")",
       "Bash(set -a)",
       "Bash(source ../../.env)",
-      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(source .env)",
+      "Bash(set +a)"
     ],
     "additionalDirectories": [
       "C:\\Users\\menar\\Desktop\\src\\lib\\lib"

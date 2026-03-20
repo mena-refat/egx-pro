@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BrainCircuit,
@@ -15,6 +15,7 @@ import {
   Circle,
   Timer,
   Target,
+  Bell,
 } from 'lucide-react';
 import { Skeleton } from '../../ui/Skeleton';
 const TradingViewChart = lazy(() => import('./TradingViewChart').then((m) => ({ default: m.TradingViewChart })));
@@ -27,6 +28,7 @@ import { AnalysisResult } from '../analysis/AnalysisResult';
 import { formatNum, formatBig } from '../analysis/analysisUtils';
 import type { TabId, ChartRange } from '../../../hooks/useStockAnalysis';
 import styles from './StockAnalysis.module.scss';
+import { PriceAlertDialog } from './PriceAlertDialog';
 
 export interface StockAnalysisProps {
   stock: Stock;
@@ -52,6 +54,7 @@ const CHART_RANGES: { id: ChartRange; labelKey: string }[] = [
 export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
   const navigate = useNavigate();
   const api = useStockAnalysis(stock);
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
   const {
     activeTab,
     setActiveTab,
@@ -59,6 +62,8 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
     setChartRange,
     priceDetail,
     watchlist,
+    watchlistAlert,
+    updateAlert,
     price,
     open,
     previousClose,
@@ -124,7 +129,20 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             >
               {watchlist.includes(stock.ticker) ? <Star className="w-3.5 h-3.5 fill-[var(--warning)]" /> : <Plus className="w-3.5 h-3.5" />}
               {watchlist.includes(stock.ticker) ? t('stockDetail.watchlistRemove') : t('stockDetail.watchlistAdd')}
-        </button>
+            </button>
+            {watchlist.includes(stock.ticker) && (
+              <button
+                type="button"
+                onClick={() => setAlertDialogOpen(true)}
+                title={t('stockDetail.priceAlertTitle')}
+                className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg ${watchlistAlert?.targetPrice != null ? 'bg-[var(--brand-bg,#eff6ff)] text-[var(--brand)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'}`}
+              >
+                <Bell className={`w-3.5 h-3.5 ${watchlistAlert?.targetPrice != null ? 'fill-[var(--brand)]' : ''}`} />
+                {watchlistAlert?.targetPrice != null
+                  ? t(watchlistAlert.targetDirection === 'DOWN' ? 'stockDetail.priceAlertDownBadge' : 'stockDetail.priceAlertUpBadge', { price: watchlistAlert.targetPrice.toFixed(2) })
+                  : t('stockDetail.priceAlertSet')}
+              </button>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -493,6 +511,18 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           </div>
         </div>
       )}
+
+      {/* Price Alert Dialog */}
+      <PriceAlertDialog
+        isOpen={alertDialogOpen}
+        onClose={() => setAlertDialogOpen(false)}
+        ticker={stock.ticker}
+        currentPrice={price}
+        currentAlert={watchlistAlert}
+        isPro={isPro}
+        onSave={updateAlert}
+        isRTL={isRTL}
+      />
 
       {/* Stats glossary modal */}
       {statsInfoOpen && (

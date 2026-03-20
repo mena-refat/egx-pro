@@ -22,7 +22,7 @@ export const WatchlistService = {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
 
     const parsed = watchlistTickerSchema.parse(body) as WatchlistTickerInput;
-    const { ticker, targetPrice: bodyTargetPrice } = parsed;
+    const { ticker, targetPrice: bodyTargetPrice, targetDirection } = parsed;
 
     const planUser = await UserRepository.getPlanUser(userId);
     if (!planUser) throw new AppError('UNAUTHORIZED', 401);
@@ -43,12 +43,13 @@ export const WatchlistService = {
       userId,
       ticker,
       targetPrice: bodyTargetPrice ?? undefined,
+      targetDirection: bodyTargetPrice != null ? (targetDirection ?? 'UP') : undefined,
     });
     const newUnseenAchievements = await addNewlyUnlockedAchievements(userId, completedBefore);
     return { item, newUnseenAchievements };
   },
 
-  async update(userId: number, ticker: string, body: { targetPrice?: number | null }) {
+  async update(userId: number, ticker: string, body: { targetPrice?: number | null; targetDirection?: string | null }) {
     if (!userId) throw new AppError('UNAUTHORIZED', 401);
     const normalizedTicker = ticker?.toUpperCase();
     if (!normalizedTicker) throw new AppError('VALIDATION_ERROR', 400);
@@ -65,25 +66,26 @@ export const WatchlistService = {
       userId,
       normalizedTicker,
       targetPrice != null
-        ? { targetPrice }
-        : { targetPrice: null, targetReachedNotifiedAt: null }
+        ? { targetPrice, targetDirection: body.targetDirection ?? 'UP', targetReachedNotifiedAt: null }
+        : { targetPrice: null, targetDirection: null, targetReachedNotifiedAt: null }
     );
     return { updated: updated.count > 0 };
   },
 
   async checkTargets(userId: number, body: unknown): Promise<void> {
     const parsed = watchlistCheckTargetsSchema.parse(body) as WatchlistCheckTargetsInput;
-    for (const { ticker, targetPrice, currentPrice } of parsed.items) {
-      if (currentPrice < targetPrice) continue;
-      const row = await WatchlistRepository.findFirstTargetNotNotified(
-        userId,
-        ticker,
-        targetPrice
-      );
+    for (const { ticker, targetPrice, targetDirection, currentPrice } of parsed.items) {
+      const direction = targetDirection ?? 'UP';
+      const hit = direction === 'DOWN' ? currentPrice <= targetPrice : currentPrice >= targetPrice;
+      if (!hit) continue;
+
+      const row = await WatchlistRepository.findFirstTargetNotNotified(userId, ticker, targetPrice);
       if (!row) continue;
-      const titleAr = `سهم ${ticker} وصل للسعر المستهدف`;
-      const bodyAr = `السعر الحالي ${currentPrice} وصل أو تجاوز المستهدف ${targetPrice}`;
-      await createNotification(userId, 'stock_target', titleAr, bodyAr);
+
+      const dirSymbol = direction === 'DOWN' ? '↓' : '↑';
+      const titleAr = `سهم ${ticker} وصل للسعر المستهدف ${dirSymbol}`;
+      const bodyAr = `السعر الحالي ${currentPrice.toFixed(2)} وصل أو تجاوز المستهدف ${targetPrice.toFixed(2)} ج.م`;
+      await createNotification(userId, 'stock_target', titleAr, bodyAr, { route: `/stocks/${ticker}` });
       await WatchlistRepository.updateTargetNotified(row.id);
     }
   },

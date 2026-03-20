@@ -40,6 +40,7 @@ export function useStockAnalysis(stock: Stock) {
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [errorAnalysis, setErrorAnalysis] = useState<string | null>(null);
   const [watchlist, setWatchlist] = useState<string[]>([]);
+  const [watchlistAlert, setWatchlistAlert] = useState<{ targetPrice: number | null; targetDirection: 'UP' | 'DOWN' } | null>(null);
   const [shariaDismissed, setShariaDismissed] = useState(false);
   const [statsInfoOpen, setStatsInfoOpen] = useState(false);
   const [analysisPlan, setAnalysisPlan] = useState<{ used: number; quota: number } | null>(null);
@@ -138,8 +139,10 @@ export function useStockAnalysis(stock: Stock) {
         setTradingStatsAvailable(statsData?.available ?? false);
         const newsData = (newsRes.data as { data?: unknown[] })?.data ?? newsRes.data;
         setNews(Array.isArray(newsData) ? newsData : []);
-        const rawList = (watchRes.data as { items?: { ticker: string }[] })?.items;
+        const rawList = (watchRes.data as { items?: { ticker: string; targetPrice?: number | null; targetDirection?: string | null }[] })?.items;
         setWatchlist(Array.isArray(rawList) ? rawList.map((w) => w.ticker) : []);
+        const thisItem = Array.isArray(rawList) ? rawList.find((w) => w.ticker === stock.ticker) : null;
+        setWatchlistAlert(thisItem ? { targetPrice: thisItem.targetPrice ?? null, targetDirection: (thisItem.targetDirection as 'UP' | 'DOWN') ?? 'UP' } : null);
 
         const allPrices = (allPricesRes.data as { data?: Stock[] })?.data ?? (Array.isArray(allPricesRes.data) ? allPricesRes.data : []);
         const list = Array.isArray(allPrices) ? allPrices : [];
@@ -261,6 +264,11 @@ export function useStockAnalysis(stock: Stock) {
     }
   }, [stock.ticker, watchlist]);
 
+  const updateAlert = async (targetPrice: number | null, targetDirection: 'UP' | 'DOWN' = 'UP') => {
+    await api.patch(`/watchlist/${stock.ticker}`, { targetPrice, targetDirection });
+    setWatchlistAlert(targetPrice != null ? { targetPrice, targetDirection } : null);
+  };
+
   return {
     stock,
     activeTab,
@@ -278,6 +286,8 @@ export function useStockAnalysis(stock: Stock) {
     loadingAnalysis,
     errorAnalysis,
     watchlist,
+    watchlistAlert,
+    updateAlert,
     shariaDismissed,
     setShariaDismissed,
     statsInfoOpen,

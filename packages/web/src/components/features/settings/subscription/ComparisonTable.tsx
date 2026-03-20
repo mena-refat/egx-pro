@@ -1,22 +1,32 @@
-import { Check, X } from 'lucide-react';
+import { Check, X, Sparkles } from 'lucide-react';
 
 const COMPARISON_ROWS = [
-  { featureKey: 'compareWatchlist',   free: '—',  pro: '5',    ultra: 'unlimited' },
-  { featureKey: 'comparePortfolio',   free: '3',  pro: '10',   ultra: 'unlimited' },
-  { featureKey: 'compareGoals',       free: '1',  pro: '3',    ultra: 'unlimited' },
-  { featureKey: 'compareAi',          free: '3',  pro: '20',   ultra: '45'        },
-  { featureKey: 'comparePredictions', free: '3',  pro: '10',   ultra: '20'        },
-  { featureKey: 'compareExactMode',   free: 'x',  pro: 'check', ultra: 'check'   },
-  { featureKey: 'compareRealtime',    free: 'x',  pro: 'check', ultra: 'check'   },
-  { featureKey: 'compareAlerts',      free: 'x',  pro: 'check', ultra: 'check'   },
-  { featureKey: 'compareSharia',      free: 'check', pro: 'check', ultra: 'check' },
-  { featureKey: 'compareSupport',     free: 'x',  pro: 'check', ultra: 'check'   },
+  { featureKey: 'compareWatchlist',         free: '—',  pro: '5',         ultra: 'unlimited' },
+  { featureKey: 'comparePortfolio',         free: '3',  pro: '10',        ultra: 'unlimited' },
+  { featureKey: 'compareGoals',             free: '1',  pro: '3',         ultra: 'unlimited' },
+  { featureKey: 'compareAi',               free: '3',  pro: '20',        ultra: '45'        },
+  { featureKey: 'comparePredictions',       free: '3',  pro: '10',        ultra: '20'        },
+  { featureKey: 'comparePredictionsActive', free: '10', pro: '35',        ultra: '60'        },
+  { featureKey: 'compareExactMode',         free: 'x',  pro: 'check',     ultra: 'check'     },
+  { featureKey: 'compareRealtime',          free: 'x',  pro: 'check',     ultra: 'check'     },
+  { featureKey: 'compareAlerts',            free: 'x',  pro: 'check',     ultra: 'check'     },
+  { featureKey: 'compareSharia',            free: 'check', pro: 'check',  ultra: 'check'     },
+  { featureKey: 'compareSupport',           free: 'x',  pro: 'standard',  ultra: 'priority'  },
 ];
 
-function Cell({ value, unlimited }: { value: string; unlimited: string }) {
+function Cell({ value, unlimited, t }: { value: string; unlimited: string; t: (k: string) => string }) {
   if (value === 'check') return <Check className="w-4 h-4 text-[var(--success)]" aria-hidden />;
   if (value === 'x') return <X className="w-4 h-4 text-[var(--text-muted)]" aria-hidden />;
   if (value === 'unlimited') return <span>{unlimited}</span>;
+  if (value === 'standard') return (
+    <span className="text-xs font-medium text-[var(--text-secondary)]">{t('billing.supportStandard')}</span>
+  );
+  if (value === 'priority') return (
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-400">
+      <Sparkles className="w-3.5 h-3.5" aria-hidden />
+      {t('billing.supportPriority')}
+    </span>
+  );
   return <span>{value}</span>;
 }
 
@@ -62,17 +72,17 @@ export function ComparisonTable({ t, onFeatureClick }: ComparisonTableProps) {
                 </td>
                 <td className="text-center py-0 px-4 h-14 align-middle">
                   <div className="flex justify-center items-center">
-                    <Cell value={row.free} unlimited={t('billing.compareUnlimited')} />
+                    <Cell value={row.free} unlimited={t('billing.compareUnlimited')} t={t} />
                   </div>
                 </td>
                 <td className="py-0 px-4 h-14 align-middle">
                   <div className="flex justify-center items-center">
-                    <Cell value={row.pro} unlimited={t('billing.compareUnlimited')} />
+                    <Cell value={row.pro} unlimited={t('billing.compareUnlimited')} t={t} />
                   </div>
                 </td>
                 <td className="py-0 px-4 h-14 align-middle">
                   <div className="flex justify-center items-center font-medium">
-                    <Cell value={row.ultra} unlimited={t('billing.compareUnlimited')} />
+                    <Cell value={row.ultra} unlimited={t('billing.compareUnlimited')} t={t} />
                   </div>
                 </td>
               </tr>

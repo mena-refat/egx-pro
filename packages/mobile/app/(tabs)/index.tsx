@@ -427,7 +427,8 @@ export default function HomePage() {
               <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
                 {news.slice(0, 3).map((item, i) => (
                   <View
-                    key={item.id}
+                    // Some items might not have a stable `id`; fallback to index to avoid React key warnings.
+                    key={item.id ?? i}
                     style={{
                       paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
                       borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: colors.border,

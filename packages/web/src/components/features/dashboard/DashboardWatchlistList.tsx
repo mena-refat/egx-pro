@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Eye } from 'lucide-react';
+import { Eye, Bell } from 'lucide-react';
 import { getStockName, getStockInfo } from '../../../lib/egxStocks';
 import { Skeleton } from '../../ui/Skeleton';
 import EmptyState from '../../shared/EmptyState';
@@ -9,8 +9,10 @@ import type { Stock } from '../../../types';
 
 type LivePrices = Record<string, { price?: number; change?: number; changePercent?: number }>;
 
+type WatchlistStock = Stock & { targetPrice?: number | null; targetDirection?: 'UP' | 'DOWN' | null };
+
 type Props = {
-  watchlist: Stock[];
+  watchlist: WatchlistStock[];
   livePrices: LivePrices;
   loading: boolean;
   onGoToStocks: () => void;
@@ -50,6 +52,8 @@ export const DashboardWatchlistList = memo(function DashboardWatchlistList({ wat
         const stock = { ...w, ...priceData };
         const ch = (stock.changePercent ?? stock.change ?? 0) as number;
         const isUp = ch >= 0;
+        const hasAlert = w.targetPrice != null;
+        const alertDir = w.targetDirection ?? 'UP';
         return (
           <button
             type="button"
@@ -59,7 +63,15 @@ export const DashboardWatchlistList = memo(function DashboardWatchlistList({ wat
             aria-label={t('stockDetail.viewStock', { ticker: stock.ticker, defaultValue: `عرض ${getStockName(stock.ticker, lang)}` })}
           >
             <div className="min-w-0">
-              <p className="font-semibold text-body text-[var(--text-primary)]">{getStockName(stock.ticker, lang)}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="font-semibold text-body text-[var(--text-primary)]">{getStockName(stock.ticker, lang)}</p>
+                {hasAlert && (
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--brand-bg,#eff6ff)] text-[var(--brand)]">
+                    <Bell className="w-2.5 h-2.5" />
+                    {alertDir === 'DOWN' ? '↓' : '↑'} {w.targetPrice!.toFixed(2)}
+                  </span>
+                )}
+              </div>
               <p className="text-label mt-0.5">{stock.ticker}</p>
               {getStockInfo(stock.ticker)?.nameEn && (
                 <p className="text-label mt-0.5 truncate max-w-[200px]">{getStockInfo(stock.ticker)?.nameEn}</p>

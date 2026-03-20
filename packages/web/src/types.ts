@@ -15,6 +15,9 @@ export interface Stock {
   low?: number;
   high52w?: number;
   low52w?: number;
+  /** Watchlist fields — present when fetched via /watchlist */
+  targetPrice?: number | null;
+  targetDirection?: 'UP' | 'DOWN' | null;
 }
 
 export interface User {

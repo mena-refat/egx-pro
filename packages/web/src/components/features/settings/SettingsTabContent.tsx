@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CreditCard, Gift, Award, User } from 'lucide-react';
-import { SubscriptionTab, ReferralTab, AchievementsTab, AccountOverviewTab } from './features/settings';
+import { SubscriptionTab, ReferralTab, AchievementsTab, AccountOverviewTab } from '.';
 
 const TABS = [
   { id: 'overview', labelKey: 'settings.accountOverview', icon: User },

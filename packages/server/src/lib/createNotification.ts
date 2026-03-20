@@ -19,17 +19,39 @@ export type NotificationType =
   | 'account_suspended'
   | 'abuse_warning';
 
+/** Send an Expo push notification — non-critical, never throws. */
+async function sendExpoPush(
+  token: string,
+  title: string,
+  body: string,
+  data?: Record<string, unknown>
+): Promise<void> {
+  if (!token.startsWith('ExponentPushToken[')) return;
+  try {
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ to: token, title, body, data: data ?? {}, sound: 'default', priority: 'high' }),
+    });
+  } catch {
+    // non-critical — ignore silently
+  }
+}
+
 export async function createNotification(
   userId: number,
   type: NotificationType,
   title: string,
   body: string,
-  options?: { route?: string }
+  options?: { route?: string; pushToken?: string }
 ): Promise<void> {
   try {
     await prisma.notification.create({
       data: { userId, type, title, body, route: options?.route ?? undefined },
     });
+    if (options?.pushToken) {
+      await sendExpoPush(options.pushToken, title, body, { route: options.route });
+    }
   } catch (err) {
     logger.error('Create notification error', { err });
   }

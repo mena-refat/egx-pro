@@ -28,30 +28,41 @@ export async function runDelayedPricesJob(): Promise<void> {
         }, 15 * 60)
       )
     );
+
     const watchlistAlerts = await prisma.watchlist.findMany({
       where: { targetPrice: { not: null } },
-      include: { user: { select: { id: true, notifySignals: true } } },
+      include: { user: { select: { id: true, notifySignals: true, pushToken: true } } },
     });
+
     const alertTickers = [...new Set(watchlistAlerts.map((a) => a.ticker))];
     const alertQuotes = alertTickers.length > 0 ? await marketDataService.getQuotes(alertTickers) : new Map();
+
     for (const item of watchlistAlerts) {
       const priceData = alertQuotes.get(item.ticker);
       if (!priceData || item.targetPrice == null) continue;
-      const hit = priceData.price >= item.targetPrice;
+
+      const direction = item.targetDirection ?? 'UP';
+      const hit = direction === 'DOWN'
+        ? priceData.price <= item.targetPrice
+        : priceData.price >= item.targetPrice;
+
       const alreadyNotified = item.targetReachedNotifiedAt != null;
+
       if (hit && !alreadyNotified && item.user.notifySignals) {
+        const dirSymbol = direction === 'DOWN' ? '↓' : '↑';
         await createNotification(
           item.user.id,
           'stock_target',
-          `${item.ticker} وصل للسعر المستهدف`,
-          `السعر الحالي ${priceData.price} ج.م — وصل للهدف ${item.targetPrice} ج.م`,
-          { route: `/stocks/${item.ticker}` }
+          `${item.ticker} وصل للسعر المستهدف ${dirSymbol}`,
+          `السعر الحالي ${priceData.price.toFixed(2)} ج.م — وصل للهدف ${item.targetPrice.toFixed(2)} ج.م`,
+          { route: `/stocks/${item.ticker}`, pushToken: item.user.pushToken ?? undefined }
         );
         await prisma.watchlist.update({
           where: { id: item.id },
           data: { targetReachedNotifiedAt: new Date() },
         });
       }
+
       if (!hit && alreadyNotified) {
         await prisma.watchlist.update({
           where: { id: item.id },

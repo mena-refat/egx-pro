@@ -138,12 +138,14 @@ export const addHoldingSchema = z.object({
 export const watchlistTickerSchema = z.object({
   ticker: z.string().min(2, 'Ticker must be at least 2 characters').max(20).toUpperCase(),
   targetPrice: z.number().positive().optional(),
+  targetDirection: z.enum(['UP', 'DOWN']).optional(),
 });
 
 export const watchlistCheckTargetsSchema = z.object({
   items: z.array(z.object({
     ticker: z.string().min(1).max(20),
     targetPrice: z.number().positive(),
+    targetDirection: z.enum(['UP', 'DOWN']).default('UP'),
     currentPrice: z.number().nonnegative(),
   })),
 });

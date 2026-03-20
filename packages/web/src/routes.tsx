@@ -18,15 +18,12 @@ import {
 } from './components/skeletons';
 import {
   SubscriptionTab,
-  ReferralTab,
-  AchievementsTab,
-  AccountOverviewTab,
   InvestorProfileTab,
   AccountSettingsTab,
   SecuritySettingsTab,
   PreferencesSettingsTab,
-  NotificationsSettingsTab,
   DangerSettingsTab,
+  SettingsTabContent,
 } from './components/features/settings';
 import SettingsLayout from './components/layout/SettingsLayout';
 
@@ -68,13 +65,15 @@ export function AppRoutes({ currentWealth }: AppRoutesProps) {
         <Route path="account"       element={<AccountSettingsTab />} />
         <Route path="security"      element={<SecuritySettingsTab />} />
         <Route path="preferences"   element={<PreferencesSettingsTab />} />
-        <Route path="notifications" element={<NotificationsSettingsTab />} />
-        <Route path="danger"        element={<DangerSettingsTab />} />
-        <Route path="overview"      element={<AccountOverviewTab />} />
         <Route path="investor"      element={<InvestorProfileTab />} />
-        <Route path="subscription"  element={<SubscriptionTab />} />
-        <Route path="referrals"     element={<ReferralTab />} />
-        <Route path="achievements"  element={<AchievementsTab />} />
+        <Route path="danger"        element={<DangerSettingsTab />} />
+        <Route path="perks"         element={<SettingsTabContent />} />
+        {/* Redirects for old routes */}
+        <Route path="notifications" element={<Navigate to="/settings/preferences" replace />} />
+        <Route path="overview"      element={<Navigate to="/settings/perks" replace />} />
+        <Route path="subscription"  element={<Navigate to="/settings/perks" replace />} />
+        <Route path="referrals"     element={<Navigate to="/settings/perks" replace />} />
+        <Route path="achievements"  element={<Navigate to="/settings/perks" replace />} />
       </Route>
       <Route path="/profile" element={<ErrorBoundary><Suspense fallback={<ProfileSkeleton />}><ProfilePage /></Suspense></ErrorBoundary>} />
       <Route path="/profile/:username" element={<ErrorBoundary><Suspense fallback={<ProfileSkeleton />}><SocialProfilePage /></Suspense></ErrorBoundary>} />
