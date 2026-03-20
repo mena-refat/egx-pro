@@ -8,9 +8,15 @@ const predictionTime = z.enum(['WEEK', 'MONTH', 'THREE_MONTHS', 'SIX_MONTHS', 'N
 
 export const createPredictionBodySchema = z.object({
   ticker: z.string().min(2).max(20).transform((s) => s.toUpperCase()),
-  direction: predictionDir,
-  timeframe: predictionTime,
-  targetPrice: z.number().positive(),
+  mode: z.enum(['TIER', 'EXACT']).optional().default('TIER'),
+  // TIER mode fields
+  direction: predictionDir.optional(),
+  moveTier: z.enum(['LIGHT', 'MEDIUM', 'STRONG', 'EXTREME']).optional(),
+  timeframe: predictionTime.optional(),
+  // EXACT mode fields
+  targetPrice: z.number().positive().optional(),
+  expiresAt: z.string().optional(),
+  // Common
   reason: z.string().min(1, 'يرجى كتابة سبب توقعك').max(500),
   isPublic: z.boolean().optional().default(true),
 });

@@ -494,7 +494,7 @@ export const PredictionsService = {
       resolvedPrice,
       resolvedAt:  new Date(),
       pointsEarned,
-      accuracyPct: tierAccuracy,
+      accuracyPct,
     });
 
     // ── User stats ───────────────────────────────────────────────────────────

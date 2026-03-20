@@ -29,7 +29,6 @@ export const PredictionRepository = {
         timeframe:  data.timeframe  ?? undefined,
         targetPrice: data.targetPrice ?? undefined,
         priceAtCreation: data.priceAtCreation,
-        timeframe: data.timeframe,
         reason: data.reason ?? undefined,
         expiresAt: data.expiresAt,
         isPublic: data.isPublic,
