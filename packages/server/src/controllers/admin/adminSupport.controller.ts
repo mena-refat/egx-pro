@@ -37,7 +37,15 @@ export const AdminSupportController = {
       ];
     }
 
-    // Sort order — agents default to oldest first so they answer longest-waiting users
+    // Plan-weight for queue priority: Ultra (1) → Pro (2) → other (3)
+    // Used when sort is 'plan' (default for managers) or 'oldest' for agents
+    const PLAN_WEIGHT: Record<string, number> = {
+      ultra: 1, ultra_yearly: 1,
+      pro: 2, yearly: 2,
+    };
+
+    // Sort order — agents default to oldest first; managers default to plan-priority queue
+    const usePlanSort = !sort || sort === 'plan'; // default manager sort
     let orderBy: object[];
     if (sort === 'newest') {
       orderBy = [{ createdAt: 'desc' }];
@@ -47,8 +55,54 @@ export const AdminSupportController = {
       // Explicit oldest, or agent default
       orderBy = [{ createdAt: 'asc' }];
     } else {
-      // Manager default: priority first, then newest
-      orderBy = [{ priority: 'desc' }, { createdAt: 'desc' }];
+      // Manager default (plan sort): fetch all, sort in-process, paginate manually
+      orderBy = [{ createdAt: 'asc' }]; // secondary sort for stable plan-sort below
+    }
+
+    if (usePlanSort && manager) {
+      // Fetch all matching tickets (plan-priority sort requires full dataset for correct pagination)
+      const [allTickets, total] = await Promise.all([
+        prisma.supportTicket.findMany({
+          where,
+          include: {
+            user: { select: { id: true, email: true, username: true, fullName: true, plan: true } },
+          },
+          orderBy: [{ createdAt: 'asc' }],
+        }),
+        prisma.supportTicket.count({ where }),
+      ]);
+
+      // Sort: Ultra oldest → Ultra newest → Pro oldest → Pro newest
+      allTickets.sort((a, b) => {
+        const wa = PLAN_WEIGHT[a.user.plan ?? ''] ?? 3;
+        const wb = PLAN_WEIGHT[b.user.plan ?? ''] ?? 3;
+        if (wa !== wb) return wa - wb;
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      });
+
+      const tickets = allTickets.slice((pageNum - 1) * 20, pageNum * 20);
+
+      const agentIds = [...new Set(tickets.map((t) => t.assignedTo).filter(Boolean))] as number[];
+      let agentMap: Record<number, { fullName: string; email: string }> = {};
+      if (agentIds.length > 0) {
+        const agents = await prisma.admin.findMany({
+          where: { id: { in: agentIds } },
+          select: { id: true, fullName: true, email: true },
+        });
+        agentMap = Object.fromEntries(agents.map((a) => [a.id, { fullName: a.fullName, email: a.email }]));
+      }
+
+      sendSuccess(res, {
+        tickets: tickets.map((t) => ({
+          ...t,
+          assignedAgent: t.assignedTo ? (agentMap[t.assignedTo] ?? null) : null,
+        })),
+        total,
+        page: pageNum,
+        totalPages: Math.ceil(total / 20),
+        isManager: manager,
+      });
+      return;
     }
 
     const [tickets, total] = await Promise.all([

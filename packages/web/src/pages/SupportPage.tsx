@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LifeBuoy, Plus, ArrowLeft, Inbox, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { LifeBuoy, Plus, ArrowLeft, Inbox, RefreshCw, CheckCircle2, Lock, Zap } from 'lucide-react';
 import api from '../lib/api';
+import { useAuthStore } from '../store/authStore';
 import { SupportTicket, TicketStatus } from '../components/features/support/support.types';
 import { SupportNewTicketForm } from '../components/features/support/SupportNewTicketForm';
 import { SupportTicketDetail } from '../components/features/support/SupportTicketDetail';
@@ -9,9 +10,19 @@ import { TicketCard, StatsBar } from '../components/features/support/SupportTick
 
 type View = 'list' | 'new' | 'detail';
 
+function isSupportAllowed(plan: string | undefined, referralProExpiresAt: string | null | undefined): boolean {
+  if (!plan || plan === 'free') {
+    const now = new Date();
+    return !!(referralProExpiresAt && new Date(referralProExpiresAt) > now);
+  }
+  return plan !== 'free';
+}
+
 export default function SupportPage() {
   const { t, i18n } = useTranslation('common');
   const isAr = i18n.language.startsWith('ar');
+  const user = useAuthStore(s => s.user);
+  const canUseSupport = isSupportAllowed(user?.plan, user?.referralProExpiresAt);
 
   const [tickets,  setTickets]  = useState<SupportTicket[]>([]);
   const [loading,  setLoading]  = useState(true);
@@ -92,15 +103,44 @@ export default function SupportPage() {
             >
               <RefreshCw className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => setView('new')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand)] text-[var(--text-inverse)] font-semibold text-sm hover:opacity-90 transition-opacity"
-            >
-              <Plus className="w-4 h-4" />
-              {t('support.newTicket')}
-            </button>
+            {canUseSupport ? (
+              <button
+                onClick={() => setView('new')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand)] text-[var(--text-inverse)] font-semibold text-sm hover:opacity-90 transition-opacity"
+              >
+                <Plus className="w-4 h-4" />
+                {t('support.newTicket')}
+              </button>
+            ) : (
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-500 font-semibold text-sm hover:bg-amber-500/15 transition-colors"
+              >
+                <Lock className="w-4 h-4" />
+                {t('support.upgradeToContact')}
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Free plan banner */}
+        {!canUseSupport && (
+          <div className="flex items-start gap-4 p-5 rounded-2xl bg-gradient-to-br from-amber-500/8 to-orange-500/8 border border-amber-500/20">
+            <div className="p-2 rounded-xl bg-amber-500/15 shrink-0">
+              <Zap className="w-5 h-5 text-amber-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-[var(--text-primary)] text-sm">{t('support.freeLockedTitle')}</p>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5 leading-relaxed">{t('support.freeLockedDesc')}</p>
+            </div>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))}
+              className="shrink-0 px-3 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-colors whitespace-nowrap"
+            >
+              {t('support.upgradeNow')}
+            </button>
+          </div>
+        )}
 
         {/* Success toast */}
         {success && (
@@ -129,15 +169,25 @@ export default function SupportPage() {
             </div>
             <div>
               <p className="font-semibold text-[var(--text-primary)]">{t('support.noTickets')}</p>
-              <p className="text-sm text-[var(--text-muted)] mt-1">{t('support.noTicketsHint')}</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1">{t(canUseSupport ? 'support.noTicketsHint' : 'support.freeLockedDesc')}</p>
             </div>
-            <button
-              onClick={() => setView('new')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand)] text-[var(--text-inverse)] font-semibold text-sm hover:opacity-90 transition-opacity"
-            >
-              <Plus className="w-4 h-4" />
-              {t('support.newTicket')}
-            </button>
+            {canUseSupport ? (
+              <button
+                onClick={() => setView('new')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand)] text-[var(--text-inverse)] font-semibold text-sm hover:opacity-90 transition-opacity"
+              >
+                <Plus className="w-4 h-4" />
+                {t('support.newTicket')}
+              </button>
+            ) : (
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 transition-colors"
+              >
+                <Zap className="w-4 h-4" />
+                {t('support.upgradeNow')}
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-2.5">
@@ -156,6 +206,7 @@ export default function SupportPage() {
   }
 
   /* ── New ticket view ── */
+  if (view === 'new' && !canUseSupport) { setView('list'); return null; }
   if (view === 'new') {
     return (
       <div className="max-w-2xl mx-auto space-y-4">

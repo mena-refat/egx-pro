@@ -7,11 +7,12 @@ import { useRouter } from 'expo-router';
 import {
   ArrowLeft, ArrowRight, LifeBuoy, Plus, Clock,
   CheckCircle, XCircle, AlertCircle, Send, Star, ChevronLeft, ChevronRight,
-  MessageSquare, Inbox,
+  MessageSquare, Inbox, Lock, Zap,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useTheme } from '../../hooks/useTheme';
+import { useAuthStore } from '../../store/authStore';
 import apiClient from '../../lib/api/client';
 
 type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
@@ -250,6 +251,7 @@ function TicketDetail({ ticket, onBack, onRated }: { ticket: SupportTicket; onBa
 export default function SupportPage() {
   const router = useRouter();
   const { colors } = useTheme();
+  const user = useAuthStore((s) => s.user);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -258,6 +260,12 @@ export default function SupportPage() {
   const mountedRef = useRef(true);
   const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
   const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
+
+  const plan = user?.plan ?? 'free';
+  const referralProExpiresAt = (user as { referralProExpiresAt?: string | null } | null)?.referralProExpiresAt;
+  const canUseSupport =
+    plan !== 'free' ||
+    !!(referralProExpiresAt && new Date(referralProExpiresAt) > new Date());
 
   useEffect(() => () => { mountedRef.current = false; }, []);
 
@@ -334,16 +342,27 @@ export default function SupportPage() {
             <Text style={{ color: colors.text }} className="text-base font-bold">الدعم الفني</Text>
           </View>
         </View>
-        <Pressable
-          onPress={() => setShowCreate((v) => !v)}
-          style={{ backgroundColor: showCreate ? colors.hover : '#8b5cf6', borderColor: showCreate ? colors.border : 'transparent' }}
-          className="flex-row items-center gap-1.5 px-3 py-2 rounded-xl border"
-        >
-          <Plus size={13} color={showCreate ? colors.textSub : '#fff'} />
-          <Text className="text-xs font-bold" style={{ color: showCreate ? colors.textSub : '#fff' }}>
-            {showCreate ? 'إلغاء' : 'تذكرة جديدة'}
-          </Text>
-        </Pressable>
+        {canUseSupport ? (
+          <Pressable
+            onPress={() => setShowCreate((v) => !v)}
+            style={{ backgroundColor: showCreate ? colors.hover : '#8b5cf6', borderColor: showCreate ? colors.border : 'transparent' }}
+            className="flex-row items-center gap-1.5 px-3 py-2 rounded-xl border"
+          >
+            <Plus size={13} color={showCreate ? colors.textSub : '#fff'} />
+            <Text className="text-xs font-bold" style={{ color: showCreate ? colors.textSub : '#fff' }}>
+              {showCreate ? 'إلغاء' : 'تذكرة جديدة'}
+            </Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={() => router.push('/settings/subscription')}
+            style={{ backgroundColor: '#f59e0b18', borderColor: '#f59e0b35' }}
+            className="flex-row items-center gap-1.5 px-3 py-2 rounded-xl border"
+          >
+            <Lock size={13} color="#f59e0b" />
+            <Text className="text-xs font-bold" style={{ color: '#f59e0b' }}>ترقية</Text>
+          </Pressable>
+        )}
       </View>
 
       <ScrollView
@@ -353,8 +372,36 @@ export default function SupportPage() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" colors={['#8b5cf6']} />
         }
       >
+        {/* Free plan banner */}
+        {!canUseSupport && (
+          <View
+            style={{ backgroundColor: '#f59e0b0d', borderColor: '#f59e0b30' }}
+            className="border rounded-2xl p-4 gap-3"
+          >
+            <View className="flex-row items-start gap-3">
+              <View style={{ backgroundColor: '#f59e0b20' }} className="w-9 h-9 rounded-xl items-center justify-center shrink-0">
+                <Zap size={16} color="#f59e0b" />
+              </View>
+              <View className="flex-1">
+                <Text style={{ color: colors.text }} className="text-sm font-bold leading-5">
+                  الدعم الفني متاح لمشتركي Pro و Ultra
+                </Text>
+                <Text style={{ color: colors.textSub }} className="text-xs leading-5 mt-0.5">
+                  قم بالترقية للتواصل مع فريق الدعم والحصول على مساعدة متخصصة.
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={() => router.push('/settings/subscription')}
+              className="bg-amber-500 rounded-xl py-2.5 items-center"
+            >
+              <Text className="text-sm font-bold text-white">اشترك الآن</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Create form */}
-        {showCreate && (
+        {showCreate && canUseSupport && (
           <CreateForm onCreated={handleCreated} onCancel={() => setShowCreate(false)} />
         )}
 
@@ -369,7 +416,7 @@ export default function SupportPage() {
               </View>
             ))}
           </View>
-        ) : tickets.length === 0 && !showCreate ? (
+        ) : tickets.length === 0 && !showCreate && canUseSupport ? (
           <View className="items-center py-20 gap-3">
             <View style={{ backgroundColor: colors.hover, borderColor: colors.border }} className="w-16 h-16 rounded-full border items-center justify-center">
               <Inbox size={26} color={colors.textMuted} />

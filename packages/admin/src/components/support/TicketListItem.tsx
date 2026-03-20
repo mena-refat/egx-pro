@@ -48,10 +48,20 @@ export function TicketListItem({ tk, isSelected, managerMode, isChecked, locale,
                   )}
                   <p className="text-xs font-semibold text-white truncate">{tk.subject}</p>
                 </div>
-                <p className="text-[11px] text-slate-500 truncate">
-                  {tk.user?.fullName ?? tk.user?.username ?? tk.user?.email ?? '—'}
+                <p className="text-[11px] text-slate-500 truncate flex items-center gap-1.5">
+                  <span>{tk.user?.fullName ?? tk.user?.username ?? tk.user?.email ?? '—'}</span>
+                  {(tk.user?.plan === 'ultra' || tk.user?.plan === 'ultra_yearly') && (
+                    <span className="inline-flex shrink-0 items-center px-1.5 py-px rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20 text-[9px] font-bold tracking-wide">
+                      ULTRA
+                    </span>
+                  )}
+                  {(tk.user?.plan === 'pro' || tk.user?.plan === 'yearly') && (
+                    <span className="inline-flex shrink-0 items-center px-1.5 py-px rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold tracking-wide">
+                      PRO
+                    </span>
+                  )}
                   <span className="text-slate-700"> · </span>
-                  {tk.message}
+                  <span className="truncate">{tk.message}</span>
                 </p>
               </div>
               <div className="shrink-0 flex flex-col items-end gap-1.5">

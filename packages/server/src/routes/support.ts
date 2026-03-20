@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma.ts';
 import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 import { authenticate } from '../middleware/auth.middleware.ts';
+import { requirePaid } from '../middleware/plan.middleware.ts';
 import type { AuthRequest } from './types.ts';
 
 const router = Router();
@@ -22,7 +23,7 @@ const ticketCreateLimiter = rateLimit({
   handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
 });
 
-router.post('/', authenticate, ticketCreateLimiter, async (req, res) => {
+router.post('/', authenticate, requirePaid, ticketCreateLimiter, async (req, res) => {
   const userId = (req as AuthRequest).user?.id;
   if (!userId) { sendError(res, 'UNAUTHORIZED', 401); return; }
 
