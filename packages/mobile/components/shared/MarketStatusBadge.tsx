@@ -62,6 +62,8 @@ export function MarketStatusBadge() {
               pulseStyle,
               {
                 position:        'absolute',
+                top:             0,
+                left:            0,
                 width:           8,
                 height:          8,
                 borderRadius:    4,

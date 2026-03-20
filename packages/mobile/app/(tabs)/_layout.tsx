@@ -3,6 +3,7 @@ import { Tabs, Redirect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { House, Briefcase, BarChart3, Sparkles, User } from 'lucide-react-native';
+import { ViewStyle } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import { useUnreadCount } from '../../hooks/useUnreadCount';
@@ -29,19 +30,43 @@ function TabIcon({
   focused: boolean;
 }) {
   return (
-    <View style={{ alignItems: 'center', gap: 3 }}>
-      <Icon size={22} color={color} />
-      {focused && (
-        <View
-          style={{
-            width: 4, height: 4, borderRadius: 2,
-            backgroundColor: BRAND,
-          }}
-        />
-      )}
+    // Important: keep a stable height for the icon across focused/unfocused.
+    // React Navigation centers tab icons based on the returned element size,
+    // so adding/removing the dot can visually "shift" icons.
+    <View style={tabIconContainerStyle as ViewStyle}>
+      <View style={tabIconIconStyle}>
+        <Icon size={20} color={color} />
+      </View>
+      <View
+        style={[
+          tabIconDotStyle,
+          focused ? { backgroundColor: BRAND } : { backgroundColor: 'transparent' },
+        ]}
+      />
     </View>
   );
 }
+
+const tabIconContainerStyle = {
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 38,
+  height: 36,
+  position: 'relative' as const,
+};
+
+const tabIconIconStyle = {
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const tabIconDotStyle = {
+  position: 'absolute' as const,
+  bottom: -1,
+  width: 4,
+  height: 4,
+  borderRadius: 2,
+};
 
 export default function TabsLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -57,9 +82,8 @@ export default function TabsLayout() {
     backgroundColor:  colors.card,
     borderTopColor:   colors.border,
     borderTopWidth:   1,
-    height:           TAB_HEIGHT + insets.bottom,
+    height:           TAB_HEIGHT,
     paddingBottom:    insets.bottom,
-    paddingTop:       8,
     elevation:        0,
   };
 
@@ -70,7 +94,7 @@ export default function TabsLayout() {
     tabBarStyle,
     tabBarLabel:          TAB_LABELS[name]?.[lang] ?? name,
     tabBarHideOnKeyboard: true,
-    tabBarLabelStyle:     { fontSize: 10, fontWeight: '500' as const },
+    tabBarLabelStyle:     { fontSize: 10, fontWeight: '500' as const, marginTop: -2 },
     tabBarItemStyle:      { paddingVertical: 0 },
   });
 

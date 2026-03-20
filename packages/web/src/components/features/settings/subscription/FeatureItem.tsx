@@ -1,5 +1,5 @@
 import { type ComponentType } from 'react';
-import { Check, X, BarChart3, Brain, Bell, TrendingUp, Shield, Sparkles, Zap } from 'lucide-react';
+import { Check, X, BarChart3, Brain, Bell, TrendingUp, Shield, Sparkles, Zap, Target, Headphones } from 'lucide-react';
 
 const FEATURE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   freeNoWatchlist: BarChart3,
@@ -20,6 +20,11 @@ const FEATURE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   shariaMode: Shield,
   prioritySupport: Sparkles,
   earlyAccess: Zap,
+  freePredictions: Zap,
+  proPredictions: Zap,
+  ultraPredictions: Zap,
+  exactModePredictions: Target,
+  proSupport: Headphones,
 };
 
 interface FeatureItemProps {

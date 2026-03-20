@@ -1,14 +1,16 @@
 import { Check, X } from 'lucide-react';
 
 const COMPARISON_ROWS = [
-  { featureKey: 'compareWatchlist', free: '—', pro: '5', ultra: 'unlimited' },
-  { featureKey: 'comparePortfolio', free: '3', pro: '10', ultra: 'unlimited' },
-  { featureKey: 'compareGoals', free: '1', pro: '3', ultra: 'unlimited' },
-  { featureKey: 'compareAi', free: '3', pro: '30', ultra: 'unlimited' },
-  { featureKey: 'compareRealtime', free: 'x', pro: 'check', ultra: 'check' },
-  { featureKey: 'compareAlerts', free: 'x', pro: 'check', ultra: 'check' },
-  { featureKey: 'compareSharia', free: 'check', pro: 'check', ultra: 'check' },
-  { featureKey: 'compareSupport', free: 'x', pro: 'x', ultra: 'check' },
+  { featureKey: 'compareWatchlist',   free: '—',  pro: '5',    ultra: 'unlimited' },
+  { featureKey: 'comparePortfolio',   free: '3',  pro: '10',   ultra: 'unlimited' },
+  { featureKey: 'compareGoals',       free: '1',  pro: '3',    ultra: 'unlimited' },
+  { featureKey: 'compareAi',          free: '3',  pro: '20',   ultra: '45'        },
+  { featureKey: 'comparePredictions', free: '3',  pro: '10',   ultra: '20'        },
+  { featureKey: 'compareExactMode',   free: 'x',  pro: 'check', ultra: 'check'   },
+  { featureKey: 'compareRealtime',    free: 'x',  pro: 'check', ultra: 'check'   },
+  { featureKey: 'compareAlerts',      free: 'x',  pro: 'check', ultra: 'check'   },
+  { featureKey: 'compareSharia',      free: 'check', pro: 'check', ultra: 'check' },
+  { featureKey: 'compareSupport',     free: 'x',  pro: 'check', ultra: 'check'   },
 ];
 
 function Cell({ value, unlimited }: { value: string; unlimited: string }) {

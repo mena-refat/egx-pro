@@ -207,7 +207,9 @@ export default function HomePage() {
               <Bell size={16} color={colors.textSub} />
               {unreadCount > 0 && (
                 <View style={{
-                  position: 'absolute', top: -4, right: -4,
+                  position: 'absolute',
+                  top: -4,
+                  ...(I18nManager.isRTL ? { left: -4 } : { right: -4 }),
                   width: 16, height: 16, borderRadius: 8,
                   backgroundColor: BRAND, alignItems: 'center', justifyContent: 'center',
                 }}>
