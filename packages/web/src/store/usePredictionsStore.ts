@@ -63,6 +63,8 @@ export interface LeaderboardEntry {
 export interface DailyLimits {
   used: number;
   limit: number;
+  activeUsed: number;
+  activeLimit: number;
   resetsAt: string;
 }
 

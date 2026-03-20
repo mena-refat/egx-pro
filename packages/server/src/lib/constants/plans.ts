@@ -9,10 +9,17 @@ export const PLAN_PRICES = {
 /** عدد الدعوات النشطة المطلوبة لمكافأة شهر Pro مجاناً */
 export const REFERRAL_REQUIRED = 15;
 
-/** Predictions: daily limits per plan, rate limit for create */
+/** Predictions: daily limits + simultaneous active cap per plan */
 export const PREDICTION_LIMITS = {
-  freeDaily: 3,
-  proDaily: 10,
+  // Daily creation limits
+  freeDaily:  3,
+  proDaily:   10,
+  ultraDaily: 20,
+  // Max active predictions at the same time
+  freeMaxActive:  10,
+  proMaxActive:   35,
+  ultraMaxActive: 60,
+  // Rate & misc
   createRatePerMin: 5,
   deletionWindowMinutes: 5,
   minAccountAgeHours: 24,

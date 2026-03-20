@@ -1,22 +1,23 @@
-const { getDefaultConfig } = require('expo/metro-config');
+const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 
-// Root node_modules has tailwindcss v4 (hoisted from web/admin), but nativewind
-// requires v3. Redirect all tailwindcss requires to the mobile-local v3 install.
-const _origResolve = Module._resolveFilename;
-Module._resolveFilename = function (request, parent, isMain, options) {
-  if (request === 'tailwindcss' || request.startsWith('tailwindcss/')) {
-    return _origResolve.call(this, request, parent, isMain, {
-      ...(options || {}),
-      paths: [__dirname],
-    });
-  }
-  return _origResolve.call(this, request, parent, isMain, options);
-};
+// NativeWind requires Tailwind CSS v3.
+// In this monorepo, `packages/web` and `packages/admin` use Tailwind v4 at the root level,
+// while `packages/mobile` uses Tailwind v3. We ensure NativeWind resolves Tailwind v3 by
+// creating a Windows-compatible junction under `node_modules/nativewind/node_modules`.
+const srcTailwind = path.resolve(__dirname, 'node_modules', 'tailwindcss');
+const dstTailwind = path.resolve(__dirname, '../../node_modules/nativewind/node_modules/tailwindcss');
+const srcPkg = path.join(srcTailwind, 'package.json');
+const dstPkg = path.join(dstTailwind, 'package.json');
 
+if (!fs.existsSync(dstPkg) && fs.existsSync(srcPkg)) {
+  fs.mkdirSync(path.dirname(dstTailwind), { recursive: true });
+  // `junction` works better on Windows than symlinks.
+  fs.symlinkSync(srcTailwind, dstTailwind, 'junction');
+}
+
+const { getDefaultConfig } = require('expo/metro-config');
 const { withNativeWind } = require('nativewind/metro');
 
 const config = getDefaultConfig(__dirname);
-
 module.exports = withNativeWind(config, { input: './global.css' });

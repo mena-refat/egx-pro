@@ -1,11 +1,13 @@
 import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Target } from 'lucide-react';
+import { Target, HelpCircle } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import { usePredictionsStore } from '../store/usePredictionsStore';
 import { usePredictionsApi } from '../hooks/usePredictionsApi';
 import { useAuthStore } from '../store/authStore';
 import { Skeleton } from '../components/ui/Skeleton';
-const NewPredictionSheet = lazy(() => import('../components/predictions/NewPredictionSheet').then((m) => ({ default: m.NewPredictionSheet })));
+import { ScoringInfoCard } from '../components/features/predictions/ScoringInfoCard';
+const NewPredictionSheet = lazy(() => import('../components/features/predictions/NewPredictionSheet').then((m) => ({ default: m.NewPredictionSheet })));
 import {
   PredictionsFeedTab,
   PredictionsMyTab,
@@ -65,13 +67,27 @@ export default function PredictionsPage() {
     { id: 'stock', label: t('predictions.tabPerStock') },
   ];
 
-  const canCreate = dailyLimits ? dailyLimits.used < dailyLimits.limit : true;
+  const canCreate = dailyLimits
+    ? dailyLimits.used < dailyLimits.limit && dailyLimits.activeUsed < dailyLimits.activeLimit
+    : true;
+  const [scoringInfoOpen, setScoringInfoOpen] = useState(false);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Target className="w-8 h-8 text-[var(--brand)]" aria-hidden />
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">{t('predictions.title')}</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Target className="w-8 h-8 text-[var(--brand)]" aria-hidden />
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">{t('predictions.title')}</h1>
+        </div>
+        <button
+          type="button"
+          onClick={() => setScoringInfoOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-amber-400 transition-colors text-sm"
+          title={t('predictions.scoringInfoTitle')}
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span className="hidden sm:inline">{t('predictions.scoringInfoTitle')}</span>
+        </button>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -112,7 +128,7 @@ export default function PredictionsPage() {
           statusFilter={myStatusFilter}
           onStatusFilter={setMyStatusFilter}
           canCreate={canCreate}
-          limitReachedLabel={dailyLimits?.resetsAt}
+          limits={dailyLimits ?? undefined}
           onNewPrediction={openNewPrediction}
         />
       )}
@@ -128,6 +144,10 @@ export default function PredictionsPage() {
           <NewPredictionSheet onClose={() => usePredictionsStore.getState().closeNewPrediction()} />
         </Suspense>
       )}
+
+      <AnimatePresence>
+        {scoringInfoOpen && <ScoringInfoCard onClose={() => setScoringInfoOpen(false)} />}
+      </AnimatePresence>
     </div>
   );
 }

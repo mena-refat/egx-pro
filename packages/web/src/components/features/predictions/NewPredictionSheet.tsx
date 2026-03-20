@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, TrendingDown, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, Zap, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../../ui/Button';
 import { usePredictionsStore, type MoveTier } from '../../../store/usePredictionsStore';
@@ -8,13 +8,14 @@ import { usePredictionsApi } from '../../../hooks/usePredictionsApi';
 import { useAuthStore } from '../../../store/authStore';
 import { searchStocks, getStockName } from '../../../lib/egxStocks';
 import api from '../../../lib/api';
+import { formatRange, calcPoints, TIMEFRAME_MULTIPLIER } from '../../../lib/scoringConstants';
+import { ScoringInfoCard } from './ScoringInfoCard';
 
 const TIMEFRAMES = ['WEEK', 'MONTH', 'THREE_MONTHS', 'SIX_MONTHS', 'NINE_MONTHS', 'YEAR'] as const;
 
 interface TierDef {
   key: MoveTier;
   labelKey: string;
-  rangeKey: string;
   basePoints: number;
   color: string;
   bg: string;
@@ -22,15 +23,11 @@ interface TierDef {
 }
 
 const TIERS: TierDef[] = [
-  { key: 'LIGHT',   labelKey: 'predictions.tierLight',   rangeKey: 'predictions.tierLightRange',   basePoints: 30,  color: 'text-sky-400',    bg: 'bg-sky-500/10',    border: 'border-sky-500/40' },
-  { key: 'MEDIUM',  labelKey: 'predictions.tierMedium',  rangeKey: 'predictions.tierMediumRange',  basePoints: 60,  color: 'text-green-400',  bg: 'bg-green-500/10',  border: 'border-green-500/40' },
-  { key: 'STRONG',  labelKey: 'predictions.tierStrong',  rangeKey: 'predictions.tierStrongRange',  basePoints: 100, color: 'text-amber-400',  bg: 'bg-amber-500/10',  border: 'border-amber-500/40' },
-  { key: 'EXTREME', labelKey: 'predictions.tierExtreme', rangeKey: 'predictions.tierExtremeRange', basePoints: 150, color: 'text-red-400',    bg: 'bg-red-500/10',    border: 'border-red-500/40' },
+  { key: 'LIGHT',   labelKey: 'predictions.tierLight',   basePoints: 25,  color: 'text-sky-400',   bg: 'bg-sky-500/10',   border: 'border-sky-500/40' },
+  { key: 'MEDIUM',  labelKey: 'predictions.tierMedium',  basePoints: 55,  color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/40' },
+  { key: 'STRONG',  labelKey: 'predictions.tierStrong',  basePoints: 100, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/40' },
+  { key: 'EXTREME', labelKey: 'predictions.tierExtreme', basePoints: 160, color: 'text-red-400',   bg: 'bg-red-500/10',   border: 'border-red-500/40' },
 ];
-
-const TIMEFRAME_MULTIPLIER: Record<string, number> = {
-  WEEK: 1.0, MONTH: 1.4, THREE_MONTHS: 2.0, SIX_MONTHS: 2.8, NINE_MONTHS: 3.5, YEAR: 5.0,
-};
 
 function calcExpiresAt(timeframe: string): string {
   const d = new Date();
@@ -56,6 +53,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scoringInfoOpen, setScoringInfoOpen] = useState(false);
   const accessToken = useAuthStore((s) => s.accessToken);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -93,8 +91,9 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
   }, [draft.ticker, accessToken]);
 
   const selectedTier = TIERS.find((t) => t.key === draft.moveTier) ?? null;
-  const multiplier = TIMEFRAME_MULTIPLIER[draft.timeframe ?? 'WEEK'] ?? 1.0;
-  const pointPotential = selectedTier ? Math.round(selectedTier.basePoints * multiplier) : null;
+  const currentTf = (draft.timeframe ?? 'WEEK') as import('../../../lib/scoringConstants').PredictionTime;
+  const multiplier = TIMEFRAME_MULTIPLIER[currentTf] ?? 1.0;
+  const pointPotential = selectedTier ? calcPoints(selectedTier.key, currentTf) : null;
 
   const handleSubmit = async () => {
     if (!draft.ticker || draft.direction == null || draft.moveTier == null || draft.timeframe == null || !agreeTerms) return;
@@ -187,10 +186,22 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                   <>
                     {/* Move Tier selector */}
                     <div>
-                      <p className="text-sm font-medium text-[var(--text-secondary)] mb-2">{t('predictions.selectTier')}</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-[var(--text-secondary)]">{t('predictions.selectTier')}</p>
+                        <button
+                          type="button"
+                          onClick={() => setScoringInfoOpen(true)}
+                          className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] hover:text-amber-400 transition-colors"
+                        >
+                          <HelpCircle className="w-3.5 h-3.5" />
+                          {t('predictions.scoringInfoTitle')}
+                        </button>
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         {TIERS.map((tier) => {
                           const isSelected = draft.moveTier === tier.key;
+                          const dynRange = formatRange(tier.key, currentTf);
+                          const dynPts = calcPoints(tier.key, currentTf);
                           return (
                             <button
                               key={tier.key}
@@ -201,9 +212,9 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                               <p className={`text-sm font-semibold ${isSelected ? tier.color : 'text-[var(--text-primary)]'}`}>
                                 {t(tier.labelKey)}
                               </p>
-                              <p className="text-xs text-[var(--text-muted)]">{t(tier.rangeKey)}</p>
-                              <p className={`text-xs font-medium mt-1 ${isSelected ? tier.color : 'text-[var(--text-muted)]'}`}>
-                                {tier.basePoints} {t('predictions.basePts')}
+                              <p className="text-xs text-[var(--text-muted)]">{dynRange}</p>
+                              <p className={`text-xs font-medium mt-1 flex items-center gap-0.5 ${isSelected ? tier.color : 'text-[var(--text-muted)]'}`}>
+                                <Zap className="w-3 h-3" />{dynPts} {t('predictions.pts')}
                               </p>
                             </button>
                           );
@@ -346,6 +357,11 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
             )}
           </AnimatePresence>
         </div>
+
+        {/* Scoring info overlay */}
+        <AnimatePresence>
+          {scoringInfoOpen && <ScoringInfoCard onClose={() => setScoringInfoOpen(false)} />}
+        </AnimatePresence>
 
         {/* Floating stock suggestions overlay */}
         <AnimatePresence>

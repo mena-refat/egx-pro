@@ -113,7 +113,13 @@
       "Bash(rm -rf \"$BASE/goals\")",
       "Bash(rm -rf \"$BASE/market\")",
       "Bash(rm -rf \"$BASE/predictions\")",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Bash(npm --version)",
+      "Bash(npm view:*)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d[''''version'''']\\)\")",
+      "WebSearch",
+      "Bash(cmd /c \"mklink /J \"\"c:\\\\Users\\\\menar\\\\Desktop\\\\egx-pro\\\\node_modules\\\\nativewind\\\\node_modules\\\\tailwindcss\"\" \"\"c:\\\\Users\\\\menar\\\\Desktop\\\\egx-pro\\\\packages\\\\mobile\\\\node_modules\\\\tailwindcss\"\"\")",
+      "Bash(powershell -Command \"New-Item -ItemType Junction -Path ''c:\\\\Users\\\\menar\\\\Desktop\\\\egx-pro\\\\node_modules\\\\nativewind\\\\node_modules\\\\tailwindcss'' -Target ''c:\\\\Users\\\\menar\\\\Desktop\\\\egx-pro\\\\packages\\\\mobile\\\\node_modules\\\\tailwindcss'' -Force\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\menar\\Desktop\\src\\lib\\lib"

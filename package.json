@@ -11,6 +11,7 @@
     "packages/mobile"
   ],
   "scripts": {
+    "postinstall": "node -e \"const fs=require('fs'),path=require('path');const dst=path.join('node_modules','nativewind','node_modules','tailwindcss');const src=path.resolve('packages','mobile','node_modules','tailwindcss');if(!fs.existsSync(dst)){fs.mkdirSync(path.dirname(dst),{recursive:true});fs.symlinkSync(src,dst,'junction');console.log('✓ tailwindcss v3 junction created for nativewind');}\"",
     "dev": "npm run dev --workspace=@borsa/server",
     "dev:web": "npm run dev --workspace=@borsa/web",
     "dev:admin": "npm run dev --workspace=@borsa/admin",
@@ -30,6 +31,11 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native-worklets": "0.5.1"
   },
   "overrides": {
     "eslint-plugin-react-hooks": {

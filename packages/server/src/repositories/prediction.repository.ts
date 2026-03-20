@@ -50,6 +50,12 @@ export const PredictionRepository = {
     return prisma.prediction.delete({ where: { id } });
   },
 
+  countActiveByUser(userId: number) {
+    return prisma.prediction.count({
+      where: { userId, status: 'ACTIVE' },
+    });
+  },
+
   countActiveByUserAndTicker(userId: number, ticker: string) {
     return prisma.prediction.count({
       where: {

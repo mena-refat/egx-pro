@@ -170,6 +170,7 @@
     "termsWarning": "This prediction is personal opinion, not investment advice. It cannot be edited after publishing.",
     "endsOn": "Ends on",
     "expectedChange": "Expected change",
+    "scoringInfoTitle": "How points work?",
     "selectTier": "Select expected move size",
     "tierHint": "Points multiply with longer timeframes",
     "tierLight": "Light",

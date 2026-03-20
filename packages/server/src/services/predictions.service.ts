@@ -4,7 +4,7 @@ import { getStockPrice } from '../lib/stockData.ts';
 import { incrWithExpire, getCount, decrCount } from '../lib/redis.ts';
 import { getCairoDateString, getCairoDateStringFromDate, getCairoMidnightExpirySeconds } from '../lib/cairo-date.ts';
 import { PREDICTION_LIMITS } from '../lib/constants.ts';
-import { isPaid } from '../lib/plan.ts';
+import { isPaid, isPro, isUltra } from '../lib/plan.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { PredictionRepository } from '../repositories/prediction.repository.ts';
 import { FollowRepository } from '../repositories/follow.repository.ts';
@@ -15,59 +15,59 @@ const DELETION_WINDOW_MS = PREDICTION_LIMITS.deletionWindowMinutes * 60 * 1000;
 const MIN_ACCOUNT_AGE_MS = PREDICTION_LIMITS.minAccountAgeHours * 60 * 60 * 1000;
 
 // ─── Move Tier Definitions ────────────────────────────────────────────────────
-// Calibrated for EGX market characteristics:
-//   • Daily price limit ±10%
-//   • Typical quarterly blue-chip moves: 5-20%
-//   • High-volatility small-cap: 20-40%
-//   • EXTREME (>30%) requires exceptional calls (earnings surprises, macro events)
+// Calibrated to EGX 40-year history (1986-2024):
+//   • Individual stock annualized volatility: ~55% (vs index ~26%)
+//   • Daily limit ±10%, can exceed after suspension/IPO (absolute ±20%)
+//   • Tier ranges are timeframe-specific so difficulty is equal across all durations
+//   • Basis: σ_t = 55% × √(T/252), tiers at 0-0.5σ / 0.5-1.5σ / 1.5-2.5σ / >2.5σ
 
 export interface TierDef {
-  min:        number;   // inclusive lower bound (% absolute move in predicted direction)
-  max:        number;   // exclusive upper bound (Infinity for EXTREME)
-  basePoints: number;   // points earned when tier is correctly predicted
+  basePoints: number;
   labelAr:    string;
   labelEn:    string;
-  rangeLabel: string;
 }
 
 export const TIER_DEFS: Record<MoveTier, TierDef> = {
-  LIGHT:   { min: 1,  max: 5,        basePoints: 30,  labelAr: 'خفيف',   labelEn: 'Light',   rangeLabel: '1-5٪'  },
-  MEDIUM:  { min: 5,  max: 15,       basePoints: 60,  labelAr: 'متوسط',  labelEn: 'Medium',  rangeLabel: '5-15٪' },
-  STRONG:  { min: 15, max: 30,       basePoints: 100, labelAr: 'قوي',    labelEn: 'Strong',  rangeLabel: '15-30٪'},
-  EXTREME: { min: 30, max: Infinity, basePoints: 150, labelAr: 'متطرف',  labelEn: 'Extreme', rangeLabel: '>30٪'  },
+  LIGHT:   { basePoints: 25,  labelAr: 'خفيف',   labelEn: 'Light'   },
+  MEDIUM:  { basePoints: 55,  labelAr: 'متوسط',  labelEn: 'Medium'  },
+  STRONG:  { basePoints: 100, labelAr: 'قوي',    labelEn: 'Strong'  },
+  EXTREME: { basePoints: 160, labelAr: 'متطرف',  labelEn: 'Extreme' },
 };
 
-// Points when direction is correct but tier is off
-const ADJACENT_TIER_POINTS  = 20;  // ±1 tier — direction right, magnitude slightly off
-const DIRECTION_ONLY_POINTS = 10;  // ±2+ tiers or FLAT — direction right, magnitude way off
-const MISS_POINTS           = -5;  // Wrong direction — small penalty to discourage flip-flopping
+// Timeframe-specific tier ranges [min%, max%) calibrated to EGX volatility.
+// Each tier represents roughly the same probability band at every timeframe.
+const TIMEFRAME_TIER_RANGES: Record<PredictionTime, Record<MoveTier, [number, number]>> = {
+  WEEK:         { LIGHT: [1, 5],   MEDIUM: [5, 11],  STRONG: [11, 19],  EXTREME: [19, Infinity] },
+  MONTH:        { LIGHT: [1, 8],   MEDIUM: [8, 25],  STRONG: [25, 40],  EXTREME: [40, Infinity] },
+  THREE_MONTHS: { LIGHT: [1, 15],  MEDIUM: [15, 40], STRONG: [40, 70],  EXTREME: [70, Infinity] },
+  SIX_MONTHS:   { LIGHT: [2, 20],  MEDIUM: [20, 60], STRONG: [60, 95],  EXTREME: [95, Infinity] },
+  NINE_MONTHS:  { LIGHT: [2, 25],  MEDIUM: [25, 70], STRONG: [70, 120], EXTREME: [120, Infinity] },
+  YEAR:         { LIGHT: [3, 28],  MEDIUM: [28, 82], STRONG: [82, 135], EXTREME: [135, Infinity] },
+};
 
-// Timeframe multipliers — superlinear curve rewarding long-term commitment.
-// Research basis: prediction difficulty grows roughly with sqrt(time),
-// but long-term predictors add more portfolio value, hence the boost.
+// Timeframe multipliers — reward long-term commitment (difficulty already baked into ranges).
 const TIMEFRAME_MULTIPLIER: Record<PredictionTime, number> = {
   WEEK:         1.0,
-  MONTH:        1.4,
-  THREE_MONTHS: 2.0,
-  SIX_MONTHS:   2.8,
-  NINE_MONTHS:  3.5,
-  YEAR:         5.0,
+  MONTH:        1.3,
+  THREE_MONTHS: 1.8,
+  SIX_MONTHS:   2.4,
+  NINE_MONTHS:  3.0,
+  YEAR:         4.0,
 };
+
+const MISS_POINTS = -8;  // Wrong direction — penalty to discourage flip-flopping
 
 // Tier order for adjacency calculation
 const TIER_ORDER: MoveTier[] = ['LIGHT', 'MEDIUM', 'STRONG', 'EXTREME'];
 
-function getTierForMove(absPct: number): MoveTier | 'FLAT' {
-  if (absPct < 1) return 'FLAT';
+function getTierForMove(absPct: number, timeframe: PredictionTime): MoveTier | 'FLAT' {
+  const ranges = TIMEFRAME_TIER_RANGES[timeframe];
+  if (absPct < ranges.LIGHT[0]) return 'FLAT';
   for (const tier of TIER_ORDER) {
-    const def = TIER_DEFS[tier];
-    if (absPct >= def.min && absPct < def.max) return tier;
+    const [min, max] = ranges[tier];
+    if (absPct >= min && absPct < max) return tier;
   }
   return 'EXTREME';
-}
-
-function tierDistance(a: MoveTier, b: MoveTier): number {
-  return Math.abs(TIER_ORDER.indexOf(a) - TIER_ORDER.indexOf(b));
 }
 
 function getExpiresAt(timeframe: PredictionTime): Date {
@@ -95,7 +95,15 @@ function computeRank(stats: { totalPredictions: number; accuracyRate: number }):
 
 export const PredictionsService = {
   async getDailyLimit(user: { plan?: string | null; planExpiresAt?: Date | null; referralProExpiresAt?: Date | null }): Promise<number> {
-    return isPaid(user) ? PREDICTION_LIMITS.proDaily : PREDICTION_LIMITS.freeDaily;
+    if (isUltra(user)) return PREDICTION_LIMITS.ultraDaily;
+    if (isPaid(user))  return PREDICTION_LIMITS.proDaily;
+    return PREDICTION_LIMITS.freeDaily;
+  },
+
+  async getMaxActive(user: { plan?: string | null; planExpiresAt?: Date | null; referralProExpiresAt?: Date | null }): Promise<number> {
+    if (isUltra(user)) return PREDICTION_LIMITS.ultraMaxActive;
+    if (isPaid(user))  return PREDICTION_LIMITS.proMaxActive;
+    return PREDICTION_LIMITS.freeMaxActive;
   },
 
   async getDailyUsed(userId: number): Promise<number> {
@@ -104,12 +112,20 @@ export const PredictionsService = {
   },
 
   async getLimits(userId: number, user: { plan?: string | null; planExpiresAt?: Date | null; referralProExpiresAt?: Date | null }) {
-    const [limit, used] = await Promise.all([
+    const [dailyLimit, used, activeLimit, activeUsed] = await Promise.all([
       this.getDailyLimit(user),
       this.getDailyUsed(userId),
+      this.getMaxActive(user),
+      PredictionRepository.countActiveByUser(userId),
     ]);
     const midnightSec = getCairoMidnightExpirySeconds();
-    return { used, limit, resetsAt: new Date(midnightSec * 1000).toISOString() };
+    return {
+      used,
+      limit: dailyLimit,
+      activeUsed,
+      activeLimit,
+      resetsAt: new Date(midnightSec * 1000).toISOString(),
+    };
   },
 
   async create(
@@ -168,6 +184,14 @@ export const PredictionsService = {
     if (used >= dailyLimit) {
       throw new AppError('DAILY_LIMIT_EXCEEDED', 429,
         `تم استهلاك حد التوقعات اليومي (${dailyLimit}). يتم إعادة التعيين عند منتصف الليل بتوقيت القاهرة.`
+      );
+    }
+
+    const maxActive    = await this.getMaxActive(user);
+    const activeCount  = await PredictionRepository.countActiveByUser(userId);
+    if (activeCount >= maxActive) {
+      throw new AppError('ACTIVE_LIMIT_EXCEEDED', 429,
+        `وصلت للحد الأقصى من التوقعات النشطة (${maxActive}). انتظر حتى تنتهي بعض توقعاتك الحالية أو قم بترقية خطتك.`
       );
     }
 
@@ -305,23 +329,22 @@ export const PredictionsService = {
   /**
    * Resolves a prediction against the actual closing price and scores it.
    *
-   * New tier-based scoring model (EGX-calibrated):
+   * Scoring model (EGX-calibrated, timeframe-aware):
    *
-   *  Step 1 — Direction check: did price move in the predicted direction?
-   *  Step 2 — Magnitude: compute |actual move %| in predicted direction
-   *  Step 3 — Tier matching: map actual move to LIGHT/MEDIUM/STRONG/EXTREME/FLAT
-   *  Step 4 — Base points:
-   *              Wrong direction            →  -5  (MISS_POINTS)
-   *              Right dir, move < 1%       →  10  (DIRECTION_ONLY_POINTS, flat market)
-   *              Right dir, tier exact      →  tierDef.basePoints (30/60/100/150)
-   *              Right dir, 1 tier adjacent →  20  (ADJACENT_TIER_POINTS)
-   *              Right dir, 2+ tiers off    →  10  (DIRECTION_ONLY_POINTS)
-   *  Step 5 — × TIMEFRAME_MULTIPLIER (1.0 → 5.0 for WEEK → YEAR)
+   *  Step 1 — Direction check
+   *  Step 2 — |actual move %| vs TIMEFRAME_TIER_RANGES[timeframe]
+   *  Step 3 — Base points:
+   *              Wrong direction         →  -8  (MISS_POINTS)
+   *              Flat (< tier LIGHT min) →  round(0.08 × base)  consolation
+   *              Tier exact              →  tierDef.basePoints (25/55/100/160)
+   *              ±1 tier adjacent        →  round(0.25 × base)
+   *              ±2+ tiers off           →  round(0.08 × base)
+   *  Step 4 — × TIMEFRAME_MULTIPLIER (1.0 → 4.0 for WEEK → YEAR)
    *
-   *  HIT   = direction correct AND actual move ≥ 1%
-   *  MISSED = direction wrong OR actual move < 1%
+   *  HIT    = direction correct AND actualTier ≠ FLAT
+   *  MISSED = direction wrong OR actualTier = FLAT
    *
-   *  accuracyPct = tier accuracy score (100/50/25/10/0)
+   *  accuracyPct = 100 / 50 / 20 / 8 / 0
    */
   async resolveAndScore(predictionId: string, resolvedPrice: number) {
     const prediction = await PredictionRepository.findByIdForResolution(predictionId);
@@ -329,6 +352,7 @@ export const PredictionsService = {
 
     const direction  = prediction.direction;
     const moveTier   = (prediction.moveTier ?? 'MEDIUM') as MoveTier;
+    const timeframe  = prediction.timeframe;
     const signedMovePct = ((resolvedPrice - prediction.priceAtCreation) / prediction.priceAtCreation) * 100;
 
     const directionCorrect =
@@ -336,7 +360,8 @@ export const PredictionsService = {
       (direction === 'DOWN' && resolvedPrice < prediction.priceAtCreation);
 
     const absMovePct = Math.abs(signedMovePct);
-    const actualTier = getTierForMove(absMovePct);
+    const actualTier = getTierForMove(absMovePct, timeframe);
+    const basePts    = TIER_DEFS[moveTier].basePoints;
 
     // ── Base points ──────────────────────────────────────────────────────────
     let basePoints:  number;
@@ -346,19 +371,19 @@ export const PredictionsService = {
       basePoints   = MISS_POINTS;
       tierAccuracy = 0;
     } else if (actualTier === 'FLAT') {
-      basePoints   = DIRECTION_ONLY_POINTS;
-      tierAccuracy = 10;
+      basePoints   = Math.round(basePts * 0.08);
+      tierAccuracy = 8;
     } else {
-      const dist = tierDistance(moveTier, actualTier);
+      const dist = Math.abs(TIER_ORDER.indexOf(moveTier) - TIER_ORDER.indexOf(actualTier));
       if (dist === 0) {
-        basePoints   = TIER_DEFS[moveTier].basePoints;
+        basePoints   = basePts;
         tierAccuracy = 100;
       } else if (dist === 1) {
-        basePoints   = ADJACENT_TIER_POINTS;
+        basePoints   = Math.round(basePts * 0.25);
         tierAccuracy = 50;
       } else {
-        basePoints   = DIRECTION_ONLY_POINTS;
-        tierAccuracy = 25;
+        basePoints   = Math.round(basePts * 0.08);
+        tierAccuracy = 20;
       }
     }
 
