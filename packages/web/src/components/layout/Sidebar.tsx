@@ -55,7 +55,7 @@ const SECTIONS: { groupKey: string; items: NavItem[] }[] = [
 
 // Always pinned at bottom — separated visually from main nav
 const BOTTOM_ITEMS: NavItem[] = [
-  { id: 'settings', path: '/settings/account', icon: Settings  },
+  { id: 'settings', path: '/settings', icon: Settings  },
   { id: 'support',  path: '/support',          icon: LifeBuoy  },
 ];
 

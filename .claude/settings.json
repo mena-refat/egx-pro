@@ -124,7 +124,12 @@
       "Bash(source ../../.env)",
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
       "Bash(source .env)",
-      "Bash(set +a)"
+      "Bash(set +a)",
+      "Bash(grep -r \"export.*Blocker\\\\|type Blocker\" node_modules/react-router-dom/dist/*.d.ts)",
+      "Bash(grep -r \"export.*Blocker\\\\|type Blocker\" node_modules/react-router/dist/*.d.ts)",
+      "Bash(find packages/web/node_modules/react-router* -name *.d.ts)",
+      "Bash(find node_modules/react-router -name *.d.ts -o -name *.d.mts)",
+      "Bash(find node_modules/react-router -name *.d.mts)"
     ],
     "additionalDirectories": [
       "C:\\Users\\menar\\Desktop\\src\\lib\\lib"

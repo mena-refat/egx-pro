@@ -1,5 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '../../store/authStore';
 import {
   User,
   Shield,
@@ -7,73 +9,212 @@ import {
   BarChart2,
   CreditCard,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
-interface TabItem {
+interface SettingCard {
   id: string;
   path: string;
   label: string;
+  desc: string;
   icon: React.ComponentType<{ className?: string }>;
   danger?: boolean;
+  iconBg: string;
+  iconColor: string;
 }
 
-const TABS: TabItem[] = [
-  { id: 'account',      path: '/settings/account',      label: 'معلوماتي',           icon: User       },
-  { id: 'security',     path: '/settings/security',     label: 'الأمان',             icon: Shield     },
-  { id: 'investor',     path: '/settings/investor',     label: 'ملف المستثمر',       icon: BarChart2  },
-  { id: 'preferences',  path: '/settings/preferences',  label: 'المظهر والإشعارات', icon: Sliders    },
-  { id: 'subscription', path: '/settings/subscription', label: 'الاشتراك',           icon: CreditCard },
-  { id: 'danger',       path: '/settings/danger',       label: 'حذف الحساب',         icon: Trash2,    danger: true },
+const CARDS: SettingCard[] = [
+  {
+    id: 'account',
+    path: '/settings/account',
+    label: 'معلوماتي',
+    desc: 'الاسم والصورة والبريد الإلكتروني',
+    icon: User,
+    iconBg: 'bg-[var(--brand)]/10',
+    iconColor: 'text-[var(--brand)]',
+  },
+  {
+    id: 'security',
+    path: '/settings/security',
+    label: 'الأمان',
+    desc: 'كلمة المرور والتحقق الثنائي',
+    icon: Shield,
+    iconBg: 'bg-emerald-400/10',
+    iconColor: 'text-emerald-400',
+  },
+  {
+    id: 'investor',
+    path: '/settings/investor',
+    label: 'ملف المستثمر',
+    desc: 'أهدافك وشخصيتك الاستثمارية',
+    icon: BarChart2,
+    iconBg: 'bg-violet-400/10',
+    iconColor: 'text-violet-400',
+  },
+  {
+    id: 'preferences',
+    path: '/settings/preferences',
+    label: 'المظهر والإشعارات',
+    desc: 'الثيم واللغة وإعدادات الإشعارات',
+    icon: Sliders,
+    iconBg: 'bg-amber-400/10',
+    iconColor: 'text-amber-400',
+  },
+  {
+    id: 'subscription',
+    path: '/settings/subscription',
+    label: 'الاشتراك',
+    desc: 'ترقية الخطة وإدارة المزايا',
+    icon: CreditCard,
+    iconBg: 'bg-sky-400/10',
+    iconColor: 'text-sky-400',
+  },
+  {
+    id: 'danger',
+    path: '/settings/danger',
+    label: 'حذف الحساب',
+    desc: 'حذف حسابك وبياناتك نهائياً',
+    icon: Trash2,
+    iconBg: 'bg-[var(--danger)]/10',
+    iconColor: 'text-[var(--danger)]',
+    danger: true,
+  },
 ];
 
-const PREFS_ALIASES = ['/settings/notifications'];
+const PREFS_ALIASES  = ['/settings/notifications'];
+const SUB_ALIASES: Record<string, string> = {
+  '/settings/notifications': 'preferences',
+  '/settings/perks':         'subscription',
+  '/settings/overview':      'subscription',
+};
 
-function isTabActive(tab: TabItem, pathname: string): boolean {
-  if (pathname === tab.path) return true;
-  if (tab.id === 'preferences')  return PREFS_ALIASES.includes(pathname);
-  if (tab.id === 'subscription') return ['/settings/perks', '/settings/overview'].includes(pathname);
-  return false;
+function getActiveCard(pathname: string): SettingCard | undefined {
+  return CARDS.find((c) => {
+    if (pathname === c.path) return true;
+    if (c.id === 'preferences'  && PREFS_ALIASES.includes(pathname)) return true;
+    if (c.id === 'subscription' && ['/settings/perks', '/settings/overview'].includes(pathname)) return true;
+    return false;
+  });
 }
 
-export default function SettingsLayout() {
+// ── Settings index — card grid ──────────────────────────────────────────────
+function SettingsIndex() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { t } = useTranslation('common');
+  const user = useAuthStore((s) => s.user);
+
+  const plan = (user as { plan?: string } | null)?.plan ?? 'free';
+  const planBadge =
+    plan === 'ultra'
+      ? { label: 'Ultra ✦', cls: 'bg-amber-500/15 text-amber-400 border border-amber-400/30' }
+      : plan === 'pro' || plan === 'yearly'
+      ? { label: 'Pro', cls: 'bg-[var(--brand)]/15 text-[var(--brand)] border border-[var(--brand)]/30' }
+      : { label: t('subscription.free', { defaultValue: 'مجاني' }), cls: 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border)]' };
 
   return (
-    <div className="max-w-2xl mx-auto" dir="rtl">
+    <div className="space-y-5" dir="rtl">
+      {/* User pill */}
+      <div className="flex items-center gap-3 p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border)]">
+        <div className="w-12 h-12 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] flex items-center justify-center shrink-0 overflow-hidden">
+          {user?.avatarUrl
+            ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+            : <User className="w-5 h-5 text-[var(--text-muted)]" />
+          }
+        </div>
+        <div className="min-w-0 flex-1">
+          {user?.fullName && (
+            <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{user.fullName}</p>
+          )}
+          {user?.username && (
+            <p className="text-xs text-[var(--text-muted)] truncate">@{user.username}</p>
+          )}
+        </div>
+        <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold shrink-0 border ${planBadge.cls}`}>
+          {planBadge.label}
+        </span>
+      </div>
 
-      {/* ── Horizontal tab bar ── */}
-      <div className="flex gap-1 overflow-x-auto border-b border-[var(--border)] -mx-1 px-1 mb-6 scrollbar-hide">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = isTabActive(tab, location.pathname);
+      {/* Cards */}
+      <div className="space-y-2">
+        {CARDS.map((card) => {
+          const Icon = card.icon;
           return (
             <button
-              key={tab.id}
+              key={card.id}
               type="button"
-              onClick={() => navigate(tab.path)}
-              className={`
-                flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium whitespace-nowrap shrink-0
-                transition-colors border-b-2 -mb-px
-                ${isActive
-                  ? tab.danger
-                    ? 'border-[var(--danger)] text-[var(--danger)] bg-[var(--danger-bg)]'
-                    : 'border-[var(--brand)] text-[var(--brand)]'
-                  : tab.danger
-                  ? 'border-transparent text-[var(--danger)]/70 hover:text-[var(--danger)] hover:bg-[var(--danger-bg)]'
-                  : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
+              onClick={() => navigate(card.path)}
+              className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl border transition-all text-start group
+                ${card.danger
+                  ? 'bg-[var(--bg-card)] border-[var(--border)] hover:border-[var(--danger)]/40 hover:bg-[var(--danger-bg)]'
+                  : 'bg-[var(--bg-card)] border-[var(--border)] hover:border-[var(--brand)]/30 hover:bg-[var(--bg-card-hover)]'
                 }
               `}
             >
-              <Icon className="w-3.5 h-3.5 shrink-0" />
-              {tab.label}
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${card.iconBg}`}>
+                <Icon className={`w-5 h-5 ${card.iconColor}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold ${card.danger ? 'text-[var(--danger)]' : 'text-[var(--text-primary)]'}`}>
+                  {card.label}
+                </p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{card.desc}</p>
+              </div>
+              <ChevronLeft className={`w-4 h-4 shrink-0 transition-transform group-hover:-translate-x-0.5
+                ${card.danger ? 'text-[var(--danger)]/50' : 'text-[var(--text-muted)]'}`}
+              />
             </button>
           );
         })}
       </div>
+    </div>
+  );
+}
 
-      {/* ── Page content ── */}
+// ── Sub-page wrapper with back button ───────────────────────────────────────
+function SettingsSubPage({ card }: { card: SettingCard }) {
+  const navigate  = useNavigate();
+  const Icon      = card.icon;
+
+  return (
+    <div className="space-y-5" dir="rtl">
+      {/* Back + title */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/settings')}
+          className="w-8 h-8 flex items-center justify-center rounded-xl bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors shrink-0"
+          aria-label="رجوع"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${card.iconBg} shrink-0`}>
+          <Icon className={`w-4 h-4 ${card.iconColor}`} />
+        </div>
+        <h2 className={`text-base font-bold ${card.danger ? 'text-[var(--danger)]' : 'text-[var(--text-primary)]'}`}>
+          {card.label}
+        </h2>
+      </div>
+
       <Outlet />
+    </div>
+  );
+}
+
+// ── Main layout ──────────────────────────────────────────────────────────────
+export default function SettingsLayout() {
+  const location = useLocation();
+  const isIndex  = location.pathname === '/settings' || location.pathname === '/settings/';
+  const activeCard = getActiveCard(location.pathname);
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      {isIndex
+        ? <SettingsIndex />
+        : activeCard
+          ? <SettingsSubPage card={activeCard} />
+          : <Outlet />
+      }
     </div>
   );
 }

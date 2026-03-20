@@ -256,7 +256,7 @@ export default function PortfolioPage() {
                       <View style={{
                         width: 42, height: 42, borderRadius: RADIUS.md,
                         backgroundColor: BRAND_BG_STRONG, borderWidth: 1, borderColor: BRAND + '28',
-                        alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md, flexShrink: 0,
+                        alignItems: 'center', justifyContent: 'center', marginEnd: SPACE.md, flexShrink: 0,
                       }}>
                         <Text style={{ color: BRAND, fontSize: 8, fontWeight: WEIGHT.extrabold }} numberOfLines={1}>
                           {h.ticker.slice(0, 4)}

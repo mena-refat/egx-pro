@@ -313,7 +313,7 @@ export default function HomePage() {
                     <View style={{
                       width: 40, height: 40, borderRadius: RADIUS.md,
                       backgroundColor: BRAND_BG_STRONG, borderWidth: 1, borderColor: BRAND + '28',
-                      alignItems: 'center', justifyContent: 'center', marginRight: SPACE.md, flexShrink: 0,
+                      alignItems: 'center', justifyContent: 'center', marginEnd: SPACE.md, flexShrink: 0,
                     }}>
                       <Text style={{ color: BRAND, fontSize: 8, fontWeight: WEIGHT.extrabold }} numberOfLines={1}>
                         {h.ticker.slice(0, 4)}
@@ -325,7 +325,7 @@ export default function HomePage() {
                         {getStockName(h.ticker, 'ar')} · {h.shares} سهم
                       </Text>
                     </View>
-                    <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end', marginLeft: SPACE.sm, flexShrink: 0 }}>
+                    <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end', marginStart: SPACE.sm, flexShrink: 0 }}>
                       <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>
                         {n(h.currentValue)} EGP
                       </Text>

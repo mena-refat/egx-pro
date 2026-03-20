@@ -61,7 +61,7 @@ export function AppRoutes({ currentWealth }: AppRoutesProps) {
       <Route path="/goals" element={<ErrorBoundary><Suspense fallback={<GoalsSkeleton />}><GoalsPage currentWealth={currentWealth} /></Suspense></ErrorBoundary>} />
 
       <Route path="/settings" element={<ErrorBoundary><SettingsLayout /></ErrorBoundary>}>
-        <Route index element={<Navigate to="/settings/account" replace />} />
+        <Route index element={null} />
         <Route path="account"      element={<AccountSettingsTab />} />
         <Route path="security"     element={<SecuritySettingsTab />} />
         <Route path="preferences"  element={<PreferencesSettingsTab />} />

@@ -173,7 +173,7 @@ export default function ProfilePage() {
       if (!ctrl.signal.aborted) { setStats(s); setCompletion(c); }
     });
     return () => ctrl.abort();
-  }, [accessToken]);
+  }, [accessToken, authUser]);
 
   if (loading || !profileUser) {
     return (

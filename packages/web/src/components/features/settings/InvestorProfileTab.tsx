@@ -7,6 +7,8 @@ import {
 import { useAuthStore } from '../../../store/authStore';
 import api from '../../../lib/api';
 import { Button } from '../../ui/Button';
+import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
+import { UnsavedChangesDialog } from '../../shared/UnsavedChangesDialog';
 
 // ─── Constants (mirror of OnboardingWizard) ──────────────────────────────────
 
@@ -167,6 +169,8 @@ export function InvestorProfileTab() {
   const [status, setStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [dirty, setDirty] = useState(false);
 
+  const blocker = useUnsavedChanges(dirty);
+
   function update(patch: Partial<InvestorFormState>) {
     setForm((prev) => ({ ...prev, ...patch }));
     setDirty(true);
@@ -235,6 +239,7 @@ export function InvestorProfileTab() {
 
   return (
     <div className="space-y-5 max-w-2xl">
+      <UnsavedChangesDialog blocker={blocker} />
 
       {/* Goal */}
       <Section icon={Target} title="هدف الاستثمار">

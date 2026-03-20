@@ -7,6 +7,8 @@ import { TIMEOUTS } from '../../../lib/constants';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import type { ProfileTabProps } from './types';
+import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
+import { UnsavedChangesDialog } from '../../shared/UnsavedChangesDialog';
 
 function displayPhone(phone: string | null | undefined): string {
   if (!phone) return '';
@@ -209,8 +211,11 @@ export function AccountTab({ user, onUpdateProfile, setRequestStatus }: ProfileT
   const isRtl = i18n.language.startsWith('ar');
   const inputBase = 'w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none transition-colors';
 
+  const blocker = useUnsavedChanges(editingField !== null);
+
   return (
     <div className="space-y-6">
+      <UnsavedChangesDialog blocker={blocker} />
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6">
         <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2 mb-4">
           <User className="w-5 h-5 text-[var(--text-muted)]" />
