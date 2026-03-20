@@ -1,6 +1,7 @@
 import { View, Text } from 'react-native';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
+import { GREEN_BG, RED_BG, RADIUS, SPACE, WEIGHT } from '../../lib/theme';
 
 interface Props {
   change: number;
@@ -15,23 +16,39 @@ export function PriceTag({ change, changePercent, size = 'md', showIcon = true }
   const isUp = safeChange > 0;
   const isDown = safeChange < 0;
   const color = isUp ? '#4ade80' : isDown ? '#f87171' : '#8b949e';
-  const bgColor = isUp ? 'bg-emerald-500/10' : isDown ? 'bg-red-500/10' : 'bg-white/[0.04]';
-  const sizes = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' } as const;
+  const { colors } = useTheme();
+  const bgColor = isUp ? GREEN_BG
+    : isDown ? RED_BG
+    : `${colors.textSub}14`; // small neutral glass effect
+
+  const sizes = { sm: 11, md: 13, lg: 16 } as const;
   const iconSz = { sm: 12, md: 14, lg: 16 }[size];
   const prefix = isUp ? '+' : '';
 
   return (
-    <View className={`flex-row items-center gap-1 px-2 py-1 rounded-lg ${bgColor}`}>
-      {showIcon &&
-        (isUp ? (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACE.xs,
+        paddingHorizontal: SPACE.sm,
+        paddingVertical: SPACE.xs,
+        borderRadius: RADIUS.lg,
+        backgroundColor: bgColor,
+      }}
+    >
+      {showIcon && (
+        isUp ? (
           <TrendingUp size={iconSz} color={color} />
         ) : isDown ? (
           <TrendingDown size={iconSz} color={color} />
         ) : (
           <Minus size={iconSz} color={color} />
-        ))}
-      <Text className={`${sizes[size]} font-semibold`} style={{ color }}>
-        {prefix}{safePct.toFixed(2)}%
+        )
+      )}
+      <Text style={{ color, fontSize: sizes[size], fontWeight: WEIGHT.semibold }}>
+        {prefix}
+        {safePct.toFixed(2)}%
       </Text>
     </View>
   );
@@ -39,10 +56,17 @@ export function PriceTag({ change, changePercent, size = 'md', showIcon = true }
 
 export function StockPrice({ price, size = 'md' }: { price: number; size?: 'sm' | 'md' | 'lg' }) {
   const { colors } = useTheme();
-  const sizes = { sm: 'text-sm', md: 'text-base', lg: 'text-xl' } as const;
+  const sizes = { sm: 13, md: 15, lg: 20 } as const;
   const safePrice = isFinite(price) ? price : 0;
   return (
-    <Text style={{ color: colors.text }} className={`${sizes[size]} font-bold tabular-nums`}>
+    <Text
+      style={{
+        color: colors.text,
+        fontSize: sizes[size],
+        fontWeight: WEIGHT.bold,
+        fontVariant: ['tabular-nums'],
+      }}
+    >
       {safePrice.toFixed(2)}
     </Text>
   );

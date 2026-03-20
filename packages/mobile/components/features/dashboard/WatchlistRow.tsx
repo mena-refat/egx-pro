@@ -21,17 +21,25 @@ export function WatchlistRow({ stock, livePrice }: Props) {
     <Pressable
       onPress={() => router.push(`/stocks/${stock.ticker}`)}
       style={({ pressed }) => [
-        { backgroundColor: pressed ? colors.hover : 'transparent', paddingHorizontal: 16 },
+        {
+          backgroundColor: pressed ? colors.hover : 'transparent',
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        },
       ]}
-      className="flex-row items-center justify-between py-3"
     >
-      <View className="flex-1">
-        <Text style={{ color: colors.text }} className="text-sm font-semibold">{stock.ticker}</Text>
-        <Text style={{ color: colors.textSub }} className="text-xs mt-0.5" numberOfLines={1}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>
+          {stock.ticker}
+        </Text>
+        <Text style={{ color: colors.textSub, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
           {getStockName(stock.ticker, 'ar')}
         </Text>
       </View>
-      <View className="items-end gap-1">
+      <View style={{ alignItems: 'flex-end', gap: 4 }}>
         <StockPrice price={price} />
         <PriceTag change={change} changePercent={changePercent} size="sm" />
       </View>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../../store/authStore';
 import { useProfileStore } from '../../../store/profileStore';
 import {
@@ -14,9 +14,13 @@ import {
   Crosshair,
   ChevronLeft,
   ChevronRight,
+  Gift,
+  Award,
 } from 'lucide-react';
 import { FollowersFollowingModal, ProfileCounterRow } from '.';
 import { usePredictionsApi } from '../../../hooks/usePredictionsApi';
+import { ReferralTab } from '../settings/ReferralTab';
+import { AchievementsTab } from '../settings/AchievementsTab';
 import api from '../../../lib/api';
 import type { User } from '../../../types';
 import type { ProfileUser } from '.';
@@ -64,6 +68,14 @@ function fieldLabel(field: string): string {
   return map[field] ?? field;
 }
 
+type ProfileTab = 'overview' | 'achievements' | 'referral';
+
+const PROFILE_TABS: { id: ProfileTab; label: string; icon: typeof UserIcon }[] = [
+  { id: 'overview',      label: 'نظرة عامة', icon: UserIcon },
+  { id: 'achievements',  label: 'الإنجازات', icon: Award    },
+  { id: 'referral',      label: 'الإحالة',   icon: Gift     },
+];
+
 export default function ProfilePage() {
   const { t, i18n } = useTranslation('common');
   const { user: authUser, accessToken } = useAuthStore();
@@ -73,7 +85,11 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(() => !authUser);
   const { setCounts, followersCount, followingCount } = useProfileStore();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { fetchMyStats } = usePredictionsApi();
+
+  const rawTab = searchParams.get('tab') as ProfileTab | null;
+  const activeTab: ProfileTab = rawTab === 'achievements' || rawTab === 'referral' ? rawTab : 'overview';
 
   const [predictionStats, setPredictionStats] = useState<{
     rank: string;
@@ -177,24 +193,28 @@ export default function ProfilePage() {
 
   const ChevronEnd = isRtl ? ChevronLeft : ChevronRight;
 
-  // Prediction rank label
   const rankKey = predictionStats
     ? `predictions.rank${predictionStats.rank.charAt(0)}${predictionStats.rank.slice(1).toLowerCase()}`
     : '';
+
+  const setTab = (tab: ProfileTab) => {
+    if (tab === 'overview') {
+      setSearchParams({});
+    } else {
+      setSearchParams({ tab });
+    }
+  };
 
   return (
     <div className="space-y-4" dir={isRtl ? 'rtl' : 'ltr'}>
 
       {/* ── Hero card ── */}
       <div className="relative rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
-        {/* Decorative gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--brand)]/8 via-transparent to-transparent pointer-events-none" />
         <div className="absolute -top-10 -end-10 w-40 h-40 rounded-full bg-[var(--brand)]/6 blur-3xl pointer-events-none" />
 
         <div className="relative p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
-
-            {/* Avatar + info */}
             <div className="flex items-center gap-4">
               <div className="w-20 h-20 rounded-2xl bg-[var(--bg-secondary)] border-2 border-[var(--border)] flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
                 {profileUser.avatarUrl
@@ -221,7 +241,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Edit button */}
             <button
               type="button"
               onClick={() => navigate('/settings/account')}
@@ -232,7 +251,6 @@ export default function ProfilePage() {
             </button>
           </div>
 
-          {/* Followers / following */}
           <div className="mt-4 pt-4 border-t border-[var(--border-subtle)]">
             <ProfileCounterRow
               profileUsername={profileUser.username ?? ''}
@@ -244,116 +262,149 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* ── Stats grid ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          {
-            label: 'قيمة المحفظة',
-            value: stats?.portfolioValue ? `${Math.round(stats.portfolioValue).toLocaleString('en-US')}` : '—',
-            unit: stats?.portfolioValue ? 'EGP' : undefined,
-            icon: Wallet,
-            color: 'text-[var(--brand)]',
-            bg: 'bg-[var(--brand)]/8',
-          },
-          {
-            label: 'تحليلات AI',
-            value: stats?.analysesCount ?? '—',
-            icon: BarChart2,
-            color: 'text-violet-400',
-            bg: 'bg-violet-400/8',
-          },
-          {
-            label: 'المراقبة',
-            value: stats?.watchlistCount ?? '—',
-            icon: Star,
-            color: 'text-amber-400',
-            bg: 'bg-amber-400/8',
-          },
-          {
-            label: 'إجمالي التوقعات',
-            value: predictionStats?.totalPredictions ?? '—',
-            icon: Crosshair,
-            color: 'text-emerald-400',
-            bg: 'bg-emerald-400/8',
-          },
-        ].map((s) => (
-          <div key={s.label} className="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] flex flex-col items-center text-center gap-2">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${s.bg}`}>
-              <s.icon className={`w-4.5 h-4.5 ${s.color}`} style={{ width: 18, height: 18 }} />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-[var(--text-primary)] leading-tight">
-                {s.value}
-                {s.unit && <span className="text-xs text-[var(--text-muted)] font-normal ms-1">{s.unit}</span>}
-              </p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">{s.label}</p>
-            </div>
-          </div>
-        ))}
+      {/* ── Profile Tabs ── */}
+      <div className="flex gap-1 border-b border-[var(--border)] -mx-0">
+        {PROFILE_TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setTab(tab.id)}
+              className={`
+                flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors
+                ${isActive
+                  ? 'border-[var(--brand)] text-[var(--brand)]'
+                  : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
+                }
+              `}
+            >
+              <Icon className="w-4 h-4 shrink-0" />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* ── Profile completion ── */}
-      {completion?.percentage != null && completion.percentage < 100 && (
-        <div className="rounded-xl border border-amber-400/40 bg-amber-400/8 p-4">
-          <div className="flex items-center justify-between mb-2.5">
-            <span className="text-sm font-semibold text-amber-400">أكمل ملفك الشخصي</span>
-            <span className="text-sm font-bold text-amber-400">{completion.percentage}%</span>
-          </div>
-          <div className="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden mb-3">
-            <div
-              className="h-full bg-amber-400 rounded-full transition-[width]"
-              style={{ width: `${completion.percentage}%` }}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {completion.missing?.map((m) => (
-              <button
-                key={m.field}
-                type="button"
-                onClick={() => navigate(m.route)}
-                className="text-xs px-2.5 py-1 rounded-lg bg-amber-400/15 text-amber-400 hover:bg-amber-400/25 transition-colors font-medium"
-              >
-                + {fieldLabel(m.field)}
-              </button>
+      {/* ── Tab content ── */}
+      {activeTab === 'overview' && (
+        <>
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              {
+                label: 'قيمة المحفظة',
+                value: stats?.portfolioValue ? `${Math.round(stats.portfolioValue).toLocaleString('en-US')}` : '—',
+                unit: stats?.portfolioValue ? 'EGP' : undefined,
+                icon: Wallet,
+                color: 'text-[var(--brand)]',
+                bg: 'bg-[var(--brand)]/8',
+              },
+              {
+                label: 'تحليلات AI',
+                value: stats?.analysesCount ?? '—',
+                icon: BarChart2,
+                color: 'text-violet-400',
+                bg: 'bg-violet-400/8',
+              },
+              {
+                label: 'المراقبة',
+                value: stats?.watchlistCount ?? '—',
+                icon: Star,
+                color: 'text-amber-400',
+                bg: 'bg-amber-400/8',
+              },
+              {
+                label: 'إجمالي التوقعات',
+                value: predictionStats?.totalPredictions ?? '—',
+                icon: Crosshair,
+                color: 'text-emerald-400',
+                bg: 'bg-emerald-400/8',
+              },
+            ].map((s) => (
+              <div key={s.label} className="p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] flex flex-col items-center text-center gap-2">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${s.bg}`}>
+                  <s.icon className={`${s.color}`} style={{ width: 18, height: 18 }} />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-[var(--text-primary)] leading-tight">
+                    {s.value}
+                    {s.unit && <span className="text-xs text-[var(--text-muted)] font-normal ms-1">{s.unit}</span>}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">{s.label}</p>
+                </div>
+              </div>
             ))}
           </div>
-        </div>
+
+          {/* Profile completion */}
+          {completion?.percentage != null && completion.percentage < 100 && (
+            <div className="rounded-xl border border-amber-400/40 bg-amber-400/8 p-4">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-sm font-semibold text-amber-400">أكمل ملفك الشخصي</span>
+                <span className="text-sm font-bold text-amber-400">{completion.percentage}%</span>
+              </div>
+              <div className="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden mb-3">
+                <div
+                  className="h-full bg-amber-400 rounded-full transition-[width]"
+                  style={{ width: `${completion.percentage}%` }}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {completion.missing?.map((m) => (
+                  <button
+                    key={m.field}
+                    type="button"
+                    onClick={() => navigate(m.route)}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-amber-400/15 text-amber-400 hover:bg-amber-400/25 transition-colors font-medium"
+                  >
+                    + {fieldLabel(m.field)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Prediction stats */}
+          {predictionStats && (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-[var(--brand)]/10 flex items-center justify-center">
+                    <Trophy className="w-4 h-4 text-[var(--brand)]" />
+                  </div>
+                  <span className="font-semibold text-[var(--text-primary)] text-sm">إحصائيات التوقعات</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/predictions')}
+                  className="text-xs text-[var(--brand)] hover:underline flex items-center gap-0.5"
+                >
+                  عرض الكل
+                  <ChevronEnd className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {[
+                  { label: 'المستوى', value: t(rankKey, { defaultValue: predictionStats.rank }) },
+                  { label: 'الدقة', value: predictionStats.accuracyRate != null ? `${Math.round(predictionStats.accuracyRate)}%` : '—' },
+                  { label: 'النقاط', value: predictionStats.totalPoints != null ? predictionStats.totalPoints.toLocaleString('en-US') : '—' },
+                  { label: 'أفضل سلسلة', value: predictionStats.bestStreak ? `${predictionStats.bestStreak} ✓` : '—' },
+                ].map((item) => (
+                  <div key={item.label} className="p-3 rounded-xl bg-[var(--bg-secondary)] text-center">
+                    <p className="text-base font-bold text-[var(--text-primary)]">{item.value}</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5">{item.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {/* ── Prediction stats ── */}
-      {predictionStats && (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[var(--brand)]/10 flex items-center justify-center">
-                <Trophy className="w-4 h-4 text-[var(--brand)]" />
-              </div>
-              <span className="font-semibold text-[var(--text-primary)] text-sm">إحصائيات التوقعات</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/predictions')}
-              className="text-xs text-[var(--brand)] hover:underline flex items-center gap-0.5"
-            >
-              عرض الكل
-              <ChevronEnd className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {[
-              { label: 'المستوى', value: t(rankKey, { defaultValue: predictionStats.rank }) },
-              { label: 'الدقة', value: predictionStats.accuracyRate != null ? `${Math.round(predictionStats.accuracyRate)}%` : '—' },
-              { label: 'النقاط', value: predictionStats.totalPoints != null ? predictionStats.totalPoints.toLocaleString('en-US') : '—' },
-              { label: 'أفضل سلسلة', value: predictionStats.bestStreak ? `${predictionStats.bestStreak} ✓` : '—' },
-            ].map((item) => (
-              <div key={item.label} className="p-3 rounded-xl bg-[var(--bg-secondary)] text-center">
-                <p className="text-base font-bold text-[var(--text-primary)]">{item.value}</p>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">{item.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {activeTab === 'achievements' && <AchievementsTab />}
+      {activeTab === 'referral'     && <ReferralTab />}
 
       <FollowersFollowingModal />
     </div>

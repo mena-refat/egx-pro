@@ -28,30 +28,21 @@ function TabIcon({
   focused: boolean;
 }) {
   return (
-    <View style={tabIconContainerStyle}>
+    <View style={{ alignItems: 'center', gap: 3 }}>
       <Icon size={22} color={color} />
-      {/* Always render the dot to avoid any layout shift when focused/unfocused */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: -1,
-          width: 4,
-          height: 4,
-          borderRadius: 2,
-          backgroundColor: focused ? BRAND : 'transparent',
-        }}
-      />
+      {focused && (
+        <View
+          style={{
+            width: 4,
+            height: 4,
+            borderRadius: 2,
+            backgroundColor: BRAND,
+          }}
+        />
+      )}
     </View>
   );
 }
-
-const tabIconContainerStyle = {
-  width: 38,
-  height: 36,
-  alignItems: 'center',
-  justifyContent: 'center',
-  position: 'relative',
-};
 
 export default function TabsLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);

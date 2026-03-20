@@ -3,6 +3,7 @@ import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import apiClient from '../../../lib/api/client';
 import { useTheme } from '../../../hooks/useTheme';
+import { BRAND } from '../../../lib/theme';
 
 interface DataPoint {
   date: string;
@@ -112,19 +113,36 @@ export function StockChart({ ticker, lineColor }: Props) {
       : { linePath: '', areaPath: '' };
 
   return (
-    <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-4">
+    <View
+      style={{
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        borderWidth: 1,
+        borderRadius: 24,
+        padding: 16,
+      }}
+    >
       {/* Range selector */}
-      <View className="flex-row gap-1 mb-4">
+      <View style={{ flexDirection: 'row', gap: 4, marginBottom: 16 }}>
         {RANGES.map((r) => (
           <Pressable
             key={r.id}
             onPress={() => setRange(r.id)}
-            style={range === r.id ? {} : { backgroundColor: colors.hover }}
-            className={`flex-1 py-1.5 rounded-lg items-center ${range === r.id ? 'bg-brand' : ''}`}
+            style={{
+              flex: 1,
+              paddingVertical: 6,
+              borderRadius: 12,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: range === r.id ? BRAND : colors.hover,
+            }}
           >
             <Text
-              style={{ color: range === r.id ? '#fff' : colors.textSub }}
-              className="text-xs font-semibold"
+              style={{
+                color: range === r.id ? '#fff' : colors.textSub,
+                fontSize: 11,
+                fontWeight: '600',
+              }}
             >
               {r.label}
             </Text>
@@ -133,12 +151,12 @@ export function StockChart({ ticker, lineColor }: Props) {
       </View>
 
       {loading ? (
-        <View style={{ height: CHART_HEIGHT }} className="items-center justify-center">
+        <View style={{ height: CHART_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color="#8b5cf6" />
         </View>
       ) : data.length === 0 ? (
-        <View style={{ height: CHART_HEIGHT }} className="items-center justify-center">
-          <Text style={{ color: colors.textMuted }} className="text-sm">لا توجد بيانات</Text>
+        <View style={{ height: CHART_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: colors.textMuted, fontSize: 13 }}>لا توجد بيانات</Text>
         </View>
       ) : (
         <View

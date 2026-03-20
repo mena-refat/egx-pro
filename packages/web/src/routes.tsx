@@ -23,7 +23,6 @@ import {
   SecuritySettingsTab,
   PreferencesSettingsTab,
   DangerSettingsTab,
-  SettingsTabContent,
 } from './components/features/settings';
 import SettingsLayout from './components/layout/SettingsLayout';
 
@@ -60,21 +59,24 @@ export function AppRoutes({ currentWealth }: AppRoutesProps) {
       <Route path="/market" element={<ErrorBoundary><Suspense fallback={<MarketSkeleton />}><MarketPage /></Suspense></ErrorBoundary>} />
       <Route path="/calculator" element={<ErrorBoundary><Suspense fallback={<CalculatorSkeleton />}><InvestmentCalculator /></Suspense></ErrorBoundary>} />
       <Route path="/goals" element={<ErrorBoundary><Suspense fallback={<GoalsSkeleton />}><GoalsPage currentWealth={currentWealth} /></Suspense></ErrorBoundary>} />
+
       <Route path="/settings" element={<ErrorBoundary><SettingsLayout /></ErrorBoundary>}>
         <Route index element={<Navigate to="/settings/account" replace />} />
-        <Route path="account"       element={<AccountSettingsTab />} />
-        <Route path="security"      element={<SecuritySettingsTab />} />
-        <Route path="preferences"   element={<PreferencesSettingsTab />} />
-        <Route path="investor"      element={<InvestorProfileTab />} />
-        <Route path="danger"        element={<DangerSettingsTab />} />
-        <Route path="perks"         element={<SettingsTabContent />} />
-        {/* Redirects for old routes */}
-        <Route path="notifications" element={<Navigate to="/settings/preferences" replace />} />
-        <Route path="overview"      element={<Navigate to="/settings/perks" replace />} />
-        <Route path="subscription"  element={<Navigate to="/settings/perks" replace />} />
-        <Route path="referrals"     element={<Navigate to="/settings/perks" replace />} />
-        <Route path="achievements"  element={<Navigate to="/settings/perks" replace />} />
+        <Route path="account"      element={<AccountSettingsTab />} />
+        <Route path="security"     element={<SecuritySettingsTab />} />
+        <Route path="preferences"  element={<PreferencesSettingsTab />} />
+        <Route path="investor"     element={<InvestorProfileTab />} />
+        <Route path="subscription" element={<SubscriptionTab />} />
+        <Route path="danger"       element={<DangerSettingsTab />} />
+        {/* Redirects for old/moved routes */}
+        <Route path="notifications" element={<Navigate to="/settings/preferences"              replace />} />
+        <Route path="perks"         element={<Navigate to="/settings/subscription"             replace />} />
+        <Route path="overview"      element={<Navigate to="/settings/subscription"             replace />} />
+        <Route path="referral"      element={<Navigate to="/profile?tab=referral"              replace />} />
+        <Route path="referrals"     element={<Navigate to="/profile?tab=referral"              replace />} />
+        <Route path="achievements"  element={<Navigate to="/profile?tab=achievements"          replace />} />
       </Route>
+
       <Route path="/profile" element={<ErrorBoundary><Suspense fallback={<ProfileSkeleton />}><ProfilePage /></Suspense></ErrorBoundary>} />
       <Route path="/profile/:username" element={<ErrorBoundary><Suspense fallback={<ProfileSkeleton />}><SocialProfilePage /></Suspense></ErrorBoundary>} />
       <Route path="/setup-username" element={<ErrorBoundary><Suspense fallback={<UsernameSetupSkeleton />}><UsernameSetupPage /></Suspense></ErrorBoundary>} />

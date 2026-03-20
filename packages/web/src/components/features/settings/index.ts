@@ -8,5 +8,4 @@ export { SecuritySettingsTab } from './SecuritySettingsTab';
 export { PreferencesSettingsTab } from './PreferencesSettingsTab';
 export { NotificationsSettingsTab } from './NotificationsSettingsTab';
 export { DangerSettingsTab } from './DangerSettingsTab';
-export { SettingsTabContent } from './SettingsTabContent';
 export { useSettingsProfile } from './useSettingsProfile';
