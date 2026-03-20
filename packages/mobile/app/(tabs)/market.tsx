@@ -1,12 +1,13 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, Pressable, RefreshControl,
-  TextInput, useWindowDimensions,
+  TextInput, useWindowDimensions, I18nManager,
 } from 'react-native';
 import type { ListRenderItem } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
-  Search, TrendingUp, TrendingDown, ChevronDown, ChevronUp,
+  Search, ChevronDown, ChevronUp,
   BarChart2, Eye, EyeOff, DollarSign,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
@@ -17,10 +18,9 @@ import { useTheme } from '../../hooks/useTheme';
 import { useMarketData } from '../../hooks/useMarketData';
 import { useLivePrices } from '../../hooks/useLivePrices';
 import { getStockName } from '../../lib/egxStocks';
-import { BRAND, BRAND_BG_STRONG, FONT, WEIGHT, RADIUS, SPACE } from '../../lib/theme';
+import { BRAND, BRAND_BG_STRONG, GREEN, RED, FONT, WEIGHT, RADIUS, SPACE } from '../../lib/theme';
 import type { Stock, MarketOverview, CommodityData } from '../../types/stock';
-
-type Tab = 'gainers' | 'losers' | 'all';
+import MarketTrendFilter, { type TrendTab, type MarketTrendCounts } from '../../components/features/stocks/MarketTrendFilter';
 
 const ITEM_HEIGHT = 65;
 
@@ -43,7 +43,7 @@ function getUsdChange(usdEgp?: MarketOverview['usdEgp']): number {
 // ─── IndexCard ──────────────────────────────────────────────────
 function IndexCard({ label, value, changePercent }: { label: string; value: number; changePercent: number }) {
   const { colors } = useTheme();
-  const clr = changePercent === 0 ? colors.textMuted : changePercent > 0 ? '#4ade80' : '#f87171';
+  const clr = changePercent === 0 ? colors.textMuted : changePercent > 0 ? GREEN : RED;
   return (
     <View style={{
       backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1,
@@ -76,7 +76,7 @@ function CommodityKaratTable({ buy24, sell24, karats }: { buy24: number; sell24:
       borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
     }}>
       <View style={{
-        flexDirection: 'row', justifyContent: 'space-between',
+        flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between',
         paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm,
         backgroundColor: colors.hover, borderBottomWidth: 1, borderBottomColor: colors.border,
       }}>
@@ -88,20 +88,37 @@ function CommodityKaratTable({ buy24, sell24, karats }: { buy24: number; sell24:
         <View
           key={k.label}
           style={{
-            flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+            flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center',
             paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm + 2,
             borderBottomWidth: i < karats.length - 1 ? 1 : 0, borderBottomColor: colors.border,
           }}
         >
           <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.semibold, flex: 1 }}>{k.label}</Text>
-          <Text style={{ color: '#4ade80', fontSize: FONT.sm, fontWeight: WEIGHT.bold, width: 90, textAlign: 'center', fontVariant: ['tabular-nums'] }}>
+          <Text style={{ color: GREEN, fontSize: FONT.sm, fontWeight: WEIGHT.bold, width: 90, textAlign: 'center', fontVariant: ['tabular-nums'] }}>
             {n(buy24 * k.ratio, 2)}
           </Text>
-          <Text style={{ color: '#f87171', fontSize: FONT.sm, fontWeight: WEIGHT.bold, width: 90, textAlign: 'center', fontVariant: ['tabular-nums'] }}>
+          <Text style={{ color: RED, fontSize: FONT.sm, fontWeight: WEIGHT.bold, width: 90, textAlign: 'center', fontVariant: ['tabular-nums'] }}>
             {n(sell24 * k.ratio, 2)}
           </Text>
         </View>
       ))}
+    </View>
+  );
+}
+
+// ─── ForexBuySellPanel ─────────────────────────────────────────
+function ForexBuySellPanel({ buy, sell }: { buy: number; sell: number }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: SPACE.md, paddingHorizontal: SPACE.lg, gap: 6 }}>
+      <View style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', gap: SPACE.md }}>
+        <Text style={{ color: GREEN, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>شراء</Text>
+        <Text style={{ color: colors.text, fontSize: FONT.xs, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>{n(buy, 2)} EGP</Text>
+      </View>
+      <View style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', gap: SPACE.md }}>
+        <Text style={{ color: RED, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>بيع</Text>
+        <Text style={{ color: colors.text, fontSize: FONT.xs, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>{n(sell, 2)} EGP</Text>
+      </View>
     </View>
   );
 }
@@ -115,7 +132,7 @@ function CommodityRow({ emoji, label, subtitle, priceLabel, priceValue, changePe
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const isUp    = (changePercent ?? 0) >= 0;
-  const pctClr  = (changePercent ?? 0) === 0 ? colors.textMuted : isUp ? '#4ade80' : '#f87171';
+  const pctClr  = (changePercent ?? 0) === 0 ? colors.textMuted : isUp ? GREEN : RED;
   const hasExpand = !!expandedContent;
 
   return (
@@ -134,11 +151,11 @@ function CommodityRow({ emoji, label, subtitle, priceLabel, priceValue, changePe
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }}>{label}</Text>
           {subtitle && <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{subtitle}</Text>}
-          {buy !== undefined && sell !== undefined && buy > 0 && (
+          {buy !== undefined && sell !== undefined && (buy > 0 || sell > 0) && (
             <View style={{ flexDirection: 'row', gap: SPACE.sm, marginTop: 3 }}>
-              <Text style={{ color: '#4ade80', fontSize: 11, fontWeight: WEIGHT.semibold }}>شراء {n(buy, 2)}</Text>
+              <Text style={{ color: GREEN, fontSize: 11, fontWeight: WEIGHT.semibold }}>شراء {n(buy, 2)}</Text>
               <Text style={{ color: colors.border, fontSize: 11 }}>|</Text>
-              <Text style={{ color: '#f87171', fontSize: 11, fontWeight: WEIGHT.semibold }}>بيع {n(sell, 2)}</Text>
+              <Text style={{ color: RED, fontSize: 11, fontWeight: WEIGHT.semibold }}>بيع {n(sell, 2)}</Text>
             </View>
           )}
         </View>
@@ -172,10 +189,14 @@ function CommoditiesSection({ overview }: { overview: MarketOverview }) {
 
   const goldBuy24   = gold?.buyEgxPerGram  ?? 0;
   const goldSell24  = gold?.sellEgxPerGram ?? 0;
-  const goldPrice   = goldBuy24 > 0 ? (goldBuy24 + goldSell24) / 2 : 0;
+  const goldPrice   = (goldBuy24 > 0 || goldSell24 > 0) ? (goldBuy24 + goldSell24) / 2 : 0;
   const silverBuy   = silver?.buyEgxPerGram  ?? 0;
   const silverSell  = silver?.sellEgxPerGram ?? 0;
-  const silverPrice = silverBuy > 0 ? (silverBuy + silverSell) / 2 : 0;
+  const silverPrice = (silverBuy > 0 || silverSell > 0) ? (silverBuy + silverSell) / 2 : 0;
+
+  // Approximation for display when API only provides mid USD/EGP.
+  const usdBuy  = usdValue > 0 ? usdValue * 0.995 : 0;
+  const usdSell = usdValue > 0 ? usdValue * 1.005 : 0;
 
   const goldKarats   = [{ label: 'عيار 24', ratio: 1 }, { label: 'عيار 21', ratio: 21/24 }, { label: 'عيار 18', ratio: 18/24 }, { label: 'عيار 14', ratio: 14/24 }];
   const silverKarats = [{ label: 'عيار 999', ratio: 1 }, { label: 'عيار 925', ratio: 925/999 }, { label: 'عيار 800', ratio: 800/999 }];
@@ -189,16 +210,24 @@ function CommoditiesSection({ overview }: { overview: MarketOverview }) {
         <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>العملات والسلع</Text>
         <Text style={{ color: colors.textMuted, fontSize: 11 }}>اضغط للتوسع</Text>
       </View>
-      <CommodityRow emoji="💵" label="الدولار الأمريكي" subtitle="USD / EGP" priceValue={usdValue} changePercent={usdChange} priceLabel="EGP" />
+      <CommodityRow
+        emoji="💵"
+        label="الدولار الأمريكي"
+        subtitle="USD / EGP"
+        priceValue={usdValue}
+        changePercent={usdChange}
+        priceLabel="EGP"
+        expandedContent={(usdBuy > 0 || usdSell > 0) ? <ForexBuySellPanel buy={usdBuy} sell={usdSell} /> : undefined}
+      />
       <CommodityRow
         emoji="🥇" label="الذهب" subtitle="عيار 24 — للجرام"
         priceValue={goldPrice} changePercent={gold?.changePercent} buy={goldBuy24} sell={goldSell24} priceLabel="EGP/جم"
-        expandedContent={goldBuy24 > 0 ? <CommodityKaratTable buy24={goldBuy24} sell24={goldSell24} karats={goldKarats} /> : undefined}
+        expandedContent={(goldBuy24 > 0 || goldSell24 > 0) ? <CommodityKaratTable buy24={goldBuy24} sell24={goldSell24} karats={goldKarats} /> : undefined}
       />
       <CommodityRow
         emoji="🥈" label="الفضة" subtitle="عيار 999 — للجرام"
         priceValue={silverPrice} changePercent={silver?.changePercent} buy={silverBuy} sell={silverSell} priceLabel="EGP/جم"
-        expandedContent={silverBuy > 0 ? <CommodityKaratTable buy24={silverBuy} sell24={silverSell} karats={silverKarats} /> : undefined}
+        expandedContent={(silverBuy > 0 || silverSell > 0) ? <CommodityKaratTable buy24={silverBuy} sell24={silverSell} karats={silverKarats} /> : undefined}
       />
     </View>
   );
@@ -263,18 +292,15 @@ interface HeaderProps {
   loadingOverview: boolean;
   loadingStocks: boolean;
   isCompact: boolean;
-  tab: Tab;
-  setTab: (t: Tab) => void;
+  tab: TrendTab;
+  setTab: (t: TrendTab) => void;
   search: string;
   setSearch: (s: string) => void;
+  trendCounts: MarketTrendCounts;
 }
-const MarketListHeader = React.memo(function MarketListHeader({ overview, loadingOverview, loadingStocks, isCompact, tab, setTab, search, setSearch }: HeaderProps) {
+const MarketListHeader = React.memo(function MarketListHeader({ overview, loadingOverview, loadingStocks, isCompact, tab, setTab, search, setSearch, trendCounts }: HeaderProps) {
   const { colors } = useTheme();
-  const TABS = [
-    { id: 'gainers' as Tab, label: 'الصاعدة', icon: TrendingUp,   color: '#4ade80' },
-    { id: 'losers'  as Tab, label: 'الهابطة', icon: TrendingDown, color: '#f87171' },
-    { id: 'all'     as Tab, label: 'الكل',    icon: null,         color: BRAND },
-  ];
+  const { t } = useTranslation();
   return (
     <View>
       <View style={{ paddingTop: SPACE.lg }}>
@@ -298,39 +324,17 @@ const MarketListHeader = React.memo(function MarketListHeader({ overview, loadin
         <TextInput
           value={search}
           onChangeText={setSearch}
-          placeholder="ابحث عن سهم..."
+          placeholder={t('market.search')}
           placeholderTextColor={colors.textMuted}
           style={{ color: colors.text, flex: 1, paddingVertical: 11, fontSize: FONT.base }}
         />
       </View>
-      {/* Filter tabs */}
-      <View style={{
-        marginHorizontal: SPACE.lg, marginBottom: SPACE.sm,
-        backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1,
-        borderRadius: RADIUS.lg, padding: 4, flexDirection: 'row', gap: 4,
-      }}>
-        {TABS.map((t) => {
-          const active = tab === t.id;
-          return (
-            <Pressable
-              key={t.id}
-              onPress={() => setTab(t.id)}
-              style={{
-                flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                gap: 5, paddingVertical: isCompact ? 8 : 9, borderRadius: RADIUS.md - 4,
-                backgroundColor: active ? t.color + '22' : 'transparent',
-                borderWidth: active ? 1 : 0,
-                borderColor: active ? t.color + '44' : 'transparent',
-              }}
-            >
-              {t.icon && <t.icon size={12} color={active ? t.color : colors.textMuted} />}
-              <Text style={{ fontSize: isCompact ? 11 : FONT.xs, fontWeight: WEIGHT.bold, color: active ? t.color : colors.textMuted }}>
-                {t.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <MarketTrendFilter
+        tab={tab}
+        setTab={setTab}
+        counts={trendCounts}
+        compact={isCompact}
+      />
       {loadingStocks && (
         <View style={{ marginHorizontal: SPACE.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden', padding: SPACE.md, gap: 2 }}>
           {Array.from({ length: 8 }).map((_, i) => <Skeleton.Box key={i} height={60} radius={RADIUS.md} />)}
@@ -344,9 +348,10 @@ const MarketListHeader = React.memo(function MarketListHeader({ overview, loadin
 export default function MarketPage() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isCompact = width < 380;
-  const [tab, setTab] = useState<Tab>('gainers');
+  const [tab, setTab] = useState<TrendTab>('gainers');
   const [search, setSearch] = useState('');
   const { overview, stocks, loadingStocks, loadingOverview, refreshing, refresh } = useMarketData();
 
@@ -365,18 +370,41 @@ export default function MarketPage() {
     [stocks, prices],
   );
 
-  const filtered = useMemo(() => {
+  const searchFiltered = useMemo(() => {
     let list = [...enriched];
     if (search.trim()) {
       const q = search.trim().toUpperCase();
       list = list.filter(
-        (s) => s.ticker.includes(q) || getStockName(s.ticker, 'ar').includes(search) || getStockName(s.ticker, 'en').toUpperCase().includes(q),
+        (s) =>
+          s.ticker.includes(q) ||
+          getStockName(s.ticker, 'ar').includes(search) ||
+          getStockName(s.ticker, 'en').toUpperCase().includes(q),
       );
     }
-    if (tab === 'gainers') return list.filter((s) => s.changePercent > 0).sort((a, b) => b.changePercent - a.changePercent);
-    if (tab === 'losers')  return list.filter((s) => s.changePercent < 0).sort((a, b) => a.changePercent - b.changePercent);
-    return list.sort((a, b) => b.changePercent - a.changePercent);
-  }, [enriched, tab, search]);
+    return list;
+  }, [enriched, search]);
+
+  const trendDerived = useMemo(() => {
+    const gainers = searchFiltered.filter((s) => s.changePercent > 0).sort((a, b) => (b.changePercent - a.changePercent) || (b.price - a.price));
+    const losers = searchFiltered.filter((s) => s.changePercent < 0).sort((a, b) => (a.changePercent - b.changePercent) || (b.price - a.price));
+    const all = [...searchFiltered].sort((a, b) => {
+      const absA = Math.abs(a.changePercent);
+      const absB = Math.abs(b.changePercent);
+      if (absB !== absA) return absB - absA; // biggest move first (up or down)
+      if (b.changePercent !== a.changePercent) return b.changePercent - a.changePercent; // prefer gainers in ties
+      return b.price - a.price;
+    });
+
+    const trendCounts: MarketTrendCounts = {
+      gainers: gainers.length,
+      losers: losers.length,
+      all: all.length,
+    };
+
+    return { gainers, losers, all, trendCounts };
+  }, [searchFiltered]);
+
+  const filtered = tab === 'gainers' ? trendDerived.gainers : tab === 'losers' ? trendDerived.losers : trendDerived.all;
 
   useEffect(() => {
     setVisibleTickers(filtered.slice(0, 30).map((s) => s.ticker));
@@ -401,16 +429,23 @@ export default function MarketPage() {
     <MarketListHeader
       overview={overview} loadingOverview={loadingOverview} loadingStocks={loadingStocks}
       isCompact={isCompact} tab={tab} setTab={setTab} search={search} setSearch={setSearch}
+      trendCounts={trendDerived.trendCounts}
     />
-  ), [overview, loadingOverview, loadingStocks, isCompact, tab, search]);
+  ), [overview, loadingOverview, loadingStocks, isCompact, tab, search, trendDerived.trendCounts]);
 
   const listEmpty = useMemo(() => (
     loadingStocks ? null : (
       <View style={{ marginHorizontal: SPACE.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, alignItems: 'center', paddingVertical: 48 }}>
-        <Text style={{ color: colors.textMuted, fontSize: FONT.base }}>لا توجد نتائج</Text>
+        <Text style={{ color: colors.textMuted, fontSize: FONT.base }}>
+          {tab === 'gainers'
+            ? t('market.noGainers')
+            : tab === 'losers'
+              ? t('market.noLosers')
+              : t('market.noAll')}
+        </Text>
       </View>
     )
-  ), [loadingStocks, colors]);
+  ), [loadingStocks, colors, tab, t]);
 
   return (
     <ScreenWrapper padded={false} edges={['top']}>

@@ -302,6 +302,7 @@ export const AdminAnalyticsController = {
   async paidUsersList(req: AdminRequest, res: Response): Promise<void> {
     const { page = '1', plan = '', withDiscount = '', adminGrant = '' } = req.query as Record<string, string>;
     const pageNum = Math.max(1, Number.parseInt(page, 10) || 1);
+    const isSuperAdmin = req.admin?.role === 'SUPER_ADMIN';
 
     const now = new Date();
     const where: Record<string, unknown> = {
@@ -318,7 +319,7 @@ export const AdminAnalyticsController = {
       prisma.user.findMany({
         where,
         select: {
-          id: true,
+          ...(isSuperAdmin ? { id: true } : {}),
           email: true,
           phone: true,
           fullName: true,
@@ -354,8 +355,7 @@ export const AdminAnalyticsController = {
         ? 0
         : basePrice;
 
-      return {
-        id: u.id,
+      const base = {
         email: u.email,
         phone: u.phone,
         fullName: u.fullName,
@@ -370,6 +370,10 @@ export const AdminAnalyticsController = {
         isAdminGrant: u.planSetByAdmin,
         isFreeUpgrade: !u.planSetByAdmin && paidAmount === 0,
       };
+
+      return isSuperAdmin
+        ? { ...base, id: (u as any).id as string }
+        : base;
     });
 
     const filtered =

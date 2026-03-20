@@ -9,7 +9,7 @@ import { Search, Download, RefreshCw, ShieldOff, Trash2, Plus, ShieldCheck } fro
 import { useAdminStore } from '../store/adminAuthStore';
 
 type UserRow = {
-  id: string; email: string | null; phone: string | null;
+  id?: string; email: string | null; phone: string | null;
   fullName: string | null; username: string | null;
   plan: string; createdAt: string; lastLoginAt: string | null;
   isEmailVerified: boolean; aiAnalysisUsedThisMonth: number;
@@ -166,13 +166,15 @@ export default function UsersPage() {
             <button onClick={() => load()} className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-all">
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             </button>
-            <a
-              href={`/api/admin/users/export.csv${plan ? `?plan=${plan}` : ''}`}
-              download
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] rounded-lg text-slate-300 transition-all"
-            >
-              <Download size={13} /> {t('users.exportCsv')}
-            </a>
+            {isSuperAdmin && (
+              <a
+                href={`/api/admin/users/export.csv${plan ? `?plan=${plan}` : ''}`}
+                download
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] rounded-lg text-slate-300 transition-all"
+              >
+                <Download size={13} /> {t('users.exportCsv')}
+              </a>
+            )}
           </div>
         )}
       </div>
@@ -238,8 +240,10 @@ export default function UsersPage() {
             rowCount={users.length}
             empty={t('users.noUsers')}
           >
-            {users.map((u) => (
-              <tr key={u.id} className={`hover:bg-white/[0.02] transition-colors border-b border-white/[0.04] last:border-0 ${u.isSuspended ? 'bg-red-500/[0.03]' : ''}`}>
+            {users.map((u, idx) => {
+              const rowKey = isSuperAdmin ? u.id : (u.email ?? u.phone ?? u.username ?? u.fullName ?? String(idx));
+              return (
+              <tr key={rowKey} className={`hover:bg-white/[0.02] transition-colors border-b border-white/[0.04] last:border-0 ${u.isSuspended ? 'bg-red-500/[0.03]' : ''}`}>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <div>
@@ -270,10 +274,12 @@ export default function UsersPage() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <Link to={`/users/${u.id}`} className="text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
-                      {t('users.view')}
-                    </Link>
-                    {isSuperAdmin && u.isSuspended && (
+                    {isSuperAdmin && u.id && (
+                      <Link to={`/users/${u.id}`} className="text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
+                        {t('users.view')}
+                      </Link>
+                    )}
+                    {isSuperAdmin && u.isSuspended && u.id && (
                       <button
                         onClick={() => void handleUnsuspend(u.id)}
                         disabled={unsuspendingId === u.id}
@@ -286,7 +292,8 @@ export default function UsersPage() {
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </DataTable>
 
           <Pagination page={page} totalPages={Math.ceil(total / 20)} total={total} limit={20} onChange={setPage} />

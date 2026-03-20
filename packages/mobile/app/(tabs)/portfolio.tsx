@@ -1,16 +1,15 @@
 import { useCallback, useMemo } from 'react';
 import {
-  View, Text, ScrollView, FlatList, RefreshControl,
+  View, Text, ScrollView, RefreshControl,
   Pressable, Alert, I18nManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Plus, Briefcase, Star, TrendingUp } from 'lucide-react-native';
+import { Plus, Briefcase, TrendingUp } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
 import { useLivePrices } from '../../hooks/useLivePrices';
 import { usePortfolioData } from '../../hooks/useMarketData';
-import { useWatchlist } from '../../hooks/useWatchlist';
 import { Skeleton } from '../../components/ui/Skeleton';
 import apiClient from '../../lib/api/client';
 import { getStockName } from '../../lib/egxStocks';
@@ -19,46 +18,9 @@ import {
   FONT, WEIGHT, RADIUS, SPACE,
   GREEN, RED,
 } from '../../lib/theme';
-import type { Stock } from '../../types/stock';
 
 function n(v: number, d = 0) {
   return v.toLocaleString('en-US', { maximumFractionDigits: d });
-}
-
-// ─── WatchlistChip (horizontal) ─────────────────────────────────
-function WatchlistChip({ stock, live, onPress }: { stock: Stock; live?: { price: number; changePercent: number }; onPress: () => void }) {
-  const { colors } = useTheme();
-  const price  = live?.price         ?? stock.price         ?? 0;
-  const chgPct = live?.changePercent  ?? stock.changePercent ?? 0;
-  const isUp   = chgPct >= 0;
-  const clr    = chgPct === 0 ? colors.textSub : isUp ? GREEN : RED;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({
-        backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
-        borderRadius: RADIUS.xl, padding: SPACE.md, minWidth: 110, opacity: pressed ? 0.85 : 1,
-      })}
-    >
-      <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{stock.ticker}</Text>
-      <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 1 }} numberOfLines={1}>
-        {getStockName(stock.ticker, 'ar')}
-      </Text>
-      <Text style={{ color: price > 0 ? colors.text : colors.textMuted, fontSize: FONT.base, fontWeight: WEIGHT.bold, marginTop: SPACE.xs, fontVariant: ['tabular-nums'] }}>
-        {price > 0 ? price.toFixed(2) : '—'}
-      </Text>
-      <View style={{
-        flexDirection: 'row', alignItems: 'center', marginTop: 3,
-        backgroundColor: chgPct === 0 ? colors.hover : isUp ? '#4ade8018' : '#f8717118',
-        paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start',
-      }}>
-        <Text style={{ color: clr, fontSize: 11, fontWeight: WEIGHT.semibold, fontVariant: ['tabular-nums'] }}>
-          {isUp ? '+' : ''}{chgPct.toFixed(2)}%
-        </Text>
-      </View>
-    </Pressable>
-  );
 }
 
 // ─── SectionHdr ─────────────────────────────────────────────────
@@ -88,16 +50,13 @@ export default function PortfolioPage() {
   const router   = useRouter();
   const { colors, isDark } = useTheme();
   const { holdings, summary, loading, refreshing, refresh } = usePortfolioData();
-  const { items: watchlist, refetch: reloadWatchlist } = useWatchlist();
 
   const holdingTickers  = useMemo(() => holdings.map((h) => h.ticker), [holdings]);
-  const watchlistTickers = useMemo(() => watchlist.map((s) => s.ticker), [watchlist]);
-  const allTickers      = useMemo(() => [...new Set([...holdingTickers, ...watchlistTickers])], [holdingTickers, watchlistTickers]);
-  const { prices }      = useLivePrices(allTickers);
+  const { prices }      = useLivePrices(holdingTickers);
 
   const handleRefresh = useCallback(async () => {
-    await Promise.all([refresh(), reloadWatchlist()]);
-  }, [refresh, reloadWatchlist]);
+    await refresh();
+  }, [refresh]);
 
   // Live-enriched holdings
   const enrichedHoldings = useMemo(() =>
@@ -294,34 +253,7 @@ export default function PortfolioPage() {
             </View>
           </View>
 
-          {/* ─── 3. Watchlist (horizontal) ─────────── */}
-          {watchlist.length > 0 && (
-            <View>
-              <View style={{ paddingHorizontal: SPACE.lg }}>
-                <SectionHdr
-                  title="قائمة المتابعة"
-                  icon={Star}
-                  action={{ label: 'عرض الكل', onPress: () => router.push('/market') }}
-                />
-              </View>
-              <FlatList
-                data={watchlist}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(s) => s.ticker}
-                contentContainerStyle={{ paddingHorizontal: SPACE.lg, gap: SPACE.sm }}
-                renderItem={({ item: s }) => (
-                  <WatchlistChip
-                    stock={s}
-                    live={prices[s.ticker]}
-                    onPress={() => router.push(`/stocks/${s.ticker}`)}
-                  />
-                )}
-              />
-            </View>
-          )}
-
-          {/* ─── 4. Performance breakdown ──────────── */}
+          {/* ─── 3. Performance breakdown ──────────── */}
           {enrichedHoldings.length > 0 && (
             <View style={{ paddingHorizontal: SPACE.lg }}>
               <SectionHdr title="أداء المحفظة" icon={TrendingUp} />

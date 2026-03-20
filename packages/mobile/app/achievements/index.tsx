@@ -73,6 +73,7 @@ export default function AchievementsPage() {
   const [unlocked, setUnlocked] = useState<Set<string>>(new Set());
   const [unlockedAt, setUnlockedAt] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
   const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
 
@@ -80,6 +81,7 @@ export default function AchievementsPage() {
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
+      setError(null);
       const res = await apiClient.get('/api/user/achievements', { signal });
       const raw: BackendAchievement[] = Array.isArray(res.data)
         ? res.data
@@ -102,7 +104,7 @@ export default function AchievementsPage() {
         setUnlockedAt(ats);
       }
     } catch {
-      // silent
+      if (!signal?.aborted && mountedRef.current) setError('فشل تحميل الإنجازات. حاول مرة أخرى.');
     } finally {
       if (!signal?.aborted && mountedRef.current) setLoading(false);
     }
@@ -115,12 +117,13 @@ export default function AchievementsPage() {
   }, [load]);
 
   const unlockedCount = unlocked.size;
+  const percent = TOTAL > 0 ? Math.round((unlockedCount / TOTAL) * 100) : 0;
 
   return (
     <ScreenWrapper padded={false}>
       {/* Header */}
       <View
-        style={{ borderBottomColor: colors.border, borderBottomWidth: 0.5 }}
+        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
         className="flex-row items-center gap-3 px-4 pt-5 pb-4"
       >
         <Pressable
@@ -140,7 +143,39 @@ export default function AchievementsPage() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 36 }}>
-        {loading ? (
+        {error ? (
+          <View style={{ gap: 12, paddingTop: 8 }}>
+            <View
+              style={{
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderRadius: 16,
+                padding: 14,
+                gap: 10,
+              }}
+            >
+              <Text style={{ color: colors.textMuted, fontSize: 13, lineHeight: 18 }}>{error}</Text>
+              <Pressable
+                onPress={() => {
+                  setLoading(true);
+                  const ctrl = new AbortController();
+                  void load(ctrl.signal);
+                }}
+                style={({ pressed }) => ({
+                  backgroundColor: pressed ? colors.hover : colors.inputBg,
+                  borderRadius: 12,
+                  paddingVertical: 10,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                })}
+              >
+                <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>إعادة المحاولة</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : loading ? (
           <View style={{ gap: 16 }}>
             {[1, 2, 3, 4].map((i) => (
               <View key={i} style={{ gap: 8 }}>
@@ -160,7 +195,13 @@ export default function AchievementsPage() {
                   <Trophy size={16} color="#f59e0b" />
                   <Text style={{ color: colors.text }} className="text-sm font-bold">إجمالي الإنجازات</Text>
                 </View>
-                <Text className="text-sm font-bold text-amber-400">{unlockedCount}/{TOTAL}</Text>
+                <Text
+                  className="text-sm font-bold text-amber-400"
+                  style={{ fontVariant: ['tabular-nums'] }}
+                  numberOfLines={1}
+                >
+                  {unlockedCount}/{TOTAL} ({percent}%)
+                </Text>
               </View>
               <View style={{ backgroundColor: colors.hover }} className="h-2 rounded-full overflow-hidden">
                 <View
@@ -170,7 +211,7 @@ export default function AchievementsPage() {
               </View>
               <Text style={{ color: colors.textMuted }} className="text-xs">
                 {unlockedCount === TOTAL
-                  ? 'أكملت جميع الإنجازات! 🎉'
+                  ? 'أكملت جميع الإنجازات!'
                   : `متبقى ${TOTAL - unlockedCount} إنجازات لتكمل المجموعة`}
               </Text>
             </View>
@@ -230,14 +271,24 @@ export default function AchievementsPage() {
                             <Text
                               style={{ color: isUnlocked ? colors.text : colors.textSub }}
                               className="text-sm font-semibold"
+                              numberOfLines={1}
                             >
                               {ach.titleAr}
                             </Text>
-                            <Text style={{ color: colors.textMuted }} className="text-xs mt-0.5 leading-4">
+                            <Text
+                              style={{ color: colors.textMuted }}
+                              className="text-xs mt-0.5 leading-4"
+                              numberOfLines={2}
+                              ellipsizeMode="tail"
+                            >
                               {ach.descAr}
                             </Text>
                             {isUnlocked && unlockedDate && (
-                              <Text style={{ color: level.color }} className="text-[10px] mt-1 font-medium">
+                              <Text
+                                style={{ color: level.color }}
+                                className="text-[10px] mt-1 font-medium"
+                                numberOfLines={1}
+                              >
                                 ✓ {new Date(unlockedDate).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', year: 'numeric' })}
                               </Text>
                             )}

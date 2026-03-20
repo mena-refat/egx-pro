@@ -84,8 +84,12 @@ export default function ReferralPage() {
 
   const required = data?.referralsRequired ?? 15;
   const active = data?.activeReferrals ?? 0;
-  const progress = Math.min((active % required) / required, 1);
-  const remaining = required - (active % required);
+  const mod = required > 0 ? active % required : 0;
+  const completedCycle = mod === 0 && active > 0;
+  const progress = required > 0 ? (completedCycle ? 1 : mod / required) : 0;
+  const remaining = completedCycle ? 0 : required - mod;
+  const achievedInCycle = completedCycle ? required : mod;
+  const progressPct = Math.round(progress * 100);
 
   return (
     <ScreenWrapper padded={false}>
@@ -133,7 +137,9 @@ export default function ReferralPage() {
                 ادعُ أصدقاءك واحصل على Pro مجاناً
               </Text>
               <Text style={{ color: colors.textSub }} className="text-xs text-center leading-5">
-                ادعُ {required} صديقاً يفتح حسابه ويبقى نشطاً، وستحصل على شهر Pro مجاناً!
+                {remaining === 0
+                  ? 'أنت جاهز للحصول على شهر Pro مجاناً.'
+                  : `ادعُ ${remaining} صديقاً يفتح حسابه ويبقى نشطاً، وستحصل على شهر Pro مجاناً!`}
               </Text>
 
               {/* Referral code */}
@@ -176,9 +182,14 @@ export default function ReferralPage() {
                   <Crown size={14} color="#8b5cf6" />
                   <Text style={{ color: colors.text }} className="text-sm font-semibold">التقدم نحو الجائزة</Text>
                 </View>
-                <Text style={{ color: colors.textMuted }} className="text-xs">
-                  {active % required}/{required}
-                </Text>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ color: colors.textMuted }} className="text-xs">
+                    {achievedInCycle}/{required}
+                  </Text>
+                  <Text style={{ color: colors.textSub }} className="text-[10px]">
+                    {progressPct}% مكتمل
+                  </Text>
+                </View>
               </View>
 
               {/* Progress bar */}
@@ -190,9 +201,11 @@ export default function ReferralPage() {
               </View>
 
               <Text style={{ color: colors.textMuted }} className="text-xs">
-                {remaining === required
-                  ? `ادعُ ${required} صديقاً لتحصل على شهر Pro مجاناً`
-                  : `متبقى ${remaining} دعوة لشهر Pro مجاناً`}
+                {remaining === 0
+                  ? 'تم تحقيق الشرط للحصول على Pro مجاناً.'
+                  : remaining === required
+                    ? `ادعُ ${required} صديقاً لتحصل على شهر Pro مجاناً`
+                    : `متبقى ${remaining} دعوة لشهر Pro مجاناً`}
               </Text>
 
               {/* Expiry if active */}
@@ -232,7 +245,7 @@ export default function ReferralPage() {
             {data.recentReferrals.length > 0 && (
               <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl overflow-hidden">
                 <View style={{ borderBottomColor: colors.border, borderBottomWidth: 0.5 }} className="px-4 py-3">
-                  <Text style={{ color: colors.textSub }} className="text-xs font-semibold uppercase tracking-wider">آخر الدعوات</Text>
+                  <Text style={{ color: colors.textSub }} className="text-xs font-semibold">آخر الدعوات</Text>
                 </View>
                 {data.recentReferrals.map((r, i) => (
                   <View
@@ -272,7 +285,7 @@ export default function ReferralPage() {
 
             {/* How it works */}
             <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-4 gap-3">
-              <Text style={{ color: colors.textSub }} className="text-xs font-semibold uppercase tracking-wider">كيف يعمل البرنامج؟</Text>
+              <Text style={{ color: colors.textSub }} className="text-xs font-semibold">كيف يعمل البرنامج؟</Text>
               {[
                 { step: '١', text: 'شارك كود الدعوة مع أصدقائك' },
                 { step: '٢', text: `يسجّل ${required} صديقاً باستخدام الكود ويبقوا نشطين` },

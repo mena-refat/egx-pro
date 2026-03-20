@@ -49,15 +49,15 @@ function usePredictionsPreview() {
 
 const AI_TOOLS = [
   {
-    id: 'analyze',
-    icon: Brain,
-    title: 'تحليل سهم',
-    desc: 'تحليل شامل فني وأساسي',
-    href: '/ai/analyze',
+    id: 'recommendations',
+    icon: Sparkles,
+    title: 'توصيات شخصية',
+    desc: 'مخصصة لمحفظتك',
+    href: '/ai/recommendations',
     cost: '1 تحليل',
-    color: BRAND,
-    bg: BRAND + '10',
-    border: BRAND + '20',
+    color: '#f59e0b',
+    bg: '#f59e0b10',
+    border: '#f59e0b20',
   },
   {
     id: 'compare',
@@ -71,15 +71,15 @@ const AI_TOOLS = [
     border: '#3b82f620',
   },
   {
-    id: 'recommendations',
-    icon: Sparkles,
-    title: 'توصيات شخصية',
-    desc: 'مخصصة لمحفظتك',
-    href: '/ai/recommendations',
+    id: 'analyze',
+    icon: Brain,
+    title: 'تحليل سهم',
+    desc: 'تحليل شامل فني وأساسي',
+    href: '/ai/analyze',
     cost: '1 تحليل',
-    color: '#f59e0b',
-    bg: '#f59e0b10',
-    border: '#f59e0b20',
+    color: BRAND,
+    bg: BRAND + '10',
+    border: BRAND + '20',
   },
 ] as const;
 

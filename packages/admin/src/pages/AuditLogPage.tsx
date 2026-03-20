@@ -4,6 +4,7 @@ import { adminApi } from '../lib/adminApi';
 import { DataTable } from '../components/DataTable';
 import { Pagination } from '../components/Pagination';
 import { Search, RefreshCw, X, Monitor, Download } from 'lucide-react';
+import { useAdminStore } from '../store/adminAuthStore';
 
 const AUDIT_ACTIONS: { value: string; label: string }[] = [
   { value: 'ADMIN_LOGIN',               label: 'Admin Login' },
@@ -206,6 +207,8 @@ function formatTarget(
 
 export default function AuditLogPage() {
   const { t } = useTranslation();
+  const currentAdmin = useAdminStore((s) => s.admin);
+  const isSuperAdmin = currentAdmin?.role === 'SUPER_ADMIN';
 
   const [logs, setLogs]   = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -394,9 +397,11 @@ export default function AuditLogPage() {
                 {l.admin?.fullName && (
                   <p className="text-[11px] text-slate-500 mt-0.5">{l.admin.fullName}</p>
                 )}
-                <p className="text-[10px] font-mono text-slate-700 mt-0.5 select-all" title={l.adminId}>
-                  ID: {l.adminId}
-                </p>
+                {isSuperAdmin && l.adminId != null && (
+                  <p className="text-[10px] font-mono text-slate-700 mt-0.5 select-all" title={l.adminId}>
+                    ID: {l.adminId}
+                  </p>
+                )}
               </td>
 
               {/* Action badge */}
@@ -414,7 +419,7 @@ export default function AuditLogPage() {
                     {tgt.secondary}
                   </p>
                 )}
-                {l.target && (
+                {isSuperAdmin && l.target && (
                   <p className="text-[10px] font-mono text-slate-700 mt-0.5 select-all" title={`ref: ${l.target}`}>
                     ref: {l.target}
                   </p>

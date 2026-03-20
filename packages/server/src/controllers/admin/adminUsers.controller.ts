@@ -64,7 +64,7 @@ export const AdminUsersController = {
       prisma.user.findMany({
         where,
         select: {
-          id: true,
+          ...(req.admin?.role === 'SUPER_ADMIN' ? { id: true } : {}),
           email: true,
           phone: true,
           fullName: true,
@@ -126,6 +126,14 @@ export const AdminUsersController = {
       sendError(res, 'NOT_FOUND', 404);
       return;
     }
+    if (req.admin?.role !== 'SUPER_ADMIN') {
+      // Privacy: never leak internal user IDs to non-super admins.
+      // Keep the rest of the user fields intact for their operational needs.
+      const { id: _id, ...rest } = user as any;
+      sendSuccess(res, rest);
+      return;
+    }
+
     sendSuccess(res, user);
   },
 

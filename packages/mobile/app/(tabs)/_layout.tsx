@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { View, I18nManager } from 'react-native';
 import { Tabs, Redirect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,12 +8,22 @@ import { useTheme } from '../../hooks/useTheme';
 import { useUnreadCount } from '../../hooks/useUnreadCount';
 import { BRAND } from '../../lib/theme';
 
-const TAB_LABELS: Record<string, { ar: string; en: string }> = {
+type TabName = 'index' | 'portfolio' | 'market' | 'ai' | 'profile';
+
+const TAB_LABELS: Record<TabName, { ar: string; en: string }> = {
   index:     { ar: 'الرئيسية', en: 'Home' },
   portfolio: { ar: 'محفظتي',   en: 'Portfolio' },
-  market:    { ar: 'الأسواق',  en: 'Markets' },
+  market:    { ar: 'السوق',  en: 'Markets' },
   ai:        { ar: 'الذكاء',   en: 'AI' },
   profile:   { ar: 'حسابي',    en: 'Profile' },
+};
+
+const TAB_ICONS: Record<TabName, React.ComponentType<{ size?: number; color?: string }>> = {
+  index: House,
+  market: BarChart3,
+  portfolio: Briefcase,
+  ai: Sparkles,
+  profile: User,
 };
 
 const TAB_HEIGHT = 60;
@@ -51,6 +61,7 @@ export default function TabsLayout() {
   const { colors }      = useTheme();
   const unreadCount     = useUnreadCount();
   const lang            = i18n.language?.startsWith('ar') ? 'ar' : 'en';
+  const isRTL           = I18nManager.isRTL;
 
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
 
@@ -64,7 +75,7 @@ export default function TabsLayout() {
     elevation:        0,
   };
 
-  const screenOptions = (name: keyof typeof TAB_LABELS) => ({
+  const screenOptions = (name: TabName) => ({
     headerShown:          false,
     tabBarActiveTintColor: BRAND,
     tabBarInactiveTintColor: colors.textMuted,
@@ -75,55 +86,35 @@ export default function TabsLayout() {
     tabBarItemStyle:      { paddingVertical: 0 },
   });
 
+  const tabOrder: TabName[] = isRTL
+    ? ['profile', 'ai', 'portfolio', 'market', 'index']
+    : ['index', 'market', 'portfolio', 'ai', 'profile'];
+
   return (
     <Tabs>
-      <Tabs.Screen
-        name="index"
-        options={{
-          ...screenOptions('index'),
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon Icon={House} color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="market"
-        options={{
-          ...screenOptions('market'),
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon Icon={BarChart3} color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="portfolio"
-        options={{
-          ...screenOptions('portfolio'),
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon Icon={Briefcase} color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="ai"
-        options={{
-          ...screenOptions('ai'),
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon Icon={Sparkles} color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          ...screenOptions('profile'),
-          tabBarBadge:      unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : undefined,
-          tabBarBadgeStyle: { backgroundColor: '#ef4444', fontSize: 9, minWidth: 16, height: 16 },
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon Icon={User} color={color} focused={focused} />
-          ),
-        }}
-      />
+      {tabOrder.map((name) => {
+        const Icon = TAB_ICONS[name];
+
+        const extraOptions =
+          name === 'profile'
+            ? {
+                tabBarBadge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : undefined,
+                tabBarBadgeStyle: { backgroundColor: '#ef4444', fontSize: 9, minWidth: 16, height: 16 },
+              }
+            : {};
+
+        return (
+          <Tabs.Screen
+            key={name}
+            name={name}
+            options={{
+              ...screenOptions(name),
+              ...extraOptions,
+              tabBarIcon: ({ color, focused }) => <TabIcon Icon={Icon} color={color} focused={focused} />,
+            }}
+          />
+        );
+      })}
     </Tabs>
   );
 }

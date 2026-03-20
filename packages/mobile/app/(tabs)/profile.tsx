@@ -15,6 +15,7 @@ import {
   BRAND, BRAND_BG_STRONG,
   FONT, WEIGHT, RADIUS, SPACE,
 } from '../../lib/theme';
+import { usePredictionScore } from '../../hooks/usePredictionScore';
 
 type ThemeOption = 'dark' | 'light' | 'system';
 
@@ -92,6 +93,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, logout, updateUser } = useAuthStore();
   const { colors } = useTheme();
+  const { score: predictionAccuracyRate, loading: predictionLoading } = usePredictionScore();
 
   const handleLogout = async () => {
     await logout();
@@ -169,7 +171,16 @@ export default function ProfilePage() {
               {[
                 { label: 'الخطة',      value: planLabel,                          color: isPro ? BRAND : colors.textSub },
                 { label: 'التحليلات',  value: String(user?.aiAnalysisUsedThisMonth ?? 0), color: colors.text },
-                { label: 'المعرف',     value: user?.id ? `#${user.id}` : '—',     color: colors.textMuted },
+                {
+                  label: 'اسكور التوقعات',
+                  value:
+                    predictionLoading
+                      ? '—'
+                      : predictionAccuracyRate != null
+                        ? `${Math.round(predictionAccuracyRate)}%`
+                        : '—',
+                  color: colors.text,
+                },
               ].map((s, i, arr) => (
                 <View
                   key={s.label}

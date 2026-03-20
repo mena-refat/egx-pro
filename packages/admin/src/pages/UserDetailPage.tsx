@@ -6,11 +6,14 @@ import { Badge } from '../components/Badge';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Modal } from '../components/Modal';
 import { ArrowLeft, ShieldOff, ShieldCheck, Ban, ShieldAlert } from 'lucide-react';
+import { useAdminStore } from '../store/adminAuthStore';
 
 const PLANS = ['free', 'pro', 'yearly', 'ultra', 'ultra_yearly'];
 
 export default function UserDetailPage() {
   const { t } = useTranslation();
+  const currentAdmin = useAdminStore((s) => s.admin);
+  const isSuperAdmin = currentAdmin?.role === 'SUPER_ADMIN';
   const { id } = useParams<{ id: string }>();
   const nav    = useNavigate();
   const [user, setUser]               = useState<any>(null);
@@ -87,7 +90,9 @@ export default function UserDetailPage() {
         </button>
         <div className="flex-1">
           <h1 className="text-xl font-bold text-white">{user.fullName ?? user.username ?? 'User'}</h1>
-          <p className="text-sm text-slate-500">{user.email ?? user.phone ?? user.id}</p>
+          <p className="text-sm text-slate-500">
+            {user.email ?? user.phone ?? (isSuperAdmin ? user.id : '—')}
+          </p>
         </div>
         <div className="flex gap-2">
           <button

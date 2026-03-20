@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, Pressable, TextInput,
-  ActivityIndicator, I18nManager,
+  View, Text, ScrollView, Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight, Check, Pencil, User } from 'lucide-react-native';
+import { Pencil } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
-import { BRAND, BRAND_BG_STRONG } from '../../lib/theme';
+import { BRAND_BG_STRONG, GREEN_BG, RED_BG, RED, BRAND } from '../../lib/theme';
+import { Button } from '../../components/ui/Button';
+import { EditValueCard, type EditableField } from './EditValueCard';
+import { AccountHeader } from './AccountHeader';
 
 interface FieldRowProps {
   label: string;
@@ -48,32 +50,53 @@ export default function AccountPage() {
   const router = useRouter();
   const { user, updateUser } = useAuthStore();
   const { colors } = useTheme();
-  const [editing, setEditing] = useState<'fullName' | 'username' | null>(null);
-  const [value, setValue] = useState('');
+  const [editing, setEditing] = useState<EditableField | null>(null);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const startEdit = (field: 'fullName' | 'username') => {
+  const startEdit = (field: EditableField) => {
     setEditing(field);
-    setValue(field === 'fullName' ? user?.fullName ?? '' : user?.username ?? '');
     setError(null);
     setSuccess(false);
   };
 
-  const save = async () => {
-    if (!editing || !value.trim()) return;
+  const initialEditValue = useMemo(() => {
+    if (!editing) return '';
+    if (editing === 'fullName') return user?.fullName ?? '';
+    if (editing === 'username') return user?.username ?? '';
+    if (editing === 'email') return user?.email ?? '';
+    return user?.phone ?? '';
+  }, [editing, user?.email, user?.fullName, user?.phone, user?.username]);
+
+  const saveField = async (val: string) => {
+    if (!editing) return;
     setSaving(true);
     setError(null);
     try {
-      await apiClient.put('/api/user/profile', { [editing]: value.trim() });
-      updateUser({ [editing]: value.trim() });
+      const key = editing;
+      const payload: Record<string, unknown> = {};
+      if (key === 'email') {
+        payload.email = val === '' ? null : val;
+      } else if (key === 'phone') {
+        payload.phone = val === '' ? null : val;
+      } else if (key === 'username') {
+        payload.username = val.trim() === '' ? null : val;
+      } else {
+        payload.fullName = val.trim() === '' ? null : val;
+      }
+
+      await apiClient.put('/api/user/profile', payload);
+      updateUser(payload as any);
       setSuccess(true);
-      setTimeout(() => { setSuccess(false); setEditing(null); }, 1200);
+      setTimeout(() => { setSuccess(false); setEditing(null); }, 1100);
     } catch (err: unknown) {
       const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
         ?? (err as { error?: string })?.error;
       if (code === 'USERNAME_TAKEN') setError('اسم المستخدم محجوز، جرب آخر');
+      else if (code === 'EMAIL_ALREADY_EXISTS') setError('هذا البريد الإلكتروني مستخدم بالفعل');
+      else if (code === 'PHONE_ALREADY_EXISTS') setError('هذا الرقم مستخدم بالفعل');
+      else if (code === 'INVALID_PHONE') setError('رقم الموبايل غير صالح');
       else setError('حدث خطأ، حاول مرة أخرى');
     } finally {
       setSaving(false);
@@ -82,54 +105,7 @@ export default function AccountPage() {
 
   return (
     <ScreenWrapper padded={false}>
-      <View
-        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
-        // header: flex-row items-center gap-3 px-4 pt-5 pb-4
-        // (gap works on RN >= 0.71; used elsewhere in this project)
-        // If it doesn't, spacing can be tuned quickly.
-      >
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-            paddingHorizontal: 16,
-            paddingTop: 20,
-            paddingBottom: 16,
-          }}
-        >
-          <Pressable
-            onPress={() => router.back()}
-            style={{
-              backgroundColor: colors.hover,
-              borderColor: colors.border,
-              borderWidth: 1,
-              width: 36,
-              height: 36,
-              borderRadius: 12,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
-          </Pressable>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 12,
-              backgroundColor: BRAND_BG_STRONG,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <User size={15} color={BRAND} />
-          </View>
-          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>
-            البيانات الشخصية
-          </Text>
-        </View>
-      </View>
+      <AccountHeader title="البيانات الشخصية" onBack={() => router.back()} />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 20, gap: 16 }}
@@ -166,99 +142,54 @@ export default function AccountPage() {
           <View style={{ borderWidth: 1, borderRadius: 24, paddingHorizontal: 16, overflow: 'hidden' }}>
             <FieldRow label="الاسم الكامل" value={user?.fullName ?? ''} onEdit={() => startEdit('fullName')} />
             <FieldRow label="اسم المستخدم" value={user?.username ? `@${user.username}` : ''} onEdit={() => startEdit('username')} />
-            <FieldRow label="البريد الإلكتروني" value={user?.email ?? ''} editable={false} onEdit={() => {}} />
-            <View style={{ paddingVertical: 14, paddingHorizontal: 0 }}>
-              <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 2 }}>رقم الموبايل</Text>
-              <Text style={{ color: colors.text, fontSize: 13, fontWeight: '500' }}>{user?.phone || '—'}</Text>
-            </View>
+            <FieldRow label="البريد الإلكتروني" value={user?.email ?? ''} onEdit={() => startEdit('email')} />
+            <FieldRow label="رقم الموبايل" value={user?.phone ?? ''} onEdit={() => startEdit('phone')} />
           </View>
         </View>
 
-        {/* Edit form */}
         {editing && (
-          <View
-            style={{ backgroundColor: colors.card, borderColor: colors.border }}
-            // border rounded-2xl p-4 gap-3
-          >
-            <View style={{ borderWidth: 1, borderRadius: 24, padding: 16, gap: 12 }}>
-            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>
-              تعديل {editing === 'fullName' ? 'الاسم' : 'اسم المستخدم'}
-            </Text>
-
+          <View style={{ marginTop: 12 }}>
             {error && (
               <View
                 style={{
-                  backgroundColor: '#f8717112',
-                  borderColor: '#f8717130',
+                  backgroundColor: RED_BG,
+                  borderColor: `${RED}30`,
                   borderWidth: 1,
                   borderRadius: 16,
                   paddingHorizontal: 12,
                   paddingVertical: 10,
+                  marginBottom: 12,
                 }}
               >
-                <Text style={{ color: '#f87171', fontSize: 11, fontWeight: '600' }}>{error}</Text>
+                <Text style={{ color: RED, fontSize: 11, fontWeight: '600' }}>{error}</Text>
               </View>
             )}
 
-            <TextInput
-              value={value}
-              onChangeText={setValue}
-              autoCapitalize={editing === 'fullName' ? 'words' : 'none'}
-              autoCorrect={false}
-              autoFocus
-              placeholderTextColor={colors.textMuted}
-              style={{
-                color: colors.text,
-                borderColor: colors.border,
-                backgroundColor: colors.hover,
-                borderWidth: 1,
-                borderRadius: 12,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                fontSize: 14,
+            {success && (
+              <View
+                style={{
+                  backgroundColor: GREEN_BG,
+                  borderColor: `${BRAND}30`,
+                  borderWidth: 1,
+                  borderRadius: 16,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  marginBottom: 12,
+                }}
+              >
+                <Text style={{ color: colors.text, fontSize: 11, fontWeight: '600' }}>تم الحفظ</Text>
+              </View>
+            )}
+
+            <EditValueCard
+              field={editing}
+              initialValue={initialEditValue}
+              onCancel={() => setEditing(null)}
+              saving={saving}
+              onSave={async (val) => {
+                await saveField(val);
               }}
             />
-
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Pressable
-                onPress={() => setEditing(null)}
-                style={{
-                  flex: 1,
-                  borderColor: colors.border,
-                  borderWidth: 1,
-                  borderRadius: 12,
-                  paddingVertical: 10,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text style={{ color: colors.textSub, fontSize: 13, fontWeight: '600' }}>إلغاء</Text>
-              </Pressable>
-              <Pressable
-                onPress={save}
-                disabled={saving}
-                style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: 12,
-                  backgroundColor: BRAND,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexDirection: 'row',
-                  gap: 8,
-                  opacity: saving ? 0.6 : 1,
-                }}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : success ? (
-                  <Check size={16} color="#fff" />
-                ) : (
-                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>حفظ</Text>
-                )}
-              </Pressable>
-            </View>
-            </View>
           </View>
         )}
       </ScrollView>

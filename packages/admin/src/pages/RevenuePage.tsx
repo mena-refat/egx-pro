@@ -25,6 +25,7 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
+import { useAdminStore } from '../store/adminAuthStore';
 
 type RevenueData = {
   mrr: number;
@@ -40,7 +41,7 @@ type RevenueData = {
 type ChartPoint = { month: string; newSubs: number; estimatedRevenue: number };
 
 type Subscriber = {
-  id: string;
+  id?: string;
   email: string | null;
   fullName: string | null;
   username: string | null;
@@ -64,6 +65,8 @@ const PLAN_LABELS: Record<string, string> = {
 
 export default function RevenuePage() {
   const { t } = useTranslation();
+  const currentAdmin = useAdminStore((s) => s.admin);
+  const isSuperAdmin = currentAdmin?.role === 'SUPER_ADMIN';
   const [data, setData] = useState<RevenueData | null>(null);
   const [chart, setChart] = useState<ChartPoint[]>([]);
   const [subs, setSubs] = useState<Subscriber[]>([]);
@@ -230,13 +233,15 @@ export default function RevenuePage() {
               <option value="true">{t('revenue.adminGrants')}</option>
               <option value="false">{t('revenue.paidOnly')}</option>
             </select>
-            <a
-              href={`/api/admin/users/export.csv${planFilter ? `?plan=${planFilter}` : ''}`}
-              download
-              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-white/[0.06] border border-white/[0.08] rounded-lg text-slate-300 hover:bg-white/[0.1] transition-all"
-            >
-              <Download size={12} /> CSV
-            </a>
+            {isSuperAdmin && (
+              <a
+                href={`/api/admin/users/export.csv${planFilter ? `?plan=${planFilter}` : ''}`}
+                download
+                className="flex items-center gap-1 px-3 py-1.5 text-xs bg-white/[0.06] border border-white/[0.08] rounded-lg text-slate-300 hover:bg-white/[0.1] transition-all"
+              >
+                <Download size={12} /> CSV
+              </a>
+            )}
           </div>
         </div>
 
@@ -246,8 +251,8 @@ export default function RevenuePage() {
           rowCount={subs.length}
           empty={t('revenue.noSubscribers')}
         >
-          {subs.map((s) => (
-            <tr key={s.id} className="hover:bg-white/[0.02] transition-colors">
+          {subs.map((s, idx) => (
+            <tr key={isSuperAdmin ? (s.id ?? String(idx)) : (s.email ?? s.username ?? String(idx))} className="hover:bg-white/[0.02] transition-colors">
               <td className="px-4 py-3">
                 <p className="text-sm text-white font-medium">{s.fullName ?? s.username ?? '—'}</p>
                 <p className="text-xs text-slate-500">{s.email ?? '—'}</p>

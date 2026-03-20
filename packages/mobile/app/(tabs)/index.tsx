@@ -69,6 +69,7 @@ function MoverChip({ s, onPress }: { s: Stock; onPress: () => void }) {
   const { colors } = useTheme();
   const isUp = s.changePercent >= 0;
   const clr  = isUp ? GREEN : RED;
+  const isRTL = I18nManager.isRTL;
   return (
     <Pressable
       onPress={onPress}
@@ -76,7 +77,7 @@ function MoverChip({ s, onPress }: { s: Stock; onPress: () => void }) {
         backgroundColor: isUp ? '#4ade8010' : '#f8717110',
         borderWidth: 1, borderColor: isUp ? '#4ade8030' : '#f8717130',
         borderRadius: RADIUS.lg, paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm,
-        flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, opacity: pressed ? 0.8 : 1,
+        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm, opacity: pressed ? 0.8 : 1,
       })}
     >
       {isUp ? <TrendingUp size={13} color={clr} /> : <TrendingDown size={13} color={clr} />}
@@ -95,9 +96,10 @@ function SectionHdr({
   title, icon: Icon, action,
 }: { title: string; icon?: React.ComponentType<{ size: number; color: string }>; action?: { label: string; onPress: () => void } }) {
   const { colors } = useTheme();
+  const isRTL = I18nManager.isRTL;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
+    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.sm }}>
+      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm }}>
         {Icon && (
           <View style={{ width: 26, height: 26, borderRadius: RADIUS.sm, backgroundColor: BRAND_BG_STRONG, alignItems: 'center', justifyContent: 'center' }}>
             <Icon size={13} color={BRAND} />
@@ -214,7 +216,7 @@ export default function HomePage() {
         {/* ─── Header ─────────────────────────────────── */}
         <View style={{
           borderBottomWidth: 1, borderBottomColor: colors.border,
-          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+          flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between',
           paddingHorizontal: SPACE.lg, paddingTop: isCompact ? 12 : 18, paddingBottom: isCompact ? 10 : 14,
         }}>
           <View>
@@ -223,7 +225,7 @@ export default function HomePage() {
               {user?.fullName?.split(' ')[0] ?? 'مستثمر'}
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
+          <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm }}>
             <MarketStatusBadge />
             <Pressable
               onPress={() => router.navigate('/notifications')}
@@ -288,7 +290,7 @@ export default function HomePage() {
                         </Text>
                       </View>
                     </View>
-                    <View style={{ flexDirection: 'row', gap: SPACE.xl, marginTop: SPACE.lg }}>
+                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: SPACE.xl, marginTop: SPACE.lg }}>
                       <View>
                         <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>التكلفة</Text>
                         <Text style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold, fontVariant: ['tabular-nums'] }}>
@@ -335,7 +337,7 @@ export default function HomePage() {
                         borderBottomColor: colors.border,
                         backgroundColor: pressed ? colors.hover : 'transparent',
                         paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
-                        flexDirection: 'row', alignItems: 'center',
+                        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center',
                       },
                       i < Math.min(enrichedHoldings.length, 4) - 1 && { borderBottomWidth: 1 },
                     ]}
@@ -388,7 +390,15 @@ export default function HomePage() {
               />
             </View>
             {watchlistLoading ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: SPACE.lg, gap: SPACE.sm }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  paddingHorizontal: SPACE.lg,
+                  gap: SPACE.sm,
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                }}
+              >
                 {[1, 2, 3, 4].map((i) => <Skeleton.Box key={i} width={120} height={90} radius={RADIUS.xl} />)}
               </ScrollView>
             ) : watchlist.length === 0 ? (
@@ -407,7 +417,11 @@ export default function HomePage() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 keyExtractor={(s) => s.ticker}
-                contentContainerStyle={{ paddingHorizontal: SPACE.lg, gap: SPACE.sm }}
+                contentContainerStyle={{
+                  paddingHorizontal: SPACE.lg,
+                  gap: SPACE.sm,
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                }}
                 renderItem={({ item: s }) => (
                   <WatchlistCard
                     stock={s}
@@ -461,7 +475,7 @@ export default function HomePage() {
           {/* ─── 5. News preview ────────────────────────── */}
           {lastTwoDaysNews.length > 0 && (
             <View style={{ paddingHorizontal: SPACE.lg }}>
-              <SectionHdr title="آخر الأخبار" icon={Newspaper} />
+              <SectionHdr title="أخبار" icon={Newspaper} />
               <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
                 {lastTwoDaysNews.slice(0, 3).map((item, i) => (
                   <View
