@@ -1,13 +1,17 @@
 import { prisma } from '../lib/prisma.ts';
-import type { PredictionDir, PredictionTime, PredictionStatus, UserRank, MoveTier } from '@prisma/client';
+import type { PredictionDir, PredictionTime, PredictionStatus, PredictionMode, UserRank, MoveTier } from '@prisma/client';
 
 export type PredictionCreateInput = {
   userId: number;
   ticker: string;
+  mode: PredictionMode;
   direction: PredictionDir;
-  moveTier: MoveTier;
+  // TIER mode
+  moveTier?: MoveTier;
+  timeframe?: PredictionTime;
+  // EXACT mode
+  targetPrice?: number;
   priceAtCreation: number;
-  timeframe: PredictionTime;
   reason: string | null;
   expiresAt: Date;
   isPublic: boolean;
@@ -19,8 +23,11 @@ export const PredictionRepository = {
       data: {
         userId: data.userId,
         ticker: data.ticker.toUpperCase(),
-        direction: data.direction,
-        moveTier: data.moveTier,
+        direction:  data.direction,
+        mode:       data.mode,
+        moveTier:   data.moveTier   ?? undefined,
+        timeframe:  data.timeframe  ?? undefined,
+        targetPrice: data.targetPrice ?? undefined,
         priceAtCreation: data.priceAtCreation,
         timeframe: data.timeframe,
         reason: data.reason ?? undefined,

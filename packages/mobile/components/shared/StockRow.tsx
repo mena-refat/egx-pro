@@ -67,7 +67,7 @@ const StockRow = React.memo(function StockRow({ stock, onPress, livePrice, last 
       </View>
 
       {/* Price + change */}
-      <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end', flexShrink: 0 }}>
+      <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end', flexShrink: 0, minWidth: 76 }}>
         <Text style={{
           color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold,
           fontVariant: ['tabular-nums'],

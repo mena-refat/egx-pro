@@ -1,15 +1,17 @@
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, TrendingDown, Heart, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, Heart, Zap, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { FeedPrediction, MoveTier } from '../../../store/usePredictionsStore';
 import { Button } from '../../ui/Button';
+import { formatRange } from '../../../lib/scoringConstants';
+import type { PredictionTime } from '../../../lib/scoringConstants';
 
-const TIER_STYLE: Record<MoveTier, { color: string; bg: string; labelKey: string; rangeKey: string }> = {
-  LIGHT:   { color: 'text-sky-400',   bg: 'bg-sky-500/10',   labelKey: 'predictions.tierLight',   rangeKey: 'predictions.tierLightRange' },
-  MEDIUM:  { color: 'text-green-400', bg: 'bg-green-500/10', labelKey: 'predictions.tierMedium',  rangeKey: 'predictions.tierMediumRange' },
-  STRONG:  { color: 'text-amber-400', bg: 'bg-amber-500/10', labelKey: 'predictions.tierStrong',  rangeKey: 'predictions.tierStrongRange' },
-  EXTREME: { color: 'text-red-400',   bg: 'bg-red-500/10',   labelKey: 'predictions.tierExtreme', rangeKey: 'predictions.tierExtremeRange' },
+const TIER_STYLE: Record<MoveTier, { color: string; bg: string; labelKey: string }> = {
+  LIGHT:   { color: 'text-sky-400',   bg: 'bg-sky-500/10',   labelKey: 'predictions.tierLight'   },
+  MEDIUM:  { color: 'text-green-400', bg: 'bg-green-500/10', labelKey: 'predictions.tierMedium'  },
+  STRONG:  { color: 'text-amber-400', bg: 'bg-amber-500/10', labelKey: 'predictions.tierStrong'  },
+  EXTREME: { color: 'text-red-400',   bg: 'bg-red-500/10',   labelKey: 'predictions.tierExtreme' },
 };
 
 const RANK_COLORS: Record<string, string> = {
@@ -104,12 +106,17 @@ export const PredictionCard = memo(function PredictionCard({
         <span className={isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
           {t(isUp ? 'predictions.directionUp' : 'predictions.directionDown')}
         </span>
-        {tier && (
+        {prediction.mode === 'EXACT' ? (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold text-emerald-400 bg-emerald-500/10">
+            <Target className="w-3 h-3" />
+            {prediction.targetPrice?.toFixed(2)} ج.م
+          </span>
+        ) : tier && prediction.timeframe ? (
           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${tier.color} ${tier.bg}`}>
             {t(tier.labelKey)}
-            <span className="opacity-70">{t(tier.rangeKey)}</span>
+            <span className="opacity-70">{formatRange(prediction.moveTier!, prediction.timeframe as PredictionTime)}</span>
           </span>
-        )}
+        ) : null}
       </div>
 
       <p className="text-xs text-[var(--text-muted)] mb-2">
@@ -142,8 +149,8 @@ export const PredictionCard = memo(function PredictionCard({
             {t('predictions.daysLeft')} {daysLeft} {t('predictions.day')}
           </span>
         )}
-        {prediction.status === 'ACTIVE' && tier && (
-          <span className="text-xs text-amber-400 flex items-center gap-0.5">
+        {prediction.status === 'ACTIVE' && (tier || prediction.mode === 'EXACT') && (
+          <span className={`text-xs flex items-center gap-0.5 ${prediction.mode === 'EXACT' ? 'text-emerald-400' : 'text-amber-400'}`}>
             <Zap className="w-3 h-3" aria-hidden />
             {t('predictions.pointPotential')}
           </span>

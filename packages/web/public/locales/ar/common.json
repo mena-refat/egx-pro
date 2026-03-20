@@ -209,7 +209,21 @@
     "successPublished": "تم نشر توقعك بنجاح!",
     "loadMore": "تحميل المزيد",
     "statusActive": "نشط",
-    "next": "التالي"
+    "next": "التالي",
+    "modeTabTier": "حجم التحرك",
+    "modeTabExact": "سعر محدد",
+    "exactUpgradeTitle": "وضع السعر المحدد — للبرو والألترا",
+    "exactUpgradeDesc": "توقع سعراً محدداً بدقة وحدد تاريخ انتهاء خاص بيك — النقاط أعلى كلما كنت أدق.",
+    "upgradeNow": "ترقية الآن",
+    "exactModeDesc": "حدد سعراً مستهدفاً وتاريخ انتهاء، والاتجاه بيتحدد تلقائياً.",
+    "exactTargetPrice": "السعر المستهدف",
+    "exactExpiryDate": "تاريخ الانتهاء",
+    "exactDateRange": "من بكره لحد سنتين من دلوقتي",
+    "exactDerivedUp": "توقعك: السهم يصعد",
+    "exactDerivedDown": "توقعك: السهم يهبط",
+    "exactPriceSameAsCurrent": "السعر المستهدف لازم يختلف عن السعر الحالي",
+    "exactToleranceBands": "نطاقات التقييم (بناءً على تاريخ الانتهاء)",
+    "exactMaxPoints": "أقصى نقاط محتملة"
   },
   "header": {
     "welcome": "أهلاً",

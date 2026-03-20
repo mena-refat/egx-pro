@@ -90,20 +90,38 @@ export function useMarketData() {
   return { overview, stocks, news, loadingStocks, loadingOverview, refreshing, refresh };
 }
 
+type RawHolding = {
+  id: string;
+  ticker: string;
+  shares: number;
+  avgPrice: number;
+  buyDate?: string;
+  currentPrice?: number;
+  currentValue?: number;
+  gainLoss?: number;
+  gainLossPercent?: number;
+};
+
+export type PortfolioHolding = RawHolding & { ids: string[] };
+
+function groupHoldingsByTicker(raw: RawHolding[]): PortfolioHolding[] {
+  const map = new Map<string, PortfolioHolding>();
+  for (const h of raw) {
+    const existing = map.get(h.ticker);
+    if (existing) {
+      const totalShares = existing.shares + h.shares;
+      existing.avgPrice = (existing.avgPrice * existing.shares + h.avgPrice * h.shares) / totalShares;
+      existing.shares = totalShares;
+      existing.ids.push(h.id);
+    } else {
+      map.set(h.ticker, { ...h, ids: [h.id] });
+    }
+  }
+  return Array.from(map.values());
+}
+
 export function usePortfolioData() {
-  const [holdings, setHoldings] = useState<
-    {
-      id: string;
-      ticker: string;
-      shares: number;
-      avgPrice: number;
-      buyDate?: string;
-      currentPrice?: number;
-      currentValue?: number;
-      gainLoss?: number;
-      gainLossPercent?: number;
-    }[]
-  >([]);
+  const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
   const [summary, setSummary] = useState({
     totalValue: 0,
     totalCost: 0,
@@ -125,11 +143,11 @@ export function usePortfolioData() {
     try {
       const res = await apiClient.get('/api/portfolio', { signal });
       const payload = (res.data as {
-        holdings?: typeof holdings;
+        holdings?: RawHolding[];
         summary?: typeof summary;
       }) ?? { holdings: undefined, summary: undefined };
       if (!signal?.aborted && mountedRef.current) {
-        setHoldings(payload.holdings ?? []);
+        setHoldings(groupHoldingsByTicker(payload.holdings ?? []));
         setSummary(
           payload.summary ?? {
             totalValue: 0,

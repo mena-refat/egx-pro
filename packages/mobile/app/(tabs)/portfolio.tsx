@@ -45,8 +45,8 @@ function WatchlistChip({ stock, live, onPress }: { stock: Stock; live?: { price:
       <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 1 }} numberOfLines={1}>
         {getStockName(stock.ticker, 'ar')}
       </Text>
-      <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold, marginTop: SPACE.xs, fontVariant: ['tabular-nums'] }}>
-        {price.toFixed(2)}
+      <Text style={{ color: price > 0 ? colors.text : colors.textMuted, fontSize: FONT.base, fontWeight: WEIGHT.bold, marginTop: SPACE.xs, fontVariant: ['tabular-nums'] }}>
+        {price > 0 ? price.toFixed(2) : '—'}
       </Text>
       <View style={{
         flexDirection: 'row', alignItems: 'center', marginTop: 3,
@@ -139,16 +139,6 @@ export default function PortfolioPage() {
     ]);
   }, [refresh]);
 
-  // Group holdings by ticker for delete
-  const groupedByTicker = useMemo(() => {
-    const map = new Map<string, { ids: string[]; ticker: string }>();
-    holdings.forEach((h) => {
-      const existing = map.get(h.ticker);
-      if (existing) existing.ids.push(h.id);
-      else map.set(h.ticker, { ids: [h.id], ticker: h.ticker });
-    });
-    return map;
-  }, [holdings]);
 
   return (
     <ScreenWrapper padded={false} edges={['top']}>
@@ -250,13 +240,12 @@ export default function PortfolioPage() {
                 </Pressable>
               ) : (
                 enrichedHoldings.map((h, i) => {
-                  const group  = groupedByTicker.get(h.ticker);
                   const isLast = i === enrichedHoldings.length - 1;
                   return (
                     <Pressable
-                      key={h.id}
+                      key={h.ticker}
                       onPress={() => router.push(`/stocks/${h.ticker}`)}
-                      onLongPress={() => group && handleDeleteGroup(group.ids, h.ticker)}
+                      onLongPress={() => handleDeleteGroup(h.ids, h.ticker)}
                       style={({ pressed }) => ({
                         backgroundColor: pressed ? colors.hover : 'transparent',
                         borderBottomWidth: isLast ? 0 : 1, borderBottomColor: colors.border,
@@ -343,7 +332,7 @@ export default function PortfolioPage() {
                   const isLast   = i === enrichedHoldings.length - 1;
                   return (
                     <Pressable
-                      key={h.id}
+                      key={h.ticker}
                       onPress={() => router.push(`/stocks/${h.ticker}`)}
                       style={({ pressed }) => ({
                         backgroundColor: pressed ? colors.hover : 'transparent',

@@ -8,7 +8,7 @@ import { isPaid, isPro, isUltra } from '../lib/plan.ts';
 import { UserRepository } from '../repositories/user.repository.ts';
 import { PredictionRepository } from '../repositories/prediction.repository.ts';
 import { FollowRepository } from '../repositories/follow.repository.ts';
-import type { PredictionDir, PredictionTime, MoveTier, UserRank } from '@prisma/client';
+import type { PredictionDir, PredictionTime, MoveTier, PredictionMode, UserRank } from '@prisma/client';
 
 const DAILY_KEY_PREFIX = 'predictions:daily:';
 const DELETION_WINDOW_MS = PREDICTION_LIMITS.deletionWindowMinutes * 60 * 1000;
@@ -55,10 +55,61 @@ const TIMEFRAME_MULTIPLIER: Record<PredictionTime, number> = {
   YEAR:         4.0,
 };
 
-const MISS_POINTS = -8;  // Wrong direction — penalty to discourage flip-flopping
+const MISS_POINTS = -8;  // Wrong direction (TIER mode)
 
 // Tier order for adjacency calculation
 const TIER_ORDER: MoveTier[] = ['LIGHT', 'MEDIUM', 'STRONG', 'EXTREME'];
+
+// ─── EXACT Mode Scoring ────────────────────────────────────────────────────────
+// Tolerance bands: [tolerance%, base points, accuracyPct]
+// Higher base than TIER because predicting an exact price is far harder.
+const EXACT_BANDS: Array<[number, number, number]> = [
+  [2,  500, 100],  // ±2%  → دقة تامة (Bullseye)
+  [5,  350,  70],  // ±5%  → دقيق جداً (Sharp)
+  [10, 200,  40],  // ±10% → دقيق (Precise)
+  [20,  90,  18],  // ±20% → قريب (Close)
+];
+const EXACT_FAR_POINTS = 25;    // Direction right but >20% off
+const EXACT_MISS_POINTS = -15;  // Wrong direction (higher penalty for EXACT)
+
+// Days-to-expiry multiplier for EXACT mode
+function exactDaysMultiplier(createdAt: Date, expiresAt: Date): number {
+  const days = Math.round((expiresAt.getTime() - createdAt.getTime()) / 86_400_000);
+  if (days <= 7)   return 1.0;
+  if (days <= 30)  return 1.5;
+  if (days <= 90)  return 2.2;
+  if (days <= 180) return 3.0;
+  if (days <= 365) return 4.5;
+  return 6.0;
+}
+
+function scoreExact(
+  targetPrice: number,
+  resolvedPrice: number,
+  priceAtCreation: number,
+  createdAt: Date,
+  expiresAt: Date
+): { basePoints: number; multiplier: number; accuracyPct: number; status: 'HIT' | 'MISSED' } {
+  const directionUp = targetPrice > priceAtCreation;
+  const directionCorrect =
+    (directionUp  && resolvedPrice > priceAtCreation) ||
+    (!directionUp && resolvedPrice < priceAtCreation);
+
+  if (!directionCorrect) {
+    return { basePoints: EXACT_MISS_POINTS, multiplier: 1, accuracyPct: 0, status: 'MISSED' };
+  }
+
+  const diffPct = Math.abs((resolvedPrice - targetPrice) / targetPrice) * 100;
+  const mult    = exactDaysMultiplier(createdAt, expiresAt);
+
+  for (const [band, pts, accuracy] of EXACT_BANDS) {
+    if (diffPct <= band) {
+      return { basePoints: pts, multiplier: mult, accuracyPct: accuracy, status: 'HIT' };
+    }
+  }
+
+  return { basePoints: EXACT_FAR_POINTS, multiplier: mult, accuracyPct: 5, status: 'HIT' };
+}
 
 function getTierForMove(absPct: number, timeframe: PredictionTime): MoveTier | 'FLAT' {
   const ranges = TIMEFRAME_TIER_RANGES[timeframe];
@@ -132,29 +183,69 @@ export const PredictionsService = {
     userId:  number,
     user:    { plan?: string | null; planExpiresAt?: Date | null; referralProExpiresAt?: Date | null; createdAt?: Date },
     body:    {
-      ticker:     string;
-      direction:  PredictionDir;
-      moveTier:   MoveTier;
-      timeframe:  PredictionTime;
-      reason?:    string | null;
-      isPublic?:  boolean;
+      ticker:       string;
+      mode?:        'TIER' | 'EXACT';
+      // TIER mode
+      direction?:   'UP' | 'DOWN';
+      moveTier?:    MoveTier;
+      timeframe?:   PredictionTime;
+      // EXACT mode
+      targetPrice?: number;
+      expiresAt?:   string; // ISO date string from client (EXACT mode only)
+      reason?:      string | null;
+      isPublic?:    boolean;
     }
   ) {
-    const ticker    = String(body.ticker || '').trim().toUpperCase();
-    const direction = body.direction as PredictionDir;
-    const moveTier  = body.moveTier  as MoveTier;
-    const timeframe = (body.timeframe || 'WEEK') as PredictionTime;
+    const ticker   = String(body.ticker || '').trim().toUpperCase();
+    const mode     = (body.mode === 'EXACT' ? 'EXACT' : 'TIER') as PredictionMode;
     const rawReason = typeof body.reason === 'string' ? body.reason : '';
     const isPublic  = body.isPublic !== false;
+
+    if (!ticker) throw new AppError('VALIDATION_ERROR', 400, 'الرمز المالي مطلوب');
+
+    // ── EXACT mode: Pro/Ultra only ────────────────────────────────────────────
+    if (mode === 'EXACT' && !isPaid(user)) {
+      throw new AppError('FORBIDDEN', 403, 'وضع السعر المحدد متاح فقط لمشتركي Pro و Ultra');
+    }
 
     const validTimeframes: PredictionTime[] = ['WEEK', 'MONTH', 'THREE_MONTHS', 'SIX_MONTHS', 'NINE_MONTHS', 'YEAR'];
     const validTiers:      MoveTier[]       = ['LIGHT', 'MEDIUM', 'STRONG', 'EXTREME'];
 
-    if (!ticker || !['UP', 'DOWN'].includes(direction) || !validTimeframes.includes(timeframe)) {
-      throw new AppError('VALIDATION_ERROR', 400, 'بيانات غير صالحة');
-    }
-    if (!validTiers.includes(moveTier)) {
-      throw new AppError('VALIDATION_ERROR', 400, 'حجم التحرك المختار غير صالح');
+    let direction:   PredictionDir;
+    let moveTier:    MoveTier | undefined;
+    let timeframe:   PredictionTime | undefined;
+    let targetPrice: number | undefined;
+    let expiresAt:   Date;
+
+    if (mode === 'TIER') {
+      direction = body.direction as PredictionDir;
+      moveTier  = body.moveTier  as MoveTier;
+      timeframe = (body.timeframe || 'WEEK') as PredictionTime;
+
+      if (!['UP', 'DOWN'].includes(direction) || !validTimeframes.includes(timeframe)) {
+        throw new AppError('VALIDATION_ERROR', 400, 'بيانات غير صالحة');
+      }
+      if (!validTiers.includes(moveTier)) {
+        throw new AppError('VALIDATION_ERROR', 400, 'حجم التحرك المختار غير صالح');
+      }
+      expiresAt = getExpiresAt(timeframe);
+    } else {
+      // EXACT mode — direction derived from target vs current price
+      targetPrice = Number(body.targetPrice);
+      if (!targetPrice || targetPrice <= 0) {
+        throw new AppError('VALIDATION_ERROR', 400, 'السعر المستهدف غير صالح');
+      }
+
+      const rawExpiry = body.expiresAt ? new Date(body.expiresAt) : null;
+      const minExpiry = new Date(Date.now() + 86_400_000); // +24h
+      const maxExpiry = new Date(Date.now() + 2 * 365 * 86_400_000); // +2 years
+      if (!rawExpiry || isNaN(rawExpiry.getTime()) || rawExpiry < minExpiry || rawExpiry > maxExpiry) {
+        throw new AppError('VALIDATION_ERROR', 400, 'تاريخ الانتهاء يجب أن يكون بين غد و سنتين من الآن');
+      }
+      expiresAt = rawExpiry;
+      // Direction is derived at scoring time — store UP/DOWN based on target vs creation price
+      // We'll store it as UP/DOWN after we fetch the current price below
+      direction = 'UP'; // placeholder, will be overridden after price fetch
     }
 
     const trimmedReason = rawReason.trim();
@@ -205,14 +296,23 @@ export const PredictionsService = {
       throw new AppError('PRICE_UNAVAILABLE', 503, 'السعر غير متوفر حالياً. حاول لاحقاً.');
     }
 
-    const expiresAt = getExpiresAt(timeframe);
+    // Derive direction for EXACT mode after we have the current price
+    if (mode === 'EXACT' && targetPrice !== undefined) {
+      if (Math.abs((targetPrice - priceData.price) / priceData.price) < 0.001) {
+        throw new AppError('VALIDATION_ERROR', 400, 'السعر المستهدف قريب جداً من السعر الحالي');
+      }
+      direction = targetPrice > priceData.price ? 'UP' : 'DOWN';
+    }
+
     const prediction = await PredictionRepository.create({
       userId,
       ticker,
-      direction,
-      moveTier,
+      mode,
+      direction: direction!,
+      moveTier:    mode === 'TIER' ? moveTier : undefined,
+      timeframe:   mode === 'TIER' ? timeframe : undefined,
+      targetPrice: mode === 'EXACT' ? targetPrice : undefined,
       priceAtCreation: priceData.price,
-      timeframe,
       reason:   trimmedReason,
       expiresAt,
       isPublic,
@@ -326,75 +426,68 @@ export const PredictionsService = {
   },
 
   // ─── Core Scoring Engine ─────────────────────────────────────────────────────
-  /**
-   * Resolves a prediction against the actual closing price and scores it.
-   *
-   * Scoring model (EGX-calibrated, timeframe-aware):
-   *
-   *  Step 1 — Direction check
-   *  Step 2 — |actual move %| vs TIMEFRAME_TIER_RANGES[timeframe]
-   *  Step 3 — Base points:
-   *              Wrong direction         →  -8  (MISS_POINTS)
-   *              Flat (< tier LIGHT min) →  round(0.08 × base)  consolation
-   *              Tier exact              →  tierDef.basePoints (25/55/100/160)
-   *              ±1 tier adjacent        →  round(0.25 × base)
-   *              ±2+ tiers off           →  round(0.08 × base)
-   *  Step 4 — × TIMEFRAME_MULTIPLIER (1.0 → 4.0 for WEEK → YEAR)
-   *
-   *  HIT    = direction correct AND actualTier ≠ FLAT
-   *  MISSED = direction wrong OR actualTier = FLAT
-   *
-   *  accuracyPct = 100 / 50 / 20 / 8 / 0
-   */
   async resolveAndScore(predictionId: string, resolvedPrice: number) {
     const prediction = await PredictionRepository.findByIdForResolution(predictionId);
     if (!prediction || prediction.status !== 'ACTIVE') return;
 
-    const direction  = prediction.direction;
-    const moveTier   = (prediction.moveTier ?? 'MEDIUM') as MoveTier;
-    const timeframe  = prediction.timeframe;
-    const signedMovePct = ((resolvedPrice - prediction.priceAtCreation) / prediction.priceAtCreation) * 100;
+    let pointsEarned: number;
+    let accuracyPct:  number;
+    let status: 'HIT' | 'MISSED';
 
-    const directionCorrect =
-      (direction === 'UP'   && resolvedPrice > prediction.priceAtCreation) ||
-      (direction === 'DOWN' && resolvedPrice < prediction.priceAtCreation);
-
-    const absMovePct = Math.abs(signedMovePct);
-    const actualTier = getTierForMove(absMovePct, timeframe);
-    const basePts    = TIER_DEFS[moveTier].basePoints;
-
-    // ── Base points ──────────────────────────────────────────────────────────
-    let basePoints:  number;
-    let tierAccuracy: number;
-
-    if (!directionCorrect) {
-      basePoints   = MISS_POINTS;
-      tierAccuracy = 0;
-    } else if (actualTier === 'FLAT') {
-      basePoints   = Math.round(basePts * 0.08);
-      tierAccuracy = 8;
+    if (prediction.mode === 'EXACT') {
+      // ── EXACT mode ─────────────────────────────────────────────────────────
+      if (!prediction.targetPrice) return; // should never happen
+      const r = scoreExact(
+        prediction.targetPrice, resolvedPrice,
+        prediction.priceAtCreation, prediction.createdAt, prediction.expiresAt
+      );
+      pointsEarned = r.basePoints >= 0 ? Math.round(r.basePoints * r.multiplier) : r.basePoints;
+      accuracyPct  = r.accuracyPct;
+      status       = r.status;
     } else {
-      const dist = Math.abs(TIER_ORDER.indexOf(moveTier) - TIER_ORDER.indexOf(actualTier));
-      if (dist === 0) {
-        basePoints   = basePts;
-        tierAccuracy = 100;
-      } else if (dist === 1) {
-        basePoints   = Math.round(basePts * 0.25);
-        tierAccuracy = 50;
-      } else {
+      // ── TIER mode ──────────────────────────────────────────────────────────
+      const direction  = prediction.direction;
+      const moveTier   = (prediction.moveTier ?? 'MEDIUM') as MoveTier;
+      const timeframe  = prediction.timeframe!;
+      const signedMovePct = ((resolvedPrice - prediction.priceAtCreation) / prediction.priceAtCreation) * 100;
+
+      const directionCorrect =
+        (direction === 'UP'   && resolvedPrice > prediction.priceAtCreation) ||
+        (direction === 'DOWN' && resolvedPrice < prediction.priceAtCreation);
+
+      const absMovePct = Math.abs(signedMovePct);
+      const actualTier = getTierForMove(absMovePct, timeframe);
+      const basePts    = TIER_DEFS[moveTier].basePoints;
+
+      let basePoints: number;
+      let tierAccuracy: number;
+
+      if (!directionCorrect) {
+        basePoints   = MISS_POINTS;
+        tierAccuracy = 0;
+      } else if (actualTier === 'FLAT') {
         basePoints   = Math.round(basePts * 0.08);
-        tierAccuracy = 20;
+        tierAccuracy = 8;
+      } else {
+        const dist = Math.abs(TIER_ORDER.indexOf(moveTier) - TIER_ORDER.indexOf(actualTier));
+        if (dist === 0) {
+          basePoints   = basePts;
+          tierAccuracy = 100;
+        } else if (dist === 1) {
+          basePoints   = Math.round(basePts * 0.25);
+          tierAccuracy = 50;
+        } else {
+          basePoints   = Math.round(basePts * 0.08);
+          tierAccuracy = 20;
+        }
       }
+
+      const multiplier = TIMEFRAME_MULTIPLIER[timeframe] ?? 1;
+      pointsEarned     = basePoints >= 0 ? Math.round(basePoints * multiplier) : basePoints;
+      pointsEarned     = Math.max(MISS_POINTS, pointsEarned);
+      accuracyPct      = tierAccuracy;
+      status           = directionCorrect && actualTier !== 'FLAT' ? 'HIT' : 'MISSED';
     }
-
-    // ── Timeframe multiplier ─────────────────────────────────────────────────
-    const multiplier   = TIMEFRAME_MULTIPLIER[prediction.timeframe] ?? 1;
-    let   pointsEarned = basePoints >= 0 ? Math.round(basePoints * multiplier) : basePoints;
-    pointsEarned       = Math.max(MISS_POINTS, pointsEarned);
-
-    // ── Status ───────────────────────────────────────────────────────────────
-    const status: 'HIT' | 'MISSED' =
-      directionCorrect && actualTier !== 'FLAT' ? 'HIT' : 'MISSED';
 
     await PredictionRepository.updateResolution(predictionId, {
       status,

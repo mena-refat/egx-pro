@@ -88,12 +88,18 @@ enum PredictionStatus {
   EXPIRED
 }
 
-/// حجم التحرك المتوقع بدلاً من السعر المستهدف الدقيق
+/// وضع التوقع: حجم التحرك (الوضع الأساسي) أو سعر محدد (للمدفوعين فقط)
+enum PredictionMode {
+  TIER   // يتوقع حجم التحرك (LIGHT/MEDIUM/STRONG/EXTREME)
+  EXACT  // يتوقع سعراً بعينه وتاريخ انتهاء مخصص — Pro/Ultra فقط
+}
+
+/// حجم التحرك المتوقع
 enum MoveTier {
-  LIGHT    // خفيف  : تحرك 1-5%
-  MEDIUM   // متوسط : تحرك 5-15%
-  STRONG   // قوي   : تحرك 15-30%
-  EXTREME  // متطرف : تحرك >30%
+  LIGHT    // خفيف  : نطاق يعتمد على الإطار الزمني
+  MEDIUM   // متوسط
+  STRONG   // قوي
+  EXTREME  // متطرف
 }
 
 enum UserRank {
@@ -542,18 +548,21 @@ model Prediction {
   userId          Int
   ticker          String
   direction       PredictionDir
-  moveTier        MoveTier         @default(MEDIUM)
-  targetPrice     Float?           // deprecated — kept for legacy data only
+  mode            PredictionMode   @default(TIER)
+  // TIER mode
+  moveTier        MoveTier?        // null when mode = EXACT
+  timeframe       PredictionTime?  // null when mode = EXACT
+  // EXACT mode
+  targetPrice     Float?           // required when mode = EXACT
   priceAtCreation Float
-  timeframe       PredictionTime
   reason          String?
-  expiresAt       DateTime
+  expiresAt       DateTime         // TIER: computed from timeframe; EXACT: user-chosen
   isPublic        Boolean          @default(true)
   status          PredictionStatus @default(ACTIVE)
   resolvedAt      DateTime?
   resolvedPrice   Float?
   pointsEarned    Int?
-  accuracyPct     Float?           // 0-100: tier accuracy score at resolution
+  accuracyPct     Float?           // TIER: 0-100 tier accuracy; EXACT: 0-100 tolerance accuracy
   createdAt       DateTime         @default(now())
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes           PredictionLike[]

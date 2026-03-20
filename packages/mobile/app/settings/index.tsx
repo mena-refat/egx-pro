@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, Pressable, Alert, Linking } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   User, Shield, Bell, CreditCard, Fingerprint,
@@ -11,6 +11,7 @@ import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
+import { FONT, WEIGHT, RADIUS, SPACE } from '../../lib/theme';
 
 type ThemeOption = 'dark' | 'light' | 'system';
 
@@ -32,20 +33,28 @@ function MenuItem({ icon: Icon, label, sub, onPress, danger, last }: MenuItemPro
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
-        { borderBottomColor: colors.border2, backgroundColor: pressed ? colors.hover : 'transparent' },
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: SPACE.md,
+          paddingHorizontal: SPACE.lg,
+          paddingVertical: 14,
+          borderBottomColor: colors.border2,
+          backgroundColor: pressed ? colors.hover : 'transparent',
+        },
         !last && { borderBottomWidth: 1 },
       ]}
-      className="flex-row items-center gap-3 px-4 py-3.5"
     >
-      <View
-        className="w-9 h-9 rounded-xl items-center justify-center"
-        style={{ backgroundColor: danger ? '#f8717115' : `${colors.textSub}15` }}
-      >
+      <View style={{
+        width: 36, height: 36, borderRadius: RADIUS.lg,
+        alignItems: 'center', justifyContent: 'center',
+        backgroundColor: danger ? '#f8717115' : `${colors.textSub}15`,
+      }}>
         <Icon size={16} color={iconColor} />
       </View>
-      <View className="flex-1">
-        <Text style={{ color: danger ? '#f87171' : colors.text }} className="text-sm font-medium">{label}</Text>
-        {sub && <Text style={{ color: colors.textMuted }} className="text-xs mt-0.5">{sub}</Text>}
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: danger ? '#f87171' : colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.medium }}>{label}</Text>
+        {sub && <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 2 }}>{sub}</Text>}
       </View>
       {!danger && <ChevronIcon size={14} color={colors.textMuted} />}
     </Pressable>
@@ -55,13 +64,20 @@ function MenuItem({ icon: Icon, label, sub, onPress, danger, last }: MenuItemPro
 function Section({ title, children }: { title?: string; children: React.ReactNode }) {
   const { colors } = useTheme();
   return (
-    <View className="mx-4 mb-3">
+    <View style={{ marginHorizontal: SPACE.lg, marginBottom: SPACE.sm + 2 }}>
       {title && (
-        <Text style={{ color: colors.textMuted }} className="text-xs font-semibold uppercase tracking-wider px-1 mb-2">
+        <Text style={{
+          color: colors.textMuted, fontSize: FONT.xs, fontWeight: WEIGHT.semibold,
+          textTransform: 'uppercase', letterSpacing: 0.8,
+          paddingHorizontal: 4, marginBottom: SPACE.sm,
+        }}>
           {title}
         </Text>
       )}
-      <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl overflow-hidden">
+      <View style={{
+        backgroundColor: colors.card, borderColor: colors.border,
+        borderWidth: 1, borderRadius: RADIUS.xl, overflow: 'hidden',
+      }}>
         {children}
       </View>
     </View>
@@ -94,28 +110,38 @@ export default function SettingsPage() {
   return (
     <ScreenWrapper padded={false}>
       <ScrollView contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        <Text style={{ color: colors.text }} className="text-xl font-bold px-4 mb-5">الإعدادات</Text>
+        <Text style={{ color: colors.text, fontSize: FONT.xl, fontWeight: WEIGHT.bold, paddingHorizontal: SPACE.lg, marginBottom: 20 }}>
+          الإعدادات
+        </Text>
 
         {/* ─── Theme ─── */}
-        <View className="mx-4 mb-3">
-          <Text style={{ color: colors.textMuted }} className="text-xs font-semibold uppercase tracking-wider px-1 mb-2">
+        <View style={{ marginHorizontal: SPACE.lg, marginBottom: SPACE.sm + 2 }}>
+          <Text style={{
+            color: colors.textMuted, fontSize: FONT.xs, fontWeight: WEIGHT.semibold,
+            textTransform: 'uppercase', letterSpacing: 0.8,
+            paddingHorizontal: 4, marginBottom: SPACE.sm,
+          }}>
             المظهر
           </Text>
-          <View
-            style={{ backgroundColor: colors.card, borderColor: colors.border }}
-            className="border rounded-2xl p-1.5 flex-row gap-1"
-          >
+          <View style={{
+            backgroundColor: colors.card, borderColor: colors.border,
+            borderWidth: 1, borderRadius: RADIUS.xl, padding: 6,
+            flexDirection: 'row', gap: 4,
+          }}>
             {THEME_OPTIONS.map(({ id, label, Icon }) => {
               const active = currentTheme === id;
               return (
                 <Pressable
                   key={id}
                   onPress={() => setTheme(id)}
-                  className="flex-1 flex-row items-center justify-center gap-1.5 py-2.5 rounded-xl"
-                  style={{ backgroundColor: active ? '#8b5cf6' : 'transparent' }}
+                  style={{
+                    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                    gap: 6, paddingVertical: 10, borderRadius: RADIUS.lg,
+                    backgroundColor: active ? '#8b5cf6' : 'transparent',
+                  }}
                 >
                   <Icon size={13} color={active ? '#fff' : colors.textMuted} />
-                  <Text className="text-xs font-semibold" style={{ color: active ? '#fff' : colors.textMuted }}>
+                  <Text style={{ fontSize: FONT.xs, fontWeight: WEIGHT.semibold, color: active ? '#fff' : colors.textMuted }}>
                     {label}
                   </Text>
                 </Pressable>

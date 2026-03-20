@@ -121,9 +121,14 @@ export function usePredictionsApi() {
   const createPrediction = useCallback(
     async (body: {
       ticker: string;
-      direction: 'UP' | 'DOWN';
-      moveTier: 'LIGHT' | 'MEDIUM' | 'STRONG' | 'EXTREME';
-      timeframe: 'WEEK' | 'MONTH' | 'THREE_MONTHS' | 'SIX_MONTHS' | 'NINE_MONTHS' | 'YEAR';
+      mode: 'TIER' | 'EXACT';
+      // TIER
+      direction?: 'UP' | 'DOWN';
+      moveTier?: 'LIGHT' | 'MEDIUM' | 'STRONG' | 'EXTREME';
+      timeframe?: 'WEEK' | 'MONTH' | 'THREE_MONTHS' | 'SIX_MONTHS' | 'NINE_MONTHS' | 'YEAR';
+      // EXACT
+      targetPrice?: number;
+      expiresAt?: string;
       reason?: string | null;
       isPublic?: boolean;
     }) => {

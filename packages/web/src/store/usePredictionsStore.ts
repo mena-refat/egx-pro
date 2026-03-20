@@ -5,13 +5,15 @@ export type PredictionDir = 'UP' | 'DOWN';
 export type PredictionTime = 'WEEK' | 'MONTH' | 'THREE_MONTHS' | 'SIX_MONTHS' | 'NINE_MONTHS' | 'YEAR';
 export type UserRank = 'BEGINNER' | 'ANALYST' | 'SENIOR' | 'EXPERT' | 'LEGEND';
 export type MoveTier = 'LIGHT' | 'MEDIUM' | 'STRONG' | 'EXTREME';
+export type PredictionMode = 'TIER' | 'EXACT';
 
 export interface FeedPrediction {
   id: string;
   userId: string;
   ticker: string;
   direction: PredictionDir;
-  moveTier: MoveTier;
+  mode: PredictionMode;
+  moveTier?: MoveTier;
   targetPrice?: number;
   priceAtCreation: number;
   timeframe: PredictionTime;
@@ -71,9 +73,14 @@ export interface DailyLimits {
 export type NewPredictionDraft = {
   ticker?: string;
   stockName?: string;
+  mode?: PredictionMode;
+  // TIER fields
   direction?: PredictionDir;
   moveTier?: MoveTier;
   timeframe?: PredictionTime;
+  // EXACT fields
+  targetPrice?: number;
+  expiresAt?: string; // ISO date string
   reason?: string;
   isPublic?: boolean;
 };
@@ -118,9 +125,12 @@ interface PredictionsState {
 const initialDraft: NewPredictionDraft = {
   ticker: undefined,
   stockName: undefined,
+  mode: 'TIER',
   direction: undefined,
   moveTier: undefined,
   timeframe: 'WEEK',
+  targetPrice: undefined,
+  expiresAt: undefined,
   reason: '',
   isPublic: true,
 };

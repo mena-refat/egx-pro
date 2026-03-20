@@ -48,8 +48,8 @@ function WatchlistCard({ stock, live, onPress }: { stock: Stock; live?: { price:
       <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 1 }} numberOfLines={1}>
         {getStockName(stock.ticker, 'ar')}
       </Text>
-      <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold, marginTop: SPACE.xs, fontVariant: ['tabular-nums'] }}>
-        {price.toFixed(2)}
+      <Text style={{ color: price > 0 ? colors.text : colors.textMuted, fontSize: FONT.base, fontWeight: WEIGHT.bold, marginTop: SPACE.xs, fontVariant: ['tabular-nums'] }}>
+        {price > 0 ? price.toFixed(2) : '—'}
       </Text>
       <View style={{
         flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3,
@@ -296,7 +296,7 @@ export default function HomePage() {
               ) : (
                 enrichedHoldings.slice(0, 4).map((h, i) => (
                   <Pressable
-                    key={h.id}
+                    key={h.ticker}
                     onPress={() => router.push(`/stocks/${h.ticker}`)}
                     style={({ pressed }) => [
                       {

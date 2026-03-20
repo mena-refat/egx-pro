@@ -209,7 +209,21 @@
     "successPublished": "Your prediction was published successfully!",
     "loadMore": "Load more",
     "statusActive": "Active",
-    "next": "Next"
+    "next": "Next",
+    "modeTabTier": "Move size",
+    "modeTabExact": "Exact price",
+    "exactUpgradeTitle": "Exact price mode — Pro & Ultra",
+    "exactUpgradeDesc": "Predict an exact target price and set your own expiry date. Higher points for higher precision.",
+    "upgradeNow": "Upgrade now",
+    "exactModeDesc": "Set a target price and an expiry date. Direction is derived automatically.",
+    "exactTargetPrice": "Target price",
+    "exactExpiryDate": "Expiry date",
+    "exactDateRange": "Between tomorrow and 2 years from now",
+    "exactDerivedUp": "You expect the stock to rise",
+    "exactDerivedDown": "You expect the stock to fall",
+    "exactPriceSameAsCurrent": "Target price must differ from the current price",
+    "exactToleranceBands": "Scoring bands (based on expiry date)",
+    "exactMaxPoints": "Max potential points"
   },
   "header": {
     "welcome": "Welcome",

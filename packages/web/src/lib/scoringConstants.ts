@@ -3,6 +3,7 @@
 
 export type MoveTier = 'LIGHT' | 'MEDIUM' | 'STRONG' | 'EXTREME';
 export type PredictionTime = 'WEEK' | 'MONTH' | 'THREE_MONTHS' | 'SIX_MONTHS' | 'NINE_MONTHS' | 'YEAR';
+export type PredictionMode = 'TIER' | 'EXACT';
 
 export const TIER_ORDER: MoveTier[] = ['LIGHT', 'MEDIUM', 'STRONG', 'EXTREME'];
 
@@ -26,6 +27,46 @@ export const TIMEFRAME_TIER_RANGES: Record<PredictionTime, Record<MoveTier, [num
   NINE_MONTHS:  { LIGHT: [2, 25],  MEDIUM: [25, 70], STRONG: [70, 120], EXTREME: [120, Infinity] },
   YEAR:         { LIGHT: [3, 28],  MEDIUM: [28, 82], STRONG: [82, 135], EXTREME: [135, Infinity] },
 };
+
+// ─── EXACT mode constants ─────────────────────────────────────────────────────
+
+export interface ExactBand {
+  tolerance: number;    // max % diff from target price
+  basePoints: number;
+  accuracyPct: number;
+  labelAr: string;
+  labelEn: string;
+  color: string;
+}
+
+export const EXACT_BANDS: ExactBand[] = [
+  { tolerance: 2,  basePoints: 500, accuracyPct: 100, labelAr: 'دقة تامة',  labelEn: 'Bullseye', color: 'text-emerald-400' },
+  { tolerance: 5,  basePoints: 350, accuracyPct: 70,  labelAr: 'دقيق جداً', labelEn: 'Sharp',    color: 'text-green-400'  },
+  { tolerance: 10, basePoints: 200, accuracyPct: 40,  labelAr: 'دقيق',      labelEn: 'Precise',  color: 'text-amber-400'  },
+  { tolerance: 20, basePoints: 90,  accuracyPct: 18,  labelAr: 'قريب',      labelEn: 'Close',    color: 'text-orange-400' },
+];
+
+// [maxDays, multiplier]
+export const EXACT_DAYS_MULTIPLIERS: Array<[number, number]> = [
+  [7,        1.0],
+  [30,       1.5],
+  [90,       2.2],
+  [180,      3.0],
+  [365,      4.5],
+  [Infinity, 6.0],
+];
+
+export function calcExactDaysMultiplier(createdAt: Date, expiresAt: Date): number {
+  const days = Math.round((expiresAt.getTime() - createdAt.getTime()) / 86_400_000);
+  for (const [maxDays, mult] of EXACT_DAYS_MULTIPLIERS) {
+    if (days <= maxDays) return mult;
+  }
+  return 6.0;
+}
+
+export function calcExactMaxPoints(expiresAt: Date, createdAt = new Date()): number {
+  return Math.round(500 * calcExactDaysMultiplier(createdAt, expiresAt));
+}
 
 /** Human-readable range label e.g. "5–11%" or ">19%" */
 export function formatRange(tier: MoveTier, timeframe: PredictionTime): string {
