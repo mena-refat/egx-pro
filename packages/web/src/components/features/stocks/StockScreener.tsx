@@ -2,14 +2,14 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
-import EmptyState from './shared/EmptyState';
-import { Button } from './ui/Button';
-import { StockFilters } from './stocks/StockFilters';
-import { StockTable } from './stocks/StockTable';
-import { WatchlistTargetModal } from './stocks/WatchlistTargetModal';
-import { useStockScreener } from '../hooks/useStockScreener';
-import { Stock } from '../types';
-import type { StockWithMeta } from '../hooks/useStockScreener';
+import EmptyState from '../../shared/EmptyState';
+import { Button } from '../../ui/Button';
+import { StockFilters } from './StockFilters';
+import { StockTable } from './StockTable';
+import { WatchlistTargetModal } from './WatchlistTargetModal';
+import { useStockScreener } from '../../../hooks/useStockScreener';
+import { Stock } from '../../../types';
+import type { StockWithMeta } from '../../../hooks/useStockScreener';
 
 export interface StockScreenerProps {
   onSelectStock?: (stock: Stock) => void;

@@ -1,4 +1,4 @@
-import { getStockName, getStockInfo } from '../lib/egxStocks';
+import { getStockName, getStockInfo } from '../../../lib/egxStocks';
 
 interface StockNameDisplayProps {
   ticker: string;

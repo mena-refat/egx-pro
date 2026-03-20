@@ -3,7 +3,7 @@ import { Shield, Smartphone, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '../../../store/authStore';
 import styles from './SecuritySettings.module.scss';
 
 export default function SecuritySettings() {

@@ -14,7 +14,7 @@ export type AuthFormData = { emailOrPhone: string; password: string; fullName?: 
 function ensureUserShape(u: Record<string, unknown> | null | undefined): User | null {
   if (!u || typeof u !== 'object') return null;
   const id = u.id;
-  if (!id || typeof id !== 'string') return null;
+  if (!id) return null;
   return { ...u, id: String(id), fullName: typeof u.fullName === 'string' ? u.fullName : String(u.fullName ?? '') } as User;
 }
 

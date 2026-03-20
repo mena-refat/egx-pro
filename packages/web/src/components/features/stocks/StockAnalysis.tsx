@@ -16,16 +16,16 @@ import {
   Timer,
   Target,
 } from 'lucide-react';
-import { Skeleton } from './ui/Skeleton';
-const TradingViewChart = lazy(() => import('./features/stocks/TradingViewChart').then((m) => ({ default: m.TradingViewChart })));
-import { getStockName, getStockInfo } from '../lib/egxStocks';
-import { getSector } from '../lib/egxIndicesSectors';
-import { Stock } from '../types';
-import { useStockAnalysis } from '../hooks/useStockAnalysis';
-import { AnalysisForm } from './analysis/AnalysisForm';
-import { AnalysisResult } from './analysis/AnalysisResult';
-import { formatNum, formatBig } from './analysis/analysisUtils';
-import type { TabId, ChartRange } from '../hooks/useStockAnalysis';
+import { Skeleton } from '../../ui/Skeleton';
+const TradingViewChart = lazy(() => import('./TradingViewChart').then((m) => ({ default: m.TradingViewChart })));
+import { getStockName, getStockInfo } from '../../../lib/egxStocks';
+import { getSector } from '../../../lib/egxIndicesSectors';
+import { Stock } from '../../../types';
+import { useStockAnalysis } from '../../../hooks/useStockAnalysis';
+import { AnalysisForm } from '../analysis/AnalysisForm';
+import { AnalysisResult } from '../analysis/AnalysisResult';
+import { formatNum, formatBig } from '../analysis/analysisUtils';
+import type { TabId, ChartRange } from '../../../hooks/useStockAnalysis';
 import styles from './StockAnalysis.module.scss';
 
 export interface StockAnalysisProps {

@@ -1,6 +1,6 @@
 import React, { memo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '../../../store/authStore';
 
 interface Goal {
   id: string;

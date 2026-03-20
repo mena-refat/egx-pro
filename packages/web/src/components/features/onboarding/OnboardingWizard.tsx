@@ -18,10 +18,10 @@ import {
   Zap,
   Plus,
 } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
-import { TIMEOUTS } from '../lib/constants';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+import { useAuthStore } from '../../../store/authStore';
+import { TIMEOUTS } from '../../../lib/constants';
+import { Button } from '../../ui/Button';
+import { Input } from '../../ui/Input';
 
 const steps = [
   { id: 'goal', icon: Wallet },

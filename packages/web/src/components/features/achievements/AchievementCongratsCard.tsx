@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { TIMEOUTS } from '../lib/constants';
+import { TIMEOUTS } from '../../../lib/constants';
 
 const CARD_DURATION_MS = TIMEOUTS.cardAutoClose;
 const ENTER_DURATION_S = 0.3;

@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import { useProfileStore } from '../store/profileStore';
+import { useAuthStore } from '../../../store/authStore';
+import { useProfileStore } from '../../../store/profileStore';
 import { User as UserIcon, Trophy, Settings } from 'lucide-react';
-import { FollowersFollowingModal, ProfileCounterRow } from './features/profile';
-import { usePredictionsApi } from '../hooks/usePredictionsApi';
-import type { User } from '../types';
-import type { ProfileUser } from './features/profile';
+import { FollowersFollowingModal, ProfileCounterRow } from '.';
+import { usePredictionsApi } from '../../../hooks/usePredictionsApi';
+import type { User } from '../../../types';
+import type { ProfileUser } from '.';
 
 function userToProfileUser(user: User): ProfileUser {
   return {

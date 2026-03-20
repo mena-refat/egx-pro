@@ -1,10 +1,10 @@
 import React, { memo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Calendar, Trash2 } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
-import { toast } from '../store/toastStore';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+import { useAuthStore } from '../../../store/authStore';
+import { toast } from '../../../store/toastStore';
+import { Button } from '../../ui/Button';
+import { Input } from '../../ui/Input';
 
 interface Goal {
   id: string;
