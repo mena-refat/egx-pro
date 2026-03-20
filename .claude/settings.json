@@ -132,7 +132,8 @@
       "Bash(find node_modules/react-router -name *.d.mts)"
     ],
     "additionalDirectories": [
-      "C:\\Users\\menar\\Desktop\\src\\lib\\lib"
+      "C:\\Users\\menar\\Desktop\\src\\lib\\lib",
+      "c:\\Users\\menar\\.claude\\projects\\c--Users-menar-Desktop-egx-pro\\memory"
     ]
   }
 }

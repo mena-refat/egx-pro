@@ -253,7 +253,7 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
       const data = res.data;
       if ((data as { error?: string })?.error) {
         const err = (data as { error?: string }).error;
-        if (err === 'invalid_code') setEnable2FAError(t('settings.invalidCodeLong'));
+        if (err === 'invalid_code' || err === 'INVALID_CODE') setEnable2FAError(t('settings.invalidCodeLong'));
         else if (err === 'no_secret') setEnable2FAError(t('settings.noSecret'));
         else if (err === '2fa_already_enabled') setEnable2FAError(t('settings.twoFaAlreadyEnabled'));
         else setEnable2FAError(t('settings.twoFaInvalidCodeTryAgain'));
@@ -282,7 +282,7 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
       if ((data as { error?: string })?.error) {
         const err = (data as { error?: string }).error;
         if (err === 'wrong_password') setDisable2FAError(t('settings.wrongPassword'));
-        else if (err === 'invalid_code') setDisable2FAError(t('settings.invalidCode'));
+        else if (err === 'invalid_code' || err === 'INVALID_CODE') setDisable2FAError(t('settings.invalidCode'));
         else setDisable2FAError(err || 'Failed');
         return;
       }
@@ -586,7 +586,7 @@ export function SecurityTab({ user, onUpdateProfile, setRequestStatus }: Profile
             <div className="border-b border-[var(--border)] my-4" />
             <p className="text-sm text-[var(--text-muted)] mb-4">{t('settings.twoFaDisableDesc')}</p>
             <label className="block text-xs text-[var(--text-muted)] mb-1.5">{t('settings.password')}</label>
-            <Input type="password" value={disable2FAPassword} onChange={(e) => setDisable2FAPassword(e.target.value)} placeholder={t('settings.password')} className="mb-4" />
+            <Input type="password" value={disable2FAPassword} onChange={(e) => setDisable2FAPassword(e.target.value)} placeholder={t('settings.password')} inputClassName="mb-4" />
             <label className="block text-xs text-[var(--text-muted)] mb-1.5">{t('settings.twoFaVerificationCode', { defaultValue: 'Verification code from app' })}</label>
             <OTPInput value={disable2FAOtp} onChange={setDisable2FAOtp} className="mb-4" />
             {disable2FAError && <p className="text-xs text-[var(--danger)] mb-4">{disable2FAError}</p>}

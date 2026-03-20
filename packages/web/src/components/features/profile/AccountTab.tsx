@@ -52,7 +52,15 @@ export function AccountTab({ user, onUpdateProfile, setRequestStatus }: ProfileT
         setVerifySent(true);
         setRequestStatus({ type: 'success', message: t('settings.verificationCodeSent') });
       } else {
-        setRequestStatus({ type: 'error', message: data.error === 'already_verified' ? t('settings.emailVerified') : data.error === 'no_email' ? t('settings.emailNotVerified') : t('common.error') });
+        setRequestStatus({
+          type: 'error',
+          message:
+            data.error === 'already_verified' || data.error === 'ALREADY_VERIFIED'
+              ? t('settings.emailVerified')
+              : data.error === 'no_email' || data.error === 'NO_EMAIL'
+                ? t('settings.emailNotVerified')
+                : t('common.error'),
+        });
       }
     } catch {
       setRequestStatus({ type: 'error', message: t('common.error') });
@@ -299,7 +307,7 @@ export function AccountTab({ user, onUpdateProfile, setRequestStatus }: ProfileT
                           <button
                             type="button"
                             onClick={() => saveField(field)}
-                            disabled={savingField === field || (isUsername && (usernameFormatError || (usernameStatus !== 'available' && value !== (user.username ?? ''))))}
+                            disabled={savingField === field || (isUsername && (!!usernameFormatError || (usernameStatus !== 'available' && value !== (user.username ?? ''))))}
                             className="p-1 rounded text-[var(--success)] hover:bg-[var(--success-bg)]"
                             aria-label={t('settings.save')}
                           >

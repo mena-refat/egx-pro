@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { marketDataService } from '../services/market-data/market-data.service.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { logger } from '../lib/logger.ts';
-import { sendError } from '../lib/apiResponse.ts';
+import { sendError, sendSuccess } from '../lib/apiResponse.ts';
 
 export const MarketDataController = {
   async quotes(req: Request, res: Response): Promise<void> {
@@ -15,7 +15,10 @@ export const MarketDataController = {
       }
       const quotes = await marketDataService.getQuotes(symbols);
       const response = Object.fromEntries(quotes);
-      res.json({ data: response, marketOpen: marketDataService.isMarketOpen() });
+      sendSuccess(res, {
+        quotes: response,
+        marketOpen: marketDataService.isMarketOpen(),
+      });
     } catch (err: unknown) {
       logger.error('Quotes API error', { error: (err as Error).message });
       sendError(res, 'INTERNAL_ERROR', 500);
@@ -23,8 +26,8 @@ export const MarketDataController = {
   },
 
   health(_req: Request, res: Response): void {
-    res.json({
-      data: marketDataService.getHealthReport(),
+    sendSuccess(res, {
+      health: marketDataService.getHealthReport(),
       marketOpen: marketDataService.isMarketOpen(),
     });
   },
@@ -45,6 +48,6 @@ export const MarketDataController = {
     } catch (err: unknown) {
       results[source.name] = { error: (err as Error).message };
     }
-    res.json({ symbol, results });
+    sendSuccess(res, { symbol, results });
   },
 };

@@ -111,7 +111,7 @@ export function useAuthPage(refCode: string) {
         let msg = resData.message || resData.error || t('auth.authFailed');
         if (resData.error === 'account_not_found') msg = resData.message || t('auth.accountNotExist');
         else if (resData.error === 'account_locked') msg = resData.message || t('auth.errors.accountLocked');
-        else if (resData.error === 'already_registered' || resData.error === 'service_unavailable') msg = resData.message || msg;
+        else if (resData.error === 'already_registered' || resData.error === 'ALREADY_REGISTERED' || resData.error === 'service_unavailable' || resData.error === 'SERVICE_UNAVAILABLE') msg = resData.message || msg;
         setAuthError(msg);
         return;
       }
@@ -179,7 +179,7 @@ export function useAuthPage(refCode: string) {
       const data = await res.json();
       if (!res.ok) {
         let msg = 'Verification failed';
-        if (data.error === 'invalid_code') msg = t('settings.invalidCodeLong');
+        if (data.error === 'invalid_code' || data.error === 'INVALID_CODE') msg = t('settings.invalidCodeLong');
         else if (data.error === 'invalid_or_expired_token') msg = t('auth.sessionExpired');
         else if (data.message) msg = data.message;
         throw new Error(msg);

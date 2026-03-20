@@ -89,15 +89,15 @@ export async function register(req: Request, res: Response): Promise<void> {
     const errMessage = e instanceof Error ? e.message : String(e);
     const errLower = errMessage.toLowerCase();
     if (prismaCode === 'P2002' || errLower.includes('unique constraint') || errLower.includes('duplicate key')) {
-      sendError(res, 'already_registered', 400, 'البريد أو رقم الموبايل أو اسم المستخدم مستخدم بالفعل.');
+      sendError(res, 'ALREADY_REGISTERED', 400, 'البريد أو رقم الموبايل أو اسم المستخدم مستخدم بالفعل.');
       return;
     }
     if (prismaCode === 'P2003') {
-      sendError(res, 'invalid_data', 400, 'بيانات غير صالحة. تأكد من الحقول وحاول مرة أخرى.');
+      sendError(res, 'INVALID_DATA', 400, 'بيانات غير صالحة. تأكد من الحقول وحاول مرة أخرى.');
       return;
     }
     if (errLower.includes('connect') || errLower.includes('econnrefused') || errLower.includes('connection')) {
-      sendError(res, 'service_unavailable', 503, 'تعذر الاتصال بقاعدة البيانات. تأكد أن الخادم يعمل وحاول لاحقاً.');
+      sendError(res, 'SERVICE_UNAVAILABLE', 503, 'تعذر الاتصال بقاعدة البيانات. تأكد أن الخادم يعمل وحاول لاحقاً.');
       return;
     }
     sendError(res, 'INTERNAL_ERROR', 500, 'حدث خطأ أثناء التسجيل. حاول مرة أخرى.');
@@ -348,11 +348,11 @@ export async function sendVerifyEmail(req: AuthRequest, res: Response): Promise<
       select: { email: true, isEmailVerified: true },
     });
     if (!user?.email) {
-      sendError(res, 'no_email', 400);
+      sendError(res, 'NO_EMAIL', 400);
       return;
     }
     if (user.isEmailVerified) {
-      sendError(res, 'already_verified', 400);
+      sendError(res, 'ALREADY_VERIFIED', 400);
       return;
     }
     // Cryptographically secure 6-digit code
@@ -363,7 +363,7 @@ export async function sendVerifyEmail(req: AuthRequest, res: Response): Promise<
     sendSuccess(res, { success: true });
   } catch (e) {
     logger.error('sendVerifyEmail error', { error: e });
-    sendError(res, 'server_error', 500);
+    sendError(res, 'SERVER_ERROR', 500);
   }
 }
 
@@ -375,7 +375,7 @@ export async function confirmVerifyEmail(req: AuthRequest, res: Response): Promi
   }
   const { code } = (req.body as { code?: string }) ?? {};
   if (!code || typeof code !== 'string') {
-    sendError(res, 'code_required', 400);
+    sendError(res, 'CODE_REQUIRED', 400);
     return;
   }
   try {
@@ -390,7 +390,7 @@ export async function confirmVerifyEmail(req: AuthRequest, res: Response): Promi
     const stored = await getCache<string>(`email_verify:${userId}`);
     if (!stored || stored !== code.trim()) {
       await setCache(attemptsKey, String(attempts + 1), 15 * 60);
-      sendError(res, 'invalid_code', 400);
+      sendError(res, 'INVALID_CODE', 400);
       return;
     }
     // Invalidate code immediately after successful use
@@ -403,6 +403,6 @@ export async function confirmVerifyEmail(req: AuthRequest, res: Response): Promi
     sendSuccess(res, { success: true });
   } catch (e) {
     logger.error('confirmVerifyEmail error', { error: e });
-    sendError(res, 'server_error', 500);
+    sendError(res, 'SERVER_ERROR', 500);
   }
 }

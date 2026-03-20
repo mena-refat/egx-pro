@@ -32,6 +32,7 @@ import billingRoutes from './routes/billing.ts';
 import newsRoutes from './routes/news.ts';
 import referralRoutes from './routes/referral.ts';
 import socialRoutes from './routes/social.ts';
+import mobileRoutes from './routes/mobile.ts';
 import predictionsRoutes from './routes/predictions.ts';
 import adminRoutes from './routes/admin.ts';
 import supportRoutes from './routes/support.ts';
@@ -216,6 +217,7 @@ async function startServer() {
   app.use('/api/referral', referralRoutes);
   app.use('/api/market', marketDataRoutes);
   app.use('/api/social', socialRoutes);
+  app.use('/api/mobile', mobileRoutes);
   app.use('/api/predictions', predictionsRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/support', supportRoutes);
