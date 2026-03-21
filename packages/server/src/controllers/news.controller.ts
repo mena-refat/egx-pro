@@ -37,7 +37,7 @@ export const NewsController = {
       return;
     }
     const body = req.body as { title?: string; description?: string };
-    const result = await NewsAnalysisService.analyzeArticle({
+    const result = await NewsAnalysisService.analyzeSmart({
       title: body.title ?? '',
       description: body.description,
     });

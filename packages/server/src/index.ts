@@ -51,6 +51,7 @@ import { runArchiveUsersJob } from './jobs/archive-users.ts';
 import { runResetAiUsageJob } from './jobs/reset-ai-usage.ts';
 import { runDelayedPricesJob, DELAYED_PRICES_INTERVAL_MS } from './jobs/delayed-prices.ts';
 import { runScheduledNotificationsJob } from './jobs/scheduled-notifications.ts';
+import { runPrewarmNewsAnalysisJob } from './jobs/prewarm-news-analysis.ts';
 
 async function startServer() {
   if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
@@ -407,6 +408,18 @@ async function startServer() {
     void runScheduledNotificationsJob().catch((err) => logger.error('Scheduled notifications job error', { error: err }));
   }, { timezone: 'Africa/Cairo' });
 
+  // News analysis prewarm — every 2 hours, active 06:00–23:00 Cairo.
+  // The job itself checks the active window; at 06:00 it auto-catches up
+  // on articles published during the night (23:00–06:00).
+  let prewarmRunning = false;
+  const newsPrewarmCron = cron.schedule('0 */2 * * *', () => {
+    if (prewarmRunning) return;
+    prewarmRunning = true;
+    runPrewarmNewsAnalysisJob()
+      .catch((err) => logger.error('News prewarm job error', { error: err }))
+      .finally(() => { prewarmRunning = false; });
+  }, { timezone: 'Africa/Cairo' });
+
   void safeRunNewsSyncJob();
 
   const shutdown = (signal: string) => {
@@ -419,6 +432,7 @@ async function startServer() {
     trackRecordCron.stop();
     newsSyncCron.stop();
     scheduledNotifCron.stop();
+    newsPrewarmCron.stop();
     clearInterval(pricesInterval);
     server.close(() => {
       logger.info('HTTP server closed');

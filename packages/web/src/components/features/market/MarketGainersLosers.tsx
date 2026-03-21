@@ -57,19 +57,16 @@ export function MarketGainersLosers({ topGainers, topLosers, loading, isAr }: Pr
                   <button
                     type="button"
                     onClick={() => navigate(`/stocks/${s.ticker}`)}
-                    className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
+                    className={`w-full px-4 py-3 flex items-center justify-between gap-2 hover:bg-[var(--bg-card-hover)] transition-colors ${isAr ? 'text-right' : 'text-left'}`}
                   >
                     <div className="min-w-0">
-                      <p className="font-medium text-[var(--text-primary)] truncate">{getStockName(s.ticker, lang)}</p>
-                      <p className="text-xs text-[var(--text-muted)]">{s.ticker}</p>
+                      <p className="font-bold text-[var(--text-primary)]">{s.ticker}</p>
+                      <p className="text-xs text-[var(--text-muted)] truncate">{getStockName(s.ticker, lang)}</p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-medium text-[var(--text-secondary)]">{formatValue(s.price ?? 0, 2)}</span>
-                      <span className="text-xs font-semibold text-[var(--success)] flex items-center gap-0.5">
-                        {formatChange(s.changePercent ?? 0)}
-                        <TrendingUp className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
+                    <span className="text-sm font-semibold text-[var(--success)] flex items-center gap-0.5 shrink-0">
+                      {formatChange(s.changePercent ?? 0)}
+                      <TrendingUp className="w-3.5 h-3.5" />
+                    </span>
                   </button>
                 </li>
               ))
@@ -90,19 +87,16 @@ export function MarketGainersLosers({ topGainers, topLosers, loading, isAr }: Pr
                   <button
                     type="button"
                     onClick={() => navigate(`/stocks/${s.ticker}`)}
-                    className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-[var(--bg-card-hover)] transition-colors"
+                    className={`w-full px-4 py-3 flex items-center justify-between gap-2 hover:bg-[var(--bg-card-hover)] transition-colors ${isAr ? 'text-right' : 'text-left'}`}
                   >
                     <div className="min-w-0">
-                      <p className="font-medium text-[var(--text-primary)] truncate">{getStockName(s.ticker, lang)}</p>
-                      <p className="text-xs text-[var(--text-muted)]">{s.ticker}</p>
+                      <p className="font-bold text-[var(--text-primary)]">{s.ticker}</p>
+                      <p className="text-xs text-[var(--text-muted)] truncate">{getStockName(s.ticker, lang)}</p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-medium text-[var(--text-secondary)]">{formatValue(s.price ?? 0, 2)}</span>
-                      <span className="text-xs font-semibold text-[var(--danger)] flex items-center gap-0.5">
-                        {formatChange(s.changePercent ?? 0)}
-                        <TrendingDown className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
+                    <span className="text-sm font-semibold text-[var(--danger)] flex items-center gap-0.5 shrink-0">
+                      {formatChange(s.changePercent ?? 0)}
+                      <TrendingDown className="w-3.5 h-3.5" />
+                    </span>
                   </button>
                 </li>
               ))

@@ -267,44 +267,44 @@ export default function HomePage() {
                 style={{ padding: SPACE.xl, borderRadius: RADIUS['2xl'], borderWidth: 1, borderColor: BRAND + '30' }}
               >
                 {portLoading ? (
-                  <View style={{ gap: SPACE.sm }}>
+                  <View style={{ gap: SPACE.sm, alignItems: 'center' }}>
                     <Skeleton.Line width={120} height={14} />
                     <Skeleton.Line width={200} height={36} />
                     <Skeleton.Line width={160} height={18} />
                   </View>
                 ) : (
-                  <>
-                    <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs, marginBottom: SPACE.xs }}>
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs, marginBottom: SPACE.xs, textAlign: 'center' }}>
                       إجمالي محفظتي
                     </Text>
-                    <Text style={{ color: '#fff', fontSize: FONT['3xl'], fontWeight: WEIGHT.extrabold, fontVariant: ['tabular-nums'] }}>
+                    <Text style={{ color: '#fff', fontSize: FONT['3xl'], fontWeight: WEIGHT.extrabold, fontVariant: ['tabular-nums'], textAlign: 'center' }}>
                       {n(liveSummary.totalValue)} EGP
                     </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginTop: SPACE.sm }}>
+                    <View style={{ marginTop: SPACE.sm }}>
                       <View style={{
                         paddingHorizontal: SPACE.sm, paddingVertical: 3, borderRadius: RADIUS.full,
                         backgroundColor: isPositive ? '#4ade8025' : '#f8717125',
                       }}>
-                        <Text style={{ color: gainColor, fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>
+                        <Text style={{ color: gainColor, fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'], textAlign: 'center' }}>
                           {isPositive ? '+' : ''}{n(liveSummary.totalGainLoss)} EGP ({liveSummary.totalGainLossPercent.toFixed(2)}%)
                         </Text>
                       </View>
                     </View>
-                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: SPACE.xl, marginTop: SPACE.lg }}>
-                      <View>
-                        <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>التكلفة</Text>
+                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 56, marginTop: SPACE.lg }}>
+                      <View style={{ alignItems: 'center' }}>
+                        <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>الأساسي</Text>
                         <Text style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold, fontVariant: ['tabular-nums'] }}>
                           {n(liveSummary.totalCost)} EGP
                         </Text>
                       </View>
-                      <View>
+                      <View style={{ alignItems: 'center' }}>
                         <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>الأسهم</Text>
                         <Text style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>
                           {enrichedHoldings.length}
                         </Text>
                       </View>
                     </View>
-                  </>
+                  </View>
                 )}
               </LinearGradient>
             </Pressable>

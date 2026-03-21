@@ -781,6 +781,28 @@ model AbuseReport {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// News Analysis
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Persistent store for AI-generated news analysis results.
+/// Keyed by SHA-256 of (title|description) so it survives Redis restarts.
+/// Redis is still used as L1 hot cache (1h TTL); DB is the source of truth.
+model NewsItemAnalysis {
+  id          String   @id @default(cuid())
+  /// SHA-256 of "title|description" — matches articleHash() in the service
+  contentHash String   @unique
+  /// Full NewsImpactAnalysis JSON (all stages including deepReport if present)
+  result      Json
+  /// impact_level from Stage 1 — useful for analytics queries
+  impactLevel String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([impactLevel])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Archive
 // ─────────────────────────────────────────────────────────────────────────────
 

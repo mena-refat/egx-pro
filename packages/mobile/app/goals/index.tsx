@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import {
   ArrowLeft, ArrowRight, Plus, Target, Trash2, CheckCircle,
   Home, Car, Briefcase, Globe, Wallet, MoreHorizontal,
+  ExternalLink,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
@@ -34,6 +35,16 @@ const CATEGORIES: Record<Category, { icon: typeof Home; label: string; color: st
   other:      { icon: MoreHorizontal,label: 'أخرى',  color: '#94a3b8' },
 };
 
+/** Where to take the user to "work on" each goal type */
+const GOAL_ACTION: Record<Category, { label: string; href: string }> = {
+  wealth:     { label: 'ابدأ الاستثمار',     href: '/(tabs)/portfolio' },
+  retirement: { label: 'ابدأ الاستثمار',     href: '/(tabs)/portfolio' },
+  home:       { label: 'احسب خطة التوفير',  href: '/calculator'       },
+  car:        { label: 'احسب خطة التوفير',  href: '/calculator'       },
+  travel:     { label: 'احسب خطة التوفير',  href: '/calculator'       },
+  other:      { label: 'احسب خطة التوفير',  href: '/calculator'       },
+};
+
 function ProgressBar({ value, max }: { value: number; max: number }) {
   const { colors } = useTheme();
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
@@ -45,16 +56,20 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   );
 }
 
-function GoalCard({ goal, onDelete, onAddAmount, onComplete }: {
+function GoalCard({ goal, onDelete, onAddAmount, onComplete, onAction }: {
   goal: Goal;
   onDelete: () => void;
   onAddAmount: () => void;
   onComplete: () => void;
+  onAction: () => void;
 }) {
   const { colors } = useTheme();
-  const cat = CATEGORIES[goal.category] ?? CATEGORIES.other;
+  const cat    = CATEGORIES[goal.category] ?? CATEGORIES.other;
+  const action = GOAL_ACTION[goal.category]  ?? GOAL_ACTION.other;
   const CatIcon = cat.icon;
   const pct = goal.targetAmount > 0 ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) : 0;
+  const isRTL = I18nManager.isRTL;
+  const ChevronIcon = isRTL ? ArrowRight : ArrowLeft;
 
   return (
     <View
@@ -98,26 +113,51 @@ function GoalCard({ goal, onDelete, onAddAmount, onComplete }: {
       </View>
 
       {!goal.isCompleted && (
-        <View className="flex-row gap-2">
+        <>
+          {/* ── Action button: go work on the goal ─────────────── */}
           <Pressable
-            onPress={onAddAmount}
-            className="flex-1 py-2 rounded-xl bg-brand/15 items-center"
+            onPress={onAction}
+            style={({ pressed }) => ({
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: pressed ? `${cat.color}22` : `${cat.color}12`,
+              borderWidth: 1,
+              borderColor: `${cat.color}30`,
+              borderRadius: 12,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+            })}
           >
-            <Text className="text-xs font-bold text-brand">+ إضافة مبلغ</Text>
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 7 }}>
+              <ExternalLink size={13} color={cat.color} />
+              <Text style={{ color: cat.color, fontSize: 12, fontWeight: '700' }}>{action.label}</Text>
+            </View>
+            <ChevronIcon size={13} color={cat.color} />
           </Pressable>
-          <Pressable
-            onPress={onComplete}
-            className="flex-1 py-2 rounded-xl bg-emerald-500/15 items-center"
-          >
-            <Text className="text-xs font-bold text-emerald-400">إتمام</Text>
-          </Pressable>
-          <Pressable
-            onPress={onDelete}
-            className="w-9 h-9 rounded-xl bg-red-500/10 items-center justify-center"
-          >
-            <Trash2 size={14} color="#f87171" />
-          </Pressable>
-        </View>
+
+          {/* ── Secondary actions ───────────────────────────────── */}
+          <View className="flex-row gap-2">
+            <Pressable
+              onPress={onAddAmount}
+              className="flex-1 py-2 rounded-xl bg-brand/15 items-center"
+            >
+              <Text className="text-xs font-bold text-brand">+ إضافة مبلغ</Text>
+            </Pressable>
+            <Pressable
+              onPress={onComplete}
+              className="flex-1 py-2 rounded-xl bg-emerald-500/15 items-center"
+            >
+              <Text className="text-xs font-bold text-emerald-400">إتمام</Text>
+            </Pressable>
+            <Pressable
+              onPress={onDelete}
+              className="w-9 h-9 rounded-xl bg-red-500/10 items-center justify-center"
+            >
+              <Trash2 size={14} color="#f87171" />
+            </Pressable>
+          </View>
+        </>
       )}
       {goal.isCompleted && (
         <Pressable
@@ -307,6 +347,7 @@ export default function GoalsPage() {
                   onDelete={() => handleDelete(g.id)}
                   onAddAmount={() => { setShowAddAmount(g); setAddAmount(''); }}
                   onComplete={() => handleComplete(g)}
+                  onAction={() => router.push(GOAL_ACTION[g.category]?.href as never ?? '/calculator')}
                 />
               ))}
             </View>
@@ -322,6 +363,7 @@ export default function GoalsPage() {
                   onDelete={() => handleDelete(g.id)}
                   onAddAmount={() => { setShowAddAmount(g); setAddAmount(''); }}
                   onComplete={() => handleComplete(g)}
+                  onAction={() => router.push(GOAL_ACTION[g.category]?.href as never ?? '/calculator')}
                 />
               ))}
             </View>

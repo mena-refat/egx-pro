@@ -15,6 +15,7 @@ const openAiEngine = new OpenAiAnalysisEngine();
 
 function getRoutePlan(taskType: AiTaskType): RoutePlan {
   switch (taskType) {
+    // ── Legacy routes (unchanged) ─────────────────────────────────────────
     case 'news_summarization':
       return { primary: geminiEngine, fallback: openAiEngine };
     case 'news_extraction':
@@ -22,6 +23,24 @@ function getRoutePlan(taskType: AiTaskType): RoutePlan {
     case 'news_market_impact':
     case 'financial_analysis':
       return { primary: claudeEngine, fallback: openAiEngine };
+
+    // ── Smart pipeline routes ─────────────────────────────────────────────
+    // Stage 1: Gemini (cheapest) — summary + impact level in one call
+    case 'news_quick_analysis':
+      return { primary: geminiEngine, fallback: openAiEngine };
+
+    // Stage 3: OpenAI (better at strict JSON) — structure comprehensive data
+    case 'news_structure':
+      return { primary: openAiEngine, fallback: geminiEngine };
+
+    // Stage 4: Claude (deepest reasoning) — full investment report
+    case 'news_deep_report':
+      return { primary: claudeEngine, fallback: openAiEngine };
+
+    // Ingest: Gemini Flash (cheapest) — clean title + short summary before DB save
+    case 'news_ingest_summary':
+      return { primary: geminiEngine, fallback: openAiEngine };
+
     default:
       return { primary: claudeEngine, fallback: openAiEngine };
   }

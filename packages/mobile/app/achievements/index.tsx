@@ -9,6 +9,8 @@ import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
+import { markAchievementsSeen, getUnseenIds } from '../../hooks/useNewAchievementsCount';
+import { AchievementCongratsCard } from '../../components/features/achievements/AchievementCongratsCard';
 
 /* ─── Achievement definitions (mirrors website) ─── */
 
@@ -77,6 +79,11 @@ export default function AchievementsPage() {
   const mountedRef = useRef(true);
   const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
 
+  // ─── Celebration state ───────────────────────────────────────────
+  const [celebrationQueue, setCelebrationQueue] = useState<AchievementDef[]>([]);
+  const [cardIndex, setCardIndex] = useState(0);
+  const completedBackendIdsRef = useRef<string[]>([]);
+
   useEffect(() => () => { mountedRef.current = false; }, []);
 
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -99,9 +106,24 @@ export default function AchievementsPage() {
           if (dates[ach.backendId]) ats[ach.id] = dates[ach.backendId];
         }
       });
+
+      const completedBackendIds = raw.filter((a) => a.completed).map((a) => a.id);
+      const unseenBackendIds    = await getUnseenIds(completedBackendIds);
+      const queue               = unseenBackendIds
+        .map((bid) => ALL.find((a) => a.backendId === bid))
+        .filter(Boolean) as AchievementDef[];
+
       if (!signal?.aborted && mountedRef.current) {
         setUnlocked(ids);
         setUnlockedAt(ats);
+        completedBackendIdsRef.current = completedBackendIds;
+        if (queue.length > 0) {
+          // Show celebration cards first; markAchievementsSeen is called after.
+          setCelebrationQueue(queue);
+          setCardIndex(0);
+        } else {
+          void markAchievementsSeen(completedBackendIds);
+        }
       }
     } catch {
       if (!signal?.aborted && mountedRef.current) setError('فشل تحميل الإنجازات. حاول مرة أخرى.');
@@ -118,6 +140,20 @@ export default function AchievementsPage() {
 
   const unlockedCount = unlocked.size;
   const percent = TOTAL > 0 ? Math.round((unlockedCount / TOTAL) * 100) : 0;
+
+  // ─── Celebration handler ─────────────────────────────────────────
+  const handleCardComplete = useCallback(() => {
+    if (cardIndex < celebrationQueue.length - 1) {
+      setCardIndex((i) => i + 1);
+    } else {
+      // All cards shown — mark as seen and clear queue
+      void markAchievementsSeen(completedBackendIdsRef.current);
+      setCelebrationQueue([]);
+    }
+  }, [cardIndex, celebrationQueue.length]);
+
+  // ─── Render celebration card on top of everything ───────────────
+  const currentCard = celebrationQueue[cardIndex];
 
   return (
     <ScreenWrapper padded={false}>
@@ -314,6 +350,16 @@ export default function AchievementsPage() {
           </>
         )}
       </ScrollView>
+
+      {/* ── Celebration overlay ──────────────────────────────── */}
+      {currentCard && (
+        <AchievementCongratsCard
+          key={currentCard.id}
+          title={currentCard.titleAr}
+          description={currentCard.descAr}
+          onComplete={handleCardComplete}
+        />
+      )}
     </ScreenWrapper>
   );
 }

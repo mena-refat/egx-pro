@@ -5,6 +5,9 @@ import { logger } from '../lib/logger.ts';
 import { withRetry } from '../lib/retry.ts';
 import { NewsRepository } from '../repositories/news.repository.ts';
 import { prisma } from '../lib/prisma.ts';
+import { analysisEngine } from './ai/index.ts';
+import { getCache, setCache } from '../lib/redis.ts';
+import { NEWS_INGEST_SUMMARY_SYSTEM } from '../lib/newsAnalysisPrompts.ts';
 
 const NEWS_API_KEY = process.env.NEWS_API_KEY?.trim() ?? '';
 const GOOGLE_MARKET_QUERY = 'EGX OR "Egyptian Exchange" OR "البورصة المصرية"';
@@ -248,6 +251,104 @@ async function isStale(maxAgeMs: number, ticker?: string): Promise<boolean> {
   return Date.now() - latest.fetchedAt.getTime() > maxAgeMs;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AI ingest summarization — runs BEFORE persist()
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Minimum description length to bother summarizing (saves API calls on stubs) */
+const MIN_DESC_FOR_SUMMARY = 80;
+/** Process N articles in parallel — avoids hammering the AI API */
+const INGEST_BATCH = 5;
+/** Redis TTL for ingest cache — 7 days (same article won't be re-summarized) */
+const INGEST_CACHE_TTL_S = 7 * 24 * 60 * 60;
+
+function ingestCacheKey(title: string, description: string): string {
+  return 'ai:ingest:' + createHash('sha256').update(`${title}|${description}`).digest('hex');
+}
+
+function parseIngestJson(text: string): { title: string; summary: string } | null {
+  try {
+    const raw = JSON.parse(text) as unknown;
+    if (raw && typeof raw === 'object' && 'title' in raw && 'summary' in raw) {
+      const r = raw as Record<string, unknown>;
+      const title   = typeof r.title   === 'string' ? r.title.trim().slice(0, 120)   : '';
+      const summary = typeof r.summary === 'string' ? r.summary.trim().slice(0, 200) : '';
+      if (title && summary) return { title, summary };
+    }
+    return null;
+  } catch {
+    // Try stripping markdown fences
+    const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    const first = cleaned.indexOf('{');
+    const last  = cleaned.lastIndexOf('}');
+    if (first !== -1 && last > first) return parseIngestJson(cleaned.slice(first, last + 1));
+    return null;
+  }
+}
+
+async function summarizeOne(item: IngestedNews): Promise<IngestedNews> {
+  const description = item.summary?.trim() ?? '';
+
+  // Skip stubs — EGX disclosures have very short descriptions, not worth summarizing
+  if (description.length < MIN_DESC_FOR_SUMMARY) return item;
+
+  const key = ingestCacheKey(item.title, description);
+
+  // Redis cache hit → return immediately (free)
+  const cached = await getCache<{ title: string; summary: string }>(key);
+  if (cached) return { ...item, title: cached.title, summary: cached.summary };
+
+  // AI call — Gemini Flash via the router
+  const userMsg =
+    `Title: ${item.title.slice(0, 200)}\nDescription: ${description.slice(0, 800)}`;
+
+  const result = await analysisEngine.generate({
+    taskType:     'news_ingest_summary',
+    systemPrompt: NEWS_INGEST_SUMMARY_SYSTEM,
+    userMessage:  userMsg,
+    maxTokens:    150,
+    responseType: 'json',
+    temperature:  0.1,
+  });
+
+  const parsed = parseIngestJson(result.text);
+  if (!parsed) return item; // fallback to original
+
+  await setCache(key, parsed, INGEST_CACHE_TTL_S);
+  return { ...item, title: parsed.title, summary: parsed.summary };
+}
+
+/**
+ * Summarize a batch of articles before they are persisted.
+ * Runs in parallel chunks of INGEST_BATCH; failures fall back to the original.
+ */
+async function summarizeForIngest(items: IngestedNews[]): Promise<IngestedNews[]> {
+  if (items.length === 0) return items;
+
+  const results: IngestedNews[] = [...items];
+
+  for (let i = 0; i < items.length; i += INGEST_BATCH) {
+    const chunk   = items.slice(i, i + INGEST_BATCH);
+    const settled = await Promise.allSettled(chunk.map((item) => summarizeOne(item)));
+
+    settled.forEach((outcome, j) => {
+      if (outcome.status === 'fulfilled') {
+        results[i + j] = outcome.value;
+      } else {
+        logger.warn('News ingest summarization failed (non-fatal, using original)', {
+          title: chunk[j].title.slice(0, 60),
+          error: outcome.reason instanceof Error ? outcome.reason.message : 'UNKNOWN',
+        });
+        // results[i + j] already holds the original item — no action needed
+      }
+    });
+  }
+
+  return results;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function persist(items: IngestedNews[]): Promise<number> {
   if (items.length === 0) return 0;
   return NewsRepository.upsertMany(items);
@@ -274,7 +375,8 @@ export const NewsService = {
     if (egxItems.status === 'rejected') {
       logger.warn('EGX disclosures sync failed', { error: egxItems.reason instanceof Error ? egxItems.reason.message : 'UNKNOWN_ERROR' });
     }
-    return persist(merged);
+    const summarized = await summarizeForIngest(merged);
+    return persist(summarized);
   },
 
   async syncTickerSources(ticker: string, companyName?: string): Promise<number> {
@@ -307,7 +409,8 @@ export const NewsService = {
       });
     }
 
-    return persist(merged);
+    const summarized = await summarizeForIngest(merged);
+    return persist(summarized);
   },
 
   async getMarket(limit = DEFAULT_LIMIT): Promise<NewsArticle[]> {

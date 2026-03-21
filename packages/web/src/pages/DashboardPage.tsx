@@ -1,8 +1,7 @@
-import React, { useMemo, useCallback, lazy, Suspense } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '../components/ui/Skeleton';
-const PortfolioPerformanceChart = lazy(() => import('../components/features/portfolio/PortfolioPerformanceChart'));
 import {
   DashboardMarketBar,
   DashboardPortfolioHero,
@@ -89,17 +88,6 @@ export default function DashboardPage() {
             topLoser={topLoser}
             loading={portfolioLoading}
           />
-
-          <div className="card-base card-elevated p-8 rounded-2xl">
-            <h3 className="text-header font-semibold mb-6">{t('dashboard.portfolioPerformance')}</h3>
-            <Suspense fallback={<Skeleton height={320} className="w-full rounded-xl" />}>
-              <PortfolioPerformanceChart
-                holdings={holdings}
-                totalCost={stats.totalCost}
-                totalValue={stats.totalValue}
-              />
-            </Suspense>
-          </div>
 
           <div className="card-base card-elevated p-8 rounded-2xl">
             <div className="flex justify-between items-center mb-6">

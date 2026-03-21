@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, Fragment } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Fragment, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, TrendingUp, TrendingDown, Briefcase, PieChart as PieChartIcon } from 'lucide-react';
@@ -7,6 +7,8 @@ import api from '../../../lib/api';
 import { useLivePrices } from '../../../hooks/useLivePrices';
 import { usePortfolio } from '../../../hooks/usePortfolio';
 import { getStockName, getStockInfo, searchStocks } from '../../../lib/egxStocks';
+
+const PortfolioPerformanceChart = lazy(() => import('./PortfolioPerformanceChart'));
 import { getSectorGicsKey } from '../../../lib/egxIndicesSectors';
 import { GICS_SECTOR_LABELS } from '../../../hooks/useStockScreener';
 import { Stock } from '../../../types';
@@ -327,6 +329,18 @@ export default function PortfolioTracker() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Portfolio Performance Chart */}
+      <div className="card-base card-elevated p-8 rounded-2xl">
+        <h3 className="text-header font-semibold mb-6">{t('dashboard.portfolioPerformance')}</h3>
+        <Suspense fallback={<Skeleton height={320} className="w-full rounded-xl" />}>
+          <PortfolioPerformanceChart
+            holdings={holdings}
+            totalCost={stats.totalCost}
+            totalValue={stats.totalValue}
+          />
+        </Suspense>
       </div>
 
       {/* Add Holding Modal */}

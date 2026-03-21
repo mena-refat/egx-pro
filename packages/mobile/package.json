@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "type": "commonjs",
   "exports": {
+    "./lib": "./lib/index.ts",
     "./lib/jsx-runtime": "./lib/jsx-runtime.ts",
     "./lib/jsx-dev-runtime": "./lib/jsx-dev-runtime.ts"
   },

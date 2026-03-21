@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Skeleton } from '../../ui/Skeleton';
+import { getStockName } from '../../../lib/egxStocks';
 
 export type SessionStock = { ticker: string; changePercent: number } | null;
 
@@ -13,8 +14,9 @@ type Props = {
 };
 
 export function DashboardTopPerformer({ topGainer, topLoser, loading }: Props) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
+  const lang = i18n.language.startsWith('ar') ? 'ar' : 'en';
 
   if (loading) {
     return (
@@ -50,11 +52,16 @@ export function DashboardTopPerformer({ topGainer, topLoser, loading }: Props) {
             <span className="text-label font-semibold text-[var(--text-muted)]">{t('dashboard.topGainer')}</span>
           </div>
           {topGainer ? (
-            <div className="flex items-baseline gap-2">
-              <span className="text-body font-bold text-[var(--text-primary)]">{topGainer.ticker}</span>
-              <span className="text-body font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                +{topGainer.changePercent.toFixed(2)}%
-              </span>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-body font-bold text-[var(--text-primary)]">{topGainer.ticker}</span>
+                <span className="text-body font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  +{topGainer.changePercent.toFixed(2)}%
+                </span>
+              </div>
+              <p className="text-xs text-[var(--text-muted)] font-normal mt-0.5 truncate">
+                {getStockName(topGainer.ticker, lang)}
+              </p>
             </div>
           ) : (
             <p className="text-body text-[var(--text-muted)] flex items-center gap-2">
@@ -82,11 +89,16 @@ export function DashboardTopPerformer({ topGainer, topLoser, loading }: Props) {
             <span className="text-label font-semibold text-[var(--text-muted)]">{t('dashboard.topLoser')}</span>
           </div>
           {topLoser ? (
-            <div className="flex items-baseline gap-2">
-              <span className="text-body font-bold text-[var(--text-primary)]">{topLoser.ticker}</span>
-              <span className="text-body font-bold text-red-600 dark:text-red-400 tabular-nums">
-                {topLoser.changePercent.toFixed(2)}%
-              </span>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-body font-bold text-[var(--text-primary)]">{topLoser.ticker}</span>
+                <span className="text-body font-bold text-red-600 dark:text-red-400 tabular-nums">
+                  {topLoser.changePercent.toFixed(2)}%
+                </span>
+              </div>
+              <p className="text-xs text-[var(--text-muted)] font-normal mt-0.5 truncate">
+                {getStockName(topLoser.ticker, lang)}
+              </p>
             </div>
           ) : (
             <p className="text-body text-[var(--text-muted)] flex items-center gap-2">

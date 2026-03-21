@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Brain, GitCompare, Sparkles, Award } from 'lucide-react';
+import { Brain, GitCompare, Sparkles, Award, Zap } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useAIPlan } from '../hooks/useAIPlan';
 import { useAIAccuracy } from '../hooks/useAIAccuracy';
@@ -26,6 +26,7 @@ export default function AIPage() {
       icon: Sparkles,
       path: '/ai/recommendations',
       points: 1,
+      color: '#f59e0b',
     },
     {
       id: 'compare',
@@ -34,6 +35,7 @@ export default function AIPage() {
       icon: GitCompare,
       path: '/ai/compare',
       points: 2,
+      color: '#3b82f6',
     },
     {
       id: 'analyze',
@@ -42,6 +44,7 @@ export default function AIPage() {
       icon: Brain,
       path: '/ai/analyze',
       points: 1,
+      color: '#7c3aed',
     },
   ];
 
@@ -94,13 +97,24 @@ export default function AIPage() {
             className={styles.card}
             onClick={() => guardedAction(() => navigate(card.path))}
             aria-label={t(card.titleKey)}
+            style={{
+              '--card-color': card.color,
+              borderColor: `${card.color}30`,
+              background: `linear-gradient(135deg, ${card.color}08 0%, var(--bg-card) 60%)`,
+            } as React.CSSProperties}
           >
-            <div className={styles.cardIcon}>
-              <card.icon className={styles.icon} aria-hidden />
+            <div
+              className={styles.cardIcon}
+              style={{ background: `${card.color}18`, color: card.color }}
+            >
+              <card.icon className={styles.icon} aria-hidden style={{ color: card.color }} />
             </div>
             <h2 className={styles.cardTitle}>{t(card.titleKey)}</h2>
             <p className={styles.cardDesc}>{t(card.descKey)}</p>
-            <span className={styles.points}>{t('ai.pointsCost', { count: card.points })}</span>
+            <div className={styles.points}>
+              <Zap className={styles.pointsIcon} aria-hidden style={{ color: card.color }} />
+              <span style={{ color: card.color }}>{t('ai.pointsCost', { count: card.points })}</span>
+            </div>
           </button>
         ))}
       </div>

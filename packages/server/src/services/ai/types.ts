@@ -5,10 +5,25 @@
  */
 
 export type AiTaskType =
+  // ── Legacy (kept for backward compat) ────────────────────────────────────
   | 'news_summarization'
   | 'news_extraction'
-  | 'financial_analysis'
-  | 'news_market_impact';
+  | 'news_market_impact'
+  // ── Smart pipeline (new) ─────────────────────────────────────────────────
+  /** Stage 1 — Gemini (cheap): summary + impact level in one shot */
+  | 'news_quick_analysis'
+  /** Stage 3 — OpenAI: structure comprehensive JSON from enriched context */
+  | 'news_structure'
+  /** Stage 4 — Claude (only high/critical): deep investment report */
+  | 'news_deep_report'
+  // ── Ingest ────────────────────────────────────────────────────────────────
+  /** Pre-persist: Gemini cleans the title + writes a short summary before DB save */
+  | 'news_ingest_summary'
+  // ── Financial analysis ────────────────────────────────────────────────────
+  | 'financial_analysis';
+
+/** Impact level assigned by Stage 1 (Gemini) */
+export type NewsImpactLevel = 'low' | 'medium' | 'high' | 'critical';
 
 export interface AnalysisEngineRequest {
   taskType: AiTaskType;

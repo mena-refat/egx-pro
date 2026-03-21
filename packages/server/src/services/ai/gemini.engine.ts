@@ -23,7 +23,7 @@ export class GeminiAnalysisEngine implements IAnalysisEngine {
     const apiKey = typeof raw === 'string' ? raw.trim() : '';
     if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
 
-    const models = ['gemini-1.5-flash', 'gemini-2.0-flash'];
+    const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
     let lastStatus = 0;
     let lastError = '';
 

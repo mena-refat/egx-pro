@@ -16,6 +16,7 @@ import {
   FONT, WEIGHT, RADIUS, SPACE,
 } from '../../lib/theme';
 import { usePredictionScore } from '../../hooks/usePredictionScore';
+import { useNewAchievementsCount } from '../../hooks/useNewAchievementsCount';
 
 type ThemeOption = 'dark' | 'light' | 'system';
 
@@ -94,6 +95,7 @@ export default function ProfilePage() {
   const { user, logout, updateUser } = useAuthStore();
   const { colors } = useTheme();
   const { score: predictionAccuracyRate, loading: predictionLoading } = usePredictionScore();
+  const newAchievementsCount = useNewAchievementsCount();
 
   const handleLogout = async () => {
     await logout();
@@ -231,7 +233,7 @@ export default function ProfilePage() {
           <MenuItem icon={User}        label="البيانات الشخصية"  sub={user?.email ?? user?.phone ?? ''} onPress={() => router.push('/settings/account')}       iconColor={BRAND} />
           <MenuItem icon={CreditCard}  label="الاشتراك والخطة"   sub={planLabel}                        onPress={() => router.push('/settings/subscription')}  iconColor="#4ade80" />
           <MenuItem icon={Gift}        label="برنامج الإحالة"    sub="ادعُ أصدقاء واحصل على Pro مجاناً" onPress={() => router.push('/referral' as never)}       iconColor="#f59e0b" />
-          <MenuItem icon={Trophy}      label="إنجازاتي"           sub="اكتشف ما أنجزته حتى الآن"         onPress={() => router.push('/achievements' as never)}   iconColor="#f59e0b" />
+          <MenuItem icon={Trophy}      label="إنجازاتي"           sub="اكتشف ما أنجزته حتى الآن"         onPress={() => router.push('/achievements' as never)}   iconColor="#f59e0b" badge={newAchievementsCount} />
         </Section>
 
         {/* ─── Community ─── */}
