@@ -105,7 +105,7 @@ export function PriceAlertDialog({
           <>
             {/* Current price reference */}
             <p className="text-xs text-[var(--text-muted)] mb-3">
-              {t('stockDetail.currentPrice')}: <span className="font-semibold text-[var(--text-primary)]">{currentPrice.toFixed(2)} ج.م</span>
+              {t('stockDetail.currentPrice')}: <span className="font-semibold text-[var(--text-primary)]">{currentPrice.toFixed(2)} {t('common.egp')}</span>
             </p>
 
             {/* Price input */}
@@ -126,7 +126,7 @@ export function PriceAlertDialog({
             {isValidPrice && !sameAsCurrent && (
               <div className={`flex items-center gap-1.5 text-xs font-medium mb-3 ${direction === 'UP' ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
                 {direction === 'UP' ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                {t(direction === 'UP' ? 'stockDetail.priceAlertDirectionUp' : 'stockDetail.priceAlertDirectionDown')} {targetPrice.toFixed(2)} ج.م
+                {t(direction === 'UP' ? 'stockDetail.priceAlertDirectionUp' : 'stockDetail.priceAlertDirectionDown')} {targetPrice.toFixed(2)} {t('common.egp')}
               </div>
             )}
 

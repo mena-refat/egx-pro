@@ -20,8 +20,9 @@ export function useGoalsPage() {
 
   const openAddModal = useCallback(() => setAddModalOpen(true), []);
   const closeAddModal = useCallback(() => setAddModalOpen(false), []);
-  const onSavedAdd = useCallback(() => {
+  const onSavedAdd = useCallback((goal?: GoalRecord) => {
     setAddModalOpen(false);
+    if (goal) goalsData.prependGoal(goal);
     goalsData.fetchGoals();
   }, [goalsData]);
 

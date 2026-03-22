@@ -30,17 +30,14 @@ export function UsernameSetupForm({
     <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)] text-[var(--text-primary)] p-4">
       <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-sm">
         <h1 className="text-xl font-bold mb-2">
-          {t('settings.chooseUsername', { defaultValue: 'Choose your username' })}
+          {t('settings.chooseUsername')}
         </h1>
         <p className="text-sm text-[var(--text-secondary)] mb-4">
-          {t('settings.usernameOnce', {
-            defaultValue:
-              'Pick a unique username (3–20 English letters, numbers, and _). Your followers will find you by this name.',
-          })}
+          {t('settings.usernameOnce')}
         </p>
         <div className="space-y-2 mb-4">
           <Input
-            label={t('settings.username', { defaultValue: 'Username' })}
+            label={t('settings.username')}
             value={value}
             maxLength={maxLength}
             onChange={(e) => onChange(e.target.value)}
@@ -51,7 +48,7 @@ export function UsernameSetupForm({
           {message && !formatError && <p className="text-xs text-[var(--danger)] mt-1" role="alert" aria-live="polite">{message}</p>}
           {status === 'available' && !formatError && !message && (
             <p className="text-xs text-[var(--success)]">
-              {t('settings.usernameAvailable', { defaultValue: 'Username is available' })}
+              {t('settings.usernameAvailable')}
             </p>
           )}
         </div>
@@ -61,8 +58,8 @@ export function UsernameSetupForm({
           className="w-full"
         >
           {saving
-            ? t('common.loading', { defaultValue: 'Saving...' })
-            : t('settings.saveUsername', { defaultValue: 'Save username' })}
+            ? t('common.loading')
+            : t('settings.saveUsername')}
         </Button>
       </div>
     </div>

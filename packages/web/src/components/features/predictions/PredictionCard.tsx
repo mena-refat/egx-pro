@@ -210,7 +210,7 @@ export const PredictionCard = memo(function PredictionCard({
       <div className="mb-2">
         <p className="font-semibold text-[var(--text-primary)]">{prediction.ticker}</p>
         <p className="text-sm text-[var(--text-muted)]">
-          {t('predictions.currentPrice')}: {priceAtCreation.toFixed(2)} ج.م
+          {t('predictions.currentPrice')}: {priceAtCreation.toFixed(2)} {t('common.egp')}
         </p>
       </div>
 
@@ -227,7 +227,7 @@ export const PredictionCard = memo(function PredictionCard({
         {prediction.mode === 'EXACT' ? (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold text-emerald-400 bg-emerald-500/10">
             <Target className="w-3 h-3" />
-            {prediction.targetPrice?.toFixed(2)} ج.م
+            {prediction.targetPrice?.toFixed(2)} {t('common.egp')}
           </span>
         ) : tier && prediction.timeframe ? (
           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${tier.color} ${tier.bg}`}>

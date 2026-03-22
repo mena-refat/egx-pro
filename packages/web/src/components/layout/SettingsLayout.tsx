@@ -8,7 +8,6 @@ import {
   User,
   Shield,
   Sliders,
-  BarChart2,
   CreditCard,
   Trash2,
   ChevronLeft,
@@ -18,8 +17,8 @@ import {
 interface SettingCard {
   id: string;
   path: string;
-  label: string;
-  desc: string;
+  labelKey: string;
+  descKey: string;
   icon: React.ComponentType<{ className?: string }>;
   danger?: boolean;
   iconBg: string;
@@ -30,8 +29,8 @@ const CARDS: SettingCard[] = [
   {
     id: 'account',
     path: '/settings/account',
-    label: 'معلوماتي',
-    desc: 'الاسم والصورة والبريد الإلكتروني',
+    labelKey: 'settings.navAccount',
+    descKey:  'settings.navAccountDesc',
     icon: User,
     iconBg: 'bg-[var(--brand)]/10',
     iconColor: 'text-[var(--brand)]',
@@ -39,18 +38,17 @@ const CARDS: SettingCard[] = [
   {
     id: 'security',
     path: '/settings/security',
-    label: 'الأمان',
-    desc: 'كلمة المرور والتحقق الثنائي',
+    labelKey: 'settings.navSecurity',
+    descKey:  'settings.navSecurityDesc',
     icon: Shield,
     iconBg: 'bg-emerald-400/10',
     iconColor: 'text-emerald-400',
   },
-
   {
     id: 'preferences',
     path: '/settings/preferences',
-    label: 'المظهر والإشعارات',
-    desc: 'الثيم واللغة وإعدادات الإشعارات',
+    labelKey: 'settings.navPreferences',
+    descKey:  'settings.navPreferencesDesc',
     icon: Sliders,
     iconBg: 'bg-amber-400/10',
     iconColor: 'text-amber-400',
@@ -58,8 +56,8 @@ const CARDS: SettingCard[] = [
   {
     id: 'subscription',
     path: '/settings/subscription',
-    label: 'الاشتراك',
-    desc: 'ترقية الخطة وإدارة المزايا',
+    labelKey: 'settings.navSubscription',
+    descKey:  'settings.navSubscriptionDesc',
     icon: CreditCard,
     iconBg: 'bg-sky-400/10',
     iconColor: 'text-sky-400',
@@ -67,8 +65,8 @@ const CARDS: SettingCard[] = [
   {
     id: 'danger',
     path: '/settings/danger',
-    label: 'حذف الحساب',
-    desc: 'حذف حسابك وبياناتك نهائياً',
+    labelKey: 'settings.navDanger',
+    descKey:  'settings.navDangerDesc',
     icon: Trash2,
     iconBg: 'bg-[var(--danger)]/10',
     iconColor: 'text-[var(--danger)]',
@@ -76,12 +74,7 @@ const CARDS: SettingCard[] = [
   },
 ];
 
-const PREFS_ALIASES  = ['/settings/notifications'];
-const SUB_ALIASES: Record<string, string> = {
-  '/settings/notifications': 'preferences',
-  '/settings/perks':         'subscription',
-  '/settings/overview':      'subscription',
-};
+const PREFS_ALIASES = ['/settings/notifications'];
 
 function getActiveCard(pathname: string): SettingCard | undefined {
   return CARDS.find((c) => {
@@ -95,19 +88,20 @@ function getActiveCard(pathname: string): SettingCard | undefined {
 // ── Settings index - card grid ──────────────────────────────────────────────
 function SettingsIndex() {
   const navigate = useNavigate();
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
+  const isAr = i18n.language?.startsWith('ar');
   const user = useAuthStore((s) => s.user);
 
   const plan = (user as { plan?: string } | null)?.plan ?? 'free';
   const planBadge =
-    plan === 'ultra'
+    plan === 'ultra' || plan === 'ultra_yearly'
       ? { label: 'Ultra ✦', cls: 'bg-amber-500/15 text-amber-400 border border-amber-400/30' }
       : plan === 'pro' || plan === 'yearly'
       ? { label: 'Pro', cls: 'bg-[var(--brand)]/15 text-[var(--brand)] border border-[var(--brand)]/30' }
-      : { label: t('subscription.free', { defaultValue: 'مجاني' }), cls: 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border)]' };
+      : { label: t('settings.freePlan'), cls: 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border)]' };
 
   return (
-    <div className="space-y-5" dir="rtl">
+    <div className="space-y-5" dir={isAr ? 'rtl' : 'ltr'}>
       {/* User pill */}
       <div className="flex items-center gap-3 p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border)]">
         <div className="w-12 h-12 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] flex items-center justify-center shrink-0 overflow-hidden">
@@ -150,13 +144,14 @@ function SettingsIndex() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold ${card.danger ? 'text-[var(--danger)]' : 'text-[var(--text-primary)]'}`}>
-                  {card.label}
+                  {t(card.labelKey)}
                 </p>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">{card.desc}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{t(card.descKey)}</p>
               </div>
-              <ChevronLeft className={`w-4 h-4 shrink-0 transition-transform group-hover:-translate-x-0.5
-                ${card.danger ? 'text-[var(--danger)]/50' : 'text-[var(--text-muted)]'}`}
-              />
+              {isAr
+                ? <ChevronLeft  className={`w-4 h-4 shrink-0 transition-transform group-hover:-translate-x-0.5 ${card.danger ? 'text-[var(--danger)]/50' : 'text-[var(--text-muted)]'}`} />
+                : <ChevronRight className={`w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5  ${card.danger ? 'text-[var(--danger)]/50' : 'text-[var(--text-muted)]'}`} />
+              }
             </button>
           );
         })}
@@ -168,6 +163,8 @@ function SettingsIndex() {
 // ── Sub-page wrapper with back button ───────────────────────────────────────
 function SettingsSubPage({ card }: { card: SettingCard }) {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation('common');
+  const isAr = i18n.language?.startsWith('ar');
   const Icon = card.icon;
   const { isDirty, clearAll } = useSettingsDirty();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -181,22 +178,25 @@ function SettingsSubPage({ card }: { card: SettingCard }) {
   }
 
   return (
-    <div className="space-y-5" dir="rtl">
+    <div className="space-y-5" dir={isAr ? 'rtl' : 'ltr'}>
       {/* Back + title */}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={handleBack}
           className="w-8 h-8 flex items-center justify-center rounded-xl bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors shrink-0"
-          aria-label="رجوع"
+          aria-label={t('settings.back')}
         >
-          <ChevronRight className="w-4 h-4" />
+          {isAr
+            ? <ChevronRight className="w-4 h-4" />
+            : <ChevronLeft  className="w-4 h-4" />
+          }
         </button>
         <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${card.iconBg} shrink-0`}>
           <Icon className={`w-4 h-4 ${card.iconColor}`} />
         </div>
         <h2 className={`text-base font-bold ${card.danger ? 'text-[var(--danger)]' : 'text-[var(--text-primary)]'}`}>
-          {card.label}
+          {t(card.labelKey)}
         </h2>
       </div>
 

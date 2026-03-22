@@ -9,58 +9,58 @@ import api from '../../../lib/api';
 import { Button } from '../../ui/Button';
 import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 
-// ─── Constants (mirror of OnboardingWizard) ──────────────────────────────────
+// ─── Option IDs ──────────────────────────────────────────────────────────────
 
-const GOAL_OPTIONS = [
-  { id: 'property_or_car', icon: Home,      title: 'شراء عقار أو سيارة',   desc: 'هدف ملموس وقابل للتحقيق' },
-  { id: 'wealth',          icon: TrendingUp, title: 'تنمية ثروتي',          desc: 'خلّي فلوسك تشتغل نيابة عنك' },
-  { id: 'retirement',      icon: Umbrella,   title: 'التقاعد المريح',        desc: 'ضمان مستقبلك بكره' },
-  { id: 'travel',          icon: Compass,    title: 'سفر ومغامرات',          desc: 'عيش الحياة اللي تستحقها' },
-  { id: 'trading',         icon: Zap,        title: 'أرباح سريعة',           desc: 'مضاربة وتداول نشط' },
-  { id: 'other',           icon: Plus,       title: 'أخرى',                  desc: 'هدف خاص بيك' },
+const GOAL_IDS = [
+  { id: 'property_or_car', icon: Home,      titleKey: 'investorProfile.goalPropertyCar',   descKey: 'investorProfile.goalPropertyCarDesc' },
+  { id: 'wealth',          icon: TrendingUp, titleKey: 'investorProfile.goalWealth',         descKey: 'investorProfile.goalWealthDesc' },
+  { id: 'retirement',      icon: Umbrella,   titleKey: 'investorProfile.goalRetirement',     descKey: 'investorProfile.goalRetirementDesc' },
+  { id: 'travel',          icon: Compass,    titleKey: 'investorProfile.goalTravel',         descKey: 'investorProfile.goalTravelDesc' },
+  { id: 'trading',         icon: Zap,        titleKey: 'investorProfile.goalTrading',        descKey: 'investorProfile.goalTradingDesc' },
+  { id: 'other',           icon: Plus,       titleKey: 'investorProfile.goalOther',          descKey: 'investorProfile.goalOtherDesc' },
 ] as const;
 
-const TIMELINE_OPTIONS = [
-  { id: 'lt1', title: '⚡ أقل من سنة',          desc: 'هدف قريب - استراتيجية محافظة', years: 1 },
-  { id: '1_3', title: '📅 من 1 إلى 3 سنوات',    desc: 'أفق قصير - توازن بين الأمان والنمو', years: 3 },
-  { id: '3_7', title: '📆 من 3 إلى 7 سنوات',    desc: 'متوسط الأجل - نمو تدريجي ومستقر', years: 5 },
-  { id: 'gt7', title: '🏆 أكثر من 7 سنوات',     desc: 'طويل الأجل - أعلى عائد على المدى البعيد', years: 10 },
+const TIMELINE_IDS = [
+  { id: 'lt1', titleKey: 'investorProfile.timelineLt1', descKey: 'investorProfile.timelineLt1Desc', years: 1 },
+  { id: '1_3', titleKey: 'investorProfile.timeline1_3', descKey: 'investorProfile.timeline1_3Desc', years: 3 },
+  { id: '3_7', titleKey: 'investorProfile.timeline3_7', descKey: 'investorProfile.timeline3_7Desc', years: 5 },
+  { id: 'gt7', titleKey: 'investorProfile.timelineGt7', descKey: 'investorProfile.timelineGt7Desc', years: 10 },
 ] as const;
 
-const RISK_OPTIONS = [
-  { id: 'sell_immediately', risk: 'conservative' as const, title: '😰 هبيع فوراً وأوقف الخسارة', desc: 'سلامتي أهم من أي ربح' },
-  { id: 'wait_and_see',    risk: 'moderate' as const,     title: '🤔 هستنى وأشوف السوق',        desc: 'مش هتصرف إلا لو الوضع اتضح' },
-  { id: 'buy_more',        risk: 'aggressive' as const,   title: '😎 فرصة ذهبية - هشتري أكتر', desc: 'انخفاض السعر يعني صفقة أفضل' },
-  { id: 'long_term_calm',  risk: 'moderate' as const,     title: '🧘 مش هتأثر - استثماري طويل المدى', desc: 'التقلبات طبيعية ومش بتقلقني' },
+const RISK_IDS = [
+  { id: 'sell_immediately', risk: 'conservative' as const, titleKey: 'investorProfile.riskSellImmediately', descKey: 'investorProfile.riskSellImmediatelyDesc' },
+  { id: 'wait_and_see',    risk: 'moderate' as const,     titleKey: 'investorProfile.riskWaitAndSee',      descKey: 'investorProfile.riskWaitAndSeeDesc' },
+  { id: 'buy_more',        risk: 'aggressive' as const,   titleKey: 'investorProfile.riskBuyMore',         descKey: 'investorProfile.riskBuyMoreDesc' },
+  { id: 'long_term_calm',  risk: 'moderate' as const,     titleKey: 'investorProfile.riskLongTermCalm',    descKey: 'investorProfile.riskLongTermCalmDesc' },
 ] as const;
 
-const BUDGET_OPTIONS = [
-  { id: 'lt_1000', title: '🌱 أقل من 1,000 جنيه',       desc: 'البداية المهمة هي البداية', amount: 500 },
-  { id: '1_5k',    title: '📊 من 1,000 إلى 5,000',       desc: 'مبلغ ممتاز للبناء التدريجي', amount: 3000 },
-  { id: '5_20k',   title: '💼 من 5,000 إلى 20,000',      desc: 'محفظة متنوعة في متناول يدك', amount: 10000 },
-  { id: 'gt_20k',  title: '🚀 أكثر من 20,000 جنيه',     desc: 'مستثمر جاد بإمكانيات عالية', amount: 25000 },
+const BUDGET_IDS = [
+  { id: 'lt_1000', titleKey: 'investorProfile.budgetLt1000', descKey: 'investorProfile.budgetLt1000Desc', amount: 500 },
+  { id: '1_5k',    titleKey: 'investorProfile.budget1_5k',   descKey: 'investorProfile.budget1_5kDesc',   amount: 3000 },
+  { id: '5_20k',   titleKey: 'investorProfile.budget5_20k',  descKey: 'investorProfile.budget5_20kDesc',  amount: 10000 },
+  { id: 'gt_20k',  titleKey: 'investorProfile.budgetGt20k',  descKey: 'investorProfile.budgetGt20kDesc',  amount: 25000 },
 ] as const;
 
-const LEVEL_OPTIONS = [
-  { id: 'beginner',     title: '🐣 مبتدئ تماماً',       desc: 'لسه بتعلم وعندي أسئلة كتير' },
-  { id: 'basics',       title: '📚 بعرف الأساسيات',     desc: 'فاهم المفاهيم الأساسية وبدأت أجرب' },
-  { id: 'intermediate', title: '📈 متوسط',               desc: 'عندي تجربة وبستثمر بانتظام' },
-  { id: 'advanced',     title: '🎯 متقدم',               desc: 'خبرة واسعة وبتداول بثقة' },
+const LEVEL_IDS = [
+  { id: 'beginner',     titleKey: 'investorProfile.levelBeginner',     descKey: 'investorProfile.levelBeginnerDesc' },
+  { id: 'basics',       titleKey: 'investorProfile.levelBasics',        descKey: 'investorProfile.levelBasicsDesc' },
+  { id: 'intermediate', titleKey: 'investorProfile.levelIntermediate',  descKey: 'investorProfile.levelIntermediateDesc' },
+  { id: 'advanced',     titleKey: 'investorProfile.levelAdvanced',      descKey: 'investorProfile.levelAdvancedDesc' },
 ] as const;
 
-const SECTORS = [
-  { id: 'banks_financial',         label: 'البنوك والخدمات المالية' },
-  { id: 'real_estate_construction', label: 'العقارات والإنشاءات' },
-  { id: 'food_beverages',           label: 'الأغذية والمشروبات' },
-  { id: 'healthcare_pharma',        label: 'الرعاية الصحية والأدوية' },
-  { id: 'it_media_telecom',         label: 'الاتصالات والتكنولوجيا' },
-  { id: 'industrial_auto',          label: 'الصناعة والسيارات' },
-  { id: 'tourism_entertainment',    label: 'السياحة والترفيه' },
-  { id: 'basic_resources',          label: 'الموارد الأساسية' },
-  { id: 'utilities',                label: 'المرافق' },
-  { id: 'textiles_durables',        label: 'المنسوجات والسلع المعمرة' },
-  { id: 'diversified',              label: 'متنوع' },
-  { id: 'unknown',                  label: 'لا أعرف بعد' },
+const SECTOR_IDS = [
+  { id: 'banks_financial',          labelKey: 'investorProfile.sectorBanks' },
+  { id: 'real_estate_construction',  labelKey: 'investorProfile.sectorRealEstate' },
+  { id: 'food_beverages',            labelKey: 'investorProfile.sectorFood' },
+  { id: 'healthcare_pharma',         labelKey: 'investorProfile.sectorHealthcare' },
+  { id: 'it_media_telecom',          labelKey: 'investorProfile.sectorTech' },
+  { id: 'industrial_auto',           labelKey: 'investorProfile.sectorIndustrial' },
+  { id: 'tourism_entertainment',     labelKey: 'investorProfile.sectorTourism' },
+  { id: 'basic_resources',           labelKey: 'investorProfile.sectorResources' },
+  { id: 'utilities',                 labelKey: 'investorProfile.sectorUtilities' },
+  { id: 'textiles_durables',         labelKey: 'investorProfile.sectorTextiles' },
+  { id: 'diversified',               labelKey: 'investorProfile.sectorDiversified' },
+  { id: 'unknown',                   labelKey: 'investorProfile.sectorUnknown' },
 ];
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -126,14 +126,14 @@ const OptionCard: React.FC<OptionCardProps> = ({ selected, onClick, title, desc,
     <button
       type="button"
       onClick={onClick}
-      className={`relative text-right w-full p-3.5 rounded-xl border-2 transition-all duration-150 text-sm
+      className={`relative text-start w-full p-3.5 rounded-xl border-2 transition-all duration-150 text-sm
         ${selected
           ? 'border-[var(--brand)] bg-[var(--brand)]/8 shadow-sm'
           : 'border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--border-strong)]'
         }`}
     >
       {selected && (
-        <span className="absolute top-2.5 left-2.5 rtl:right-2.5 rtl:left-auto w-4 h-4 rounded-full bg-[var(--brand)] flex items-center justify-center">
+        <span className="absolute top-2.5 end-2.5 w-4 h-4 rounded-full bg-[var(--brand)] flex items-center justify-center">
           <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
         </span>
       )}
@@ -144,12 +144,13 @@ const OptionCard: React.FC<OptionCardProps> = ({ selected, onClick, title, desc,
       {desc && <p className="text-xs text-[var(--text-muted)] mt-0.5">{desc}</p>}
     </button>
   );
-}
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function InvestorProfileTab() {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
+  const isAr = i18n.language?.startsWith('ar');
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
 
@@ -227,17 +228,17 @@ export function InvestorProfileTab() {
           budgetBand: form.budgetBand, sectors: form.sectors, level: form.level,
         },
       });
-      setStatus({ type: 'success', msg: 'تم حفظ تفضيلاتك بنجاح ✓' });
+      setStatus({ type: 'success', msg: t('investorProfile.savedSuccess') });
       setDirty(false);
     } catch {
-      setStatus({ type: 'error', msg: 'حدث خطأ أثناء الحفظ. حاول مرة أخرى.' });
+      setStatus({ type: 'error', msg: t('investorProfile.saveError') });
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="space-y-5 max-w-2xl mx-auto" dir="rtl">
+    <div className="space-y-5 max-w-2xl mx-auto" dir={isAr ? 'rtl' : 'ltr'}>
 
       {/* Header */}
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
@@ -248,23 +249,23 @@ export function InvestorProfileTab() {
               <TrendingUp className="w-5 h-5 text-violet-400" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-[var(--text-primary)]">ملف المستثمر</h2>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">حدّد أهدافك وشخصيتك الاستثمارية</p>
+              <h2 className="text-base font-bold text-[var(--text-primary)]">{t('investorProfile.title')}</h2>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">{t('investorProfile.subtitle')}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Goal */}
-      <Section icon={Target} title="هدف الاستثمار">
+      <Section icon={Target} title={t('investorProfile.sectionGoal')}>
         <div className="grid grid-cols-2 gap-2">
-          {GOAL_OPTIONS.map((opt) => (
+          {GOAL_IDS.map((opt) => (
             <OptionCard
               key={opt.id}
               selected={form.goal === opt.id}
               onClick={() => update({ goal: opt.id })}
-              title={opt.title}
-              desc={opt.desc}
+              title={t(opt.titleKey)}
+              desc={t(opt.descKey)}
               icon={opt.icon}
             />
           ))}
@@ -272,54 +273,54 @@ export function InvestorProfileTab() {
       </Section>
 
       {/* Timeline */}
-      <Section icon={Clock} title="الأفق الزمني">
+      <Section icon={Clock} title={t('investorProfile.sectionTimeline')}>
         <div className="grid grid-cols-2 gap-2">
-          {TIMELINE_OPTIONS.map((opt) => (
+          {TIMELINE_IDS.map((opt) => (
             <OptionCard
               key={opt.id}
               selected={form.timeline === opt.id}
               onClick={() => update({ timeline: opt.id })}
-              title={opt.title}
-              desc={opt.desc}
+              title={t(opt.titleKey)}
+              desc={t(opt.descKey)}
             />
           ))}
         </div>
       </Section>
 
       {/* Risk */}
-      <Section icon={AlertTriangle} title="مستوى تحمل المخاطر">
+      <Section icon={AlertTriangle} title={t('investorProfile.sectionRisk')}>
         <div className="grid grid-cols-1 gap-2">
-          {RISK_OPTIONS.map((opt) => (
+          {RISK_IDS.map((opt) => (
             <OptionCard
               key={opt.id}
               selected={form.reaction30 === opt.id}
               onClick={() => update({ reaction30: opt.id })}
-              title={opt.title}
-              desc={opt.desc}
+              title={t(opt.titleKey)}
+              desc={t(opt.descKey)}
             />
           ))}
         </div>
       </Section>
 
       {/* Budget */}
-      <Section icon={Wallet} title="الميزانية الشهرية للاستثمار">
+      <Section icon={Wallet} title={t('investorProfile.sectionBudget')}>
         <div className="grid grid-cols-2 gap-2">
-          {BUDGET_OPTIONS.map((opt) => (
+          {BUDGET_IDS.map((opt) => (
             <OptionCard
               key={opt.id}
               selected={form.budgetBand === opt.id}
               onClick={() => update({ budgetBand: opt.id })}
-              title={opt.title}
-              desc={opt.desc}
+              title={t(opt.titleKey)}
+              desc={t(opt.descKey)}
             />
           ))}
         </div>
       </Section>
 
       {/* Sectors */}
-      <Section icon={Target} title="القطاعات المفضلة">
+      <Section icon={Target} title={t('investorProfile.sectionSectors')}>
         <div className="flex flex-wrap gap-2">
-          {SECTORS.map((sector) => {
+          {SECTOR_IDS.map((sector) => {
             const selected = form.sectors.includes(sector.id);
             return (
               <button
@@ -333,7 +334,7 @@ export function InvestorProfileTab() {
                   }`}
               >
                 {selected && <Check className="w-3 h-3" strokeWidth={3} />}
-                {sector.label}
+                {t(sector.labelKey)}
               </button>
             );
           })}
@@ -341,15 +342,15 @@ export function InvestorProfileTab() {
       </Section>
 
       {/* Level */}
-      <Section icon={TrendingUp} title="مستوى خبرتك في الاستثمار">
+      <Section icon={TrendingUp} title={t('investorProfile.sectionLevel')}>
         <div className="grid grid-cols-2 gap-2">
-          {LEVEL_OPTIONS.map((opt) => (
+          {LEVEL_IDS.map((opt) => (
             <OptionCard
               key={opt.id}
               selected={form.level === opt.id}
               onClick={() => update({ level: opt.id })}
-              title={opt.title}
-              desc={opt.desc}
+              title={t(opt.titleKey)}
+              desc={t(opt.descKey)}
             />
           ))}
         </div>
@@ -364,7 +365,11 @@ export function InvestorProfileTab() {
               {status.msg}
             </p>
           )}
-          {!status && <p className="text-xs text-[var(--text-muted)] flex-1">{dirty ? 'لديك تغييرات غير محفوظة' : 'جميع التفضيلات محدّثة'}</p>}
+          {!status && (
+            <p className="text-xs text-[var(--text-muted)] flex-1">
+              {dirty ? t('investorProfile.unsavedChanges') : t('investorProfile.allSaved')}
+            </p>
+          )}
           <Button
             type="button"
             variant="primary"
@@ -374,7 +379,7 @@ export function InvestorProfileTab() {
             icon={saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             iconPosition="left"
           >
-            {saving ? t('common.saving', { defaultValue: 'جاري الحفظ...' }) : t('common.save', { defaultValue: 'حفظ التغييرات' })}
+            {saving ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </div>

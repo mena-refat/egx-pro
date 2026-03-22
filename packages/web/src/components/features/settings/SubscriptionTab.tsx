@@ -28,7 +28,8 @@ const COMPARISON_ROWS = [
 ];
 
 export function SubscriptionTab() {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
+  const isAr = i18n.language?.startsWith('ar');
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const currentPlan = user?.plan ?? 'free';
@@ -122,7 +123,7 @@ export function SubscriptionTab() {
     setDiscountCode(sanitized);
     setDiscountCodeError(
       sanitized.length > 0 && sanitized.length < 18
-        ? t('billing.codeErrorTooShort', { defaultValue: 'الكود لازم يكون 18 حرف على الأقل' })
+        ? t('billing.codeErrorTooShort')
         : null
     );
     if (discountPercent !== null) setDiscountPercent(null);
@@ -130,7 +131,7 @@ export function SubscriptionTab() {
 
   const handleValidateCode = async () => {
     const code = discountCode.trim();
-    if (!code || !DISCOUNT_CODE_REGEX.test(code)) { setDiscountCodeError(t('billing.codeErrorInvalidChars', { defaultValue: 'كود غير صحيح' })); return; }
+    if (!code || !DISCOUNT_CODE_REGEX.test(code)) { setDiscountCodeError(t('billing.codeErrorInvalidChars')); return; }
     setValidating(true); setBillingMessage(null);
     try {
       const res = await api.post('/billing/validate-discount', { code });
@@ -189,7 +190,7 @@ export function SubscriptionTab() {
   }
 
   return (
-    <div className="space-y-5" dir="rtl">
+    <div className="space-y-5" dir={isAr ? 'rtl' : 'ltr'}>
 
       {/* ── Status message ── */}
       {billingMessage && (
@@ -315,7 +316,7 @@ export function SubscriptionTab() {
                 {/* Expiry */}
                 {current && planExpiresAt && !isFree && (
                   <p className="text-xs text-[var(--text-muted)] mt-2">
-                    {t('billing.expiresOn', { date: new Date(planExpiresAt).toLocaleDateString('ar-EG') })}
+                    {t('billing.expiresOn', { date: new Date(planExpiresAt).toLocaleDateString(isAr ? 'ar-EG' : 'en-GB') })}
                   </p>
                 )}
               </div>
@@ -360,8 +361,8 @@ export function SubscriptionTab() {
                       : discountPercent === 100
                         ? t('billing.activateNow')
                         : plan.id === 'ultra'
-                          ? t('billing.ctaGetUltra', { defaultValue: 'ترقية لـ Ultra' })
-                          : t('billing.ctaUpgradePro', { defaultValue: 'ترقية لـ Pro' })
+                          ? t('billing.ctaGetUltra')
+                          : t('billing.ctaUpgradePro')
                     }
                   </button>
                 </div>
@@ -379,7 +380,7 @@ export function SubscriptionTab() {
           className="flex items-center gap-2 text-sm font-medium text-[var(--brand)] hover:text-[var(--brand-hover)] w-full text-start"
         >
           <Tag className="w-4 h-4" />
-          {t('billing.hasDiscount', { defaultValue: 'عندك كود خصم؟' })}
+          {t('billing.hasDiscount')}
         </button>
 
         {showDiscount && (
@@ -400,7 +401,7 @@ export function SubscriptionTab() {
               disabled={validating || discountCode.length < 18}
               className="shrink-0"
             >
-              {t('billing.applyCode', { defaultValue: 'تطبيق' })}
+              {t('billing.applyCode')}
             </Button>
           </div>
         )}
@@ -410,7 +411,7 @@ export function SubscriptionTab() {
         {showDiscount && discountPercent != null && (
           <p className="text-xs text-[var(--success)] mt-1.5 flex items-center gap-1">
             <Check className="w-3.5 h-3.5" />
-            {t('billing.codeSuccess')} ({discountPercent}% خصم)
+            {t('billing.codeSuccess')} ({t('billing.percentOff', { percent: discountPercent })})
           </p>
         )}
       </div>
@@ -424,7 +425,7 @@ export function SubscriptionTab() {
         >
           <span className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-[var(--brand)]" />
-            {t('billing.compareTitle', { defaultValue: 'مقارنة الباقات' })}
+            {t('billing.compareTitle')}
           </span>
           {showComparison
             ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" />
@@ -443,8 +444,8 @@ export function SubscriptionTab() {
               </colgroup>
               <thead>
                 <tr className="bg-[var(--bg-secondary)]">
-                  <th className="text-start py-3 px-4 font-semibold text-[var(--text-muted)]">{t('billing.compareFeature', { defaultValue: 'الميزة' })}</th>
-                  <th className="text-center py-3 px-2 font-semibold text-[var(--text-muted)]">{t('billing.planFreeName', { defaultValue: 'مجاني' })}</th>
+                  <th className="text-start py-3 px-4 font-semibold text-[var(--text-muted)]">{t('billing.compareFeature')}</th>
+                  <th className="text-center py-3 px-2 font-semibold text-[var(--text-muted)]">{t('billing.planFreeName')}</th>
                   <th className="text-center py-3 px-2 font-semibold text-[var(--brand)]">Pro</th>
                   <th className="text-center py-3 px-2 font-semibold text-amber-400">Ultra</th>
                 </tr>
@@ -467,8 +468,8 @@ export function SubscriptionTab() {
                         <td key={col} className="text-center py-2.5 px-2">
                           {val === true  ? <Check className="w-3.5 h-3.5 text-[var(--success)] mx-auto" /> :
                            val === false ? <span className="text-[var(--text-muted)]">-</span> :
-                           val === 'standard' ? <span className="text-[var(--text-muted)]">{t('billing.supportStandard', { defaultValue: 'عادي' })}</span> :
-                           val === 'priority' ? <span className="text-amber-400 font-semibold">{t('billing.supportPriority', { defaultValue: 'أولوية' })}</span> :
+                           val === 'standard' ? <span className="text-[var(--text-muted)]">{t('billing.supportStandard')}</span> :
+                           val === 'priority' ? <span className="text-amber-400 font-semibold">{t('billing.supportPriority')}</span> :
                            <span>{val}</span>}
                         </td>
                       );

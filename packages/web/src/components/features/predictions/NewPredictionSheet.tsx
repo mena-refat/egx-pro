@@ -208,7 +208,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                 <button type="button" onClick={() => setNewPredictionStep(1)} className="text-sm text-[var(--brand)]">← {t('common.back')}</button>
 
                 {draft.ticker && currentPrice != null && (
-                  <p className="font-medium text-sm">{draft.ticker} - {t('predictions.currentPrice')}: <span className="text-[var(--text-primary)] font-semibold">{currentPrice.toFixed(2)} ج.م</span></p>
+                  <p className="font-medium text-sm">{draft.ticker} - {t('predictions.currentPrice')}: <span className="text-[var(--text-primary)] font-semibold">{currentPrice.toFixed(2)} {t('common.egp')}</span></p>
                 )}
 
                 {/* Mode toggle */}
@@ -517,7 +517,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-medium">{t('predictions.modeTabExact')}</span>
                       </p>
                       <p>
-                        {t('predictions.exactTargetPrice')}: <span className="font-semibold text-[var(--text-primary)]">{exactTargetPrice?.toFixed(2)} ج.م</span>
+                        {t('predictions.exactTargetPrice')}: <span className="font-semibold text-[var(--text-primary)]">{exactTargetPrice?.toFixed(2)} {t('common.egp')}</span>
                         {exactDerivedDirection && (
                           <span className={`ms-2 font-medium ${exactDerivedDirection === 'UP' ? 'text-green-400' : 'text-red-400'}`}>
                             {exactDerivedDirection === 'UP' ? '↑ ' : '↓ '}

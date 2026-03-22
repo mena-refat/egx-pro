@@ -48,7 +48,7 @@ export function MarketForexCommodities({ overview, loading }: Props) {
             <Circle className="w-3 h-3 fill-[var(--success)]" aria-hidden /> {t('delay.liveBadge')}
           </span>
         </div>
-        <p className="text-xl font-bold text-[var(--text-primary)]">{formatValue(usdVal, 2)} ج.م</p>
+        <p className="text-xl font-bold text-[var(--text-primary)]">{formatValue(usdVal, 2)} {t('common.egp')}</p>
         <p className={`text-sm font-semibold mt-1 ${(overview?.usdEgp?.changePercent ?? 0) > 0 ? 'text-[var(--success)]' : (overview?.usdEgp?.changePercent ?? 0) < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
           {formatChange(overview?.usdEgp?.changePercent ?? 0)}
         </p>
@@ -75,7 +75,7 @@ export function MarketForexCommodities({ overview, loading }: Props) {
             <span className={`text-xs font-semibold ${(overview?.gold?.changePercent ?? 0) > 0 ? 'text-[var(--success)]' : (overview?.gold?.changePercent ?? 0) < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
               {formatChange(overview?.gold?.changePercent ?? 0)}
             </span>
-            <span className="text-xs text-[var(--text-muted)]">{t('market.perGram')}: {formatValue(gold24, 0)} ج.م</span>
+            <span className="text-xs text-[var(--text-muted)]">{t('market.perGram')}: {formatValue(gold24, 0)} {t('common.egp')}</span>
           </span>
         </button>
         <AnimatePresence>
@@ -119,7 +119,7 @@ export function MarketForexCommodities({ overview, loading }: Props) {
             <span className={`text-xs font-semibold ${(overview?.silver?.changePercent ?? 0) > 0 ? 'text-[var(--success)]' : (overview?.silver?.changePercent ?? 0) < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
               {formatChange(overview?.silver?.changePercent ?? 0)}
             </span>
-            <span className="text-xs text-[var(--text-muted)]">{t('market.perGram')}: {formatValue(silver999, 2)} ج.م</span>
+            <span className="text-xs text-[var(--text-muted)]">{t('market.perGram')}: {formatValue(silver999, 2)} {t('common.egp')}</span>
           </span>
         </button>
         <AnimatePresence>

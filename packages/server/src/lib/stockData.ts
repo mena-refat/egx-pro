@@ -1,9 +1,10 @@
-import { getCache } from './redis.ts';
+import { getCache, setCache } from './redis.ts';
 import { EGX_TICKERS } from './egxTickers.ts';
 import { prisma } from './prisma.ts';
 import { toYahooSymbol } from './yahooSymbolMap.ts';
 import { marketDataService } from '../services/market-data/market-data.service.ts';
 import { logger } from './logger.ts';
+import { getMarketStatus } from './marketHours.ts';
 
 const DELAY_MINUTES = 10;
 
@@ -91,8 +92,21 @@ export async function getBulkPricesDelayed(tickers: string[] = EGX_TICKERS): Pro
 
 const RANGE_DAYS: Record<string, number> = { '1w': 7, '1mo': 30, '3mo': 90, '6mo': 180, '1y': 365 };
 
-/** Historical OHLCV from Yahoo Finance chart endpoint. */
-export async function getStockHistory(ticker: string, range = '1mo'): Promise<Array<{ date: Date; open: number; high: number; low: number; close: number; volume: number }>> {
+type OHLCVRow = { date: Date; open: number; high: number; low: number; close: number; volume: number };
+
+/** Historical OHLCV from Yahoo Finance chart endpoint — cached in Redis. */
+export async function getStockHistory(ticker: string, range = '1mo'): Promise<OHLCVRow[]> {
+  const cacheKey = `history:${ticker}:${range}`;
+  const { status: marketStatus } = getMarketStatus();
+  const isOpen = marketStatus === 'open' || marketStatus === 'pre' || marketStatus === 'auction';
+  // During market hours: 10 min TTL (intraday candle updates). Off hours: 4 hours.
+  const ttl = isOpen ? 600 : 14_400;
+
+  const cached = await getCache<Array<{ date: string; open: number; high: number; low: number; close: number; volume: number }>>(cacheKey);
+  if (cached && cached.length > 0) {
+    return cached.map((c) => ({ ...c, date: new Date(c.date) }));
+  }
+
   const yahooTicker = toYahooSymbol(ticker);
   const days = RANGE_DAYS[range] ?? 30;
   const period1 = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -101,7 +115,7 @@ export async function getStockHistory(ticker: string, range = '1mo'): Promise<Ar
     const yahoo = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
     const chart = await yahoo.chart(yahooTicker, { period1, interval: '1d' }, { validateResult: false }) as { quotes?: Array<{ date: Date; open?: number; high?: number; low?: number; close?: number; volume?: number }> } | null;
     const quotes = chart?.quotes ?? [];
-    return quotes
+    const result: OHLCVRow[] = quotes
       .filter((q) => q.close != null && Number.isFinite(q.close))
       .map((q) => ({
         date: q.date,
@@ -111,13 +125,16 @@ export async function getStockHistory(ticker: string, range = '1mo'): Promise<Ar
         close: q.close!,
         volume: q.volume ?? 0,
       }));
+    if (result.length > 0) {
+      await setCache(cacheKey, result, ttl).catch(() => {});
+    }
+    return result;
   } catch {
     return [];
   }
 }
 
-/** Financials from yahoo-finance2 quoteSummary. لا ترمي أبداً — ترجع nulls عند الفشل. Claude يبحث عن الباقي. */
-export async function getFinancials(ticker: string): Promise<{
+export type FinancialsData = {
   pe: number | null;
   forwardPe: number | null;
   eps: number | null;
@@ -136,78 +153,80 @@ export async function getFinancials(ticker: string): Promise<{
   priceToBook: number | null;
   marketCap: number | null;
   beta: number | null;
-}> {
+};
+
+const FINANCIALS_NULLS: FinancialsData = {
+  pe: null, forwardPe: null, eps: null, roe: null, roa: null,
+  debtToEquity: null, grossMargin: null, profitMargin: null, operatingMargin: null,
+  revenue: null, revenueGrowth: null, netIncome: null, freeCashFlow: null,
+  dividendYield: null, bookValue: null, priceToBook: null, marketCap: null, beta: null,
+};
+
+/** Financials from yahoo-finance2 quoteSummary — cached 24 h in Redis (fundamentals change quarterly). */
+export async function getFinancials(ticker: string): Promise<FinancialsData> {
+  const cacheKey = `fin:${ticker}`;
+  const cached = await getCache<FinancialsData>(cacheKey);
+  if (cached) return cached;
+
   const yahooTicker = toYahooSymbol(ticker);
-  const nulls = {
-    pe: null as number | null,
-    forwardPe: null as number | null,
-    eps: null as number | null,
-    roe: null as number | null,
-    roa: null as number | null,
-    debtToEquity: null as number | null,
-    grossMargin: null as number | null,
-    profitMargin: null as number | null,
-    operatingMargin: null as number | null,
-    revenue: null as number | null,
-    revenueGrowth: null as number | null,
-    netIncome: null as number | null,
-    freeCashFlow: null as number | null,
-    dividendYield: null as number | null,
-    bookValue: null as number | null,
-    priceToBook: null as number | null,
-    marketCap: null as number | null,
-    beta: null as number | null,
-  };
 
-  try {
-    const YahooFinance = (await import('yahoo-finance2')).default;
-    const yahoo = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
-
-    let summary: Record<string, unknown> | null = null;
+  const fetchedData = await (async (): Promise<FinancialsData> => {
     try {
-      summary = (await yahoo.quoteSummary(yahooTicker, {
-        modules: ['defaultKeyStatistics', 'financialData', 'summaryDetail'] as ('defaultKeyStatistics' | 'financialData' | 'summaryDetail')[],
-      })) as Record<string, unknown>;
-    } catch {
-      logger.info(`quoteSummary unavailable for ${yahooTicker} — Claude will search`);
-      return nulls;
+      const YahooFinance = (await import('yahoo-finance2')).default;
+      const yahoo = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
+
+      let summary: Record<string, unknown> | null = null;
+      try {
+        summary = (await yahoo.quoteSummary(yahooTicker, {
+          modules: ['defaultKeyStatistics', 'financialData', 'summaryDetail'] as ('defaultKeyStatistics' | 'financialData' | 'summaryDetail')[],
+        })) as Record<string, unknown>;
+      } catch {
+        logger.info(`quoteSummary unavailable for ${yahooTicker} — Claude will search`);
+        return FINANCIALS_NULLS;
+      }
+
+      if (!summary) return FINANCIALS_NULLS;
+
+      const fin = summary.financialData as Record<string, unknown> | undefined;
+      const keys = summary.defaultKeyStatistics as Record<string, unknown> | undefined;
+
+      const num = (v: unknown): number | null => {
+        if (v == null) return null;
+        const n = typeof v === 'object' && v !== null && 'raw' in v ? (v as { raw: number }).raw : Number(v);
+        return Number.isFinite(n) ? n : null;
+      };
+
+      return {
+        pe: num(keys?.trailingPE),
+        forwardPe: num(keys?.forwardPE),
+        eps: num(keys?.trailingEps),
+        roe: num(fin?.returnOnEquity),
+        roa: num(fin?.returnOnAssets),
+        debtToEquity: num(fin?.debtToEquity),
+        grossMargin: num(fin?.grossMargins),
+        profitMargin: num(fin?.profitMargins),
+        operatingMargin: num(fin?.operatingMargins),
+        revenue: num(fin?.totalRevenue),
+        revenueGrowth: num(fin?.revenueGrowth),
+        netIncome: null,
+        freeCashFlow: num(fin?.freeCashflow),
+        dividendYield: num(keys?.dividendYield),
+        bookValue: num(keys?.bookValue),
+        priceToBook: num(keys?.priceToBook),
+        marketCap: null,
+        beta: num(keys?.beta),
+      };
+    } catch (err) {
+      logger.warn('getFinancials failed completely', { ticker, error: (err as Error).message });
+      return FINANCIALS_NULLS;
     }
+  })();
 
-    if (!summary) return nulls;
+  // Cache 24 hours — fundamentals change quarterly, not daily
+  const hasAnyData = Object.values(fetchedData).some((v) => v !== null);
+  await setCache(cacheKey, fetchedData, hasAnyData ? 86_400 : 3_600).catch(() => {});
 
-    const fin = summary.financialData as Record<string, unknown> | undefined;
-    const keys = summary.defaultKeyStatistics as Record<string, unknown> | undefined;
-
-    const num = (v: unknown): number | null => {
-      if (v == null) return null;
-      const n = typeof v === 'object' && v !== null && 'raw' in v ? (v as { raw: number }).raw : Number(v);
-      return Number.isFinite(n) ? n : null;
-    };
-
-    return {
-      pe: num(keys?.trailingPE),
-      forwardPe: num(keys?.forwardPE),
-      eps: num(keys?.trailingEps),
-      roe: num(fin?.returnOnEquity),
-      roa: num(fin?.returnOnAssets),
-      debtToEquity: num(fin?.debtToEquity),
-      grossMargin: num(fin?.grossMargins),
-      profitMargin: num(fin?.profitMargins),
-      operatingMargin: num(fin?.operatingMargins),
-      revenue: num(fin?.totalRevenue),
-      revenueGrowth: num(fin?.revenueGrowth),
-      netIncome: null,
-      freeCashFlow: num(fin?.freeCashflow),
-      dividendYield: num(keys?.dividendYield),
-      bookValue: num(keys?.bookValue),
-      priceToBook: num(keys?.priceToBook),
-      marketCap: null,
-      beta: num(keys?.beta),
-    };
-  } catch (err) {
-    logger.warn('getFinancials failed completely', { ticker, error: (err as Error).message });
-    return nulls;
-  }
+  return fetchedData;
 }
 
 /** Search EGX stocks by name from database. */

@@ -262,7 +262,7 @@ export async function addNewlyUnlockedAchievements(
 
   const user = await UserRepository.findUnique({
     where: { id: userId },
-    select: { unseenAchievements: true },
+    select: { unseenAchievements: true, notifyAchievements: true, pushToken: true },
   });
   if (!user) return [];
   const unseen = user.unseenAchievements ?? [];
@@ -273,11 +273,16 @@ export async function addNewlyUnlockedAchievements(
     where: { id: userId },
     data: { unseenAchievements: newUnseen },
   });
-  for (const id of toAdd) {
-    const def = ACHIEVEMENT_DEFS.find((d) => d.id === id);
-    const title = def ? `حققت إنجاز "${def.title}"` : 'إنجاز جديد';
-    const body = def?.shortDescription ?? 'تهانينا!';
-    await createNotification(userId, 'achievement', title, body);
+  if (user.notifyAchievements !== false) {
+    for (const id of toAdd) {
+      const def = ACHIEVEMENT_DEFS.find((d) => d.id === id);
+      const title = def ? `حققت إنجاز "${def.title}"` : 'إنجاز جديد';
+      const body = def?.shortDescription ?? 'تهانينا!';
+      await createNotification(userId, 'achievement', title, body, {
+        route: '/achievements',
+        pushToken: user.pushToken ?? undefined,
+      });
+    }
   }
   return toAdd;
 }

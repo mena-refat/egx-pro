@@ -202,7 +202,7 @@ function ProfilePageInner() {
     ? { label: 'Ultra ✦', cls: 'bg-amber-500/15 text-amber-400 border border-amber-400/30' }
     : (plan === 'pro' || plan === 'yearly')
     ? { label: 'Pro', cls: 'bg-[var(--brand)]/15 text-[var(--brand)] border border-[var(--brand)]/30' }
-    : { label: t('subscription.free', { defaultValue: 'مجاني' }), cls: 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border)]' };
+    : { label: t('settings.freePlan'), cls: 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border)]' };
 
   const ChevronEnd = isRtl ? ChevronLeft : ChevronRight;
 

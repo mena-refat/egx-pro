@@ -12,7 +12,7 @@ export function GoalsWealthBanner({ currentWealth, locale }: Props) {
     <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
       <p className="text-body text-[var(--text-secondary)]">
         {t('goals.portfolioAvailable')}:{' '}
-        <span className="font-semibold text-[var(--text-primary)]">{formatMoney(currentWealth, locale)} ج.م</span>
+        <span className="font-semibold text-[var(--text-primary)]">{formatMoney(currentWealth, locale)} {t('common.egp')}</span>
       </p>
     </div>
   );

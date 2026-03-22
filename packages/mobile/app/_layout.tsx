@@ -1,6 +1,6 @@
 import '../global.css';
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
@@ -32,6 +32,7 @@ if (!isExpoGo) {
 export default function RootLayout() {
   const { checkAuth, isLoading, isAuthenticated } = useAuthStore();
   const { colors, isDark } = useTheme();
+  const router = useRouter();
 
   useEffect(() => {
     checkAuth().finally(() => {
@@ -54,6 +55,30 @@ export default function RootLayout() {
         .catch(() => null);
     }
   }, [isAuthenticated, isExpoGo]);
+
+  // Navigate to the right screen when user taps a push notification
+  useEffect(() => {
+    if (isExpoGo) return;
+    const Notifications = require('expo-notifications') as typeof import('expo-notifications');
+
+    // App opened from a notification tap (killed/background state)
+    void Notifications.getLastNotificationResponseAsync().then((response) => {
+      const route = response?.notification.request.content.data?.route as string | undefined;
+      if (route) {
+        try { router.push(route as never); } catch { /* invalid route */ }
+      }
+    });
+
+    // Notification tapped while app is in foreground or background
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const route = response.notification.request.content.data?.route as string | undefined;
+      if (route) {
+        try { router.push(route as never); } catch { /* invalid route */ }
+      }
+    });
+
+    return () => sub.remove();
+  }, [router, isExpoGo]);
 
   if (isLoading) return null;
 

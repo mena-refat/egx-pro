@@ -38,7 +38,7 @@ export async function runResolvePredictions(): Promise<void> {
             'prediction_missed',
             'توقعك لم يتحقق',
             `توقعك على ${p.ticker} انتهت مدته ولم يتم التحقق منه.`,
-            { route: '/predictions' }
+            { route: '/predictions', pushToken: p.user.pushToken ?? undefined }
           );
         } else {
           logger.warn(`Skipping prediction ${p.id}: no price for ${p.ticker} (${daysOverdue.toFixed(1)} days overdue)`);
@@ -56,7 +56,7 @@ export async function runResolvePredictions(): Promise<void> {
           'prediction_hit',
           'تحقق توقعك!',
           `🎯 ${p.ticker} وصل لـ ${priceData.price} جنيه. ربحت ${pointsEarned} نقطة`,
-          { route: '/predictions' }
+          { route: '/predictions', pushToken: p.user.pushToken ?? undefined }
         );
       } else {
         await createNotification(
@@ -64,7 +64,7 @@ export async function runResolvePredictions(): Promise<void> {
           'prediction_missed',
           'توقعك لم يتحقق',
           `توقعك على ${p.ticker} لم يتحقق. انتهت المدة.`,
-          { route: '/predictions' }
+          { route: '/predictions', pushToken: p.user.pushToken ?? undefined }
         );
       }
     } catch (err) {

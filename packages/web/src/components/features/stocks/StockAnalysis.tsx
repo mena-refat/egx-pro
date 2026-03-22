@@ -154,7 +154,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 )}
               </div>
         <div className="flex items-center gap-3 mt-2">
-          <span className="text-2xl font-bold text-[var(--text-primary)]">{formatNum(price)} ج.م</span>
+          <span className="text-2xl font-bold text-[var(--text-primary)]">{formatNum(price)} {t('common.egp')}</span>
           <span className={`text-sm font-semibold flex items-center gap-0.5 ${(stock.changePercent ?? 0) >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
             {(stock.changePercent ?? 0) >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
             {(stock.changePercent ?? 0) >= 0 ? '+' : ''}{(stock.changePercent ?? 0).toFixed(2)}% {(stock.change ?? 0) >= 0 ? '+' : ''}{formatNum(stock.change)} ج
@@ -391,7 +391,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                     >
                       <p className="text-label font-semibold text-[var(--text-primary)] truncate">{s.ticker}</p>
                       <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">{getStockName(s.ticker, lang as 'ar' | 'en')}</p>
-                      <p className="text-sm font-bold tabular-nums text-[var(--text-primary)] mt-2">{(s.price ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ج.م</p>
+                      <p className="text-sm font-bold tabular-nums text-[var(--text-primary)] mt-2">{(s.price ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {t('common.egp')}</p>
                       <span className={`inline-block text-xs font-semibold tabular-nums mt-1 ${isUp ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
                         {isUp ? '+' : ''}{(ch).toFixed(2)}%
                       </span>

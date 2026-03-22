@@ -11,7 +11,7 @@ import { formatWithCommas } from './goalsUtils';
 export interface GoalFormModalProps {
   open: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (goal?: GoalRecord) => void;
   accessToken: string | null;
   t: (key: string, opts?: object) => string;
   mode: 'add' | 'edit';
@@ -94,6 +94,14 @@ export function GoalFormModal({
           }
           throw new Error(data.error || 'Failed');
         }
+        const body = await res.json().catch(() => null);
+        const newGoal: GoalRecord | undefined = body?.data ?? (body?.id ? body : undefined);
+        clearCache('/goals');
+        if (typeof window !== 'undefined')
+          window.dispatchEvent(new CustomEvent('profile-completion-changed'));
+        toast.success(t('goals.added', { defaultValue: t('common.success') }));
+        onSaved(newGoal);
+        return;
       } else if (goalId) {
         const res = await fetch(`/api/goals/${goalId}`, {
           method: 'PUT',
@@ -117,7 +125,7 @@ export function GoalFormModal({
       clearCache('/goals');
       if (typeof window !== 'undefined')
         window.dispatchEvent(new CustomEvent('profile-completion-changed'));
-      toast.success(mode === 'add' ? t('goals.added', { defaultValue: t('common.success') }) : t('common.success'));
+      toast.success(t('common.success'));
       onSaved();
     } catch (e) {
       setErr(t('goals.errorAdd'));

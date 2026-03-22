@@ -135,6 +135,10 @@ function scoreTechnicalAndWave(price: number, ind: IndicatorsInput, history: OHL
   const pt = 28 / 22;
   let s = 0;
 
+  // Hoist history arrays — used in both technical and wave sections
+  const closes = history.map((d) => d.close);
+  const n = closes.length;
+
   // 1. Trend direction
   s += pt * sig(ind.trend === 'صاعد', true);
   if (ind.trend === 'هابط') s += 0;
@@ -157,8 +161,17 @@ function scoreTechnicalAndWave(price: number, ind: IndicatorsInput, history: OHL
     else s += pt * 0;
   } else s += pt * 0.5;
 
-  // 7. RSI divergence — not computed; neutral
-  s += pt * 0.5;
+  // 7. RSI divergence — bullish when RSI oversold while price dropping (bounce signal)
+  let rsiDiv = 0.5;
+  if (ind.rsi14 != null && n >= 11) {
+    const priceOld = closes[n - 11] ?? closes[0];
+    const priceChg10 = priceOld != null && priceOld > 0 ? ((price - priceOld) / priceOld) * 100 : 0;
+    if (ind.rsi14 < 30 && priceChg10 < -5) rsiDiv = 1;
+    else if (ind.rsi14 < 40 && priceChg10 < 0) rsiDiv = 0.75;
+    else if (ind.rsi14 > 70 && priceChg10 > 5) rsiDiv = 0.1;
+    else if (ind.rsi14 > 60 && priceChg10 > 0) rsiDiv = 0.35;
+  }
+  s += pt * rsiDiv;
 
   // 8. MACD signal
   const macdBull = ind.macd != null && ind.macdSignal != null && ind.macd > ind.macdSignal;
@@ -189,8 +202,13 @@ function scoreTechnicalAndWave(price: number, ind: IndicatorsInput, history: OHL
   }
   s += pt * bbPos;
 
-  // 13. Bollinger squeeze — use ATR/range proxy; neutral if no data
-  s += pt * 0.5;
+  // 13. Bollinger squeeze — narrow bandwidth signals coil/breakout potential
+  let bbSqueeze = 0.5;
+  if (ind.bollingerUpper != null && ind.bollingerLower != null && ind.sma20 != null && ind.sma20 > 0) {
+    const bandwidth = (ind.bollingerUpper - ind.bollingerLower) / ind.sma20;
+    bbSqueeze = bandwidth < 0.04 ? 1 : bandwidth < 0.08 ? 0.75 : bandwidth > 0.20 ? 0.25 : 0.5;
+  }
+  s += pt * bbSqueeze;
 
   // 14. Distance to support (close to support = upside room)
   let distSup = 0.5;
@@ -213,8 +231,6 @@ function scoreTechnicalAndWave(price: number, ind: IndicatorsInput, history: OHL
   s += pt * distRes;
 
   // ─── WAVE / STRUCTURE (7 factors) ───
-  const closes = history.map((d) => d.close);
-  const n = closes.length;
   const recent = n >= 20 ? closes.slice(-60) : [];
   const high = recent.length ? Math.max(...recent) : price;
   const low = recent.length ? Math.min(...recent) : price;
@@ -232,17 +248,49 @@ function scoreTechnicalAndWave(price: number, ind: IndicatorsInput, history: OHL
   // 25. Fibonacci retracement level
   s += pt * (range > 0 ? elliott : 0.5);
 
-  // 26. Fibonacci extension — no data
-  s += pt * 0.5;
+  // 26. Fibonacci extension — price position above recent low relative to range
+  let fibExt = 0.5;
+  if (range > 0 && n >= 20) {
+    const ext = (price - low) / range;
+    fibExt = ext > 1.272 ? 0.9 : ext > 1.0 ? 0.8 : ext > 0.618 ? 0.6 : 0.35;
+  }
+  s += pt * fibExt;
 
-  // 27. Wave strength ratio — proxy by momentum consistency
-  s += pt * 0.5;
+  // 27. Wave strength — consistency of multi-period uptrend
+  let waveStr = 0.5;
+  if (n >= 22) {
+    const p5  = closes[n - 6]  ?? closes[0];
+    const p10 = closes[n - 11] ?? closes[0];
+    const p21 = closes[n - 22] ?? closes[0];
+    const up1 = price > (p5 ?? 0);
+    const up2 = (p5 ?? 0) > (p10 ?? 0);
+    const up3 = (p10 ?? 0) > (p21 ?? 0);
+    const upCount = [up1, up2, up3].filter(Boolean).length;
+    waveStr = upCount === 3 ? 1 : upCount === 2 ? 0.7 : upCount === 1 ? 0.35 : 0.1;
+  }
+  s += pt * waveStr;
 
-  // 28–30. Price structure, breakout, consolidation — simplified
+  // 28–30. Price structure, breakout, consolidation
   const inRange = range > 0 && (price - low) / range > 0.2 && (high - price) / range > 0.2;
   s += pt * (inRange ? 0.7 : 0.5);
-  s += pt * 0.5;
-  s += pt * 0.5;
+
+  // 29. Breakout — price near recent 60-bar high
+  let breakout = 0.3;
+  if (range > 0 && n >= 20) {
+    const pctFromHigh = high > 0 ? (high - price) / high : 1;
+    breakout = pctFromHigh < 0.03 ? 1 : pctFromHigh < 0.08 ? 0.7 : pctFromHigh < 0.18 ? 0.45 : 0.2;
+  }
+  s += pt * breakout;
+
+  // 30. Consolidation — tight recent 20-bar range = coil/spring setup
+  let consolidation = 0.4;
+  if (n >= 20) {
+    const r20Hi = Math.max(...closes.slice(-20) as number[]);
+    const r20Lo = Math.min(...closes.slice(-20) as number[]);
+    const tightness = r20Hi > 0 ? (r20Hi - r20Lo) / r20Hi : 1;
+    consolidation = tightness < 0.04 ? 0.9 : tightness < 0.08 ? 0.7 : tightness < 0.15 ? 0.5 : 0.35;
+  }
+  s += pt * consolidation;
 
   return clamp(s, 0, MAX_TECHNICAL);
 }
@@ -271,61 +319,250 @@ function scoreFundamental(price: number, fin: FinancialsInput | null): number {
   let s = 0;
   if (!fin) return pt * 9;
 
+  // 1. EPS positive
   s += pt * sig(fin.eps != null && fin.eps > 0, fin.eps != null);
-  s += pt * 0.5; // EPS growth — not provided
+
+  // 2. EPS growth proxy — positive EPS + strong revenue growth signals earnings expansion
+  const epsGrowth = fin.eps != null && fin.eps > 0 && fin.revenueGrowth != null && fin.revenueGrowth > 0.05;
+  s += pt * sig(epsGrowth, fin.eps != null && fin.revenueGrowth != null);
+
+  // 3. PE valuation
   s += pt * sig(fin.pe != null && fin.pe > 0 && fin.pe < 25, fin.pe != null);
-  s += pt * 0.5; // PEG
+
+  // 4. PEG ratio — PE / (revenueGrowth * 100); <1 undervalued, >2 expensive
+  let pegScore = 0.5;
+  if (fin.pe != null && fin.pe > 0 && fin.revenueGrowth != null && fin.revenueGrowth > 0) {
+    const peg = fin.pe / (fin.revenueGrowth * 100);
+    pegScore = peg < 1 ? 1 : peg < 2 ? 0.7 : peg < 3 ? 0.35 : 0.1;
+  } else if (fin.pe != null && fin.pe > 0 && fin.pe < 12) {
+    pegScore = 0.7; // low PE without growth data = fair value proxy
+  }
+  s += pt * pegScore;
+
+  // 5. Revenue growth
   s += pt * sig(fin.revenueGrowth != null && fin.revenueGrowth > 0, fin.revenueGrowth != null);
-  s += pt * 0.5; // earnings growth
+
+  // 6. Earnings growth proxy — strong operating margin + revenue growth signals earnings quality
+  const earningsGrowth = fin.operatingMargin != null && fin.operatingMargin > 0.08
+    && fin.revenueGrowth != null && fin.revenueGrowth > 0;
+  s += pt * sig(earningsGrowth, fin.operatingMargin != null && fin.revenueGrowth != null);
+
+  // 7. Profit margin quality
   s += pt * sig(fin.profitMargin != null && fin.profitMargin > 0.05, fin.profitMargin != null);
+
+  // 8. Operating margin
   s += pt * sig(fin.operatingMargin != null && fin.operatingMargin > 0, fin.operatingMargin != null);
-  s += pt * sig(fin.profitMargin != null && fin.profitMargin > 0, fin.profitMargin != null);
+
+  // 9. Gross margin quality
+  s += pt * sig(fin.grossMargin != null && fin.grossMargin > 0.2, fin.grossMargin != null);
+
+  // 10. ROE
   s += pt * sig(fin.roe != null && fin.roe > 0.1, fin.roe != null);
+
+  // 11. ROA
   s += pt * sig(fin.roa != null && fin.roa > 0, fin.roa != null);
-  s += pt * 0.5; // ROIC
+
+  // 12. ROIC proxy — ROE adjusted for leverage: high ROE on low D/E = genuine return
+  let roicScore = 0.5;
+  if (fin.roe != null && fin.debtToEquity != null && fin.debtToEquity >= 0) {
+    const roic = fin.roe / (1 + fin.debtToEquity);
+    roicScore = roic > 0.15 ? 1 : roic > 0.08 ? 0.7 : roic > 0 ? 0.4 : 0.1;
+  } else if (fin.roe != null) {
+    roicScore = fin.roe > 0.12 ? 0.7 : fin.roe > 0 ? 0.45 : 0.2;
+  }
+  s += pt * roicScore;
+
+  // 13. Debt/equity
   s += pt * sig(fin.debtToEquity != null && fin.debtToEquity < 1.5, fin.debtToEquity != null);
-  s += pt * 0.5; // interest coverage
+
+  // 14. Interest coverage proxy — low leverage + positive operating margin = serviceable debt
+  let icScore = 0.5;
+  if (fin.debtToEquity != null && fin.operatingMargin != null) {
+    if (fin.debtToEquity < 0.3) icScore = 1;
+    else if (fin.debtToEquity < 0.8 && fin.operatingMargin > 0.05) icScore = 0.75;
+    else if (fin.debtToEquity > 2.5 || fin.operatingMargin < 0) icScore = 0.1;
+    else icScore = 0.4;
+  }
+  s += pt * icScore;
+
+  // 15. Free cash flow
   s += pt * sig(fin.freeCashFlow != null && fin.freeCashFlow > 0, fin.freeCashFlow != null);
+
+  // 16. Dividend yield
   s += pt * sig(fin.dividendYield != null && fin.dividendYield > 0, fin.dividendYield != null);
+
+  // 17. Book value positive
   s += pt * sig(fin.bookValue != null && fin.bookValue > 0, fin.bookValue != null);
+
+  // 18. Price-to-book valuation
   s += pt * sig(fin.priceToBook != null && fin.priceToBook > 0 && fin.priceToBook < 3, fin.priceToBook != null);
-  s += pt * 0.5; // fair value vs price
+
+  // 19. Fair value — P/B < 1 = trading below book (deep value); PE cross-check as fallback
+  let fairVal = 0.5;
+  if (fin.priceToBook != null && fin.priceToBook > 0) {
+    fairVal = fin.priceToBook < 1 ? 1 : fin.priceToBook < 2 ? 0.75 : fin.priceToBook < 4 ? 0.4 : 0.15;
+  } else if (fin.pe != null && fin.pe > 0) {
+    fairVal = fin.pe < 10 ? 1 : fin.pe < 18 ? 0.7 : fin.pe < 30 ? 0.35 : 0.15;
+  }
+  s += pt * fairVal;
 
   return clamp(s, 0, MAX_FUNDAMENTAL);
 }
 
 // ─── LIQUIDITY (6) + SECTOR & MARKET (6) → market_score max 17 ───
-function scoreMarket(ind: IndicatorsInput, market: MarketContextInput): number {
+function scoreMarket(ind: IndicatorsInput, market: MarketContextInput, fin?: FinancialsInput | null, price?: number): number {
   const liquidityPt = 8 / 6;
   const sectorPt = 9 / 6;
   let s = 0;
 
+  // 1. Average volume — has any liquidity at all
   s += liquidityPt * sig(ind.avgVolume20 != null && ind.avgVolume20 > 0, ind.avgVolume20 != null);
-  s += liquidityPt * sig(ind.lastVolume != null && ind.avgVolume20 != null && ind.avgVolume20 > 0 && ind.lastVolume / ind.avgVolume20 >= 0.5, ind.lastVolume != null && ind.avgVolume20 != null);
-  s += liquidityPt * 0.5; // bid-ask
-  s += liquidityPt * 0.5; // institutional
-  s += liquidityPt * 0.5; // market cap tier
-  s += liquidityPt * 0.5; // float
+
+  // 2. Relative volume — today vs 20-day avg (0.5× = acceptable floor)
+  s += liquidityPt * sig(
+    ind.lastVolume != null && ind.avgVolume20 != null && ind.avgVolume20 > 0 && ind.lastVolume / ind.avgVolume20 >= 0.5,
+    ind.lastVolume != null && ind.avgVolume20 != null,
+  );
+
+  // 3. Bid-ask proxy — daily turnover rate: volume*price / marketCap; high turnover = tight spread
+  let bidAsk = 0.5;
+  if (price != null && price > 0 && fin?.marketCap != null && fin.marketCap > 0 && ind.lastVolume != null) {
+    const turnover = (ind.lastVolume * price) / fin.marketCap;
+    bidAsk = turnover > 0.01 ? 1 : turnover > 0.003 ? 0.7 : turnover > 0.001 ? 0.45 : 0.2;
+  } else if (ind.lastVolume != null && ind.avgVolume20 != null && ind.avgVolume20 > 0) {
+    const ratio = ind.lastVolume / ind.avgVolume20;
+    bidAsk = ratio > 2 ? 0.85 : ratio > 1 ? 0.65 : 0.4;
+  }
+  s += liquidityPt * bidAsk;
+
+  // 4. Institutional proxy — no data available; neutral
+  s += liquidityPt * 0.5;
+
+  // 5. Market cap tier — large/mid = higher liquidity and institutional interest
+  let capTier = 0.5;
+  if (fin?.marketCap != null && fin.marketCap > 0) {
+    // EGP tiers: >10B = large, >1B = mid, >100M = small, else micro
+    capTier = fin.marketCap > 10_000_000_000 ? 1
+      : fin.marketCap > 1_000_000_000 ? 0.75
+      : fin.marketCap > 100_000_000 ? 0.5
+      : 0.25;
+  }
+  s += liquidityPt * capTier;
+
+  // 6. VWAP signal — price above VWAP = net buying pressure during session
+  let vwapSignal = 0.5;
+  if (price != null && ind.vwap != null && ind.vwap > 0) {
+    const pctVwap = (price - ind.vwap) / ind.vwap;
+    vwapSignal = pctVwap > 0.02 ? 0.9 : pctVwap > 0 ? 0.7 : pctVwap > -0.02 ? 0.35 : 0.15;
+  }
+  s += liquidityPt * vwapSignal;
 
   const ch = market.egx30?.changePercent;
+
+  // 7. EGX30 positive — broad market tailwind
   s += sectorPt * sig(ch != null && ch > 0, ch != null);
+
+  // 8. EGX30 strong positive (>0.5%) — momentum environment
   s += sectorPt * sig(ch != null && ch > 0.5, ch != null);
-  s += sectorPt * 0.5;
+
+  // 9. EGX30 magnitude — strong move (>2%) = high-conviction market session
+  let egxMag = 0.5;
+  if (ch != null) {
+    egxMag = ch > 2 ? 0.9 : ch > 1 ? 0.7 : ch > -1 ? 0.5 : ch > -2 ? 0.25 : 0.1;
+  }
+  s += sectorPt * egxMag;
+
+  // 10. EGX30 not in deep decline (>-1%)
   s += sectorPt * sig(ch != null && ch > -1, ch != null);
-  s += sectorPt * 0.5;
-  s += sectorPt * 0.5;
+
+  // 11. Market session — open market = can act on signals
+  const isOpen = typeof market.marketStatus === 'string' && market.marketStatus.includes('مفتوح');
+  s += sectorPt * (market.marketStatus != null ? (isOpen ? 0.75 : 0.45) : 0.5);
+
+  // 12. USD/EGP macro equity pressure — stable currency benefits equities
+  const usd = market.usdEgp;
+  let usdEquity = 0.5;
+  if (usd != null) {
+    usdEquity = usd < 40 ? 0.85 : usd < 50 ? 0.6 : usd < 58 ? 0.35 : 0.15;
+  }
+  s += sectorPt * usdEquity;
 
   return clamp(s, 0, MAX_MARKET);
 }
 
 // ─── MACRO (5) → macro_score max 7 ───
 function scoreMacro(market: MarketContextInput): number {
-  return MAX_MACRO * 0.5;
+  const pt = MAX_MACRO / 5;
+  let s = 0;
+
+  // 1. EGX30 daily direction — broad market health
+  const ch = market.egx30?.changePercent;
+  if (ch != null) {
+    s += pt * (ch > 1 ? 1 : ch > 0 ? 0.7 : ch > -1 ? 0.4 : 0.1);
+  } else {
+    s += pt * 0.5;
+  }
+
+  // 2. USD/EGP rate — lower = more stable macro environment for equities
+  const usd = market.usdEgp;
+  if (usd != null) {
+    s += pt * (usd < 35 ? 1 : usd < 48 ? 0.65 : usd < 57 ? 0.4 : 0.15);
+  } else {
+    s += pt * 0.5;
+  }
+
+  // 3. Market session activity — open market = price discovery and liquidity
+  const isActive = typeof market.marketStatus === 'string' && market.marketStatus.includes('مفتوح');
+  s += pt * (market.marketStatus != null ? (isActive ? 0.7 : 0.45) : 0.5);
+
+  // 4. CBE interest rate environment — no real-time feed; neutral
+  s += pt * 0.5;
+
+  // 5. Inflation / CPI environment — no real-time feed; neutral
+  s += pt * 0.5;
+
+  return clamp(s, 0, MAX_MACRO);
 }
 
 // ─── GEOPOLITICAL (3) + EGYPT (2) → risk_score max 7 ───
-function scoreRisk(): number {
-  return MAX_RISK * 0.5;
+function scoreRisk(price: number, ind: IndicatorsInput, fin: FinancialsInput | null, market: MarketContextInput): number {
+  const pt = MAX_RISK / 5;
+  let s = 0;
+
+  // 1. Beta — lower beta = less systemic risk
+  if (fin?.beta != null && fin.beta > 0) {
+    s += pt * (fin.beta < 0.8 ? 1 : fin.beta < 1.2 ? 0.7 : fin.beta < 1.8 ? 0.35 : 0.1);
+  } else {
+    s += pt * 0.5;
+  }
+
+  // 2. ATR volatility — ATR14 / price; lower daily swing = lower risk
+  if (ind.atr14 != null && price > 0) {
+    const atrPct = ind.atr14 / price;
+    s += pt * (atrPct < 0.025 ? 1 : atrPct < 0.05 ? 0.7 : atrPct < 0.10 ? 0.35 : 0.1);
+  } else {
+    s += pt * 0.5;
+  }
+
+  // 3. Leverage (D/E) — lower debt = lower financial risk
+  if (fin?.debtToEquity != null && fin.debtToEquity >= 0) {
+    s += pt * (fin.debtToEquity < 0.5 ? 1 : fin.debtToEquity < 1.5 ? 0.65 : fin.debtToEquity < 3 ? 0.3 : 0.1);
+  } else {
+    s += pt * 0.5;
+  }
+
+  // 4. Currency risk (USD/EGP) — weaker pound = higher cost-of-imports / financing risk
+  const usd = market.usdEgp;
+  if (usd != null) {
+    s += pt * (usd < 40 ? 0.9 : usd < 52 ? 0.55 : 0.2);
+  } else {
+    s += pt * 0.5;
+  }
+
+  // 5. Geopolitical / regional risk — no real-time data; neutral
+  s += pt * 0.5;
+
+  return clamp(s, 0, MAX_RISK);
 }
 
 /**
@@ -339,9 +576,9 @@ export function computeScore(input: ScoringInput): ScoringResult {
   const technical_score = scoreTechnicalAndWave(price, indicators, history);
   const momentum_score = scoreMomentum(price, changePercent, indicators, history, marketChg);
   const fundamental_score = scoreFundamental(price, financials ?? null);
-  const market_score = scoreMarket(indicators, market);
+  const market_score = scoreMarket(indicators, market, financials, price);
   const macro_score = scoreMacro(market);
-  const risk_score = scoreRisk();
+  const risk_score = scoreRisk(price, indicators, financials ?? null, market);
 
   const total =
     technical_score +

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, Loader2 } from 'lucide-react';
 import { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Input } from '../../ui/Input';
 import { DiscoverAutocompleteDropdown } from './DiscoverAutocompleteDropdown';
 import { AutocompleteSuggestion } from './types';
@@ -39,6 +40,9 @@ export function DiscoverSearchBar({
   minUsernameLength,
   t,
 }: DiscoverSearchBarProps) {
+  const { i18n } = useTranslation();
+  const isAr = i18n.language?.startsWith('ar');
+
   return (
     <div className={styles.searchWrap}>
       <Input
@@ -56,7 +60,7 @@ export function DiscoverSearchBar({
         }}
         placeholder={t('social.discoverPage.searchPlaceholder')}
         aria-label={t('social.discoverPage.searchAria')}
-        dir="rtl"
+        dir={isAr ? 'rtl' : 'ltr'}
         icon={
           autoLoading || searchLoading ? (
             <Loader2 className={styles.spinner} aria-hidden />

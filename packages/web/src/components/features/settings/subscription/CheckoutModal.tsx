@@ -113,7 +113,7 @@ export function CheckoutModal({
             disabled={loading}
             onClick={handlePaymob}
           >
-            {t('billing.payNow', { defaultValue: 'ادفع الآن بـ Paymob' })}
+            {t('billing.payNow')}
           </Button>
 
           <p className="flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)] mt-2">

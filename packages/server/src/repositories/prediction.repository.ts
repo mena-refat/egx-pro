@@ -307,7 +307,7 @@ export const PredictionRepository = {
   findExpiredActive() {
     return prisma.prediction.findMany({
       where: { status: 'ACTIVE', expiresAt: { lte: new Date() } },
-      include: { user: { select: { id: true } } },
+      include: { user: { select: { id: true, pushToken: true } } },
     });
   },
 

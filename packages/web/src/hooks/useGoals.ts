@@ -56,6 +56,10 @@ export function useGoals() {
     return () => controller.abort();
   }, [fetchGoals]);
 
+  const prependGoal = useCallback((goal: GoalRecord) => {
+    setGoals((prev) => [goal, ...prev.filter((g) => g.id !== goal.id)]);
+  }, []);
+
   const activeGoals = goals.filter((g) => g.status !== 'completed');
   const completedGoals = goals.filter((g) => g.status === 'completed');
 
@@ -67,5 +71,6 @@ export function useGoals() {
     error,
     setError,
     fetchGoals,
+    prependGoal,
   };
 }
