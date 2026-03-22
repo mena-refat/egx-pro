@@ -30,7 +30,7 @@ if (!isExpoGo) {
 }
 
 export default function RootLayout() {
-  const { checkAuth, isLoading, isAuthenticated } = useAuthStore();
+  const { checkAuth, isAuthenticated } = useAuthStore();
   const { colors, isDark } = useTheme();
   const router = useRouter();
 
@@ -79,8 +79,6 @@ export default function RootLayout() {
 
     return () => sub.remove();
   }, [router, isExpoGo]);
-
-  if (isLoading) return null;
 
   return (
     <ErrorBoundary>

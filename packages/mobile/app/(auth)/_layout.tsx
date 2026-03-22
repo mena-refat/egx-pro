@@ -4,7 +4,8 @@ import { useAuthStore } from '../../store/authStore';
 
 export default function AuthLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  if (isAuthenticated) return <Redirect href="/" />;
+  const isLoading = useAuthStore((s) => s.isLoading);
+  if (!isLoading && isAuthenticated) return <Redirect href="/" />;
 
   return (
     <>

@@ -53,7 +53,11 @@ apiClient.interceptors.response.use(
       return Promise.reject({ ok: false, error: 'NETWORK_ERROR', message: 'لا يوجد اتصال' });
     }
 
-    if (error.response?.status === 401 && !original._retry) {
+    // Don't attempt token refresh for auth endpoints — they use credentials, not tokens
+    const skipRefreshUrls = ['/api/auth/login', '/api/auth/register', '/api/auth/refresh'];
+    const isAuthEndpoint = skipRefreshUrls.includes(original.url ?? '');
+
+    if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });

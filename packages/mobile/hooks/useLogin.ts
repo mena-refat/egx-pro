@@ -184,11 +184,12 @@ export function useLogin() {
         router.replace('/');
       }
     } catch (err: unknown) {
-      const code = (err as { error?: string })?.error;
+      const code =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+        (err as { error?: string })?.error;
       if (code === 'INVALID_CREDENTIALS') setError('البريد أو كلمة المرور غير صحيحة');
       else if (code === 'ACCOUNT_LOCKED') setError('الحساب محجوب مؤقتاً — حاول بعد 30 دقيقة');
       else if (code === 'ACCOUNT_SUSPENDED') setError('هذا الحساب موقوف — تواصل مع الدعم الفني');
-      // Never expose raw backend messages — they may leak implementation details
       else setError('حدث خطأ، حاول مرة أخرى');
     } finally {
       setLoading(false);
@@ -288,7 +289,9 @@ export function useRegister() {
       await setAuth(body.user, body.accessToken, body.refreshToken);
       router.replace('/');
     } catch (err: unknown) {
-      const code = (err as { error?: string })?.error;
+      const code =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+        (err as { error?: string })?.error;
       if (code === 'EMAIL_EXISTS' || code === 'PHONE_EXISTS') {
         setError('هذا البريد أو الموبايل مسجل بالفعل');
       } else {
