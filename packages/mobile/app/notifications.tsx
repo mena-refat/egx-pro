@@ -144,7 +144,7 @@ export default function NotificationsPage() {
         style={{
           borderBottomColor: colors.border,
           borderBottomWidth: 0.5,
-          flexDirection: 'row',
+          flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingHorizontal: 16,
@@ -154,7 +154,7 @@ export default function NotificationsPage() {
       >
         <View
           style={{
-            flexDirection: 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             gap: 12,
           }}
@@ -321,7 +321,7 @@ export default function NotificationsPage() {
             >
             {items.map((notif, i) => {
               const hasRoute = !!notif.route;
-              const ChevronIcon = isRTL ? ChevronRight : ChevronLeft;
+              const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
               return (
                 <Pressable
                   key={notif.id}
@@ -329,7 +329,7 @@ export default function NotificationsPage() {
                   style={({ pressed }) => [
                     {
                       position: 'relative',
-                      flexDirection: 'row',
+                      flexDirection: isRTL ? 'row-reverse' : 'row',
                       alignItems: 'center',
                       gap: 12,
                       paddingHorizontal: 16,

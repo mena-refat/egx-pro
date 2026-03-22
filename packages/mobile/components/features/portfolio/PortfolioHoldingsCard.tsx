@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { Trash2, TrendingDown, TrendingUp, Minus } from 'lucide-react-native';
 import { getStockName } from '../../../lib/egxStocks';
+import { useTheme } from '../../../hooks/useTheme';
 
 interface Holding {
   id: string;
@@ -60,6 +61,7 @@ export function PortfolioHoldingsCard({
   holdings, livePrices, cardBackground, borderColor, textColor, subTextColor, mutedTextColor,
   onPressTicker, onDeleteGroup,
 }: Props) {
+  const { isRTL } = useTheme();
   const grouped = groupHoldings(holdings);
 
   return (
@@ -89,7 +91,7 @@ export function PortfolioHoldingsCard({
                 style={({ pressed }) => ({
                   backgroundColor: pressed ? '#8b5cf608' : 'transparent',
                   paddingHorizontal: 16, paddingVertical: 14,
-                  flexDirection: 'row', alignItems: 'center', gap: 12,
+                  flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 12,
                 })}
               >
                 {/* Ticker badge — unified brand purple */}

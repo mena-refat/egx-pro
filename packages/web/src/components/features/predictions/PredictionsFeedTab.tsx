@@ -13,7 +13,7 @@ type Props = {
   filter: 'all' | 'following' | 'top';
   onFilter: (f: 'all' | 'following' | 'top') => void;
   onLoadMore: () => void;
-  onLike: (id: string, source: 'feed', likeCount: number, isLiked: boolean) => void;
+  onLike: (id: string, source: 'feed', likeCount: number, isLiked: boolean) => Promise<void> | void;
   onNewPrediction?: () => void;
 };
 

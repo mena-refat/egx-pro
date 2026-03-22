@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { isEgyptMarketOpen } from '../../lib/cairoTime';
 import { useTheme } from '../../hooks/useTheme';
 import { FONT, WEIGHT, RADIUS, SPACE } from '../../lib/theme';
@@ -19,6 +20,7 @@ const COLOR_CLOSED = '#f87171';
 
 export function MarketStatusBadge() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(() => isEgyptMarketOpen());
 
   useEffect(() => {
@@ -99,7 +101,7 @@ export function MarketStatusBadge() {
         fontSize:   FONT.xs,
         fontWeight: WEIGHT.medium,
       }}>
-        {isOpen ? 'السوق مفتوح' : 'السوق مغلق'}
+        {isOpen ? t('market.open') : t('market.closed')}
       </Text>
     </View>
   );

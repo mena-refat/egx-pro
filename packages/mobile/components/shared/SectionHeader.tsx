@@ -18,7 +18,7 @@ export function SectionHeader({ title, icon: Icon, action, style }: SectionHeade
     <View
       style={[
         {
-          flexDirection:  'row',
+          flexDirection:  isRTL ? 'row-reverse' : 'row',
           alignItems:     'center',
           justifyContent: 'space-between',
           marginBottom:   SPACE.md,
@@ -26,7 +26,7 @@ export function SectionHeader({ title, icon: Icon, action, style }: SectionHeade
         style,
       ]}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
+      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm }}>
         {Icon && <Icon size={16} color={colors.textSub} />}
         <Text style={{ color: colors.text, fontSize: FONT.md, fontWeight: WEIGHT.bold }}>
           {title}
@@ -36,7 +36,7 @@ export function SectionHeader({ title, icon: Icon, action, style }: SectionHeade
       {action && (
         <Pressable
           onPress={action.onPress}
-          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 2, opacity: pressed ? 0.7 : 1 })}
+          style={({ pressed }) => ({ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 2, opacity: pressed ? 0.7 : 1 })}
         >
           <Text style={{ color: BRAND, fontSize: FONT.sm, fontWeight: WEIGHT.medium }}>
             {action.label}

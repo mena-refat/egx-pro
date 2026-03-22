@@ -282,8 +282,8 @@ export default function ComparePage() {
     <ScreenWrapper padded={false}>
       <View
         style={[
-          { borderBottomColor: colors.border, borderBottomWidth: 1 },
-          tw('flex-row items-center gap-3 px-4 pt-5 pb-4'),
+          { borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: isRTL ? 'row-reverse' : 'row' },
+          tw('items-center gap-3 px-4 pt-5 pb-4'),
         ]}
       >
         <Pressable

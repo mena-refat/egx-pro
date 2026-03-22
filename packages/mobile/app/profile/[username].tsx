@@ -150,7 +150,7 @@ export default function SocialProfilePage() {
     <ScreenWrapper padded={false}>
       {/* ─── Header ─── */}
       <View style={{
-        flexDirection: 'row', alignItems: 'center', gap: SPACE.md,
+        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.md,
         paddingHorizontal: SPACE.lg, paddingTop: 18, paddingBottom: 14,
         borderBottomWidth: 1, borderBottomColor: colors.border,
       }}>

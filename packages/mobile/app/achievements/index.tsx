@@ -179,8 +179,8 @@ export default function AchievementsPage() {
     <ScreenWrapper padded={false}>
       {/* Header */}
       <View
-        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
-        className="flex-row items-center gap-3 px-4 pt-5 pb-4"
+        style={{ borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: isRTL ? 'row-reverse' : 'row' }}
+        className="items-center gap-3 px-4 pt-5 pb-4"
       >
         <Pressable
           onPress={() => router.back()}
@@ -304,13 +304,13 @@ export default function AchievementsPage() {
                       const isUnlocked  = unlocked.has(ach.id);
                       const unlockedDate = unlockedAt[ach.id];
                       const route       = ACHIEVEMENT_ROUTES[ach.id] ?? null;
-                      const GoChevron   = isRTL ? ChevronRight : ChevronLeft;
+                      const GoChevron   = isRTL ? ChevronLeft : ChevronRight;
                       const canNavigate = !isUnlocked && route !== null;
 
                       const rowStyle = [
                         { borderBottomColor: colors.border2 },
                         i < level.achievements.length - 1 && { borderBottomWidth: 1 },
-                      ] as const;
+                      ];
 
                       const inner = (
                         <>

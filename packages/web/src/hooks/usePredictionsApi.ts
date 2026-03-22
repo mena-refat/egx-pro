@@ -169,8 +169,11 @@ export function usePredictionsApi() {
           method: 'POST',
           headers: getAuthHeaders(accessToken),
         });
-        if (!res.ok) throw new Error('Like failed');
-        const json = await res.json();
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg: string = json?.message ?? json?.error ?? '';
+          throw new Error(msg || 'Like failed');
+        }
         const liked = json?.data?.liked ?? nextLiked;
         // If server confirmed our expected toggle, keep the optimistic count.
         // If it returned a different state (de-synced client), revert to original count.
@@ -178,13 +181,14 @@ export function usePredictionsApi() {
         if (source === 'feed') setLikeOnFeed(predictionId, liked, Math.max(0, finalCount));
         else setLikeOnMy(predictionId, liked, Math.max(0, finalCount));
         return liked;
-      } catch {
+      } catch (err) {
         if (source === 'feed') setLikeOnFeed(predictionId, currentlyLiked, currentLikeCount);
         else setLikeOnMy(predictionId, currentlyLiked, currentLikeCount);
         const { toast } = await import('../store/toastStore');
         const i18n = (await import('../lib/i18n')).default;
-        toast.error(i18n.t('errors.likeFailed'));
-        throw new Error('Like failed');
+        const serverMsg = err instanceof Error ? err.message : '';
+        toast.error(serverMsg || i18n.t('errors.likeFailed', { ns: 'common' }));
+        throw err;
       }
     },
     [accessToken, setLikeOnFeed, setLikeOnMy]

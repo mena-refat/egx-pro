@@ -69,6 +69,7 @@ function IndexCard({ label, value, changePercent }: { label: string; value: numb
 // ─── CommodityKaratTable ─────────────────────────────────────────
 function CommodityKaratTable({ buy24, sell24, karats }: { buy24: number; sell24: number; karats: { label: string; ratio: number }[] }) {
   const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
   return (
     <View style={{
       backgroundColor: colors.bg, borderRadius: RADIUS.md,
@@ -80,9 +81,9 @@ function CommodityKaratTable({ buy24, sell24, karats }: { buy24: number; sell24:
         paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm,
         backgroundColor: colors.hover, borderBottomWidth: 1, borderBottomColor: colors.border,
       }}>
-        <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: WEIGHT.semibold, flex: 1 }}>العيار</Text>
-        <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: WEIGHT.semibold, width: 90, textAlign: 'center' }}>شراء (EGP/جم)</Text>
-        <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: WEIGHT.semibold, width: 90, textAlign: 'center' }}>بيع (EGP/جم)</Text>
+        <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: WEIGHT.semibold, flex: 1 }}>{t('market.karatHeader')}</Text>
+        <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: WEIGHT.semibold, width: 90, textAlign: 'center' }}>{t('market.buyPerGram')}</Text>
+        <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: WEIGHT.semibold, width: 90, textAlign: 'center' }}>{t('market.sellPerGram')}</Text>
       </View>
       {karats.map((k, i) => (
         <View
@@ -109,14 +110,15 @@ function CommodityKaratTable({ buy24, sell24, karats }: { buy24: number; sell24:
 // ─── ForexBuySellPanel ─────────────────────────────────────────
 function ForexBuySellPanel({ buy, sell }: { buy: number; sell: number }) {
   const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
   return (
     <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: SPACE.md, paddingHorizontal: SPACE.lg, gap: 6 }}>
       <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', gap: SPACE.md }}>
-        <Text style={{ color: GREEN, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>شراء</Text>
+        <Text style={{ color: GREEN, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>{t('market.buy')}</Text>
         <Text style={{ color: colors.text, fontSize: FONT.xs, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>{n(buy, 2)} EGP</Text>
       </View>
       <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', gap: SPACE.md }}>
-        <Text style={{ color: RED, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>بيع</Text>
+        <Text style={{ color: RED, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>{t('market.sell')}</Text>
         <Text style={{ color: colors.text, fontSize: FONT.xs, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>{n(sell, 2)} EGP</Text>
       </View>
     </View>
@@ -130,6 +132,7 @@ function CommodityRow({ emoji, label, subtitle, priceLabel, priceValue, changePe
   expandedContent?: React.ReactNode;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const isUp    = (changePercent ?? 0) >= 0;
   const pctClr  = (changePercent ?? 0) === 0 ? colors.textMuted : isUp ? GREEN : RED;
@@ -153,9 +156,9 @@ function CommodityRow({ emoji, label, subtitle, priceLabel, priceValue, changePe
           {subtitle && <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{subtitle}</Text>}
           {buy !== undefined && sell !== undefined && (buy > 0 || sell > 0) && (
             <View style={{ flexDirection: 'row', gap: SPACE.sm, marginTop: 3 }}>
-              <Text style={{ color: GREEN, fontSize: 11, fontWeight: WEIGHT.semibold }}>شراء {n(buy, 2)}</Text>
+              <Text style={{ color: GREEN, fontSize: 11, fontWeight: WEIGHT.semibold }}>{t('market.buy')} {n(buy, 2)}</Text>
               <Text style={{ color: colors.border, fontSize: 11 }}>|</Text>
-              <Text style={{ color: RED, fontSize: 11, fontWeight: WEIGHT.semibold }}>بيع {n(sell, 2)}</Text>
+              <Text style={{ color: RED, fontSize: 11, fontWeight: WEIGHT.semibold }}>{t('market.sell')} {n(sell, 2)}</Text>
             </View>
           )}
         </View>
@@ -182,6 +185,7 @@ function CommodityRow({ emoji, label, subtitle, priceLabel, priceValue, changePe
 // ─── CommoditiesSection ──────────────────────────────────────────
 function CommoditiesSection({ overview }: { overview: MarketOverview }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const usdValue   = getUsdValue(overview.usdEgp);
   const usdChange  = getUsdChange(overview.usdEgp);
   const gold       = overview.gold as CommodityData | undefined;
@@ -198,8 +202,8 @@ function CommoditiesSection({ overview }: { overview: MarketOverview }) {
   const usdBuy  = usdValue > 0 ? usdValue * 0.995 : 0;
   const usdSell = usdValue > 0 ? usdValue * 1.005 : 0;
 
-  const goldKarats   = [{ label: 'عيار 24', ratio: 1 }, { label: 'عيار 21', ratio: 21/24 }, { label: 'عيار 18', ratio: 18/24 }, { label: 'عيار 14', ratio: 14/24 }];
-  const silverKarats = [{ label: 'عيار 999', ratio: 1 }, { label: 'عيار 925', ratio: 925/999 }, { label: 'عيار 800', ratio: 800/999 }];
+  const goldKarats   = [{ label: t('market.karat24Gold'), ratio: 1 }, { label: t('market.karat21Gold'), ratio: 21/24 }, { label: t('market.karat18Gold'), ratio: 18/24 }, { label: t('market.karat14Gold'), ratio: 14/24 }];
+  const silverKarats = [{ label: t('market.karat999Silver'), ratio: 1 }, { label: t('market.karat925Silver'), ratio: 925/999 }, { label: t('market.karat800Silver'), ratio: 800/999 }];
 
   return (
     <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: RADIUS.xl, overflow: 'hidden', marginHorizontal: SPACE.lg, marginBottom: SPACE.lg }}>
@@ -207,12 +211,12 @@ function CommoditiesSection({ overview }: { overview: MarketOverview }) {
         <View style={{ width: 26, height: 26, borderRadius: RADIUS.sm, backgroundColor: '#f59e0b18', alignItems: 'center', justifyContent: 'center' }}>
           <DollarSign size={13} color="#f59e0b" />
         </View>
-        <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>العملات والسلع</Text>
-        <Text style={{ color: colors.textMuted, fontSize: 11 }}>اضغط للتوسع</Text>
+        <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('market.commodities')}</Text>
+        <Text style={{ color: colors.textMuted, fontSize: 11 }}>{t('market.tapToExpand')}</Text>
       </View>
       <CommodityRow
         emoji="💵"
-        label="الدولار الأمريكي"
+        label={t('market.usdEgp')}
         subtitle="USD / EGP"
         priceValue={usdValue}
         changePercent={usdChange}
@@ -220,13 +224,13 @@ function CommoditiesSection({ overview }: { overview: MarketOverview }) {
         expandedContent={(usdBuy > 0 || usdSell > 0) ? <ForexBuySellPanel buy={usdBuy} sell={usdSell} /> : undefined}
       />
       <CommodityRow
-        emoji="🥇" label="الذهب" subtitle="عيار 24 — للجرام"
-        priceValue={goldPrice} changePercent={gold?.changePercent} buy={goldBuy24} sell={goldSell24} priceLabel="EGP/جم"
+        emoji="🥇" label={t('market.gold')} subtitle={t('market.goldSubtitle')}
+        priceValue={goldPrice} changePercent={gold?.changePercent} buy={goldBuy24} sell={goldSell24} priceLabel={t('market.perGram')}
         expandedContent={(goldBuy24 > 0 || goldSell24 > 0) ? <CommodityKaratTable buy24={goldBuy24} sell24={goldSell24} karats={goldKarats} /> : undefined}
       />
       <CommodityRow
-        emoji="🥈" label="الفضة" subtitle="عيار 999 — للجرام"
-        priceValue={silverPrice} changePercent={silver?.changePercent} buy={silverBuy} sell={silverSell} priceLabel="EGP/جم"
+        emoji="🥈" label={t('market.silver')} subtitle={t('market.silverSubtitle')}
+        priceValue={silverPrice} changePercent={silver?.changePercent} buy={silverBuy} sell={silverSell} priceLabel={t('market.perGram')}
         expandedContent={(silverBuy > 0 || silverSell > 0) ? <CommodityKaratTable buy24={silverBuy} sell24={silverSell} karats={silverKarats} /> : undefined}
       />
     </View>
@@ -242,6 +246,7 @@ const EGX_INDICES = [
 
 function IndicesSection({ overview, loading }: { overview: MarketOverview | null; loading: boolean }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
   return (
     <View style={{ marginHorizontal: SPACE.lg, marginBottom: SPACE.lg }}>
@@ -250,14 +255,14 @@ function IndicesSection({ overview, loading }: { overview: MarketOverview | null
           <View style={{ width: 26, height: 26, borderRadius: RADIUS.sm, backgroundColor: BRAND_BG_STRONG, alignItems: 'center', justifyContent: 'center' }}>
             <BarChart2 size={13} color={BRAND} />
           </View>
-          <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>المؤشرات</Text>
+          <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('market.indices')}</Text>
         </View>
         <Pressable
           onPress={() => setVisible((v) => !v)}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: SPACE.sm, paddingVertical: 5, borderRadius: RADIUS.sm, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}
         >
           {visible ? <EyeOff size={13} color={colors.textSub} /> : <Eye size={13} color={colors.textSub} />}
-          <Text style={{ color: colors.textSub, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>{visible ? 'إخفاء' : 'إظهار'}</Text>
+          <Text style={{ color: colors.textSub, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>{visible ? t('market.hide') : t('market.show')}</Text>
         </Pressable>
       </View>
       {visible && (
@@ -455,7 +460,7 @@ export default function MarketPage() {
           paddingHorizontal: SPACE.lg, paddingTop: isCompact ? 12 : 18, paddingBottom: isCompact ? 10 : 14,
           flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <Text style={{ color: colors.text, fontSize: isCompact ? 19 : 22, fontWeight: WEIGHT.extrabold }}>السوق</Text>
+          <Text style={{ color: colors.text, fontSize: isCompact ? 19 : 22, fontWeight: WEIGHT.extrabold }}>{t('market.title')}</Text>
           <MarketStatusBadge />
         </View>
 

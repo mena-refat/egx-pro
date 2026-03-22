@@ -1,9 +1,10 @@
 import { useRef, useEffect, useState } from 'react';
 import { View, Text, Pressable, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { User, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
-import { useProfileCompletion, FIELD_LABELS } from '../../hooks/useProfileCompletion';
+import { useProfileCompletion, type CompletionField } from '../../hooks/useProfileCompletion';
 import { FONT, WEIGHT, RADIUS, SPACE } from '../../lib/theme';
 
 const AMBER = '#f59e0b';
@@ -14,8 +15,17 @@ const AMBER = '#f59e0b';
  */
 export function ProfileCompletionBanner({ variant = 'card' }: { variant?: 'card' | 'inline' }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const router = useRouter();
   const { data, loading } = useProfileCompletion();
+
+  const fieldLabel = (field: CompletionField): string => ({
+    email:     t('profile.fieldEmail'),
+    phone:     t('profile.fieldPhone'),
+    username:  t('profile.fieldUsername'),
+    goal:      t('profile.fieldGoal'),
+    watchlist: t('profile.fieldWatchlist'),
+  }[field]);
   const [expanded, setExpanded] = useState(false);
 
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -94,11 +104,11 @@ export function ProfileCompletionBanner({ variant = 'card' }: { variant?: 'card'
         {/* Labels */}
         <View style={{ flex: 1 }}>
           <Text style={{ color: isDone ? '#4ade80' : colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>
-            {isDone ? 'ملفك الشخصي مكتمل' : 'أكمل ملفك الشخصي'}
+            {isDone ? t('profile.profileComplete') : t('profile.completeProfile')}
           </Text>
           {canExpand && (
             <Text style={{ color: colors.textMuted, fontSize: 10, marginTop: 1 }}>
-              {expanded ? 'اضغط لإخفاء التفاصيل' : 'اضغط لمعرفة ما ينقصك'}
+              {expanded ? t('profile.tapToHide') : t('profile.tapToSeeMore')}
             </Text>
           )}
         </View>
@@ -161,7 +171,7 @@ export function ProfileCompletionBanner({ variant = 'card' }: { variant?: 'card'
               })}
             >
               <Text style={{ color: AMBER, fontSize: 11, fontWeight: WEIGHT.bold }}>
-                + {FIELD_LABELS[m.field]}
+                + {fieldLabel(m.field)}
               </Text>
             </Pressable>
           ))}

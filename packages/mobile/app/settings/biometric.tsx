@@ -159,8 +159,8 @@ export default function BiometricPage() {
       {/* Header */}
       <View
         style={[
-          { borderBottomColor: colors.border },
-          tw('flex-row items-center gap-3 px-4 pt-5 pb-4 border-b'),
+          { borderBottomColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' },
+          tw('items-center gap-3 px-4 pt-5 pb-4 border-b'),
         ]}
       >
         <Pressable

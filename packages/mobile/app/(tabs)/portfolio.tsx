@@ -4,6 +4,7 @@ import {
   Pressable, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Plus, Briefcase, TrendingUp } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
@@ -25,10 +26,10 @@ function n(v: number, d = 0) {
 
 // ─── SectionHdr ─────────────────────────────────────────────────
 function SectionHdr({ title, icon: Icon, action }: { title: string; icon?: React.ComponentType<{ size: number; color: string }>; action?: { label: string; onPress: () => void } }) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
+    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.sm }}>
+      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm }}>
         {Icon && (
           <View style={{ width: 26, height: 26, borderRadius: RADIUS.sm, backgroundColor: BRAND_BG_STRONG, alignItems: 'center', justifyContent: 'center' }}>
             <Icon size={13} color={BRAND} />
@@ -48,6 +49,7 @@ function SectionHdr({ title, icon: Icon, action }: { title: string; icon?: React
 // ─── PortfolioPage ───────────────────────────────────────────────
 export default function PortfolioPage() {
   const router   = useRouter();
+  const { t }    = useTranslation();
   const { colors, isDark, isRTL } = useTheme();
   const { holdings, summary, loading, refreshing, refresh } = usePortfolioData();
 
@@ -84,10 +86,10 @@ export default function PortfolioPage() {
   const isPositive = liveSummary.totalGainLoss >= 0;
 
   const handleDeleteGroup = useCallback((ids: string[], ticker: string) => {
-    Alert.alert('حذف السهم', `حذف جميع مراكز ${ticker} من المحفظة؟`, [
-      { text: 'إلغاء', style: 'cancel' },
+    Alert.alert(t('portfolio.deleteTitle'), t('portfolio.deleteMsg', { ticker }), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'حذف', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           try {
             await Promise.all(ids.map((id) => apiClient.delete(`/api/portfolio/${id}`)));
@@ -115,7 +117,7 @@ export default function PortfolioPage() {
           paddingHorizontal: SPACE.lg, paddingTop: 18, paddingBottom: 14,
           borderBottomWidth: 1, borderBottomColor: colors.border,
         }}>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: WEIGHT.extrabold }}>محفظتي</Text>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: WEIGHT.extrabold }}>{t('portfolio.pageTitle')}</Text>
           <Pressable
             onPress={() => router.push('/market')}
             style={{
@@ -125,7 +127,7 @@ export default function PortfolioPage() {
             }}
           >
             <Plus size={14} color="#fff" strokeWidth={2.5} />
-            <Text style={{ color: '#fff', fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>إضافة سهم</Text>
+            <Text style={{ color: '#fff', fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('portfolio.addHolding')}</Text>
           </Pressable>
         </View>
 
@@ -148,7 +150,7 @@ export default function PortfolioPage() {
                 </View>
               ) : (
                 <>
-                  <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs, marginBottom: SPACE.xs }}>القيمة الإجمالية</Text>
+                  <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs, marginBottom: SPACE.xs }}>{t('portfolio.totalValue')}</Text>
                   <Text style={{ color: '#fff', fontSize: FONT['3xl'], fontWeight: WEIGHT.extrabold, fontVariant: ['tabular-nums'] }}>
                     {n(liveSummary.totalValue)} EGP
                   </Text>
@@ -167,13 +169,13 @@ export default function PortfolioPage() {
                   </View>
                   <View style={{ flexDirection: 'row', gap: SPACE.xl, marginTop: SPACE.lg, borderTopWidth: 1, borderTopColor: BRAND + '25', paddingTop: SPACE.md }}>
                     <View>
-                      <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>التكلفة الأصلية</Text>
+                      <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>{t('portfolio.costBasis')}</Text>
                       <Text style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold, marginTop: 2, fontVariant: ['tabular-nums'] }}>
                         {n(liveSummary.totalCost)} EGP
                       </Text>
                     </View>
                     <View>
-                      <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>عدد الأسهم</Text>
+                      <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>{t('portfolio.stocksCount')}</Text>
                       <Text style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold, marginTop: 2 }}>
                         {enrichedHoldings.length}
                       </Text>
@@ -186,7 +188,7 @@ export default function PortfolioPage() {
 
           {/* ─── 2. Holdings list ──────────────────── */}
           <View style={{ paddingHorizontal: SPACE.lg }}>
-            <SectionHdr title="ممتلكاتي" icon={Briefcase} />
+            <SectionHdr title={t('portfolio.myHoldings')} icon={Briefcase} />
             <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
               {loading ? (
                 <View style={{ padding: SPACE.md, gap: 2 }}>
@@ -194,8 +196,8 @@ export default function PortfolioPage() {
                 </View>
               ) : enrichedHoldings.length === 0 ? (
                 <Pressable onPress={() => router.push('/market')} style={{ paddingVertical: 40, alignItems: 'center', gap: SPACE.sm }}>
-                  <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>المحفظة فارغة</Text>
-                  <Text style={{ color: BRAND, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>ابدأ بالاستثمار الآن</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>{t('portfolio.emptyMsg')}</Text>
+                  <Text style={{ color: BRAND, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>{t('portfolio.startInvesting')}</Text>
                 </Pressable>
               ) : (
                 enrichedHoldings.map((h, i) => {
@@ -224,10 +226,10 @@ export default function PortfolioPage() {
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{h.ticker}</Text>
                         <Text style={{ color: colors.textSub, fontSize: 11, marginTop: 1 }} numberOfLines={1}>
-                          {getStockName(h.ticker, 'ar')} · {h.shares} سهم
+                          {getStockName(h.ticker, isRTL ? 'ar' : 'en')} · {h.shares} {t('portfolio.shares')}
                         </Text>
                         <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 1, fontVariant: ['tabular-nums'] }}>
-                          متوسط {h.avgPrice.toFixed(2)} EGP
+                          {t('portfolio.avgPriceLabel', { price: h.avgPrice.toFixed(2) })}
                         </Text>
                       </View>
                       <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', flexShrink: 0 }}>
@@ -256,7 +258,7 @@ export default function PortfolioPage() {
           {/* ─── 3. Performance breakdown ──────────── */}
           {enrichedHoldings.length > 0 && (
             <View style={{ paddingHorizontal: SPACE.lg }}>
-              <SectionHdr title="أداء المحفظة" icon={TrendingUp} />
+              <SectionHdr title={t('portfolio.performance')} icon={TrendingUp} />
               <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
                 {enrichedHoldings.map((h, i) => {
                   const weight   = liveSummary.totalValue > 0 ? (h.curValue / liveSummary.totalValue) * 100 : 0;

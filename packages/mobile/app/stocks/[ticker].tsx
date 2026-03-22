@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, Pressable, RefreshControl,
-  ActivityIndicator, Alert, Linking,
+  ActivityIndicator, Alert, Linking, TextInput, Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ChevronLeft, ChevronRight, Star, StarOff, TrendingUp, TrendingDown,
-  Brain, BarChart2, Briefcase, ExternalLink, Info,
+  Brain, BarChart2, Briefcase, ExternalLink, Info, Bell, BellOff, Lock,
 } from 'lucide-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
@@ -30,6 +30,10 @@ function n(v: number, d = 2) {
   return v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
+function isPaidPlan(plan?: string) {
+  return plan === 'pro' || plan === 'yearly' || plan === 'ultra' || plan === 'ultra_yearly';
+}
+
 // ─── StatRow ────────────────────────────────────────────────────────────────
 
 function StatRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
@@ -45,6 +49,179 @@ function StatRow({ label, value, valueColor }: { label: string; value: string; v
         {value}
       </Text>
     </View>
+  );
+}
+
+// ─── PriceAlertModal ─────────────────────────────────────────────────────────
+
+interface PriceAlertModalProps {
+  visible: boolean;
+  onClose: () => void;
+  ticker: string;
+  currentPrice: number;
+  currentTargetPrice: number | null;
+  isPro: boolean;
+  onSave: (targetPrice: number | null, direction: 'UP' | 'DOWN') => Promise<void>;
+}
+
+function PriceAlertModal({
+  visible, onClose, ticker, currentPrice, currentTargetPrice, isPro, onSave,
+}: PriceAlertModalProps) {
+  const { colors } = useTheme();
+  const [input, setInput] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setInput(currentTargetPrice != null ? String(currentTargetPrice) : '');
+    }
+  }, [visible, currentTargetPrice]);
+
+  const targetPrice = parseFloat(input);
+  const isValid = !isNaN(targetPrice) && targetPrice > 0;
+  const isSameAsCurrent = isValid && Math.abs(targetPrice - currentPrice) < 0.001;
+  const direction: 'UP' | 'DOWN' = isValid && targetPrice < currentPrice ? 'DOWN' : 'UP';
+
+  const handleSave = async () => {
+    if (!isValid || isSameAsCurrent) return;
+    setSaving(true);
+    try {
+      await onSave(targetPrice, direction);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setSaving(true);
+    try {
+      await onSave(null, 'UP');
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }} onPress={onClose} />
+      <View style={{
+        backgroundColor: colors.card,
+        borderTopLeftRadius: RADIUS['2xl'], borderTopRightRadius: RADIUS['2xl'],
+        borderTopWidth: 1, borderColor: colors.border,
+        padding: SPACE.xl, gap: SPACE.lg,
+      }}>
+        {/* Header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
+            <Bell size={18} color={BRAND} />
+            <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }}>
+              تنبيه السعر — {ticker}
+            </Text>
+          </View>
+          <Pressable onPress={onClose}>
+            <Text style={{ color: colors.textSub, fontSize: FONT.lg }}>✕</Text>
+          </Pressable>
+        </View>
+
+        {!isPro ? (
+          /* Pro gate */
+          <View style={{ alignItems: 'center', gap: SPACE.md, paddingVertical: SPACE.lg }}>
+            <Lock size={32} color={BRAND} />
+            <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.semibold, textAlign: 'center' }}>
+              تنبيهات الأسعار متاحة لمشتركي Pro و Ultra فقط
+            </Text>
+            <Text style={{ color: colors.textSub, fontSize: FONT.xs, textAlign: 'center' }}>
+              قم بترقية اشتراكك للحصول على إشعارات فورية عند وصول السهم للسعر المستهدف
+            </Text>
+          </View>
+        ) : (
+          <>
+            {/* Current price reference */}
+            <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>
+              السعر الحالي:{' '}
+              <Text style={{ color: colors.text, fontWeight: WEIGHT.semibold }}>
+                {n(currentPrice)} EGP
+              </Text>
+            </Text>
+
+            {/* Price input */}
+            <View style={{ gap: SPACE.xs }}>
+              <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>السعر المستهدف (EGP)</Text>
+              <TextInput
+                value={input}
+                onChangeText={setInput}
+                placeholder={n(currentPrice)}
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numeric"
+                style={{
+                  color: colors.text,
+                  backgroundColor: colors.bg,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: RADIUS.lg,
+                  paddingHorizontal: SPACE.md,
+                  paddingVertical: SPACE.sm + 2,
+                  fontSize: FONT.sm,
+                }}
+              />
+            </View>
+
+            {/* Direction indicator */}
+            {isValid && !isSameAsCurrent && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.xs }}>
+                {direction === 'UP'
+                  ? <TrendingUp size={14} color={GREEN} />
+                  : <TrendingDown size={14} color={RED} />}
+                <Text style={{ color: direction === 'UP' ? GREEN : RED, fontSize: FONT.xs, fontWeight: WEIGHT.medium }}>
+                  {direction === 'UP' ? 'نبهني عندما يرتفع إلى' : 'نبهني عندما ينخفض إلى'} {n(targetPrice)} EGP
+                </Text>
+              </View>
+            )}
+
+            {isSameAsCurrent && (
+              <Text style={{ color: '#f59e0b', fontSize: FONT.xs }}>
+                السعر المستهدف مساوٍ للسعر الحالي
+              </Text>
+            )}
+
+            {/* Actions */}
+            <View style={{ flexDirection: 'row', gap: SPACE.sm }}>
+              <Pressable
+                onPress={handleSave}
+                disabled={saving || !isValid || isSameAsCurrent}
+                style={{
+                  flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  gap: SPACE.xs, backgroundColor: BRAND, borderRadius: RADIUS.lg,
+                  paddingVertical: SPACE.md, opacity: (saving || !isValid || isSameAsCurrent) ? 0.5 : 1,
+                }}
+              >
+                <Bell size={16} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>
+                  {saving ? 'جاري الحفظ...' : 'حفظ التنبيه'}
+                </Text>
+              </Pressable>
+
+              {currentTargetPrice != null && (
+                <Pressable
+                  onPress={handleDelete}
+                  disabled={saving}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                    gap: SPACE.xs, borderWidth: 1, borderColor: RED, borderRadius: RADIUS.lg,
+                    paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md, opacity: saving ? 0.5 : 1,
+                  }}
+                >
+                  <BellOff size={16} color={RED} />
+                </Pressable>
+              )}
+            </View>
+          </>
+        )}
+        <View style={{ height: SPACE.xl }} />
+      </View>
+    </Modal>
   );
 }
 
@@ -65,8 +242,11 @@ export default function StockDetailPage() {
   const [refreshing,  setRefreshing]  = useState(false);
 
   // ─── watchlist ───────────────────────────────────────────────
-  const [inWatchlist,    setInWatchlist]    = useState(false);
+  const [inWatchlist,      setInWatchlist]      = useState(false);
   const [watchlistLoading, setWatchlistLoading] = useState(false);
+  // Price alert
+  const [targetPrice,      setTargetPrice]      = useState<number | null>(null);
+  const [showAlertModal,   setShowAlertModal]   = useState(false);
 
   // ─── news ────────────────────────────────────────────────────
   const [news, setNews] = useState<{ id: string; title: string; publishedAt: string; source: string; url: string }[]>([]);
@@ -101,6 +281,8 @@ export default function StockDetailPage() {
   // ─── stock info (static EGX data) ───────────────────────────
   const info = ticker ? getStockInfo(ticker) : null;
 
+  const isPro = isPaidPlan(user?.plan);
+
   // ─── fetch ───────────────────────────────────────────────────
   const loadStock = useCallback(async () => {
     if (!ticker) return;
@@ -119,11 +301,15 @@ export default function StockDetailPage() {
   const loadWatchlistStatus = useCallback(async () => {
     if (!ticker) return;
     try {
-      const res = await apiClient.get<{ items?: { ticker: string }[] }>('/api/watchlist');
-      const items = (res.data as { items?: { ticker: string }[] })?.items ?? (Array.isArray(res.data) ? res.data : []);
-      setInWatchlist(items.some((i: { ticker: string }) => i.ticker === ticker));
+      const res = await apiClient.get<{ items?: { ticker: string; targetPrice?: number | null }[] }>('/api/watchlist');
+      const items = (res.data as { items?: { ticker: string; targetPrice?: number | null }[] })?.items
+        ?? (Array.isArray(res.data) ? res.data : []) as { ticker: string; targetPrice?: number | null }[];
+      const found = items.find((i) => i.ticker === ticker);
+      setInWatchlist(!!found);
+      setTargetPrice(found?.targetPrice ?? null);
     } catch {
       setInWatchlist(false);
+      setTargetPrice(null);
     }
   }, [ticker]);
 
@@ -158,6 +344,7 @@ export default function StockDetailPage() {
       if (inWatchlist) {
         await apiClient.delete(`/api/watchlist/${ticker}`);
         setInWatchlist(false);
+        setTargetPrice(null);
       } else {
         await apiClient.post('/api/watchlist', { ticker });
         setInWatchlist(true);
@@ -168,6 +355,26 @@ export default function StockDetailPage() {
       setWatchlistLoading(false);
     }
   }, [ticker, inWatchlist, watchlistLoading]);
+
+  // ─── save price alert ────────────────────────────────────────
+  const savePriceAlert = useCallback(async (newTargetPrice: number | null, direction: 'UP' | 'DOWN') => {
+    if (!ticker) return;
+    try {
+      // Add to watchlist first if not already in it
+      if (!inWatchlist) {
+        await apiClient.post('/api/watchlist', { ticker });
+        setInWatchlist(true);
+      }
+      await apiClient.put(`/api/watchlist/${ticker}`, {
+        targetPrice: newTargetPrice,
+        targetDirection: newTargetPrice != null ? direction : null,
+      });
+      setTargetPrice(newTargetPrice);
+    } catch {
+      Alert.alert('خطأ', 'تعذر حفظ التنبيه، حاول مرة أخرى');
+      throw new Error('save failed');
+    }
+  }, [ticker, inWatchlist]);
 
   // ─── loading state ───────────────────────────────────────────
   if (loadingStock) {
@@ -201,7 +408,7 @@ export default function StockDetailPage() {
 
       {/* ─── Sticky header ─────────────────────────────────── */}
       <View style={{
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between',
         paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
         borderBottomWidth: 1, borderBottomColor: colors.border,
       }}>
@@ -217,15 +424,39 @@ export default function StockDetailPage() {
           <Text style={{ color: colors.textMuted, fontSize: FONT.xs }} numberOfLines={1}>{nameAr}</Text>
         </View>
 
-        <Pressable
-          onPress={toggleWatchlist}
-          style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: inWatchlist ? BRAND_BG_STRONG : colors.card, borderWidth: 1, borderColor: inWatchlist ? BRAND : colors.border }}
-        >
-          {inWatchlist
-            ? <Star    size={18} color={BRAND} fill={BRAND} />
-            : <StarOff size={18} color={colors.textSub} />
-          }
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: SPACE.sm }}>
+          {/* Price Alert button — only for logged-in users */}
+          {user && (
+            <Pressable
+              onPress={() => setShowAlertModal(true)}
+              style={{
+                width: 40, height: 40, alignItems: 'center', justifyContent: 'center',
+                borderRadius: RADIUS.md,
+                backgroundColor: targetPrice != null ? '#f59e0b18' : colors.card,
+                borderWidth: 1,
+                borderColor: targetPrice != null ? '#f59e0b' : colors.border,
+              }}
+            >
+              {targetPrice != null
+                ? <Bell size={18} color="#f59e0b" fill="#f59e0b" />
+                : <Bell size={18} color={colors.textSub} />
+              }
+            </Pressable>
+          )}
+
+          {/* Watchlist button */}
+          <Pressable
+            onPress={toggleWatchlist}
+            style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.md, backgroundColor: inWatchlist ? BRAND_BG_STRONG : colors.card, borderWidth: 1, borderColor: inWatchlist ? BRAND : colors.border }}
+          >
+            {watchlistLoading
+              ? <ActivityIndicator size="small" color={BRAND} />
+              : inWatchlist
+                ? <Star    size={18} color={BRAND} fill={BRAND} />
+                : <StarOff size={18} color={colors.textSub} />
+            }
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -261,6 +492,27 @@ export default function StockDetailPage() {
               <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>متأخر 15د</Text>
             )}
           </View>
+
+          {/* Active price alert banner */}
+          {targetPrice != null && (
+            <Pressable
+              onPress={() => setShowAlertModal(true)}
+              style={{
+                marginTop: SPACE.md,
+                flexDirection: 'row', alignItems: 'center', gap: SPACE.sm,
+                backgroundColor: '#f59e0b15',
+                borderWidth: 1, borderColor: '#f59e0b40',
+                borderRadius: RADIUS.lg,
+                paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm,
+              }}
+            >
+              <Bell size={13} color="#f59e0b" />
+              <Text style={{ color: '#f59e0b', fontSize: FONT.xs, fontWeight: WEIGHT.medium }}>
+                تنبيه نشط عند {n(targetPrice)} EGP
+              </Text>
+              <Text style={{ color: '#f59e0b80', fontSize: FONT.xs, marginStart: 'auto' }}>تعديل</Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={{ paddingHorizontal: SPACE.lg, gap: SPACE.md }}>
@@ -474,6 +726,17 @@ export default function StockDetailPage() {
 
         </View>
       </ScrollView>
+
+      {/* Price Alert Modal */}
+      <PriceAlertModal
+        visible={showAlertModal}
+        onClose={() => setShowAlertModal(false)}
+        ticker={ticker ?? ''}
+        currentPrice={price}
+        currentTargetPrice={targetPrice}
+        isPro={isPro}
+        onSave={savePriceAlert}
+      />
     </SafeAreaView>
   );
 }

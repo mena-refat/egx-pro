@@ -12,7 +12,7 @@ interface Props {
 
 export function WatchlistRow({ stock, livePrice }: Props) {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const price = livePrice?.price ?? stock.price;
   const change = livePrice?.change ?? stock.change;
   const changePercent = livePrice?.changePercent ?? stock.changePercent;
@@ -25,7 +25,7 @@ export function WatchlistRow({ stock, livePrice }: Props) {
           backgroundColor: pressed ? colors.hover : 'transparent',
           paddingHorizontal: 16,
           paddingVertical: 12,
-          flexDirection: 'row',
+          flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
         },

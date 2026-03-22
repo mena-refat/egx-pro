@@ -10,7 +10,7 @@ export function AccountHeader({ title, onBack }: { title: string; onBack: () => 
     <View style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}>
       <View
         style={{
-          flexDirection: 'row',
+          flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'center',
           gap: 12,
           paddingHorizontal: 16,

@@ -34,7 +34,7 @@ const StockRow = React.memo(function StockRow({ stock, onPress, livePrice, last 
         borderBottomColor:  colors.border,
         paddingHorizontal:  SPACE.lg,
         paddingVertical:    SPACE.md,
-        flexDirection:      'row',
+        flexDirection:      isRTL ? 'row-reverse' : 'row',
         alignItems:         'center',
         gap:                SPACE.md,
       })}
@@ -62,12 +62,12 @@ const StockRow = React.memo(function StockRow({ stock, onPress, livePrice, last 
           {stock.ticker}
         </Text>
         <Text style={{ color: colors.textSub, fontSize: 11, marginTop: 1 }} numberOfLines={1}>
-          {getStockName(stock.ticker, 'ar')}
+          {getStockName(stock.ticker, isRTL ? 'ar' : 'en')}
         </Text>
       </View>
 
       {/* Price + change */}
-      <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', flexShrink: 0, minWidth: 76 }}>
+      <View style={{ alignItems: 'flex-end', flexShrink: 0, minWidth: 76 }}>
         <Text style={{
           color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold,
           fontVariant: ['tabular-nums'],

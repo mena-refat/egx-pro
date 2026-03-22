@@ -37,7 +37,7 @@ export async function registerPushToken(): Promise<void> {
       projectId ? { projectId } : undefined,
     );
 
-    await apiClient.post('/api/user/push-token', {
+    await apiClient.post('/api/mobile/push-token', {
       token: token.data,
       platform: Platform.OS,
     });

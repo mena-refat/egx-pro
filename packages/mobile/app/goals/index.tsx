@@ -68,7 +68,7 @@ function GoalCard({ goal, onDelete, onAddAmount, onComplete, onAction }: {
   const action = GOAL_ACTION[goal.category]  ?? GOAL_ACTION.other;
   const CatIcon = cat.icon;
   const pct = goal.targetAmount > 0 ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) : 0;
-  const ChevronIcon = isRTL ? ArrowRight : ArrowLeft;
+  const ChevronIcon = isRTL ? ArrowLeft : ArrowRight;
 
   return (
     <View
@@ -290,8 +290,8 @@ export default function GoalsPage() {
     <ScreenWrapper padded={false}>
       {/* Header */}
       <View
-        style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
-        className="flex-row items-center justify-between px-4 pt-5 pb-4"
+        style={{ borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: isRTL ? 'row-reverse' : 'row' }}
+        className="items-center justify-between px-4 pt-5 pb-4"
       >
         <View className="flex-row items-center gap-3">
           <Pressable

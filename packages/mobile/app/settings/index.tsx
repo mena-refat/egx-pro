@@ -25,7 +25,7 @@ interface MenuItemProps {
 
 function MenuItem({ icon: Icon, label, sub, onPress, danger, last }: MenuItemProps) {
   const { colors, isRTL } = useTheme();
-  const ChevronIcon = isRTL ? ChevronRight : ChevronLeft;
+  const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
   const iconColor = danger ? '#f87171' : colors.textSub;
 
   return (
@@ -33,7 +33,7 @@ function MenuItem({ icon: Icon, label, sub, onPress, danger, last }: MenuItemPro
       onPress={onPress}
       style={({ pressed }) => [
         {
-          flexDirection: 'row',
+          flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'center',
           gap: SPACE.md,
           paddingHorizontal: SPACE.lg,

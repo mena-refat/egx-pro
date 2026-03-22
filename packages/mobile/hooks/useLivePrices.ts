@@ -48,12 +48,31 @@ export function useLivePrices(tickers: string[] = []) {
 
     ws.onmessage = (e) => {
       try {
-        const msg = JSON.parse(e.data as string);
-        if (msg.type === 'PRICES' && msg.data) {
-          setPrices((prev) => ({ ...prev, ...msg.data }));
+        const msg = JSON.parse(e.data as string) as { type?: string; data?: unknown };
+        if (
+          (msg.type === 'PRICES_UPDATE' || msg.type === 'INITIAL_PRICES' || msg.type === 'PRICES') &&
+          Array.isArray(msg.data)
+        ) {
+          // Server sends array of { ticker, price, change, changePercent, volume }
+          // Convert to Record<ticker, StockPrice> for O(1) lookups
+          const patch: Record<string, StockPrice> = {};
+          for (const item of msg.data as Array<Record<string, unknown>>) {
+            const key = (item.ticker ?? item.symbol) as string | undefined;
+            if (!key) continue;
+            patch[key] = {
+              symbol: key,
+              price: Number(item.price) || 0,
+              change: Number(item.change) || 0,
+              changePercent: Number(item.changePercent) || 0,
+              volume: Number(item.volume) || 0,
+            };
+          }
+          if (Object.keys(patch).length > 0) {
+            setPrices((prev) => ({ ...prev, ...patch }));
+          }
         }
       } catch {
-        // ignore
+        // ignore malformed frames
       }
     };
 

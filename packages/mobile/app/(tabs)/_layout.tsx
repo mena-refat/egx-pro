@@ -6,9 +6,26 @@ import { House, Briefcase, BarChart3, Sparkles, User } from 'lucide-react-native
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import { useUnreadCount } from '../../hooks/useUnreadCount';
+import { useWatchlist } from '../../hooks/useWatchlist';
+import { useLivePrices } from '../../hooks/useLivePrices';
+import { useWatchlistTargets } from '../../hooks/useWatchlistTargets';
 import { BRAND } from '../../lib/theme';
 
 type TabName = 'index' | 'portfolio' | 'market' | 'ai' | 'profile';
+
+/** Invisible component — monitors watchlist price targets and fires push notifications. */
+function WatchlistTargetMonitor() {
+  const { items } = useWatchlist();
+  const tickers = items
+    .filter((w) => (w as unknown as { targetPrice?: number | null }).targetPrice != null)
+    .map((w) => w.ticker);
+  const { prices } = useLivePrices(tickers);
+  useWatchlistTargets(
+    items as unknown as { ticker: string; targetPrice?: number | null; targetDirection?: 'UP' | 'DOWN' | null }[],
+    prices as Record<string, { price: number }>,
+  );
+  return null;
+}
 
 const TAB_LABELS: Record<TabName, { ar: string; en: string }> = {
   index:     { ar: 'الرئيسية', en: 'Home' },
@@ -90,6 +107,8 @@ export default function TabsLayout() {
     : ['index', 'market', 'portfolio', 'ai', 'profile'];
 
   return (
+    <>
+    <WatchlistTargetMonitor />
     <Tabs>
       {tabOrder.map((name) => {
         const Icon = TAB_ICONS[name];
@@ -115,5 +134,6 @@ export default function TabsLayout() {
         );
       })}
     </Tabs>
+    </>
   );
 }

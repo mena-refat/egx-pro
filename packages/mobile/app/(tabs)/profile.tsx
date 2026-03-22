@@ -36,7 +36,7 @@ function MenuItem({
   badge?: number;
 }) {
   const { colors, isRTL } = useTheme();
-  const ChevronIcon = isRTL ? ChevronRight : ChevronLeft;
+  const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
   const ic = danger ? '#f87171' : (iconColor ?? colors.textSub);
 
   return (
@@ -45,7 +45,7 @@ function MenuItem({
       style={({ pressed }) => ({
         backgroundColor: pressed ? colors.hover : 'transparent',
         borderBottomWidth: 1, borderBottomColor: colors.border,
-        flexDirection: 'row', alignItems: 'center', gap: SPACE.md,
+        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.md,
         paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
       })}
     >

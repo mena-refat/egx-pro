@@ -20,7 +20,7 @@ export function SupportTicketList({
   onCreateTicket: () => void;
 }) {
   const { colors, isRTL } = useTheme();
-  const ChevronIcon = isRTL ? ChevronRight : ChevronLeft;
+  const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
 
   if (loading) {
     return (
@@ -94,7 +94,7 @@ export function SupportTicketList({
               },
             ]}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
               <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700', flex: 1 }} numberOfLines={1}>
                 {t.subject}
               </Text>
@@ -107,7 +107,7 @@ export function SupportTicketList({
               {t.message}
             </Text>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
               <Text style={{ color: colors.textMuted, fontSize: 11 }}>{timeAgo(t.createdAt)}</Text>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

@@ -272,8 +272,8 @@ export default function NewsPage() {
     <ScreenWrapper padded={false}>
       {/* Header */}
       <View
-        style={{ borderBottomColor: colors.border }}
-        className="flex-row items-center gap-3 px-4 pt-5 pb-4 border-b"
+        style={{ borderBottomColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }}
+        className="items-center gap-3 px-4 pt-5 pb-4 border-b"
       >
         <Pressable
           onPress={() => router.back()}

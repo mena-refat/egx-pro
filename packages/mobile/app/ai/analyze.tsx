@@ -467,8 +467,8 @@ export default function AnalyzePage() {
       {/* Header */}
       <View
         style={[
-          { borderBottomColor: colors.border, borderBottomWidth: 1 },
-          tw('flex-row items-center gap-3 px-4 pt-5 pb-4'),
+          { borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: isRTL ? 'row-reverse' : 'row' },
+          tw('items-center gap-3 px-4 pt-5 pb-4'),
         ]}
       >
         <Pressable
@@ -502,7 +502,7 @@ export default function AnalyzePage() {
               onPress={() => setMode('beginner')}
               style={[
                 tw('flex-1 py-2.5 rounded-xl items-center border'),
-                { backgroundColor: mode === 'beginner' ? '#8b5cf6' : colors.surface, borderColor: mode === 'beginner' ? '#8b5cf6' : colors.border },
+                { backgroundColor: mode === 'beginner' ? '#8b5cf6' : colors.card, borderColor: mode === 'beginner' ? '#8b5cf6' : colors.border },
               ]}
             >
               <Text style={[tw('text-xs font-semibold'), { color: mode === 'beginner' ? '#fff' : colors.textSub }]}>🎓 مبسّط</Text>
@@ -511,7 +511,7 @@ export default function AnalyzePage() {
               onPress={() => setMode('professional')}
               style={[
                 tw('flex-1 py-2.5 rounded-xl items-center border'),
-                { backgroundColor: mode === 'professional' ? '#8b5cf6' : colors.surface, borderColor: mode === 'professional' ? '#8b5cf6' : colors.border },
+                { backgroundColor: mode === 'professional' ? '#8b5cf6' : colors.card, borderColor: mode === 'professional' ? '#8b5cf6' : colors.border },
               ]}
             >
               <Text style={[tw('text-xs font-semibold'), { color: mode === 'professional' ? '#fff' : colors.textSub }]}>📊 احترافي</Text>

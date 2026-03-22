@@ -4,6 +4,7 @@ import {
   Pressable, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Bell, Briefcase, Star, BarChart2, Newspaper, TrendingUp, TrendingDown } from 'lucide-react-native';
 import { ProfileCompletionBanner } from '../../components/shared/ProfileCompletionBanner';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,7 +31,7 @@ function n(v: number) {
 
 // ─── WatchlistCard (horizontal chip) ────────────────────────────
 function WatchlistCard({ stock, live, onPress }: { stock: Stock; live?: { price: number; changePercent: number }; onPress: () => void }) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const price  = live?.price         ?? stock.price         ?? 0;
   const chgPct = live?.changePercent  ?? stock.changePercent ?? 0;
   const isUp   = chgPct >= 0;
@@ -47,19 +48,20 @@ function WatchlistCard({ stock, live, onPress }: { stock: Stock; live?: { price:
     >
       <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{stock.ticker}</Text>
       <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 1 }} numberOfLines={1}>
-        {getStockName(stock.ticker, 'ar')}
+        {getStockName(stock.ticker, isRTL ? 'ar' : 'en')}
       </Text>
-      <Text style={{ color: price > 0 ? colors.text : colors.textMuted, fontSize: FONT.base, fontWeight: WEIGHT.bold, marginTop: SPACE.xs, fontVariant: ['tabular-nums'] }}>
-        {price > 0 ? price.toFixed(2) : '—'}
-      </Text>
-      <View style={{
-        flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3,
-        backgroundColor: chgPct === 0 ? colors.hover : isUp ? '#4ade8018' : '#f8717118',
-        paddingHorizontal: 5, paddingVertical: 2, borderRadius: RADIUS.sm - 2, alignSelf: 'flex-start',
-      }}>
-        <Text style={{ color: clr, fontSize: 11, fontWeight: WEIGHT.semibold, fontVariant: ['tabular-nums'] }}>
-          {isUp ? '+' : ''}{chgPct.toFixed(2)}%
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACE.xs }}>
+        <Text style={{ color: price > 0 ? colors.text : colors.textMuted, fontSize: FONT.base, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>
+          {price > 0 ? price.toFixed(2) : '—'}
         </Text>
+        <View style={{
+          backgroundColor: chgPct === 0 ? colors.hover : isUp ? '#4ade8018' : '#f8717118',
+          paddingHorizontal: 5, paddingVertical: 2, borderRadius: RADIUS.sm - 2,
+        }}>
+          <Text style={{ color: clr, fontSize: 11, fontWeight: WEIGHT.semibold, fontVariant: ['tabular-nums'] }}>
+            {isUp ? '+' : ''}{chgPct.toFixed(2)}%
+          </Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -118,6 +120,7 @@ function SectionHdr({
 // ─── HomePage ────────────────────────────────────────────────────
 export default function HomePage() {
   const router      = useRouter();
+  const { t }       = useTranslation();
   const { colors, isDark, isRTL } = useTheme();
   const { width }   = useWindowDimensions();
   const isCompact   = width < 380;
@@ -218,9 +221,9 @@ export default function HomePage() {
           paddingHorizontal: SPACE.lg, paddingTop: isCompact ? 12 : 18, paddingBottom: isCompact ? 10 : 14,
         }}>
           <View>
-            <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>أهلاً بك،</Text>
+            <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>{t('dashboard.greeting')}</Text>
             <Text style={{ color: colors.text, fontSize: isCompact ? FONT.lg : FONT.xl, fontWeight: WEIGHT.extrabold, marginTop: 2 }}>
-              {user?.fullName?.split(' ')[0] ?? 'مستثمر'}
+              {user?.fullName?.split(' ')[0] ?? t('dashboard.investor')}
             </Text>
           </View>
           <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm }}>
@@ -278,7 +281,7 @@ export default function HomePage() {
                 ) : (
                   <View style={{ alignItems: 'center' }}>
                     <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs, marginBottom: SPACE.xs, textAlign: 'center' }}>
-                      إجمالي محفظتي
+                      {t('dashboard.myPortfolio')}
                     </Text>
                     <Text style={{ color: '#fff', fontSize: FONT['3xl'], fontWeight: WEIGHT.extrabold, fontVariant: ['tabular-nums'], textAlign: 'center' }}>
                       {n(liveSummary.totalValue)} EGP
@@ -295,13 +298,13 @@ export default function HomePage() {
                     </View>
                     <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 56, marginTop: SPACE.lg }}>
                       <View style={{ alignItems: 'center' }}>
-                        <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>الأساسي</Text>
+                        <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>{t('dashboard.costBase')}</Text>
                         <Text style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold, fontVariant: ['tabular-nums'] }}>
                           {n(liveSummary.totalCost)} EGP
                         </Text>
                       </View>
                       <View style={{ alignItems: 'center' }}>
-                        <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>الأسهم</Text>
+                        <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>{t('dashboard.stocksCount')}</Text>
                         <Text style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>
                           {enrichedHoldings.length}
                         </Text>
@@ -316,9 +319,9 @@ export default function HomePage() {
           {/* ─── 2. Holdings ─────────────────────────────── */}
           <View style={{ paddingHorizontal: SPACE.lg }}>
             <SectionHdr
-              title="الأسهم المملوكة"
+              title={t('dashboard.holdings')}
               icon={Briefcase}
-              action={holdings.length > 3 ? { label: `الكل (${holdings.length})`, onPress: () => router.push('/portfolio') } : undefined}
+              action={holdings.length > 3 ? { label: `${t('common.seeAll')} (${holdings.length})`, onPress: () => router.push('/portfolio') } : undefined}
             />
             <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
               {portLoading ? (
@@ -327,8 +330,8 @@ export default function HomePage() {
                 </View>
               ) : enrichedHoldings.length === 0 ? (
                 <Pressable onPress={() => router.push('/market')} style={{ paddingVertical: 36, alignItems: 'center', gap: SPACE.sm }}>
-                  <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>محفظتك فارغة</Text>
-                  <Text style={{ color: BRAND, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>ابدأ بإضافة أسهم من السوق</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>{t('dashboard.emptyPortfolio')}</Text>
+                  <Text style={{ color: BRAND, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>{t('dashboard.addFromMarket')}</Text>
                 </Pressable>
               ) : (
                 enrichedHoldings.slice(0, 4).map((h, i) => (
@@ -357,7 +360,7 @@ export default function HomePage() {
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{h.ticker}</Text>
                       <Text style={{ color: colors.textSub, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
-                        {getStockName(h.ticker, 'ar')} · {h.shares} سهم
+                        {getStockName(h.ticker, isRTL ? 'ar' : 'en')} · {h.shares} {t('portfolio.shares')}
                       </Text>
                     </View>
                     <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', marginStart: SPACE.sm, flexShrink: 0 }}>
@@ -387,9 +390,9 @@ export default function HomePage() {
           <View>
             <View style={{ paddingHorizontal: SPACE.lg }}>
               <SectionHdr
-                title="قائمة المتابعة"
+                title={t('dashboard.watchlist')}
                 icon={Star}
-                action={{ label: 'إضافة', onPress: () => router.push('/market') }}
+                action={{ label: t('dashboard.add'), onPress: () => router.push('/market') }}
               />
             </View>
             {watchlistLoading ? (
@@ -410,8 +413,8 @@ export default function HomePage() {
                   backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
                   borderRadius: RADIUS.xl, paddingVertical: 28, alignItems: 'center', gap: SPACE.sm,
                 }}>
-                  <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>قائمة المتابعة فارغة</Text>
-                  <Text style={{ color: BRAND, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>أضف أسهم من السوق</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>{t('dashboard.emptyWatchlist')}</Text>
+                  <Text style={{ color: BRAND, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>{t('dashboard.addStocksFromMarket')}</Text>
                 </Pressable>
               </View>
             ) : (
@@ -440,13 +443,13 @@ export default function HomePage() {
           {!loadingStocks && (topGainers.length > 0 || topLosers.length > 0) && (
             <View style={{ paddingHorizontal: SPACE.lg }}>
               <SectionHdr
-                title="الأكثر تحركاً"
+                title={t('dashboard.topMovers')}
                 icon={BarChart2}
-                action={{ label: 'السوق', onPress: () => router.push('/market') }}
+                action={{ label: t('tabs.market'), onPress: () => router.push('/market') }}
               />
               {topGainers.length > 0 && (
                 <View style={{ marginBottom: SPACE.md }}>
-                  <Text style={{ color: GREEN, fontSize: FONT.xs, fontWeight: WEIGHT.semibold, marginBottom: SPACE.sm }}>الصاعدة</Text>
+                  <Text style={{ color: GREEN, fontSize: FONT.xs, fontWeight: WEIGHT.semibold, marginBottom: SPACE.sm }}>{t('market.gainers')}</Text>
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -460,7 +463,7 @@ export default function HomePage() {
               )}
               {topLosers.length > 0 && (
                 <View>
-                  <Text style={{ color: RED, fontSize: FONT.xs, fontWeight: WEIGHT.semibold, marginBottom: SPACE.sm }}>الهابطة</Text>
+                  <Text style={{ color: RED, fontSize: FONT.xs, fontWeight: WEIGHT.semibold, marginBottom: SPACE.sm }}>{t('market.losers')}</Text>
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -478,7 +481,7 @@ export default function HomePage() {
           {/* ─── 5. News preview ────────────────────────── */}
           {lastTwoDaysNews.length > 0 && (
             <View style={{ paddingHorizontal: SPACE.lg }}>
-              <SectionHdr title="أخبار" icon={Newspaper} />
+              <SectionHdr title={t('dashboard.news')} icon={Newspaper} />
               <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
                 {lastTwoDaysNews.slice(0, 3).map((item, i) => (
                   <View

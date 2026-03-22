@@ -53,7 +53,7 @@ export default function SupportPage() {
           borderBottomColor: colors.border,
           borderBottomWidth: 1,
           opacity: 0.5,
-          flexDirection: 'row',
+          flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingHorizontal: 16,

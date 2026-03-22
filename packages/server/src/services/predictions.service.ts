@@ -2,6 +2,7 @@ import { AppError } from '../lib/errors.ts';
 import { logger } from '../lib/logger.ts';
 import { createNotification } from '../lib/createNotification.ts';
 import { getStockPrice } from '../lib/stockData.ts';
+import { marketDataService } from './market-data/market-data.service.ts';
 import { incrWithExpire, getCount, decrCount } from '../lib/redis.ts';
 import { getCairoDateString, getCairoDateStringFromDate, getCairoMidnightExpirySeconds } from '../lib/cairo-date.ts';
 import { PREDICTION_LIMITS } from '../lib/constants.ts';
@@ -343,6 +344,22 @@ export const PredictionsService = {
     }
   },
 
+  /** Batch-fetch current prices for a list of tickers (from cache, best-effort). */
+  async _batchCurrentPrices(tickers: string[]): Promise<Map<string, number>> {
+    const unique = [...new Set(tickers)];
+    if (unique.length === 0) return new Map();
+    try {
+      const quotes = await marketDataService.getQuotes(unique);
+      const result = new Map<string, number>();
+      for (const [sym, q] of quotes) {
+        if (q && Number.isFinite(q.price)) result.set(sym, q.price);
+      }
+      return result;
+    } catch {
+      return new Map();
+    }
+  },
+
   async getFeed(viewerId: number, filter: 'all' | 'following' | 'top', ticker: string | undefined, page: number, limit: number) {
     const data = await PredictionRepository.getFeed({
       viewerId, filter, ticker,
@@ -356,7 +373,15 @@ export const PredictionsService = {
       data.pagination.total    = sorted.length;
       data.pagination.totalPages = Math.ceil(sorted.length / limit);
     }
-    return data;
+    const activeTickers = data.items.filter((p) => p.status === 'ACTIVE').map((p) => p.ticker);
+    const prices = await this._batchCurrentPrices(activeTickers);
+    return {
+      ...data,
+      items: data.items.map((p) => ({
+        ...p,
+        currentPrice: p.status === 'ACTIVE' ? (prices.get(p.ticker) ?? null) : null,
+      })),
+    };
   },
 
   async getMy(userId: number, status: string | undefined, page: number, limit: number) {
@@ -369,6 +394,8 @@ export const PredictionsService = {
     ]);
     const likedIds = await PredictionRepository.findLikedPredictionIds(userId, items.map((p) => p.id));
     const likedSet = new Set(likedIds);
+    const activeTickers = items.filter((p) => p.status === 'ACTIVE').map((p) => p.ticker);
+    const prices = await this._batchCurrentPrices(activeTickers);
     return {
       items: items.map((p) => ({
         ...p,
@@ -377,6 +404,7 @@ export const PredictionsService = {
         userRank: p.user.predictionStats?.rank ?? 'BEGINNER',
         userAccuracyRate: p.user.predictionStats?.accuracyRate ?? 0,
         userTotalPredictions: p.user.predictionStats?.totalPredictions ?? 0,
+        currentPrice: p.status === 'ACTIVE' ? (prices.get(p.ticker) ?? null) : null,
       })),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
@@ -429,11 +457,10 @@ export const PredictionsService = {
     }
     const liked = await PredictionRepository.toggleLike(predictionId, userId);
     if (liked) {
-      const liker = await UserRepository.findUnique({ where: { id: userId }, select: { username: true } });
       await createNotification(
         prediction.userId, 'prediction_liked',
         'إعجاب بتوقعك',
-        `${liker?.username ?? 'مستخدم'} أعجبه توقعك على ${prediction.ticker}`,
+        `أعجب شخص بتوقعك على ${prediction.ticker}`,
         { route: '/predictions' }
       );
     }

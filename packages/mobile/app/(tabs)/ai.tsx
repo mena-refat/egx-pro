@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
   Brain, GitCompare, Sparkles, Zap, Calculator,
   Target, TrendingUp, TrendingDown, ChevronLeft, ChevronRight,
@@ -47,61 +48,62 @@ function usePredictionsPreview() {
   return { total, winRate, recent, loading };
 }
 
-const AI_TOOLS = [
-  {
-    id: 'recommendations',
-    icon: Sparkles,
-    title: 'توصيات شخصية',
-    desc: 'مخصصة لمحفظتك',
-    href: '/ai/recommendations',
-    cost: '1 تحليل',
-    color: '#f59e0b',
-    bg: '#f59e0b10',
-    border: '#f59e0b20',
-  },
-  {
-    id: 'compare',
-    icon: GitCompare,
-    title: 'مقارنة سهمين',
-    desc: 'أيهما أفضل الآن؟',
-    href: '/ai/compare',
-    cost: '2 تحليل',
-    color: '#3b82f6',
-    bg: '#3b82f610',
-    border: '#3b82f620',
-  },
-  {
-    id: 'analyze',
-    icon: Brain,
-    title: 'تحليل سهم',
-    desc: 'تحليل شامل فني وأساسي',
-    href: '/ai/analyze',
-    cost: '1 تحليل',
-    color: BRAND,
-    bg: BRAND + '10',
-    border: BRAND + '20',
-  },
-] as const;
-
-const CALCULATOR_CARD = {
-  id: 'calculator',
-  icon: Calculator,
-  title: 'حاسبة الاستثمار',
-  desc: 'احسب سيناريوهات العائد بدقة',
-  href: '/calculator',
-  cost: 'مجاني',
-  color: '#10b981',
-  bg: '#10b98110',
-  border: '#10b98120',
-} as const;
-
 export default function AnalyticsPage() {
   const router = useRouter();
+  const { t }  = useTranslation();
   const { colors, isRTL } = useTheme();
   const user   = useAuthStore((s) => s.user);
   const used   = user?.aiAnalysisUsedThisMonth ?? 0;
   const { total, winRate, recent, loading: predsLoading } = usePredictionsPreview();
-  const ChevronIcon = isRTL ? ChevronRight : ChevronLeft;
+  const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
+
+  const AI_TOOLS = useMemo(() => [
+    {
+      id: 'recommendations',
+      icon: Sparkles,
+      title: t('ai.recommendations'),
+      desc: t('ai.recommendationsDesc'),
+      href: '/ai/recommendations',
+      cost: t('ai.analyzesCost'),
+      color: '#f59e0b',
+      bg: '#f59e0b10',
+      border: '#f59e0b20',
+    },
+    {
+      id: 'compare',
+      icon: GitCompare,
+      title: t('ai.compare'),
+      desc: t('ai.compareDesc'),
+      href: '/ai/compare',
+      cost: t('ai.comparesCost'),
+      color: '#3b82f6',
+      bg: '#3b82f610',
+      border: '#3b82f620',
+    },
+    {
+      id: 'analyze',
+      icon: Brain,
+      title: t('ai.analyze'),
+      desc: t('ai.analyzeDesc'),
+      href: '/ai/analyze',
+      cost: t('ai.analyzesCost'),
+      color: BRAND,
+      bg: BRAND + '10',
+      border: BRAND + '20',
+    },
+  ], [t]);
+
+  const CALCULATOR_CARD = useMemo(() => ({
+    id: 'calculator',
+    icon: Calculator,
+    title: t('ai.calculator'),
+    desc: t('ai.calculatorDesc'),
+    href: '/calculator',
+    cost: t('ai.free'),
+    color: '#10b981',
+    bg: '#10b98110',
+    border: '#10b98120',
+  }), [t]);
 
   return (
     <ScreenWrapper padded={false}>
@@ -109,9 +111,9 @@ export default function AnalyticsPage() {
 
         {/* ─── Header ─── */}
         <View style={{ borderBottomColor: colors.border, borderBottomWidth: 1, paddingHorizontal: SPACE.lg, paddingTop: 18, paddingBottom: 14 }}>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: WEIGHT.extrabold }}>تحليلات</Text>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: WEIGHT.extrabold }}>{t('ai.title')}</Text>
           <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 3 }}>
-            ذكاء اصطناعي وتوقعات البورصة المصرية
+            {t('ai.subtitle')}
           </Text>
         </View>
 
@@ -126,7 +128,7 @@ export default function AnalyticsPage() {
             }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
                 <Zap size={14} color={BRAND} />
-                <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>التحليلات المستخدمة هذا الشهر</Text>
+                <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>{t('ai.quota')}</Text>
               </View>
               <View style={{ backgroundColor: BRAND_BG_STRONG, paddingHorizontal: SPACE.md, paddingVertical: 4, borderRadius: RADIUS.md }}>
                 <Text style={{ fontSize: FONT.sm, fontWeight: WEIGHT.bold, color: BRAND }}>{used}</Text>
@@ -137,7 +139,7 @@ export default function AnalyticsPage() {
           {/* ─── AI Tools (2-column grid) ─── */}
           <View>
             <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold, marginBottom: SPACE.md }}>
-              الذكاء الاصطناعي
+              {t('ai.sectionTitle')}
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm }}>
               {AI_TOOLS.map((card) => (
@@ -170,7 +172,7 @@ export default function AnalyticsPage() {
           {/* ─── Calculator (separate from AI) ─── */}
           <View>
             <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold, marginTop: SPACE.xl, marginBottom: SPACE.md }}>
-              الحاسبة
+              {t('ai.calculatorSection')}
             </Text>
             <Pressable
               onPress={() => router.push(CALCULATOR_CARD.href as never)}
@@ -204,10 +206,10 @@ export default function AnalyticsPage() {
 
           {/* ─── My Predictions ─── */}
           <View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.md }}>
-              <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>توقعاتي</Text>
-              <Pressable onPress={() => router.push('/predictions')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={{ fontSize: FONT.xs, color: BRAND }}>عرض الكل</Text>
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.md }}>
+              <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('predictions.myPredictions')}</Text>
+              <Pressable onPress={() => router.push('/predictions')} style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={{ fontSize: FONT.xs, color: BRAND }}>{t('common.seeAll')}</Text>
                 <ChevronIcon size={12} color={BRAND} />
               </Pressable>
             </View>
@@ -217,18 +219,18 @@ export default function AnalyticsPage() {
               <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border }}>
                 <View style={{ flex: 1, alignItems: 'center', paddingVertical: SPACE.md, borderRightWidth: 1, borderRightColor: colors.border }}>
                   <Text style={{ color: colors.text, fontSize: FONT.xl, fontWeight: WEIGHT.bold }}>{total}</Text>
-                  <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>إجمالي التوقعات</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{t('ai.totalPredictions')}</Text>
                 </View>
                 <View style={{ flex: 1, alignItems: 'center', paddingVertical: SPACE.md }}>
                   {winRate !== null ? (
                     <>
                       <Text style={{ color: '#4ade80', fontSize: FONT.xl, fontWeight: WEIGHT.bold }}>{winRate}%</Text>
-                      <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>نسبة الإصابة</Text>
+                      <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{t('ai.winRate')}</Text>
                     </>
                   ) : (
                     <>
                       <Text style={{ color: colors.textMuted, fontSize: FONT.xl, fontWeight: WEIGHT.bold }}>—</Text>
-                      <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>لا نتائج بعد</Text>
+                      <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{t('ai.noResults')}</Text>
                     </>
                   )}
                 </View>
@@ -242,8 +244,8 @@ export default function AnalyticsPage() {
               ) : recent.length === 0 ? (
                 <Pressable onPress={() => router.push('/predictions')} style={{ paddingVertical: 32, alignItems: 'center', gap: SPACE.sm }}>
                   <Target size={22} color={colors.textMuted} />
-                  <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>لا توجد توقعات نشطة</Text>
-                  <Text style={{ color: BRAND, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>أضف توقعاتك للسوق</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>{t('ai.noActivePredictions')}</Text>
+                  <Text style={{ color: BRAND, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>{t('ai.addPredictions')}</Text>
                 </Pressable>
               ) : (
                 recent.map((p, i) => (
@@ -274,7 +276,7 @@ export default function AnalyticsPage() {
                     </View>
                     <View style={{ paddingHorizontal: SPACE.sm, paddingVertical: 4, borderRadius: RADIUS.md, backgroundColor: p.direction === 'UP' ? '#4ade8018' : '#f8717118' }}>
                       <Text style={{ fontSize: FONT.xs, fontWeight: WEIGHT.bold, color: p.direction === 'UP' ? '#4ade80' : '#f87171' }}>
-                        {p.direction === 'UP' ? '▲ صعود' : '▼ هبوط'}
+                        {p.direction === 'UP' ? `▲ ${t('predictions.up')}` : `▼ ${t('predictions.down')}`}
                       </Text>
                     </View>
                   </Pressable>
@@ -285,7 +287,7 @@ export default function AnalyticsPage() {
 
           {/* ─── Disclaimer ─── */}
           <Text style={{ color: colors.textMuted, fontSize: 11, textAlign: 'center', lineHeight: 18, paddingHorizontal: SPACE.sm }}>
-            التحليلات للأغراض التعليمية فقط وليست توصيات استثمارية.
+            {t('ai.disclaimer')}
           </Text>
 
         </View>

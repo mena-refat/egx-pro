@@ -17,6 +17,7 @@ import { tw } from '../../lib/tw';
 type Direction = 'UP' | 'DOWN';
 type Timeframe = 'WEEK' | 'MONTH' | 'THREE_MONTHS' | 'SIX_MONTHS' | 'NINE_MONTHS' | 'YEAR';
 type PredStatus = 'PENDING' | 'CORRECT' | 'WRONG' | 'EXPIRED';
+type FeedFilter = 'all' | 'following';
 
 interface Prediction {
   id: string;
@@ -118,7 +119,12 @@ function PredictionCard({ pred }: { pred: Prediction }) {
 export default function PredictionsPage() {
   const router = useRouter();
   const { colors, isRTL } = useTheme();
+
+  // Main tabs: my / feed
   const [tab, setTab] = useState<'my' | 'feed'>('my');
+  // Feed sub-filter: all / following
+  const [feedFilter, setFeedFilter] = useState<FeedFilter>('all');
+
   const [myPreds, setMyPreds] = useState<Prediction[]>([]);
   const [feedPreds, setFeedPreds] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,23 +147,37 @@ export default function PredictionsPage() {
       ).slice(0, 5)
     : [];
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchMyPreds = useCallback(async () => {
     try {
-      const [myRes, feedRes] = await Promise.all([
-        apiClient.get('/api/predictions/my?limit=20'),
-        apiClient.get('/api/predictions/feed?limit=20'),
-      ]);
-      const myData = myRes.data as { items?: Prediction[] };
-      const feedData = feedRes.data as { items?: Prediction[] };
-      setMyPreds(myData.items ?? []);
-      setFeedPreds(feedData.items ?? []);
-    } catch { /* ignore */ } finally {
-      setLoading(false);
-    }
+      const res = await apiClient.get('/api/predictions/my?limit=20');
+      const data = res.data as { items?: Prediction[] };
+      setMyPreds(data.items ?? []);
+    } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { void fetchData(); }, [fetchData]);
+  const fetchFeed = useCallback(async (filter: FeedFilter) => {
+    try {
+      const res = await apiClient.get(`/api/predictions/feed?filter=${filter}&limit=20`);
+      const data = res.data as { items?: Prediction[] };
+      setFeedPreds(data.items ?? []);
+    } catch { /* ignore */ }
+  }, []);
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([fetchMyPreds(), fetchFeed(feedFilter)]);
+    setLoading(false);
+  }, [fetchMyPreds, fetchFeed, feedFilter]);
+
+  useEffect(() => { void fetchAll(); }, [fetchAll]);
+
+  // Re-fetch feed when filter changes
+  const handleFeedFilter = useCallback(async (f: FeedFilter) => {
+    setFeedFilter(f);
+    setLoading(true);
+    await fetchFeed(f);
+    setLoading(false);
+  }, [fetchFeed]);
 
   const handleCreate = async () => {
     const t = ticker.trim().toUpperCase();
@@ -195,8 +215,8 @@ export default function PredictionsPage() {
       {/* Header */}
       <View
         style={[
-          { borderBottomColor: colors.border, borderBottomWidth: 1 },
-          tw('flex-row items-center justify-between px-4 pt-5 pb-4'),
+          { borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: isRTL ? 'row-reverse' : 'row' },
+          tw('items-center justify-between px-4 pt-5 pb-4'),
         ]}
       >
         <View style={tw('flex-row items-center gap-3')}>
@@ -222,7 +242,7 @@ export default function PredictionsPage() {
         </Pressable>
       </View>
 
-      {/* Tabs */}
+      {/* Main Tabs */}
       <View style={tw('flex-row px-4 pt-3 gap-2')}>
         {(['my', 'feed'] as const).map((t) => (
           <Pressable
@@ -243,11 +263,40 @@ export default function PredictionsPage() {
                 tw('text-sm font-medium'),
               ]}
             >
-              {t === 'my' ? 'توقعاتي' : 'السوق'}
+              {t === 'my' ? 'توقعاتي' : 'الخلاصة'}
             </Text>
           </Pressable>
         ))}
       </View>
+
+      {/* Feed sub-filter pills (only when feed tab is active) */}
+      {tab === 'feed' && (
+        <View style={tw('flex-row px-4 pt-2 gap-2')}>
+          {([
+            { key: 'all', label: 'الكل' },
+            { key: 'following', label: 'المتابَعون' },
+          ] as { key: FeedFilter; label: string }[]).map(({ key, label }) => (
+            <Pressable
+              key={key}
+              onPress={() => { void handleFeedFilter(key); }}
+              style={[
+                tw('px-4 py-1.5 rounded-full border'),
+                {
+                  backgroundColor: feedFilter === key ? '#3b82f615' : 'transparent',
+                  borderColor: feedFilter === key ? '#3b82f6' : colors.border,
+                },
+              ]}
+            >
+              <Text style={[
+                { color: feedFilter === key ? '#3b82f6' : colors.textSub },
+                tw('text-xs font-medium'),
+              ]}>
+                {label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {loading ? (
         <View style={tw('flex-1 items-center justify-center mt-10')}>
@@ -264,7 +313,11 @@ export default function PredictionsPage() {
                 <TrendingUp size={28} color="#3b82f6" />
               </View>
               <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>
-                {tab === 'my' ? 'لا توجد توقعات بعد' : 'لا توجد توقعات في الفيد'}
+                {tab === 'my'
+                  ? 'لا توجد توقعات بعد'
+                  : feedFilter === 'following'
+                    ? 'لا توجد توقعات من المتابَعين'
+                    : 'لا توجد توقعات في الخلاصة'}
               </Text>
               {tab === 'my' && (
                 <Pressable
@@ -273,6 +326,11 @@ export default function PredictionsPage() {
                 >
                   <Text style={tw('text-sm font-bold text-white')}>أضف توقعك الأول</Text>
                 </Pressable>
+              )}
+              {tab === 'feed' && feedFilter === 'following' && (
+                <Text style={[{ color: colors.textMuted }, tw('text-xs text-center px-8')]}>
+                  تابع مستخدمين آخرين لترى توقعاتهم هنا
+                </Text>
               )}
             </View>
           ) : (

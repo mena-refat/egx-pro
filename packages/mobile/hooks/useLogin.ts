@@ -155,6 +155,7 @@ export function useLogin() {
       const code = (err as { error?: string })?.error;
       if (code === 'INVALID_CREDENTIALS') setError('البريد أو كلمة المرور غير صحيحة');
       else if (code === 'ACCOUNT_LOCKED') setError('الحساب محجوب مؤقتاً — حاول بعد 30 دقيقة');
+      else if (code === 'ACCOUNT_SUSPENDED') setError('هذا الحساب موقوف — تواصل مع الدعم الفني');
       // Never expose raw backend messages — they may leak implementation details
       else setError('حدث خطأ، حاول مرة أخرى');
     } finally {

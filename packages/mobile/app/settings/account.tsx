@@ -21,13 +21,13 @@ interface FieldRowProps {
 }
 
 function FieldRow({ label, value, onEdit, editable = true }: FieldRowProps) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   return (
     <View
       style={{
         borderBottomColor: colors.border,
         borderBottomWidth: 1,
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingVertical: 14,

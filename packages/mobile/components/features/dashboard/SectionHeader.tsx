@@ -11,10 +11,10 @@ interface Props {
 
 export function SectionHeader({ title, icon: Icon, linkLabel, onLink }: Props) {
   const { colors, isRTL } = useTheme();
-  const ChevronIcon = isRTL ? ChevronRight : ChevronLeft;
+  const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 7 }}>
         {Icon && (
           <View style={{ width: 24, height: 24, borderRadius: 7, backgroundColor: colors.hover, alignItems: 'center', justifyContent: 'center' }}>
             <Icon size={13} color={colors.textSub} />
@@ -23,7 +23,7 @@ export function SectionHeader({ title, icon: Icon, linkLabel, onLink }: Props) {
         <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{title}</Text>
       </View>
       {linkLabel && onLink && (
-        <Pressable onPress={onLink} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+        <Pressable onPress={onLink} style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 3 }}>
           <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '600' }}>{linkLabel}</Text>
           <ChevronIcon size={12} color="#8b5cf6" />
         </Pressable>

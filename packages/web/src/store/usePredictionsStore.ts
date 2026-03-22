@@ -28,6 +28,7 @@ export interface FeedPrediction {
   isPublic: boolean;
   likeCount: number;
   isLikedByMe: boolean;
+  currentPrice?: number | null;
   user?: {
     id: number;
     username: string | null;

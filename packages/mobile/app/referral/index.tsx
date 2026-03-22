@@ -95,8 +95,8 @@ export default function ReferralPage() {
     <ScreenWrapper padded={false}>
       {/* Header */}
       <View
-        style={{ borderBottomColor: colors.border, borderBottomWidth: 0.5 }}
-        className="flex-row items-center gap-3 px-4 pt-5 pb-4"
+        style={{ borderBottomColor: colors.border, borderBottomWidth: 0.5, flexDirection: isRTL ? 'row-reverse' : 'row' }}
+        className="items-center gap-3 px-4 pt-5 pb-4"
       >
         <Pressable
           onPress={() => router.back()}

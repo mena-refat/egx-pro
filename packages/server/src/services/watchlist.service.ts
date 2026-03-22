@@ -74,6 +74,14 @@ export const WatchlistService = {
 
   async checkTargets(userId: number, body: unknown): Promise<void> {
     const parsed = watchlistCheckTargetsSchema.parse(body) as WatchlistCheckTargetsInput;
+
+    // Fetch user's push token once — used for all hit notifications in this batch
+    const userRow = await UserRepository.findUnique({
+      where: { id: userId },
+      select: { pushToken: true },
+    }) as { pushToken?: string | null } | null;
+    const pushToken = userRow?.pushToken ?? undefined;
+
     for (const { ticker, targetPrice, targetDirection, currentPrice } of parsed.items) {
       const direction = targetDirection ?? 'UP';
       const hit = direction === 'DOWN' ? currentPrice <= targetPrice : currentPrice >= targetPrice;
@@ -85,7 +93,10 @@ export const WatchlistService = {
       const dirSymbol = direction === 'DOWN' ? '↓' : '↑';
       const titleAr = `سهم ${ticker} وصل للسعر المستهدف ${dirSymbol}`;
       const bodyAr = `السعر الحالي ${currentPrice.toFixed(2)} وصل أو تجاوز المستهدف ${targetPrice.toFixed(2)} ج.م`;
-      await createNotification(userId, 'stock_target', titleAr, bodyAr, { route: `/stocks/${ticker}` });
+      await createNotification(userId, 'stock_target', titleAr, bodyAr, {
+        route: `/stocks/${ticker}`,
+        pushToken,
+      });
       await WatchlistRepository.updateTargetNotified(row.id);
     }
   },

@@ -53,12 +53,12 @@ function RowItem({
   last?: boolean;
   onPress?: () => void;
 }) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        flexDirection: 'row', alignItems: 'center', gap: SPACE.md,
+        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.md,
         paddingHorizontal: SPACE.lg, paddingVertical: 14,
         backgroundColor: pressed && onPress ? colors.hover : 'transparent',
         borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.border,
@@ -143,7 +143,7 @@ export default function PreferencesPage() {
     <ScreenWrapper padded={false}>
       {/* ─── Header ─── */}
       <View style={{
-        flexDirection: 'row', alignItems: 'center', gap: SPACE.md,
+        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.md,
         paddingHorizontal: SPACE.lg, paddingTop: 18, paddingBottom: 14,
         borderBottomWidth: 1, borderBottomColor: colors.border,
       }}>

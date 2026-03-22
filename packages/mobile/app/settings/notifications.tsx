@@ -51,7 +51,7 @@ export default function NotificationsPage() {
         style={{
           borderBottomColor: colors.border,
           borderBottomWidth: 1,
-          flexDirection: 'row',
+          flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'center',
           gap: 12,
           paddingHorizontal: 16,

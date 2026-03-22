@@ -48,13 +48,13 @@ export function ScreenHeader({
         backgroundColor:  transparent ? 'transparent' : colors.bg,
         borderBottomWidth: transparent ? 0 : 1,
         borderBottomColor: colors.border,
-        flexDirection:    'row',
+        flexDirection:    isRTL ? 'row-reverse' : 'row',
         alignItems:       'center',
         paddingHorizontal: SPACE.lg,
       }}
     >
       {/* Left slot */}
-      <View style={{ width: 40, alignItems: 'flex-start' }}>
+      <View style={{ width: 40, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
         {leftAction
           ? leftAction
           : showBack && (
@@ -69,7 +69,7 @@ export function ScreenHeader({
       </View>
 
       {/* Title */}
-      <View style={{ flex: 1, alignItems: centerTitle ? 'center' : 'flex-start' }}>
+      <View style={{ flex: 1, alignItems: centerTitle ? 'center' : (isRTL ? 'flex-end' : 'flex-start') }}>
         <Text
           style={{
             color:      colors.text,
@@ -88,7 +88,7 @@ export function ScreenHeader({
       </View>
 
       {/* Right slot */}
-      <View style={{ width: 40, alignItems: 'flex-end' }}>
+      <View style={{ width: 40, alignItems: isRTL ? 'flex-start' : 'flex-end' }}>
         {rightAction ?? null}
       </View>
     </View>
