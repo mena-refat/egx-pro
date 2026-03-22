@@ -1,11 +1,10 @@
-import { View, Text, Pressable, I18nManager } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Zap } from 'lucide-react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { YELLOW, YELLOW_BG } from '../../../lib/theme';
 
 export function SupportLockedBanner({ onUpgrade }: { onUpgrade: () => void }) {
-  const { colors } = useTheme();
-  const isRTL = I18nManager.isRTL;
+  const { colors, isRTL } = useTheme();
 
   return (
     <View

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, Pressable, ScrollView, Modal,
-  RefreshControl, I18nManager,
+  RefreshControl,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, ArrowRight, Newspaper, X, TrendingUp, TrendingDown, Clock } from 'lucide-react-native';
@@ -169,13 +169,12 @@ function NewsDetailModal({
 export default function NewsPage() {
   const router = useRouter();
   const { ticker } = useLocalSearchParams<{ ticker?: string }>();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<NewsItem | null>(null);
-  const isRTL = I18nManager.isRTL;
 
   type NewsScope = 'twoDays' | 'today' | 'yesterday' | 'all';
   const [scope, setScope] = useState<NewsScope>('twoDays');
@@ -218,7 +217,7 @@ export default function NewsPage() {
     fetchNews();
   };
 
-  const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
+  const ArrowIcon = isRTL ? ArrowRight : ArrowLeft;
 
   function accentColor(sentiment?: string | null) {
     const s = sentiment?.toLowerCase();

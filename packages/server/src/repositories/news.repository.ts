@@ -145,6 +145,12 @@ export const NewsRepository = {
     });
   },
 
+  countMarketWideSince(since: Date): Promise<number> {
+    return prisma.newsItem.count({
+      where: { isMarketWide: true, publishedAt: { gte: since } },
+    });
+  },
+
   deleteOld(before: Date) {
     return prisma.newsItem.deleteMany({
       where: { publishedAt: { lt: before } },

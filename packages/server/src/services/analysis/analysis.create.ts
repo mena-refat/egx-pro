@@ -1,4 +1,5 @@
 import { getCachedAnalysis, setCachedAnalysis, singleKey, personalKey } from '../../lib/analysisCache.ts';
+import type { AnalysisMode } from '../../lib/analysisCache.ts';
 import { getAnalysisNewsCutoff, getAnalysisSessionDateString } from '../../lib/cairo-date.ts';
 import { AnalysisRepository } from '../../repositories/analysis.repository.ts';
 import { getCompletedAchievementIds, addNewlyUnlockedAchievements } from '../../lib/achievementCheck.ts';
@@ -17,7 +18,9 @@ import {
   parseAnalysisJson,
   ANALYSIS_DATA_GATHER_TIMEOUT_MS,
   ANALYSIS_MAX_TOKENS_SINGLE,
+  ANALYSIS_MAX_TOKENS_SINGLE_PRO,
   EXPLAIN_SINGLE_SYSTEM,
+  EXPLAIN_SINGLE_PRO_SYSTEM,
   getStockHistory,
   getFinancials,
   getStockNews,
@@ -29,11 +32,12 @@ import {
 
 export async function createAnalysis(
   userId: number,
-  ticker: string
+  ticker: string,
+  mode: AnalysisMode = 'beginner'
 ): Promise<{ analysis: unknown; id: string; newUnseenAchievements: string[] }> {
   if (!userId) throw new AppError('UNAUTHORIZED', 401);
 
-  const userCacheKey = personalKey(userId, ticker);
+  const userCacheKey = personalKey(userId, ticker, mode);
   const userCached = await getCachedAnalysis<unknown>(userCacheKey);
   if (userCached) {
     const saved = await AnalysisRepository.create({
@@ -46,7 +50,7 @@ export async function createAnalysis(
     return { analysis: userCached, id: saved.id, newUnseenAchievements: newAchievements };
   }
 
-  const cacheKey = singleKey(ticker);
+  const cacheKey = singleKey(ticker, mode);
   const globalCached = await getCachedAnalysis<unknown>(cacheKey);
   if (globalCached) {
     await setCachedAnalysis(userCacheKey, globalCached, 'cache');
@@ -121,10 +125,14 @@ export async function createAnalysis(
   if (financials.bookValue != null) fundLines.push(`قيمة دفترية: ${financials.bookValue.toFixed(2)}`);
   if (financials.marketCap != null && financials.marketCap > 0) fundLines.push(`قيمية سوقية: ${(financials.marketCap / 1e9).toFixed(2)} مليار`);
   if (financials.revenueGrowth != null) fundLines.push(`نمو إيرادات: ${(financials.revenueGrowth * 100).toFixed(1)}%`);
+  if (financials.priceToBook != null) fundLines.push(`P/B: ${financials.priceToBook.toFixed(2)}`);
+  if (financials.roa != null) fundLines.push(`ROA: ${(financials.roa * 100).toFixed(1)}%`);
+
   const techLines: string[] = [];
   if (indicators.rsi14 != null) techLines.push(`RSI: ${indicators.rsi14}`);
   if (indicators.trend) techLines.push(`اتجاه: ${indicators.trend}`);
   if (indicators.macd != null) techLines.push(`MACD: ${indicators.macd}`);
+  if (indicators.macdSignal != null) techLines.push(`MACD Signal: ${indicators.macdSignal}`);
   if (indicators.sma20 != null) techLines.push(`SMA20: ${indicators.sma20}`);
   if (indicators.sma50 != null) techLines.push(`SMA50: ${indicators.sma50}`);
   if (indicators.sma200 != null) techLines.push(`SMA200: ${indicators.sma200}`);
@@ -139,6 +147,7 @@ export async function createAnalysis(
       ? `حجم: ${indicators.lastVolume.toLocaleString()} (متوسط: ${indicators.avgVolume20.toLocaleString()})`
       : '';
   if (vol) techLines.push(vol);
+
   const marketLine =
     marketCtx.egx30 != null
       ? `سوق: ${marketCtx.marketStatus} | EGX30: ${marketCtx.egx30.price} (${marketCtx.egx30.changePercent > 0 ? '+' : ''}${marketCtx.egx30.changePercent.toFixed(2)}%) | USD/EGP: ${marketCtx.usdEgp ?? '—'}`
@@ -161,11 +170,14 @@ ${priceBlock}
 فني: ${hasTech ? techLines.join(' | ') : 'غير متوفرة من المصدر'}
 ${marketLine}
 أخبار: ${newsLine}
-اشرح لماذا هذا التقييم (${scoringResult.score}) وهذا القرار منطقيان بناءً على البيانات أعلاه. اخرج JSON بالشكل المحدد. لا تغيّر القرار ولا الأرقام.`;
+اشرح لماذا هذا التقييم (${scoringResult.score}) وهذا القرار منطقيان بناءً على البيانات أعلاه. احتسب الأسعار المستهدفة. اخرج JSON بالشكل المحدد. لا تغيّر القرار ولا الأرقام.`;
+
+  const systemPrompt = mode === 'professional' ? EXPLAIN_SINGLE_PRO_SYSTEM : EXPLAIN_SINGLE_SYSTEM;
+  const maxTokens = mode === 'professional' ? ANALYSIS_MAX_TOKENS_SINGLE_PRO : ANALYSIS_MAX_TOKENS_SINGLE;
 
   let rawText: string;
   try {
-    rawText = await runAnalysisEngine(EXPLAIN_SINGLE_SYSTEM, prompt, ANALYSIS_MAX_TOKENS_SINGLE);
+    rawText = await runAnalysisEngine(systemPrompt, prompt, maxTokens);
   } catch (err) {
     // فشل الـ AI — نرجّع الـ cooldown عشان المستخدم يقدر يحاول تاني
     await releaseAnalysisCooldown(userId);
@@ -189,6 +201,7 @@ ${marketLine}
     market_score: scoringResult.market_score,
     macro_score: scoringResult.macro_score,
     risk_score: scoringResult.risk_score,
+    mode,
     fundamental:
       aiJson.fundamental && typeof aiJson.fundamental === 'object'
         ? { ...(aiJson.fundamental as object), score: Math.round(scoringResult.fundamental_score * 4) }

@@ -1,24 +1,21 @@
 import React from 'react';
-import { View, Text, Pressable, ScrollView, I18nManager } from 'react-native';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   User, Shield, Bell, CreditCard, LogOut,
-  ChevronRight, ChevronLeft, Moon, Sun, Monitor,
+  ChevronRight, ChevronLeft,
   LifeBuoy, Gift, Trophy, Fingerprint, Users, Globe,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import { Badge } from '../../components/ui/Badge';
-import apiClient from '../../lib/api/client';
 import {
   BRAND, BRAND_BG_STRONG,
   FONT, WEIGHT, RADIUS, SPACE,
 } from '../../lib/theme';
 import { usePredictionScore } from '../../hooks/usePredictionScore';
 import { useNewAchievementsCount } from '../../hooks/useNewAchievementsCount';
-
-type ThemeOption = 'dark' | 'light' | 'system';
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'مجاني', pro: 'Pro', yearly: 'Pro سنوي',
@@ -37,8 +34,8 @@ function MenuItem({
   iconColor?: string;
   badge?: number;
 }) {
-  const { colors } = useTheme();
-  const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
+  const { colors, isRTL } = useTheme();
+  const ChevronIcon = isRTL ? ChevronRight : ChevronLeft;
   const ic = danger ? '#f87171' : (iconColor ?? colors.textSub);
 
   return (
@@ -92,7 +89,7 @@ function Section({ title, children, last = false }: { title?: string; children: 
 // ─── ProfilePage ─────────────────────────────────────────────────
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, logout, updateUser } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { colors } = useTheme();
   const { score: predictionAccuracyRate, loading: predictionLoading } = usePredictionScore();
   const newAchievementsCount = useNewAchievementsCount();
@@ -102,18 +99,6 @@ export default function ProfilePage() {
     router.replace('/(auth)/login');
   };
 
-  const setTheme = async (theme: ThemeOption) => {
-    updateUser({ theme });
-    try { await apiClient.put('/api/user/profile', { theme }); } catch { /* ignore */ }
-  };
-
-  const THEME_OPTIONS: { id: ThemeOption; label: string; Icon: typeof Moon }[] = [
-    { id: 'dark',   label: 'داكن',   Icon: Moon    },
-    { id: 'system', label: 'تلقائي', Icon: Monitor },
-    { id: 'light',  label: 'فاتح',   Icon: Sun     },
-  ];
-
-  const currentTheme = (user?.theme as ThemeOption | undefined) ?? 'system';
   const planLabel    = PLAN_LABELS[user?.plan ?? 'free'] ?? 'مجاني';
   const isPro        = user?.plan && user.plan !== 'free';
   const initial      = user?.fullName?.[0]?.toUpperCase() ?? 'U';
@@ -200,34 +185,6 @@ export default function ProfilePage() {
           </View>
         </View>
 
-        {/* ─── Theme Switcher ─── */}
-        <View style={{ paddingHorizontal: SPACE.lg, marginBottom: SPACE.md }}>
-          <Text style={{ color: colors.textSub, fontSize: FONT.sm, fontWeight: WEIGHT.bold, paddingHorizontal: 4, marginBottom: SPACE.sm }}>
-            المظهر
-          </Text>
-          <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: RADIUS.xl, padding: 4, flexDirection: 'row', gap: 4 }}>
-            {THEME_OPTIONS.map(({ id, label, Icon }) => {
-              const active = currentTheme === id;
-              return (
-                <Pressable
-                  key={id}
-                  onPress={() => void setTheme(id)}
-                  style={{
-                    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                    gap: 6, paddingVertical: 10, borderRadius: RADIUS.md - 4,
-                    backgroundColor: active ? BRAND : 'transparent',
-                  }}
-                >
-                  <Icon size={13} color={active ? '#fff' : colors.textMuted} />
-                  <Text style={{ fontSize: FONT.xs, fontWeight: WEIGHT.semibold, color: active ? '#fff' : colors.textMuted }}>
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
         {/* ─── Account ─── */}
         <Section title="الحساب">
           <MenuItem icon={User}        label="البيانات الشخصية"  sub={user?.email ?? user?.phone ?? ''} onPress={() => router.push('/settings/account')}       iconColor={BRAND} />
@@ -249,7 +206,7 @@ export default function ProfilePage() {
 
         {/* ─── Preferences ─── */}
         <Section title="التفضيلات">
-          <MenuItem icon={Globe}       label="اللغة والخصوصية"   sub="اللغة، الوضع الإسلامي، إعدادات الظهور" onPress={() => router.push('/settings/preferences' as never)} iconColor="#8b5cf6" />
+          <MenuItem icon={Globe}       label="التفضيلات"          sub="المظهر، اللغة، الوضع الإسلامي، الخصوصية" onPress={() => router.push('/settings/preferences' as never)} iconColor="#8b5cf6" />
           <MenuItem icon={Bell}        label="الإشعارات"          sub="تخصيص ما تستقبله"                onPress={() => router.push('/settings/notifications')} iconColor={BRAND} />
         </Section>
 

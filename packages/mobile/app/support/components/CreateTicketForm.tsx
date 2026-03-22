@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator, I18nManager } from 'react-native';
+import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
 import { Send } from 'lucide-react-native';
 import apiClient from '../../../lib/api/client';
 import { useTheme } from '../../../hooks/useTheme';
@@ -11,8 +11,7 @@ export function CreateTicketForm({
   onCreated: () => void;
   onCancel: () => void;
 }) {
-  const { colors } = useTheme();
-  const isRTL = I18nManager.isRTL;
+  const { colors, isRTL } = useTheme();
 
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');

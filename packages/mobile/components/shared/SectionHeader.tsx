@@ -1,4 +1,4 @@
-import { View, Text, Pressable, I18nManager } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { BRAND, FONT, WEIGHT, SPACE } from '../../lib/theme';
@@ -11,8 +11,8 @@ interface SectionHeaderProps {
 }
 
 export function SectionHeader({ title, icon: Icon, action, style }: SectionHeaderProps) {
-  const { colors } = useTheme();
-  const ChevronIcon = I18nManager.isRTL ? ChevronLeft : ChevronRight;
+  const { colors, isRTL } = useTheme();
+  const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
 
   return (
     <View

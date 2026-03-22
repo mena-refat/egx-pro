@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, Pressable, I18nManager } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   ArrowLeft, ArrowRight, Trophy, Lock, CheckCircle,
-  TrendingUp, Award, Crown, Sprout,
+  TrendingUp, Award, Crown, Sprout, ChevronLeft, ChevronRight,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -59,6 +59,26 @@ const LEVELS: LevelDef[] = [
 const ALL: AchievementDef[] = LEVELS.flatMap((l) => l.achievements);
 const TOTAL = ALL.length;
 
+/** Where to take the user to complete each achievement (null = no action needed) */
+const ACHIEVEMENT_ROUTES: Record<string, string | null> = {
+  first_login:             null,
+  complete_profile:        '/settings/account',
+  investment_personality:  '/onboarding',
+  first_watchlist:         '/(tabs)/market',
+  first_ai_analysis:       '/ai/analyze',
+  first_portfolio:         '/(tabs)/portfolio',
+  first_goal:              '/goals',
+  use_calculator:          '/calculator',
+  watchlist_5:             '/(tabs)/market',
+  portfolio_diverse:       '/(tabs)/portfolio',
+  ai_analysis_5:           '/ai/analyze',
+  goal_progress_50:        '/goals',
+  referral_15:             '/referral',
+  goal_complete:           '/goals',
+  pro_subscriber:          '/settings/subscription',
+  portfolio_profit:        '/(tabs)/portfolio',
+};
+
 interface BackendAchievement { id: string; completed?: boolean; date?: string | null }
 
 function LevelIconComp({ name, color }: { name: string; color: string }) {
@@ -71,13 +91,13 @@ function LevelIconComp({ name, color }: { name: string; color: string }) {
 
 export default function AchievementsPage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const [unlocked, setUnlocked] = useState<Set<string>>(new Set());
   const [unlockedAt, setUnlockedAt] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
-  const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
+  const ArrowIcon = isRTL ? ArrowRight : ArrowLeft;
 
   // ─── Celebration state ───────────────────────────────────────────
   const [celebrationQueue, setCelebrationQueue] = useState<AchievementDef[]>([]);
@@ -281,17 +301,19 @@ export default function AchievementsPage() {
                     className="border rounded-2xl overflow-hidden"
                   >
                     {level.achievements.map((ach, i) => {
-                      const isUnlocked = unlocked.has(ach.id);
+                      const isUnlocked  = unlocked.has(ach.id);
                       const unlockedDate = unlockedAt[ach.id];
-                      return (
-                        <View
-                          key={ach.id}
-                          style={[
-                            { borderBottomColor: colors.border2 },
-                            i < level.achievements.length - 1 && { borderBottomWidth: 1 },
-                          ]}
-                          className="flex-row items-center gap-3 px-4 py-3.5"
-                        >
+                      const route       = ACHIEVEMENT_ROUTES[ach.id] ?? null;
+                      const GoChevron   = isRTL ? ChevronRight : ChevronLeft;
+                      const canNavigate = !isUnlocked && route !== null;
+
+                      const rowStyle = [
+                        { borderBottomColor: colors.border2 },
+                        i < level.achievements.length - 1 && { borderBottomWidth: 1 },
+                      ] as const;
+
+                      const inner = (
+                        <>
                           {/* Icon */}
                           <View
                             className="w-10 h-10 rounded-xl items-center justify-center shrink-0"
@@ -330,16 +352,43 @@ export default function AchievementsPage() {
                             )}
                           </View>
 
-                          {/* Status */}
+                          {/* Status / Action */}
                           {isUnlocked ? (
                             <View style={{ backgroundColor: level.bg }} className="px-2 py-0.5 rounded-lg">
                               <Text className="text-[10px] font-bold" style={{ color: level.color }}>مكتمل</Text>
+                            </View>
+                          ) : canNavigate ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#3b82f618', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                              <Text style={{ color: '#3b82f6', fontSize: 10, fontWeight: '700' }}>اذهب الآن</Text>
+                              <GoChevron size={10} color="#3b82f6" />
                             </View>
                           ) : (
                             <View style={{ backgroundColor: colors.hover }} className="px-2 py-0.5 rounded-lg">
                               <Text style={{ color: colors.textMuted }} className="text-[10px]">مقفل</Text>
                             </View>
                           )}
+                        </>
+                      );
+
+                      return canNavigate ? (
+                        <Pressable
+                          key={ach.id}
+                          onPress={() => router.push(route as never)}
+                          style={({ pressed }) => [
+                            ...rowStyle,
+                            { backgroundColor: pressed ? colors.hover : 'transparent' },
+                          ]}
+                          className="flex-row items-center gap-3 px-4 py-3.5"
+                        >
+                          {inner}
+                        </Pressable>
+                      ) : (
+                        <View
+                          key={ach.id}
+                          style={rowStyle}
+                          className="flex-row items-center gap-3 px-4 py-3.5"
+                        >
+                          {inner}
                         </View>
                       );
                     })}

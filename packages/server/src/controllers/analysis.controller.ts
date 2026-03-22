@@ -3,6 +3,8 @@ import { AnalysisService } from '../services/analysis/index.ts';
 import { AnalysisRepository } from '../repositories/analysis.repository.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { sendSuccess, sendError } from '../lib/apiResponse.ts';
+import type { AnalysisMode } from '../lib/analysisCache.ts';
+import { isPro, isUltra } from '../lib/plan.ts';
 
 function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -14,6 +16,16 @@ function runNoAuth(fn: (req: Request, res: Response) => Promise<void>) {
   return (req: Request, res: Response, next: NextFunction) => {
     fn(req, res).catch(next);
   };
+}
+
+/** Validate and resolve the requested analysis mode.
+ * Professional mode requires a paid plan (Pro/Ultra). Free users always get beginner. */
+function resolveMode(req: AuthRequest): AnalysisMode {
+  const rawMode = (req.body as Record<string, unknown>)?.mode ?? 'beginner';
+  if (rawMode !== 'professional') return 'beginner';
+  const user = req.user ?? null;
+  const hasPaidPlan = isPro(user) || isUltra(user);
+  return hasPaidPlan ? 'professional' : 'beginner';
 }
 
 export const AnalysisController = {
@@ -34,11 +46,13 @@ export const AnalysisController = {
       return;
     }
     const ticker = req.params.ticker ?? '';
-    const result = await AnalysisService.create(userId, ticker);
+    const mode = resolveMode(req);
+    const result = await AnalysisService.create(userId, ticker, mode);
     sendSuccess(res, {
       analysis: result.analysis,
       id: result.id,
       newUnseenAchievements: result.newUnseenAchievements,
+      mode,
     });
   }),
 
@@ -51,8 +65,9 @@ export const AnalysisController = {
     const { ticker1, ticker2 } = req.body ?? {};
     const t1 = typeof ticker1 === 'string' ? ticker1.trim().toUpperCase() : '';
     const t2 = typeof ticker2 === 'string' ? ticker2.trim().toUpperCase() : '';
-    const result = await AnalysisService.compare(userId, t1, t2);
-    sendSuccess(res, { comparison: result.comparison, id: result.id });
+    const mode = resolveMode(req);
+    const result = await AnalysisService.compare(userId, t1, t2, mode);
+    sendSuccess(res, { comparison: result.comparison, id: result.id, mode });
   }),
 
   recommendations: run(async (req, res) => {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, Pressable, ScrollView,
-  ActivityIndicator, I18nManager,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react-native';
@@ -22,9 +22,26 @@ interface RecommendedStock {
   risks?: string[];
 }
 
+interface GoalProgress {
+  goal?: string;
+  currentAmount?: number;
+  targetAmount?: number;
+  gap?: number;
+  suggestion?: string;
+}
+
+interface WatchlistOpinion {
+  ticker?: string;
+  opinion?: string;
+  reason?: string;
+}
+
 interface RecommendationsResult {
   recommendations?: RecommendedStock[];
   summary?: string;
+  personalizedInsight?: string;
+  goalProgress?: GoalProgress[];
+  watchlistOpinion?: WatchlistOpinion[];
   disclaimer?: string;
 }
 
@@ -102,7 +119,7 @@ function RecommendationCard({ stock, rank }: { stock: RecommendedStock; rank: nu
 
 export default function RecommendationsPage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RecommendationsResult | null>(null);
@@ -147,7 +164,7 @@ export default function RecommendationsPage() {
             tw('w-9 h-9 rounded-xl border items-center justify-center'),
           ]}
         >
-          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
+          {isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
         <View style={tw('w-8 h-8 rounded-xl bg-amber-500/15 items-center justify-center')}>
           <Sparkles size={16} color="#f59e0b" />
@@ -204,6 +221,70 @@ export default function RecommendationsPage() {
                 <Text style={[{ color: colors.text }, tw('text-sm leading-6')]}>{result.summary}</Text>
               </View>
             ) : null}
+
+            {result.personalizedInsight && (
+              <View style={tw('bg-brand/10 border border-brand/25 rounded-2xl px-4 py-3 flex-row gap-2')}>
+                <Text style={tw('text-base')}>🎯</Text>
+                <Text style={[{ color: colors.text }, tw('flex-1 text-sm leading-5')]}>{result.personalizedInsight}</Text>
+              </View>
+            )}
+
+            {result.goalProgress && result.goalProgress.length > 0 && (
+              <View
+                style={[
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  tw('border rounded-2xl px-4 py-3 gap-3'),
+                ]}
+              >
+                <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>🎯 أهدافك المالية</Text>
+                {result.goalProgress.map((g, i) => {
+                  const pct = g.targetAmount && g.targetAmount > 0
+                    ? Math.min(100, Math.round(((g.currentAmount ?? 0) / g.targetAmount) * 100))
+                    : 0;
+                  return (
+                    <View key={i} style={tw('gap-1.5')}>
+                      <View style={tw('flex-row justify-between')}>
+                        <Text style={[{ color: colors.text }, tw('text-xs font-bold flex-1')]}>{g.goal}</Text>
+                        {g.gap != null && (
+                          <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>متبقي: {g.gap.toLocaleString()} ج</Text>
+                        )}
+                      </View>
+                      <View style={[{ backgroundColor: colors.border }, tw('h-1.5 rounded-full overflow-hidden')]}>
+                        <View style={[{ width: `${pct}%`, backgroundColor: '#8b5cf6' }, tw('h-full rounded-full')]} />
+                      </View>
+                      {g.suggestion && (
+                        <Text style={[{ color: colors.textSub }, tw('text-xs leading-4')]}>{g.suggestion}</Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {result.watchlistOpinion && result.watchlistOpinion.length > 0 && (
+              <View
+                style={[
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  tw('border rounded-2xl px-4 py-3 gap-2'),
+                ]}
+              >
+                <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>👁 رأي AI في قائمة مراقبتك</Text>
+                {result.watchlistOpinion.map((w, i) => {
+                  const isBuy = w.opinion?.includes('ادخل');
+                  const isSell = w.opinion?.includes('تجنّب');
+                  const opColor = isBuy ? '#4ade80' : isSell ? '#f87171' : '#fbbf24';
+                  return (
+                    <View key={i} style={[{ borderTopColor: colors.border }, tw('pt-2 flex-row items-start gap-3'), i === 0 ? { borderTopWidth: 0, paddingTop: 0 } : { borderTopWidth: 1 }]}>
+                      <Text style={[{ color: colors.text }, tw('text-xs font-bold w-12')]}>{w.ticker}</Text>
+                      <View style={[tw('px-2 py-0.5 rounded-md'), { backgroundColor: `${opColor}18` }]}>
+                        <Text style={[{ color: opColor }, tw('text-xs font-bold')]}>{w.opinion}</Text>
+                      </View>
+                      <Text style={[{ color: colors.textSub }, tw('flex-1 text-xs leading-4')]}>{w.reason}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
 
             {recs.length > 0 ? (
               <View style={tw('gap-3')}>

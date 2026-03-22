@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { View, Text, Pressable, I18nManager } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,10 +29,9 @@ export function ScreenHeader({
   transparent  = false,
   centerTitle  = true,
 }: ScreenHeaderProps) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const isRTL  = I18nManager.isRTL;
 
   // In RTL (Arabic), back = ChevronRight; in LTR (English), back = ChevronLeft
   const BackIcon = isRTL ? ChevronRight : ChevronLeft;

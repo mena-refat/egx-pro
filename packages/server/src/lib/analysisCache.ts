@@ -2,30 +2,36 @@ import { getCache, setCache } from './redis.ts';
 import { logger } from './logger.ts';
 import { getAnalysisSessionDateString } from './cairo-date.ts';
 
+export type AnalysisMode = 'beginner' | 'professional';
+
 function getCacheTTL(): number {
   return 48 * 60 * 60;
 }
 
-function singleKey(ticker: string): string {
+function singleKey(ticker: string, mode: AnalysisMode = 'beginner'): string {
   const sessionDate = getAnalysisSessionDateString();
-  return `ai:single:${ticker.toUpperCase()}:${sessionDate}`;
+  const modeTag = mode === 'professional' ? ':pro' : '';
+  return `ai:single:${ticker.toUpperCase()}:${sessionDate}${modeTag}`;
 }
 
-function compareKey(t1: string, t2: string): string {
+function compareKey(t1: string, t2: string, mode: AnalysisMode = 'beginner'): string {
   const sessionDate = getAnalysisSessionDateString();
   const sorted = [t1, t2].sort().join('_');
-  return `ai:compare:${sorted}:${sessionDate}`;
+  const modeTag = mode === 'professional' ? ':pro' : '';
+  return `ai:compare:${sorted}:${sessionDate}${modeTag}`;
 }
 
-function personalKey(userId: number, ticker: string): string {
+function personalKey(userId: number, ticker: string, mode: AnalysisMode = 'beginner'): string {
   const sessionDate = getAnalysisSessionDateString();
-  return `ai:personal:${userId}:${ticker.toUpperCase()}:${sessionDate}`;
+  const modeTag = mode === 'professional' ? ':pro' : '';
+  return `ai:personal:${userId}:${ticker.toUpperCase()}:${sessionDate}${modeTag}`;
 }
 
-function personalCompareKey(userId: number, t1: string, t2: string): string {
+function personalCompareKey(userId: number, t1: string, t2: string, mode: AnalysisMode = 'beginner'): string {
   const sessionDate = getAnalysisSessionDateString();
   const sorted = [t1, t2].sort().join('_');
-  return `ai:personal:${userId}:compare:${sorted}:${sessionDate}`;
+  const modeTag = mode === 'professional' ? ':pro' : '';
+  return `ai:personal:${userId}:compare:${sorted}:${sessionDate}${modeTag}`;
 }
 
 export async function getCachedAnalysis<T>(key: string): Promise<T | null> {

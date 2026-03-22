@@ -56,7 +56,7 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
   const step = usePredictionsStore((s) => s.newPredictionStep);
   const draft = usePredictionsStore((s) => s.newPredictionDraft);
   const { setNewPredictionStep, updateDraft } = usePredictionsStore();
-  const { createPrediction, fetchMy, fetchLimits } = usePredictionsApi();
+  const { createPrediction, fetchMy, fetchFeed, fetchLimits } = usePredictionsApi();
   const [stockSearch, setStockSearch] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -155,7 +155,8 @@ export function NewPredictionSheet({ onClose }: { onClose: () => void }) {
         });
       }
       onClose();
-      fetchMy(1);
+      fetchMy(1, 'ACTIVE');
+      fetchFeed(1);
       fetchLimits();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t('common.error'));

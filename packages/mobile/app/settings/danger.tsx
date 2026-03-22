@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, Pressable, ScrollView, TextInput,
-  ActivityIndicator, Alert, I18nManager, Modal,
+  ActivityIndicator, Alert, Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -19,7 +19,7 @@ const DANGER_BG  = '#ef444412';
 
 export default function DangerZonePage() {
   const router  = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const { logout } = useAuthStore();
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -29,7 +29,7 @@ export default function DangerZonePage() {
   const [deleteError, setDeleteError]         = useState<string | null>(null);
   const [showSuccess, setShowSuccess]         = useState(false);
 
-  const BackIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
+  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
   const CONFIRM_KEYWORD = 'حذف';
 
   const handleDeleteAccount = async () => {

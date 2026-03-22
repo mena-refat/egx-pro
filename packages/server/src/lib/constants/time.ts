@@ -12,5 +12,7 @@ export const ANALYSIS_DATA_GATHER_TIMEOUT_MS = 25_000;
 
 /** حد أقصى لتوكينز المخرجات — توفير تكلفة مع الحفاظ على جودة التحليل */
 export const ANALYSIS_MAX_TOKENS_SINGLE = 2_800;
-export const ANALYSIS_MAX_TOKENS_COMPARE = 2_600;
-export const ANALYSIS_MAX_TOKENS_RECOMMENDATIONS = 2_600;
+export const ANALYSIS_MAX_TOKENS_SINGLE_PRO = 3_400;
+export const ANALYSIS_MAX_TOKENS_COMPARE = 3_000;
+export const ANALYSIS_MAX_TOKENS_COMPARE_PRO = 3_800;
+export const ANALYSIS_MAX_TOKENS_RECOMMENDATIONS = 2_800;

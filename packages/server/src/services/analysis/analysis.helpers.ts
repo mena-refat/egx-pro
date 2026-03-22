@@ -4,7 +4,13 @@ import { marketDataService } from '../market-data/market-data.service.ts';
 import { logger } from '../../lib/logger.ts';
 import { getLimit, type UserForPlan } from '../../lib/plan.ts';
 import { AppError } from '../../lib/errors.ts';
-import { EXPLAIN_SINGLE_SYSTEM, EXPLAIN_COMPARE_SYSTEM, RECOMMENDATIONS_SYSTEM } from '../../lib/analysisPrompts.ts';
+import {
+  EXPLAIN_SINGLE_SYSTEM,
+  EXPLAIN_SINGLE_PRO_SYSTEM,
+  EXPLAIN_COMPARE_SYSTEM,
+  EXPLAIN_COMPARE_PRO_SYSTEM,
+  RECOMMENDATIONS_SYSTEM,
+} from '../../lib/analysisPrompts.ts';
 import { computeScore, DECISION_LABELS_AR } from '../../lib/scoringEngine.ts';
 import { analysisEngine } from '../ai/index.ts';
 import { withRetry } from '../../lib/retry.ts';
@@ -13,7 +19,9 @@ import { getMarketContext } from '../../lib/marketContext.ts';
 import {
   ANALYSIS_DATA_GATHER_TIMEOUT_MS,
   ANALYSIS_MAX_TOKENS_SINGLE,
+  ANALYSIS_MAX_TOKENS_SINGLE_PRO,
   ANALYSIS_MAX_TOKENS_COMPARE,
+  ANALYSIS_MAX_TOKENS_COMPARE_PRO,
   ANALYSIS_MAX_TOKENS_RECOMMENDATIONS,
 } from '../../lib/constants.ts';
 import { prisma } from '../../lib/prisma.ts';
@@ -297,7 +305,13 @@ export async function getPriceForAnalysis(ticker: string): Promise<{ price: numb
   };
 }
 
-export { ANALYSIS_DATA_GATHER_TIMEOUT_MS, ANALYSIS_MAX_TOKENS_SINGLE, ANALYSIS_MAX_TOKENS_COMPARE, ANALYSIS_MAX_TOKENS_RECOMMENDATIONS };
-export { EXPLAIN_SINGLE_SYSTEM, EXPLAIN_COMPARE_SYSTEM, RECOMMENDATIONS_SYSTEM };
+export {
+  ANALYSIS_DATA_GATHER_TIMEOUT_MS,
+  ANALYSIS_MAX_TOKENS_SINGLE, ANALYSIS_MAX_TOKENS_SINGLE_PRO,
+  ANALYSIS_MAX_TOKENS_COMPARE, ANALYSIS_MAX_TOKENS_COMPARE_PRO,
+  ANALYSIS_MAX_TOKENS_RECOMMENDATIONS,
+};
+export { EXPLAIN_SINGLE_SYSTEM, EXPLAIN_SINGLE_PRO_SYSTEM, EXPLAIN_COMPARE_SYSTEM, EXPLAIN_COMPARE_PRO_SYSTEM, RECOMMENDATIONS_SYSTEM };
+export type { AnalysisMode } from '../../lib/analysisCache.ts';
 export { DECISION_LABELS_AR };
 export { getStockHistory, getFinancials, getStockNews, getMarketContext, calculateIndicators, computeScore };

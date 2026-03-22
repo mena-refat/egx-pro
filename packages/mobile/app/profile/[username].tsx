@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, Pressable, ScrollView,
-  ActivityIndicator, I18nManager,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -74,7 +74,7 @@ function Divider() {
 export default function SocialProfilePage() {
   const { username } = useLocalSearchParams<{ username: string }>();
   const router   = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const { user: authUser } = useAuthStore();
 
   const [profile, setProfile]           = useState<SocialProfile | null>(null);
@@ -82,7 +82,7 @@ export default function SocialProfilePage() {
   const [error, setError]               = useState<'not_found' | 'error' | null>(null);
   const [followLoading, setFollowLoading] = useState(false);
 
-  const BackIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
+  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
   const isOwnProfile = authUser?.username === username;
 
   useEffect(() => {

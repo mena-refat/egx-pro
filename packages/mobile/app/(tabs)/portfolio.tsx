@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, RefreshControl,
-  Pressable, Alert, I18nManager,
+  Pressable, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Plus, Briefcase, TrendingUp } from 'lucide-react-native';
@@ -48,7 +48,7 @@ function SectionHdr({ title, icon: Icon, action }: { title: string; icon?: React
 // ─── PortfolioPage ───────────────────────────────────────────────
 export default function PortfolioPage() {
   const router   = useRouter();
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, isRTL } = useTheme();
   const { holdings, summary, loading, refreshing, refresh } = usePortfolioData();
 
   const holdingTickers  = useMemo(() => holdings.map((h) => h.ticker), [holdings]);
@@ -230,7 +230,7 @@ export default function PortfolioPage() {
                           متوسط {h.avgPrice.toFixed(2)} EGP
                         </Text>
                       </View>
-                      <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end', flexShrink: 0 }}>
+                      <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', flexShrink: 0 }}>
                         <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>
                           {n(h.curValue)} EGP
                         </Text>
@@ -277,7 +277,7 @@ export default function PortfolioPage() {
                           <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{h.ticker}</Text>
                           <Text style={{ color: colors.textMuted, fontSize: 11 }}>{weight.toFixed(1)}%</Text>
                         </View>
-                        <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end' }}>
+                        <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end' }}>
                           <Text style={{ fontSize: FONT.xs, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'], color: barColor }}>
                             {h.gainPct >= 0 ? '+' : ''}{h.gainPct.toFixed(2)}%
                           </Text>

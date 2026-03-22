@@ -1,4 +1,4 @@
-import { Pressable, View, Text, I18nManager } from 'react-native';
+import { Pressable, View, Text } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../hooks/useTheme';
 import { BRAND, BRAND_BG_STRONG, RED, RADIUS } from '../../lib/theme';
@@ -31,9 +31,8 @@ export function IconButton({
   color,
   disabled,
 }: IconButtonProps) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const s = SIZE_MAP[size];
-  const isRTL = I18nManager.isRTL;
 
   const bg = variant === 'brand' ? BRAND_BG_STRONG
            : variant === 'card'  ? colors.card

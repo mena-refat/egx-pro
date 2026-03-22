@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, I18nManager } from 'react-native';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   Brain, GitCompare, Sparkles, Zap, Calculator,
@@ -97,11 +97,11 @@ const CALCULATOR_CARD = {
 
 export default function AnalyticsPage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const user   = useAuthStore((s) => s.user);
   const used   = user?.aiAnalysisUsedThisMonth ?? 0;
   const { total, winRate, recent, loading: predsLoading } = usePredictionsPreview();
-  const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
+  const ChevronIcon = isRTL ? ChevronRight : ChevronLeft;
 
   return (
     <ScreenWrapper padded={false}>

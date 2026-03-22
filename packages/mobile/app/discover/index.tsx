@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, Pressable, ScrollView, TextInput,
-  ActivityIndicator, I18nManager,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -304,7 +304,7 @@ function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number
 
 export default function DiscoverPage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const [activeTab, setActiveTab] = useState<DiscoverTab>('community');
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -319,7 +319,7 @@ export default function DiscoverPage() {
   const [requests, setRequests]       = useState<UserItem[]>([]);
   const [loading, setLoading]         = useState(true);
 
-  const BackIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
+  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
   const loadCommunity = useCallback(async () => {
     setLoading(true);
@@ -457,7 +457,7 @@ export default function DiscoverPage() {
             onChangeText={handleSearch}
             placeholder="ابحث عن مستخدم بالاسم..."
             placeholderTextColor={colors.textMuted}
-            style={{ flex: 1, color: colors.text, fontSize: FONT.sm, textAlign: I18nManager.isRTL ? 'right' : 'left' }}
+            style={{ flex: 1, color: colors.text, fontSize: FONT.sm, textAlign: isRTL ? 'right' : 'left' }}
           />
           {searching && <ActivityIndicator size="small" color={BRAND} />}
         </View>

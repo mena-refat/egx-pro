@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, Pressable, ScrollView, TextInput,
-  ActivityIndicator, Modal, I18nManager,
+  ActivityIndicator, Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -117,7 +117,7 @@ function PredictionCard({ pred }: { pred: Prediction }) {
 
 export default function PredictionsPage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const [tab, setTab] = useState<'my' | 'feed'>('my');
   const [myPreds, setMyPreds] = useState<Prediction[]>([]);
   const [feedPreds, setFeedPreds] = useState<Prediction[]>([]);
@@ -207,7 +207,7 @@ export default function PredictionsPage() {
               tw('w-9 h-9 rounded-xl border items-center justify-center'),
             ]}
           >
-            {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
+            {isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
           </Pressable>
           <View style={tw('w-8 h-8 rounded-xl bg-blue-500/15 items-center justify-center')}>
             <TrendingUp size={16} color="#3b82f6" />

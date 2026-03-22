@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, FlatList, RefreshControl,
-  Pressable, I18nManager, useWindowDimensions,
+  Pressable, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Bell, Briefcase, Star, BarChart2, Newspaper, TrendingUp, TrendingDown } from 'lucide-react-native';
@@ -66,10 +66,9 @@ function WatchlistCard({ stock, live, onPress }: { stock: Stock; live?: { price:
 
 // ─── MoverChip ──────────────────────────────────────────────────
 function MoverChip({ s, onPress }: { s: Stock; onPress: () => void }) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const isUp = s.changePercent >= 0;
   const clr  = isUp ? GREEN : RED;
-  const isRTL = I18nManager.isRTL;
   return (
     <Pressable
       onPress={onPress}
@@ -95,8 +94,7 @@ function MoverChip({ s, onPress }: { s: Stock; onPress: () => void }) {
 function SectionHdr({
   title, icon: Icon, action,
 }: { title: string; icon?: React.ComponentType<{ size: number; color: string }>; action?: { label: string; onPress: () => void } }) {
-  const { colors } = useTheme();
-  const isRTL = I18nManager.isRTL;
+  const { colors, isRTL } = useTheme();
   return (
     <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.sm }}>
       <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm }}>
@@ -119,10 +117,9 @@ function SectionHdr({
 // ─── HomePage ────────────────────────────────────────────────────
 export default function HomePage() {
   const router      = useRouter();
-  const { colors, isDark }  = useTheme();
+  const { colors, isDark, isRTL } = useTheme();
   const { width }   = useWindowDimensions();
   const isCompact   = width < 380;
-  const isRTL       = I18nManager.isRTL;
   const user        = useAuthStore((s) => s.user);
   const unreadCount = useUnreadCount();
 
@@ -241,7 +238,7 @@ export default function HomePage() {
                 <View style={{
                   position: 'absolute',
                   top: -4,
-                  ...(I18nManager.isRTL ? { left: -4 } : { right: -4 }),
+                  ...(isRTL ? { left: -4 } : { right: -4 }),
                   width: 16, height: 16, borderRadius: 8,
                   backgroundColor: BRAND, alignItems: 'center', justifyContent: 'center',
                 }}>
@@ -357,7 +354,7 @@ export default function HomePage() {
                         {getStockName(h.ticker, 'ar')} · {h.shares} سهم
                       </Text>
                     </View>
-                    <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end', marginStart: SPACE.sm, flexShrink: 0 }}>
+                    <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', marginStart: SPACE.sm, flexShrink: 0 }}>
                       <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>
                         {n(h.currentValue)} EGP
                       </Text>

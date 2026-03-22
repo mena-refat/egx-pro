@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, ScrollView, Pressable, Linking, Alert,
-  I18nManager, Platform, ActivityIndicator, TextInput,
+  Platform, ActivityIndicator, TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Crown, Zap, Check, Tag, X, ChevronDown, ChevronUp } from 'lucide-react-native';
@@ -90,7 +90,7 @@ interface DiscountResult {
 export default function SubscriptionPage() {
   const router = useRouter();
   const { user, updateUser } = useAuthStore();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const [billing, setBilling] = useState<BillingPeriod>('monthly');
   const { connected, purchasing, purchasePlan } = useGooglePlayBilling();
 
@@ -254,7 +254,7 @@ export default function SubscriptionPage() {
           style={{ backgroundColor: colors.hover, borderColor: colors.border }}
           className="w-9 h-9 rounded-xl border items-center justify-center"
         >
-          {I18nManager.isRTL
+          {isRTL
             ? <ArrowRight size={16} color={colors.textMuted} />
             : <ArrowLeft  size={16} color={colors.textMuted} />}
         </Pressable>

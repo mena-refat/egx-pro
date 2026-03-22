@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import {
   View, Text, Pressable, ScrollView, Switch,
-  ActivityIndicator, I18nManager, Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   ArrowLeft, ArrowRight, Globe, Eye, EyeOff,
-  BookOpen, Lock, Unlock,
+  BookOpen, Lock, Unlock, Moon, Sun, Monitor,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
@@ -15,7 +15,8 @@ import apiClient from '../../lib/api/client';
 import i18n from '../../i18n';
 import { BRAND, FONT, WEIGHT, RADIUS, SPACE } from '../../lib/theme';
 
-type LangOption = 'ar' | 'en';
+type LangOption  = 'ar' | 'en';
+type ThemeOption = 'dark' | 'light' | 'system';
 
 function SectionTitle({ title }: { title: string }) {
   const { colors } = useTheme();
@@ -81,13 +82,14 @@ function RowItem({
 
 export default function PreferencesPage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const { user, updateUser } = useAuthStore();
 
   const [saving, setSaving] = useState(false);
-  const BackIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
+  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
-  const currentLang   = (i18n.language?.startsWith('ar') ? 'ar' : 'en') as LangOption;
+  const currentLang   = ((user?.language?.startsWith('ar') ?? true) ? 'ar' : 'en') as LangOption;
+  const currentTheme  = (user?.theme ?? 'system') as ThemeOption;
   const shariaMode    = user?.shariaMode ?? false;
   const isPrivate     = (user as { isPrivate?: boolean })?.isPrivate ?? false;
   const showPortfolio = (user as { showPortfolio?: boolean })?.showPortfolio ?? true;
@@ -117,32 +119,25 @@ export default function PreferencesPage() {
   };
 
   const handleLangChange = async (lang: LangOption) => {
-    const isRTL = lang === 'ar';
-
-    // Update i18n language
     await i18n.changeLanguage(lang);
-
-    // Update RTL — on Android needs app restart, iOS adjusts live
-    if (I18nManager.isRTL !== isRTL) {
-      I18nManager.allowRTL(isRTL);
-      I18nManager.forceRTL(isRTL);
-      Alert.alert(
-        lang === 'ar' ? 'تغيير اللغة' : 'Language Change',
-        lang === 'ar'
-          ? 'سيتم تطبيق التغيير عند إعادة تشغيل التطبيق'
-          : 'Change will take effect after restarting the app',
-        [{ text: lang === 'ar' ? 'حسناً' : 'OK' }],
-      );
-    }
-
-    // Persist to server
     await updateProfile({ language: lang });
   };
 
   const LANG_OPTIONS: { id: LangOption; label: string; nativeLabel: string }[] = [
-    { id: 'ar', label: 'العربية', nativeLabel: 'Arabic' },
+    { id: 'ar', label: 'العربية',    nativeLabel: 'Arabic'  },
     { id: 'en', label: 'الإنجليزية', nativeLabel: 'English' },
   ];
+
+  const THEME_OPTIONS: { id: ThemeOption; label: string; Icon: typeof Moon }[] = [
+    { id: 'dark',   label: 'داكن',   Icon: Moon    },
+    { id: 'system', label: 'تلقائي', Icon: Monitor },
+    { id: 'light',  label: 'فاتح',   Icon: Sun     },
+  ];
+
+  const handleThemeChange = (theme: ThemeOption) => {
+    updateUser({ theme });
+    void apiClient.put('/api/user/profile', { theme }).catch(() => null);
+  };
 
   return (
     <ScreenWrapper padded={false}>
@@ -165,7 +160,7 @@ export default function PreferencesPage() {
         <View style={{ flex: 1 }}>
           <Text style={{ color: colors.text, fontSize: FONT.lg, fontWeight: WEIGHT.bold }}>التفضيلات</Text>
           <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 1 }}>
-            اللغة والخصوصية والوضع الإسلامي
+            المظهر، اللغة، الوضع الإسلامي، الخصوصية
           </Text>
         </View>
         {saving && <ActivityIndicator size="small" color={BRAND} />}
@@ -175,6 +170,35 @@ export default function PreferencesPage() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: SPACE.lg, paddingTop: SPACE.md, paddingBottom: 48 }}
       >
+
+        {/* ─── Theme ─── */}
+        <SectionTitle title="المظهر" />
+        <View style={{
+          flexDirection: 'row', gap: SPACE.sm,
+          backgroundColor: colors.card, borderColor: colors.border,
+          borderWidth: 1, borderRadius: RADIUS.xl, padding: 6,
+          marginBottom: SPACE.sm,
+        }}>
+          {THEME_OPTIONS.map(({ id, label, Icon }) => {
+            const active = currentTheme === id;
+            return (
+              <Pressable
+                key={id}
+                onPress={() => handleThemeChange(id)}
+                style={{
+                  flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  gap: 6, paddingVertical: 11, borderRadius: RADIUS.lg,
+                  backgroundColor: active ? BRAND : 'transparent',
+                }}
+              >
+                <Icon size={13} color={active ? '#fff' : colors.textMuted} />
+                <Text style={{ color: active ? '#fff' : colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
         {/* ─── Language ─── */}
         <SectionTitle title="اللغة" />

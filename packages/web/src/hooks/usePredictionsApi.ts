@@ -172,9 +172,11 @@ export function usePredictionsApi() {
         if (!res.ok) throw new Error('Like failed');
         const json = await res.json();
         const liked = json?.data?.liked ?? nextLiked;
-        const likeCount = currentLikeCount + (liked ? 1 : -1);
-        if (source === 'feed') setLikeOnFeed(predictionId, liked, Math.max(0, likeCount));
-        else setLikeOnMy(predictionId, liked, Math.max(0, likeCount));
+        // If server confirmed our expected toggle, keep the optimistic count.
+        // If it returned a different state (de-synced client), revert to original count.
+        const finalCount = liked === nextLiked ? nextCount : currentLikeCount;
+        if (source === 'feed') setLikeOnFeed(predictionId, liked, Math.max(0, finalCount));
+        else setLikeOnMy(predictionId, liked, Math.max(0, finalCount));
         return liked;
       } catch {
         if (source === 'feed') setLikeOnFeed(predictionId, currentlyLiked, currentLikeCount);

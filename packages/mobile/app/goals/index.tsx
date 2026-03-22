@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, Pressable, ScrollView, TextInput,
-  ActivityIndicator, Alert, Modal, I18nManager,
+  ActivityIndicator, Alert, Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -63,12 +63,11 @@ function GoalCard({ goal, onDelete, onAddAmount, onComplete, onAction }: {
   onComplete: () => void;
   onAction: () => void;
 }) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const cat    = CATEGORIES[goal.category] ?? CATEGORIES.other;
   const action = GOAL_ACTION[goal.category]  ?? GOAL_ACTION.other;
   const CatIcon = cat.icon;
   const pct = goal.targetAmount > 0 ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) : 0;
-  const isRTL = I18nManager.isRTL;
   const ChevronIcon = isRTL ? ArrowRight : ArrowLeft;
 
   return (
@@ -174,7 +173,7 @@ function GoalCard({ goal, onDelete, onAddAmount, onComplete, onAction }: {
 
 export default function GoalsPage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -300,7 +299,7 @@ export default function GoalsPage() {
             style={{ backgroundColor: colors.hover, borderColor: colors.border }}
             className="w-9 h-9 rounded-xl border items-center justify-center"
           >
-            {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
+            {isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
           </Pressable>
           <View className="w-8 h-8 rounded-xl bg-emerald-500/15 items-center justify-center">
             <Target size={16} color="#4ade80" />

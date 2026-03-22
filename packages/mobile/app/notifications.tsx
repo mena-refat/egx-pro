@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, Pressable, RefreshControl,
-  ActivityIndicator, I18nManager, Alert,
+  ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -57,7 +57,7 @@ function iconBg(type: string): string {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const [items, setItems] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -135,8 +135,7 @@ export default function NotificationsPage() {
     }
   }, [router]);
 
-  const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
-  const isRTL = I18nManager.isRTL;
+  const ArrowIcon = isRTL ? ArrowRight : ArrowLeft;
 
   return (
     <ScreenWrapper padded={false}>

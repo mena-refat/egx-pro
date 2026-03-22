@@ -3,6 +3,7 @@ import { UserRepository } from '../../repositories/user.repository.ts';
 import { AnalysisRepository } from '../../repositories/analysis.repository.ts';
 import { AppError } from '../../lib/errors.ts';
 import { marketDataService } from '../market-data/market-data.service.ts';
+import { prisma } from '../../lib/prisma.ts';
 import {
   nullFinancials,
   defaultMarketCtx,
@@ -42,7 +43,8 @@ export async function recommendationsAnalysis(
 
   const dataMs = ANALYSIS_DATA_GATHER_TIMEOUT_MS;
   const portfolioFallback: [Array<{ ticker: string; shares: number; avgPrice: number }>, number] = [[], 0];
-  const [portfolioRows, profile, marketCtx] = await Promise.all([
+
+  const [portfolioRows, profile, marketCtx, goals, watchlistItems] = await Promise.all([
     withTimeout(
       PortfolioRepository.findByUser(userId).then(([list, n]) => [
         list.map((h) => ({ ticker: h.ticker, shares: h.shares, avgPrice: h.avgPrice })),
@@ -62,12 +64,32 @@ export async function recommendationsAnalysis(
           shariaMode: true,
           investorProfile: true,
           onboardingCompleted: true,
+          fullName: true,
         },
       }),
       dataMs,
       null
     ),
     withTimeout(getMarketContext().catch(() => defaultMarketCtx), dataMs, defaultMarketCtx),
+    withTimeout(
+      prisma.goal.findMany({
+        where: { userId, status: 'active' },
+        select: { title: true, targetAmount: true, currentAmount: true, deadline: true, category: true },
+        orderBy: { deadline: 'asc' },
+        take: 5,
+      }),
+      dataMs,
+      [] as Array<{ title: string; targetAmount: number; currentAmount: number; deadline: Date | null; category: string }>
+    ),
+    withTimeout(
+      prisma.watchlist.findMany({
+        where: { userId },
+        select: { ticker: true, targetPrice: true, targetDirection: true },
+        take: 10,
+      }),
+      dataMs,
+      [] as Array<{ ticker: string; targetPrice: number | null; targetDirection: string | null }>
+    ),
   ]);
 
   const portfolioList = Array.isArray(portfolioRows[0]) ? portfolioRows[0] : [];
@@ -82,7 +104,10 @@ export async function recommendationsAnalysis(
   const tickers = portfolioList.map((h) => h.ticker);
   const budget = profile?.monthlyBudget ?? 0;
   const shariaMode = profile?.shariaMode ?? false;
+  const investorProfile = profile?.investorProfile;
+  const firstName = (profile?.fullName ?? '').split(' ')[0] || null;
 
+  // ── بناء بلوك المحفظة ──────────────────────────────────────────────────
   let portfolioData = '';
   let portfolioScoresBlock = '';
   const toScore = portfolioList.slice(0, 5);
@@ -120,15 +145,46 @@ export async function recommendationsAnalysis(
     portfolioScoresBlock = `تقييم محسوب آلياً (نفس محرك التحليل — لا تخالفه): ${scoreResults.map((r) => `${r.ticker}=${r.score} (${DECISION_LABELS_AR[r.decision]})`).join('؛ ')}.`;
   }
 
+  // ── بناء بلوك الأهداف ──────────────────────────────────────────────────
+  let goalsBlock = '';
+  if (goals.length > 0) {
+    const lines = goals.map((g) => {
+      const gap = g.targetAmount - g.currentAmount;
+      const deadlineStr = g.deadline ? new Date(g.deadline).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short' }) : 'بدون موعد';
+      const progressPct = g.targetAmount > 0 ? ((g.currentAmount / g.targetAmount) * 100).toFixed(0) : '0';
+      return `- "${g.title}" (${g.category}): المستهدف ${g.targetAmount.toLocaleString()} ج — المحقق ${g.currentAmount.toLocaleString()} ج (${progressPct}%) — المتبقي ${gap.toLocaleString()} ج — الموعد: ${deadlineStr}`;
+    });
+    goalsBlock = `\nالأهداف المالية للمستخدم:\n${lines.join('\n')}`;
+  }
+
+  // ── بناء بلوك قائمة المراقبة ──────────────────────────────────────────
+  let watchlistBlock = '';
+  if (watchlistItems.length > 0) {
+    const lines = watchlistItems.map((w) => {
+      const targetInfo = w.targetPrice != null ? ` (هدف: ${w.targetPrice} ج — اتجاه: ${w.targetDirection ?? 'صعود'})` : '';
+      return `- ${w.ticker}${targetInfo}`;
+    });
+    watchlistBlock = `\nقائمة المراقبة (أسهم يفكر فيها):\n${lines.join('\n')}`;
+  }
+
+  // ── بناء بلوك ملف المستثمر ──────────────────────────────────────────
+  let profileBlock = '';
+  if (investorProfile && typeof investorProfile === 'object') {
+    profileBlock = `\nملف المستثمر من الأونبوردينج: ${JSON.stringify(investorProfile).slice(0, 300)}`;
+  }
+
   const systemWithSharia = shariaMode
-    ? RECOMMENDATIONS_SYSTEM.replace('ردك JSON فقط:', 'المستخدم يريد استثمارات متوافقة مع الشريعة فقط — لا بنوك تقليدية ولا شركات خمور ولا تبغ.\n\nردك JSON فقط:')
+    ? RECOMMENDATIONS_SYSTEM.replace('ردك JSON فقط بدون نص خارجه.', 'المستخدم يريد استثمارات متوافقة مع الشريعة فقط — لا بنوك تقليدية ولا شركات خمور ولا تبغ.\nردك JSON فقط بدون نص خارجه.')
     : RECOMMENDATIONS_SYSTEM;
 
   const shariaNote = shariaMode ? ' شريعة فقط.' : '';
-  const prompt = `ملف: مخاطر ${risk === 'conservative' ? 'محافظ' : risk === 'aggressive' ? 'مغامر' : 'متوازن'} | أفق ${horizon}س | ميزانية ${budget > 0 ? budget.toLocaleString() + ' ج' : '—'}${shariaNote} | قطاعات ${sectors.length ? sectors.slice(0, 3).join(',') : '—'}
-محفظة: ${portfolioData || 'فارغة'}
-${portfolioScoresBlock ? portfolioScoresBlock + '\n' : ''}سوق: ${marketCtx.marketStatus} EGX30: ${marketCtx.egx30?.price ?? '—'} USD/EGP: ${marketCtx.usdEgp ?? '—'}
-توصيات EGX: سعر مستهدف، وقف خسارة، سبب جملة واحدة. عند التوصية على أسهم المحفظة استند إلى التقييم المحسوب أعلاه. JSON فقط.`;
+  const nameNote = firstName ? `المستثمر: ${firstName} | ` : '';
+  const prompt = `${nameNote}مخاطر: ${risk === 'conservative' ? 'محافظ' : risk === 'aggressive' ? 'مغامر' : 'متوازن'} | أفق: ${horizon} سنوات | ميزانية: ${budget > 0 ? budget.toLocaleString() + ' ج/شهر' : '—'}${shariaNote} | قطاعات اهتمام: ${sectors.length ? sectors.slice(0, 5).join(', ') : '—'}
+محفظة:
+${portfolioData || 'فارغة'}
+${portfolioScoresBlock ? portfolioScoresBlock + '\n' : ''}${goalsBlock}${watchlistBlock}${profileBlock}
+سوق: ${marketCtx.marketStatus} | EGX30: ${marketCtx.egx30?.price ?? '—'} | USD/EGP: ${marketCtx.usdEgp ?? '—'}
+قدّم توصيات شخصية مخصصة تماماً لهذا المستخدم. انظر قائمة المراقبة وقيّم كل سهم فيها. انظر الأهداف واحسب كم يحتاج. JSON فقط.`;
 
   let raw: string;
   try {

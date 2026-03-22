@@ -16,6 +16,17 @@ const TICKER_REFRESH_MS = 30 * 60 * 1000;
 const NEWS_RETENTION_DAYS = 14;
 const DEFAULT_LIMIT = 20;
 const ANALYSIS_LIMIT = 5;
+/** Max general (market-wide) news articles stored per calendar day (Cairo time) */
+const DAILY_MARKET_NEWS_LIMIT = 30;
+
+/** Start of the current calendar day in Africa/Cairo time (UTC+2, no DST). */
+function cairoStartOfDay(): Date {
+  const offsetMs = 2 * 60 * 60 * 1000; // UTC+2
+  const cairoMs = Date.now() + offsetMs;
+  const midnight = new Date(cairoMs);
+  midnight.setUTCHours(0, 0, 0, 0);
+  return new Date(midnight.getTime() - offsetMs);
+}
 
 export type NewsArticle = {
   title: string;
@@ -375,7 +386,41 @@ export const NewsService = {
     if (egxItems.status === 'rejected') {
       logger.warn('EGX disclosures sync failed', { error: egxItems.reason instanceof Error ? egxItems.reason.message : 'UNKNOWN_ERROR' });
     }
-    const summarized = await summarizeForIngest(merged);
+
+    // ── Split: direct company mentions vs pure market/economy news ────────────
+    // Any article that resolves to at least one EGX ticker is company-specific
+    // (no daily limit). Pure market/economy articles are capped at 30/day.
+    const companyArticles: IngestedNews[] = [];
+    const marketArticles: IngestedNews[] = [];
+    for (const item of merged) {
+      if (item.tickers.length > 0) {
+        companyArticles.push({ ...item, isMarketWide: false });
+      } else {
+        marketArticles.push({ ...item, isMarketWide: true });
+      }
+    }
+
+    // ── Apply daily cap on market-wide articles ───────────────────────────────
+    const dayStart = cairoStartOfDay();
+    const alreadyToday = await NewsRepository.countMarketWideSince(dayStart);
+    const remaining = Math.max(0, DAILY_MARKET_NEWS_LIMIT - alreadyToday);
+
+    // Keep the most recently published ones within the remaining quota
+    const topMarketArticles = marketArticles
+      .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
+      .slice(0, remaining);
+
+    if (marketArticles.length > remaining) {
+      logger.info('News market cap applied', {
+        fetched: marketArticles.length,
+        alreadyToday,
+        persisting: topMarketArticles.length,
+        limit: DAILY_MARKET_NEWS_LIMIT,
+      });
+    }
+
+    const toIngest = [...companyArticles, ...topMarketArticles];
+    const summarized = await summarizeForIngest(toIngest);
     return persist(summarized);
   },
 

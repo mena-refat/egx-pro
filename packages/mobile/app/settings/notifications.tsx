@@ -6,7 +6,6 @@ import {
   Pressable,
   Switch,
   ActivityIndicator,
-  I18nManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Bell } from 'lucide-react-native';
@@ -29,7 +28,7 @@ type NotifKey = (typeof NOTIF_KEYS)[number]['key'];
 export default function NotificationsPage() {
   const router = useRouter();
   const { user, updateUser } = useAuthStore();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const [saving, setSaving] = useState<NotifKey | null>(null);
 
   const toggle = async (key: NotifKey) => {
@@ -73,7 +72,7 @@ export default function NotificationsPage() {
             justifyContent: 'center',
           }}
         >
-          {I18nManager.isRTL
+          {isRTL
             ? <ArrowRight size={16} color={colors.textSub} />
             : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>

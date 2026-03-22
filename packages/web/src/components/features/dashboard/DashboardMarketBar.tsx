@@ -14,7 +14,8 @@ function formatNum(n: number, locale: string): string {
 }
 
 export function DashboardMarketBar({ egx30, locale }: Props) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
+  const isAr = i18n.language?.startsWith('ar');
   const [timeParts, setTimeParts] = useState(() => formatCairoTimeEn());
   const [open, setOpen] = useState(() => isEgyptMarketOpen());
   const [colonOn, setColonOn] = useState(true);
@@ -45,7 +46,7 @@ export function DashboardMarketBar({ egx30, locale }: Props) {
   return (
     <div
       className="sticky top-0 z-10 flex flex-wrap items-center justify-center gap-x-16 gap-y-2 px-10 py-3.5 text-sm text-white/60 bg-white/5 border border-white/10 rounded-2xl mx-3 mt-2"
-      dir="rtl"
+      dir={isAr ? 'rtl' : 'ltr'}
     >
       <span className="shrink-0 flex items-center gap-2">
         <span>{t('dashboard.marketLabel')}</span>
@@ -93,7 +94,7 @@ export function DashboardMarketBar({ egx30, locale }: Props) {
             :
           </span>
           {timeParts.minute}
-          <span className="ml-0.5 text-white/70">{timeParts.ampm}</span>
+          <span className="ms-0.5 text-white/70">{timeParts.ampm}</span>
         </span>
       </span>
     </div>

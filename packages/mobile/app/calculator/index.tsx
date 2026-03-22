@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import {
-  View, Text, TextInput, Pressable, ScrollView, I18nManager,
+  View, Text, TextInput, Pressable, ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Calculator, Wallet, TrendingUp, Crown, Trophy } from 'lucide-react-native';
@@ -68,7 +68,7 @@ function NumInput({
 
 export default function CalculatorPage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
 
   const [monthly,  setMonthly ] = useState('5000');
   const [initial,  setInitial ] = useState('0');
@@ -105,7 +105,7 @@ export default function CalculatorPage() {
             tw('w-9 h-9 rounded-xl border items-center justify-center'),
           ]}
         >
-          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
+          {isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
         <View style={tw('w-8 h-8 rounded-xl bg-emerald-500/15 items-center justify-center')}>
           <Calculator size={16} color="#10b981" />

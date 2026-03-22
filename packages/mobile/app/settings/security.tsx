@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ScrollView, I18nManager } from 'react-native';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Fingerprint, Shield, ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
@@ -7,7 +7,7 @@ import { BRAND } from '../../lib/theme';
 
 export default function SecurityPage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
 
   return (
     <ScreenWrapper padded={false}>
@@ -36,7 +36,7 @@ export default function SecurityPage() {
             justifyContent: 'center',
           }}
         >
-          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
+          {isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
         <View
           style={{
@@ -90,7 +90,7 @@ export default function SecurityPage() {
                     ادخل بسرعة عبر البصمة أو رمز 6 أرقام
                   </Text>
                 </View>
-                {I18nManager.isRTL ? <ChevronLeft size={14} color={colors.textMuted} /> : <ChevronRight size={14} color={colors.textMuted} />}
+                {isRTL ? <ChevronLeft size={14} color={colors.textMuted} /> : <ChevronRight size={14} color={colors.textMuted} />}
               </View>
             </Pressable>
           </View>

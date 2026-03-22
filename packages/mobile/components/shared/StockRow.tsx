@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, I18nManager } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { TrendingUp, TrendingDown } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { getStockName } from '../../lib/egxStocks';
@@ -16,7 +16,7 @@ interface StockRowProps {
 }
 
 const StockRow = React.memo(function StockRow({ stock, onPress, livePrice, last }: StockRowProps) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
 
   const price         = livePrice?.price         ?? stock.price         ?? 0;
   const changePercent = livePrice?.changePercent  ?? stock.changePercent ?? 0;
@@ -67,7 +67,7 @@ const StockRow = React.memo(function StockRow({ stock, onPress, livePrice, last 
       </View>
 
       {/* Price + change */}
-      <View style={{ alignItems: I18nManager.isRTL ? 'flex-start' : 'flex-end', flexShrink: 0, minWidth: 76 }}>
+      <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', flexShrink: 0, minWidth: 76 }}>
         <Text style={{
           color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold,
           fontVariant: ['tabular-nums'],

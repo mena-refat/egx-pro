@@ -129,7 +129,9 @@
       "Bash(grep -r \"export.*Blocker\\\\|type Blocker\" node_modules/react-router/dist/*.d.ts)",
       "Bash(find packages/web/node_modules/react-router* -name *.d.ts)",
       "Bash(find node_modules/react-router -name *.d.ts -o -name *.d.mts)",
-      "Bash(find node_modules/react-router -name *.d.mts)"
+      "Bash(find node_modules/react-router -name *.d.mts)",
+      "Bash(find /c/Users/menar/Desktop/egx-pro -type f \\\\\\(-name *.json -o -name *.ts \\\\\\) -path */i18n/* -o -path */locales/*)",
+      "Bash(find /c/Users/menar/Desktop/egx-pro/packages/web/src -name *scoringConstants* -o -name *scoring*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\menar\\Desktop\\src\\lib\\lib",

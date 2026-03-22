@@ -1,4 +1,4 @@
-import { View, Text, Pressable, I18nManager } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { ChevronLeft, ChevronRight, Inbox, MessageSquare, Star } from 'lucide-react-native';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { useTheme } from '../../../hooks/useTheme';
@@ -19,8 +19,8 @@ export function SupportTicketList({
   onSelectTicket: (ticket: SupportTicket) => void;
   onCreateTicket: () => void;
 }) {
-  const { colors } = useTheme();
-  const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
+  const { colors, isRTL } = useTheme();
+  const ChevronIcon = isRTL ? ChevronRight : ChevronLeft;
 
   if (loading) {
     return (

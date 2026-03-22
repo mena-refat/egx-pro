@@ -12,7 +12,6 @@ import { useAuthStore } from '../store/authStore';
 import { useTheme } from '../hooks/useTheme';
 import { ErrorBoundary } from '../components/layout/ErrorBoundary';
 import { ToastProvider } from '../components/ui/Toast';
-import { I18nManager } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -40,15 +39,13 @@ export default function RootLayout() {
     });
   }, [checkAuth]);
 
-  // Sync RTL with current language
+  // Sync i18n language with user preference on load
+  const userLanguage = useAuthStore((s) => s.user?.language);
   useEffect(() => {
-    const isRTL = i18n.language?.startsWith('ar');
-    if (I18nManager.isRTL !== isRTL) {
-      I18nManager.allowRTL(isRTL);
-      I18nManager.forceRTL(isRTL);
-      // ملاحظة: لتطبيق التغيير بالكامل قد تحتاج لإعادة تشغيل التطبيق يدوياً
+    if (userLanguage && i18n.language !== userLanguage) {
+      void i18n.changeLanguage(userLanguage);
     }
-  }, []);
+  }, [userLanguage]);
 
   useEffect(() => {
     if (isAuthenticated && !isExpoGo) {

@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView,
-  ActivityIndicator, I18nManager,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -16,6 +16,7 @@ import { AnalysisLoader } from '../../components/shared/AnalysisLoader';
 import { EGX_STOCKS, getStockInfo } from '../../lib/egxStocks';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
+import { useAuthStore } from '../../store/authStore';
 import { tw } from '../../lib/tw';
 
 // ─────────────────────── types ───────────────────────
@@ -87,6 +88,15 @@ interface AnalysisResult {
   recommendation?: string;
   suitability?: string;
   disclaimer?: string;
+  mode?: string;
+  proAnalysis?: {
+    wavePosition?: string;
+    fibonacciKey?: string;
+    volumeProfile?: string;
+    stopLossMethod?: string;
+    fairValueMethod?: string;
+    sectorRelativeStrength?: string;
+  };
 }
 
 // ─────────────────────── helpers ───────────────────────
@@ -398,12 +408,20 @@ function TickerInput({ value, onChange, placeholder, disabled }: {
 // ─────────────────────── main screen ───────────────────────
 export default function AnalyzePage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const { ticker: prefill } = useLocalSearchParams<{ ticker?: string }>();
+  const user = useAuthStore((s) => s.user);
+  const hasPaidPlan = user?.plan === 'pro' || user?.plan === 'yearly' || user?.plan === 'ultra' || user?.plan === 'ultra_yearly';
   const [ticker, setTicker] = useState(prefill ?? '');
+  const [mode, setMode] = useState<'beginner' | 'professional'>('beginner');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+
+  const toggleMode = useCallback(() => {
+    if (!hasPaidPlan) return;
+    setMode((prev) => prev === 'beginner' ? 'professional' : 'beginner');
+  }, [hasPaidPlan]);
 
   const run = async () => {
     const t = ticker.trim().toUpperCase();
@@ -411,7 +429,7 @@ export default function AnalyzePage() {
     if (!getStockInfo(t)) { setError('رمز السهم غير موجود — اختر من القائمة'); return; }
     setError(null); setResult(null); setLoading(true);
     try {
-      const res = await apiClient.post(`/api/analysis/${t}`, undefined, { timeout: 120_000 });
+      const res = await apiClient.post(`/api/analysis/${t}`, { mode }, { timeout: 120_000 });
       const data = (res.data as { analysis?: AnalysisResult })?.analysis ?? res.data;
       if (data) setResult(data as AnalysisResult);
       else setError('لم يتم استلام نتيجة التحليل');
@@ -460,7 +478,7 @@ export default function AnalyzePage() {
             tw('w-9 h-9 rounded-xl border items-center justify-center'),
           ]}
         >
-          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
+          {isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
         <View style={tw('w-8 h-8 rounded-xl bg-violet-500/15 items-center justify-center')}>
           <Brain size={16} color="#8b5cf6" />
@@ -476,6 +494,30 @@ export default function AnalyzePage() {
 
         {/* Input */}
         <TickerInput value={ticker} onChange={setTicker} placeholder="ابحث عن رمز السهم (مثال: COMI)" disabled={loading} />
+
+        {/* Mode Toggle — Pro/Ultra only */}
+        {hasPaidPlan && (
+          <View style={tw('flex-row gap-2')}>
+            <Pressable
+              onPress={() => setMode('beginner')}
+              style={[
+                tw('flex-1 py-2.5 rounded-xl items-center border'),
+                { backgroundColor: mode === 'beginner' ? '#8b5cf6' : colors.surface, borderColor: mode === 'beginner' ? '#8b5cf6' : colors.border },
+              ]}
+            >
+              <Text style={[tw('text-xs font-semibold'), { color: mode === 'beginner' ? '#fff' : colors.textSub }]}>🎓 مبسّط</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setMode('professional')}
+              style={[
+                tw('flex-1 py-2.5 rounded-xl items-center border'),
+                { backgroundColor: mode === 'professional' ? '#8b5cf6' : colors.surface, borderColor: mode === 'professional' ? '#8b5cf6' : colors.border },
+              ]}
+            >
+              <Text style={[tw('text-xs font-semibold'), { color: mode === 'professional' ? '#fff' : colors.textSub }]}>📊 احترافي</Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* Button */}
         <Pressable
@@ -603,7 +645,39 @@ export default function AnalyzePage() {
               </View>
             )}
 
-            {/* ⑧ Disclaimer */}
+            {/* ⑧ Pro Analysis */}
+            {result.proAnalysis && Object.values(result.proAnalysis).some(Boolean) && (
+              <View style={{ backgroundColor: '#0ea5e910', borderColor: '#0ea5e930', borderWidth: 1, borderRadius: 14, padding: 14, gap: 8 }}>
+                <Text style={{ color: '#0ea5e9', fontSize: 11, fontWeight: '700' }}>📐 تحليل احترافي متقدم</Text>
+                {result.proAnalysis.wavePosition && (
+                  <Text style={{ color: colors.text, fontSize: 12, lineHeight: 18 }}>
+                    <Text style={{ fontWeight: '700' }}>🌊 Elliott: </Text>{result.proAnalysis.wavePosition}
+                  </Text>
+                )}
+                {result.proAnalysis.fibonacciKey && (
+                  <Text style={{ color: colors.text, fontSize: 12, lineHeight: 18 }}>
+                    <Text style={{ fontWeight: '700' }}>📏 Fibonacci: </Text>{result.proAnalysis.fibonacciKey}
+                  </Text>
+                )}
+                {result.proAnalysis.volumeProfile && (
+                  <Text style={{ color: colors.text, fontSize: 12, lineHeight: 18 }}>
+                    <Text style={{ fontWeight: '700' }}>📦 حجم: </Text>{result.proAnalysis.volumeProfile}
+                  </Text>
+                )}
+                {result.proAnalysis.stopLossMethod && (
+                  <Text style={{ color: colors.text, fontSize: 12, lineHeight: 18 }}>
+                    <Text style={{ fontWeight: '700' }}>🛡 وقف الخسارة: </Text>{result.proAnalysis.stopLossMethod}
+                  </Text>
+                )}
+                {result.proAnalysis.sectorRelativeStrength && (
+                  <Text style={{ color: colors.text, fontSize: 12, lineHeight: 18 }}>
+                    <Text style={{ fontWeight: '700' }}>🏭 قطاع: </Text>{result.proAnalysis.sectorRelativeStrength}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* ⑨ Disclaimer */}
             {result.disclaimer && (
               <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 14, padding: 14, gap: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>

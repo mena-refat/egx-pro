@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView,
-  ActivityIndicator, I18nManager,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, GitCompare, Search, Trophy, CheckCircle, XCircle, AlertTriangle } from 'lucide-react-native';
@@ -9,8 +9,16 @@ import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { AnalysisLoader } from '../../components/shared/AnalysisLoader';
 import { EGX_STOCKS, getStockInfo } from '../../lib/egxStocks';
 import { useTheme } from '../../hooks/useTheme';
+import { useAuthStore } from '../../store/authStore';
 import apiClient from '../../lib/api/client';
 import { tw } from '../../lib/tw';
+
+type AnalysisMode = 'beginner' | 'professional';
+
+interface TimeframeVerdict {
+  verdict?: string;
+  reason?: string;
+}
 
 interface StockSide {
   ticker?: string;
@@ -24,6 +32,9 @@ interface StockSide {
   weaknesses?: string[];
   risks?: string[];
   priceTarget?: number | { target?: number };
+  shortTerm?: TimeframeVerdict;
+  mediumTerm?: TimeframeVerdict;
+  longTerm?: TimeframeVerdict;
 }
 
 interface CompareResult {
@@ -36,7 +47,11 @@ interface CompareResult {
   stock2?: StockSide;
   ticker1?: StockSide;
   ticker2?: StockSide;
+  shortTermWinner?: string;
+  mediumTermWinner?: string;
+  longTermWinner?: string;
   disclaimer?: string;
+  mode?: AnalysisMode;
 }
 
 function scoreColor(s: number) {
@@ -188,15 +203,41 @@ function StockCard({ side, label, isWinner }: { side: StockSide; label: string; 
           );
         })}
       </View>
+
+      {(side.shortTerm?.verdict || side.mediumTerm?.verdict || side.longTerm?.verdict) && (
+        <View style={[{ borderTopColor: colors.border }, tw('pt-2 gap-1 border-t')]}>
+          {side.shortTerm?.verdict && (
+            <View style={tw('flex-row gap-1.5')}>
+              <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>⚡</Text>
+              <Text style={[{ color: colors.textSub }, tw('text-xs flex-1')]}>{side.shortTerm.verdict}</Text>
+            </View>
+          )}
+          {side.mediumTerm?.verdict && (
+            <View style={tw('flex-row gap-1.5')}>
+              <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>📅</Text>
+              <Text style={[{ color: colors.textSub }, tw('text-xs flex-1')]}>{side.mediumTerm.verdict}</Text>
+            </View>
+          )}
+          {side.longTerm?.verdict && (
+            <View style={tw('flex-row gap-1.5')}>
+              <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>🌱</Text>
+              <Text style={[{ color: colors.textSub }, tw('text-xs flex-1')]}>{side.longTerm.verdict}</Text>
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 }
 
 export default function ComparePage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
+  const user = useAuthStore((s) => s.user);
+  const hasPaidPlan = user?.plan === 'pro' || user?.plan === 'yearly' || user?.plan === 'ultra' || user?.plan === 'ultra_yearly';
   const [t1, setT1] = useState('');
   const [t2, setT2] = useState('');
+  const [mode, setMode] = useState<AnalysisMode>('beginner');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CompareResult | null>(null);
@@ -211,7 +252,7 @@ export default function ComparePage() {
 
     setError(null); setResult(null); setLoading(true);
     try {
-      const res = await apiClient.post('/api/analysis/compare', { ticker1: a, ticker2: b }, { timeout: 120_000 });
+      const res = await apiClient.post('/api/analysis/compare', { ticker1: a, ticker2: b, mode }, { timeout: 120_000 });
       const data =
         (res.data as { data?: { comparison?: CompareResult } })?.data?.comparison ??
         (res.data as { comparison?: CompareResult })?.comparison ??
@@ -252,7 +293,7 @@ export default function ComparePage() {
             tw('w-9 h-9 rounded-xl border items-center justify-center'),
           ]}
         >
-          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
+          {isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
         <View style={tw('w-8 h-8 rounded-xl bg-blue-500/15 items-center justify-center')}>
           <GitCompare size={16} color="#3b82f6" />
@@ -267,6 +308,41 @@ export default function ComparePage() {
       >
         <TickerInput value={t1} onChange={setT1} placeholder="السهم الأول (مثال: COMI)" disabled={loading} />
         <TickerInput value={t2} onChange={setT2} placeholder="السهم الثاني (مثال: ETEL)" disabled={loading} />
+
+        {hasPaidPlan && (
+          <View style={tw('flex-row gap-2')}>
+            <Pressable
+              onPress={() => setMode('beginner')}
+              disabled={loading}
+              style={[
+                tw('flex-1 py-2.5 rounded-xl items-center border'),
+                {
+                  backgroundColor: mode === 'beginner' ? '#8b5cf6' : colors.card,
+                  borderColor: mode === 'beginner' ? '#8b5cf6' : colors.border,
+                },
+              ]}
+            >
+              <Text style={[tw('text-xs font-bold'), { color: mode === 'beginner' ? '#fff' : colors.textSub }]}>
+                🎓 مبسّط
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setMode('professional')}
+              disabled={loading}
+              style={[
+                tw('flex-1 py-2.5 rounded-xl items-center border'),
+                {
+                  backgroundColor: mode === 'professional' ? '#8b5cf6' : colors.card,
+                  borderColor: mode === 'professional' ? '#8b5cf6' : colors.border,
+                },
+              ]}
+            >
+              <Text style={[tw('text-xs font-bold'), { color: mode === 'professional' ? '#fff' : colors.textSub }]}>
+                📊 احترافي
+              </Text>
+            </Pressable>
+          </View>
+        )}
 
         <Pressable
           onPress={run}
@@ -305,6 +381,35 @@ export default function ComparePage() {
                     </Text>
                   ) : null}
                 </View>
+              </View>
+            )}
+
+            {/* Timeframe Winners */}
+            {(result.shortTermWinner || result.mediumTermWinner || result.longTermWinner) && (
+              <View
+                style={[
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  tw('border rounded-2xl px-4 py-3 gap-2'),
+                ]}
+              >
+                {result.shortTermWinner && (
+                  <View style={tw('flex-row justify-between items-center')}>
+                    <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>⚡ قصير المدى</Text>
+                    <Text style={[{ color: colors.text }, tw('text-xs font-bold')]}>{result.shortTermWinner}</Text>
+                  </View>
+                )}
+                {result.mediumTermWinner && (
+                  <View style={tw('flex-row justify-between items-center')}>
+                    <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>📅 متوسط المدى</Text>
+                    <Text style={[{ color: colors.text }, tw('text-xs font-bold')]}>{result.mediumTermWinner}</Text>
+                  </View>
+                )}
+                {result.longTermWinner && (
+                  <View style={tw('flex-row justify-between items-center')}>
+                    <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>🌱 طويل المدى</Text>
+                    <Text style={[{ color: colors.text }, tw('text-xs font-bold')]}>{result.longTermWinner}</Text>
+                  </View>
+                )}
               </View>
             )}
 

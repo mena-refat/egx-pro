@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, RefreshControl, I18nManager } from 'react-native';
+import { View, Text, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, LifeBuoy, Plus, Lock, AlertCircle } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
@@ -12,7 +12,7 @@ import { SupportLockedBanner } from './components/SupportLockedBanner';
 
 export default function SupportPage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
 
   const {
     canUseSupport,
@@ -30,7 +30,7 @@ export default function SupportPage() {
     rateTicket,
   } = useSupportPage();
 
-  const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
+  const ArrowIcon = isRTL ? ArrowRight : ArrowLeft;
 
   if (selected) {
     return (
@@ -107,7 +107,7 @@ export default function SupportPage() {
               backgroundColor: showCreate ? colors.hover : BRAND,
               borderColor: showCreate ? colors.border : 'transparent',
               borderWidth: showCreate ? 1 : 0,
-              flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+              flexDirection: isRTL ? 'row-reverse' : 'row',
               alignItems: 'center',
               gap: 6,
               paddingHorizontal: 12,
@@ -127,7 +127,7 @@ export default function SupportPage() {
               backgroundColor: '#f59e0b18',
               borderColor: '#f59e0b35',
               borderWidth: 1,
-              flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+              flexDirection: isRTL ? 'row-reverse' : 'row',
               alignItems: 'center',
               gap: 6,
               paddingHorizontal: 12,

@@ -17,6 +17,7 @@ type Props = {
   canCreate: boolean;
   limits?: DailyLimits;
   onNewPrediction: () => void;
+  onDelete: (id: string) => Promise<void>;
 };
 
 function LimitBar({ used, total, label, icon: Icon, colorClass }: {
@@ -61,6 +62,7 @@ export function PredictionsMyTab({
   canCreate,
   limits,
   onNewPrediction,
+  onDelete,
 }: Props) {
   const { t, i18n } = useTranslation('common');
   const isAr = i18n.language?.startsWith('ar');
@@ -160,7 +162,7 @@ export function PredictionsMyTab({
       ) : (
         <div className="space-y-4">
           {predictions.map((p) => (
-            <PredictionCard key={p.id} prediction={p} variant="my" />
+            <PredictionCard key={p.id} prediction={p} variant="my" onDelete={() => onDelete(p.id)} />
           ))}
         </div>
       )}

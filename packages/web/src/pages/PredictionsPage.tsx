@@ -38,8 +38,14 @@ export default function PredictionsPage() {
 
   const username = useAuthStore((s) => s.user?.username);
   const setMyStats = usePredictionsStore((s) => s.setMyStats);
+  const removePrediction = usePredictionsStore((s) => s.removePrediction);
   const api = usePredictionsApi();
   const { fetchFeed, fetchMy, fetchLeaderboard, fetchLimits, fetchMyStats } = api;
+
+  const handleDelete = async (id: string) => {
+    await api.deletePrediction(id);
+    removePrediction(id);
+  };
 
   useEffect(() => {
     fetchLimits();
@@ -130,6 +136,7 @@ export default function PredictionsPage() {
           canCreate={canCreate}
           limits={dailyLimits ?? undefined}
           onNewPrediction={openNewPrediction}
+          onDelete={handleDelete}
         />
       )}
 

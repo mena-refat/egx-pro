@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, I18nManager } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import {
   ArrowLeft,
   ArrowRight,
@@ -24,7 +24,7 @@ export function TicketDetail({
   onReplyMarkedRead: (ticketId: string) => void;
   onRated: (ticketId: string, stars: number) => void;
 }) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const [rating, setRating] = useState<number>(ticket.rating ?? 0);
   const [ratingLoading, setRatingLoading] = useState(false);
   const cfg = STATUS_CFG[ticket.status];
@@ -34,7 +34,7 @@ export function TicketDetail({
   }, [ticket.id, ticket.rating]);
 
   const hasRated = useMemo(() => ticket.rating != null || rating > 0, [rating, ticket.rating]);
-  const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
+  const ArrowIcon = isRTL ? ArrowRight : ArrowLeft;
 
   useEffect(() => {
     if (ticket.reply && !ticket.replyRead) {
@@ -73,7 +73,7 @@ export function TicketDetail({
       >
         <View
           style={{
-            flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             gap: 12,
             paddingHorizontal: 16,
@@ -172,7 +172,7 @@ export function TicketDetail({
             )}
           </View>
         ) : (
-          <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 16, padding: 16, flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 16, padding: 16, flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 }}>
             <Clock size={16} color={colors.textMuted} />
             <Text style={{ color: colors.textMuted, fontSize: 14 }}>
               لم يتم الرد بعد — فريق الدعم سيراجع تذكرتك قريباً

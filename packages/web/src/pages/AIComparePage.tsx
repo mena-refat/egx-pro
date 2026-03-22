@@ -8,6 +8,7 @@ import { TickerSuggestInput } from '../components/ui/TickerSuggestInput';
 import { getStockInfo, searchStocks } from '../lib/egxStocks';
 import { useProfileGuard } from '../hooks/useProfileGuard';
 import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
+import { useAuthStore } from '../store/authStore';
 import type { CompareResult } from '../types';
 import { LearnSection } from '../components/features/analysis/LearnSection';
 import { AnalysisLoadingState } from '../components/features/analysis/AnalysisLoadingState';
@@ -17,8 +18,11 @@ import styles from './AIComparePage.module.scss';
 export default function AIComparePage() {
   const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const hasPaidPlan = user?.plan === 'pro' || user?.plan === 'yearly' || user?.plan === 'ultra' || user?.plan === 'ultra_yearly';
   const [ticker1, setTicker1] = useState('');
   const [ticker2, setTicker2] = useState('');
+  const [mode, setMode] = useState<'beginner' | 'professional'>('beginner');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CompareResult | null>(null);
@@ -54,7 +58,7 @@ export default function AIComparePage() {
     try {
       const res = await api.post<{ data: { comparison: CompareResult } }>(
         '/analysis/compare',
-        { ticker1: t1, ticker2: t2 },
+        { ticker1: t1, ticker2: t2, mode },
         { timeout: ANALYSIS_TIMEOUT_MS }
       );
       const data = res.data?.data?.comparison ?? (res.data as { comparison?: CompareResult })?.comparison;
@@ -131,6 +135,27 @@ export default function AIComparePage() {
           dir="ltr"
           disabled={loading}
         />
+        {hasPaidPlan && (
+          <div className={styles.modeToggle} role="group" aria-label="وضع التحليل">
+            <button
+              type="button"
+              className={`${styles.modeBtn} ${mode === 'beginner' ? styles.modeBtnActive : ''}`}
+              onClick={() => setMode('beginner')}
+              disabled={loading}
+            >
+              🎓 مبسّط
+            </button>
+            <button
+              type="button"
+              className={`${styles.modeBtn} ${mode === 'professional' ? styles.modeBtnActive : ''}`}
+              onClick={() => setMode('professional')}
+              disabled={loading}
+            >
+              📊 احترافي
+            </button>
+          </div>
+        )}
+
         <Button
           type="button"
           variant="primary"
@@ -213,10 +238,33 @@ export default function AIComparePage() {
           <div className={styles.winnerBox}>
             <span className={styles.winnerIcon}>🏆</span>
             <div>
-              <p className={styles.winnerText}>الأفضل: <strong>{result.winner}</strong></p>
+              <p className={styles.winnerText}>الأفضل إجمالاً: <strong>{result.winner}</strong></p>
               <p className={styles.winnerReason}>{result.winnerReason ?? result.reason ?? ''}</p>
             </div>
           </div>
+
+          {(result.shortTermWinner || result.mediumTermWinner || result.longTermWinner) && (
+            <div className={styles.timeframeWinners}>
+              {result.shortTermWinner && (
+                <div className={styles.tfWinner}>
+                  <span className={styles.tfLabel}>⚡ قصير المدى</span>
+                  <span className={styles.tfTicker}>{result.shortTermWinner}</span>
+                </div>
+              )}
+              {result.mediumTermWinner && (
+                <div className={styles.tfWinner}>
+                  <span className={styles.tfLabel}>📅 متوسط المدى</span>
+                  <span className={styles.tfTicker}>{result.mediumTermWinner}</span>
+                </div>
+              )}
+              {result.longTermWinner && (
+                <div className={styles.tfWinner}>
+                  <span className={styles.tfLabel}>🌱 طويل المدى</span>
+                  <span className={styles.tfTicker}>{result.longTermWinner}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className={styles.cards}>
             {[
@@ -280,6 +328,32 @@ export default function AIComparePage() {
                         <span>{r}</span>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {(s?.shortTerm || s?.mediumTerm || s?.longTerm) && (
+                  <div className={styles.stockTimeframes}>
+                    {s.shortTerm?.verdict && (
+                      <div className={styles.stfRow}>
+                        <span className={styles.stfLabel}>⚡ قصير:</span>
+                        <span className={styles.stfVerdict}>{s.shortTerm.verdict}</span>
+                        {s.shortTerm.reason && <span className={styles.stfReason}>{s.shortTerm.reason}</span>}
+                      </div>
+                    )}
+                    {s.mediumTerm?.verdict && (
+                      <div className={styles.stfRow}>
+                        <span className={styles.stfLabel}>📅 متوسط:</span>
+                        <span className={styles.stfVerdict}>{s.mediumTerm.verdict}</span>
+                        {s.mediumTerm.reason && <span className={styles.stfReason}>{s.mediumTerm.reason}</span>}
+                      </div>
+                    )}
+                    {s.longTerm?.verdict && (
+                      <div className={styles.stfRow}>
+                        <span className={styles.stfLabel}>🌱 طويل:</span>
+                        <span className={styles.stfVerdict}>{s.longTerm.verdict}</span>
+                        {s.longTerm.reason && <span className={styles.stfReason}>{s.longTerm.reason}</span>}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

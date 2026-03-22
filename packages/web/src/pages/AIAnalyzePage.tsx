@@ -10,13 +10,17 @@ import { AnalysisLoadingState } from '../components/features/analysis/AnalysisLo
 import { getStockInfo, searchStocks } from '../lib/egxStocks';
 import { useProfileGuard } from '../hooks/useProfileGuard';
 import { ProfileGuardModal } from '../components/ui/ProfileGuardModal';
+import { useAuthStore } from '../store/authStore';
 import type { AnalysisResult as AnalysisResultType } from '../types';
 import styles from './AIAnalyzePage.module.scss';
 
 export default function AIAnalyzePage() {
   const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const hasPaidPlan = user?.plan === 'pro' || user?.plan === 'yearly' || user?.plan === 'ultra' || user?.plan === 'ultra_yearly';
   const [ticker, setTicker] = useState('');
+  const [mode, setMode] = useState<'beginner' | 'professional'>('beginner');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResultType | null>(null);
@@ -45,7 +49,7 @@ export default function AIAnalyzePage() {
     setAnalysis(null);
     setLoading(true);
     try {
-      const res = await api.post<{ data: { analysis: AnalysisResultType } }>(`/analysis/${resolvedTicker}`, undefined, { timeout: ANALYSIS_TIMEOUT_MS });
+      const res = await api.post<{ data: { analysis: AnalysisResultType } }>(`/analysis/${resolvedTicker}`, { mode }, { timeout: ANALYSIS_TIMEOUT_MS });
       const data = res.data?.data?.analysis ?? (res.data as { analysis?: AnalysisResultType })?.analysis;
       if (data) setAnalysis(data);
       else setError(t('common.error'));
@@ -117,6 +121,28 @@ export default function AIAnalyzePage() {
           dir="ltr"
           disabled={loading}
         />
+
+        {hasPaidPlan && (
+          <div className={styles.modeToggle} role="group" aria-label="وضع التحليل">
+            <button
+              type="button"
+              className={`${styles.modeBtn} ${mode === 'beginner' ? styles.modeBtnActive : ''}`}
+              onClick={() => setMode('beginner')}
+              disabled={loading}
+            >
+              🎓 مبسّط
+            </button>
+            <button
+              type="button"
+              className={`${styles.modeBtn} ${mode === 'professional' ? styles.modeBtnActive : ''}`}
+              onClick={() => setMode('professional')}
+              disabled={loading}
+            >
+              📊 احترافي
+            </button>
+          </div>
+        )}
+
         <Button
           type="button"
           variant="primary"

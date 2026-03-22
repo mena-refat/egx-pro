@@ -145,6 +145,29 @@ export function AnalysisResult({ analysis: raw }: AnalysisResultProps) {
 
       {analysis.suitability && <p className={styles.suitability}>{analysis.suitability}</p>}
 
+      {analysis.proAnalysis && (
+        <div className={styles.proBlock}>
+          <h4 className={styles.proTitle}>📐 تحليل احترافي متقدم</h4>
+          {Object.entries(analysis.proAnalysis).map(([key, val]) => {
+            if (!val) return null;
+            const labels: Record<string, string> = {
+              wavePosition: '🌊 موجة Elliott',
+              fibonacciKey: '📏 Fibonacci',
+              volumeProfile: '📦 ملف الحجم',
+              stopLossMethod: '🛡 طريقة وقف الخسارة',
+              fairValueMethod: '💡 أساس السعر المستهدف',
+              sectorRelativeStrength: '🏭 قوة نسبية للقطاع',
+            };
+            return (
+              <div key={key} className={styles.proRow}>
+                <span className={styles.proLabel}>{labels[key] ?? key}</span>
+                <span className={styles.proValue}>{String(val)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {(() => {
         const glossaryCards = getMatchedGlossaryCards(getSearchableTextFromAnalysis(analysis));
         return glossaryCards.length > 0 ? <LearnSection cards={glossaryCards} /> : null;

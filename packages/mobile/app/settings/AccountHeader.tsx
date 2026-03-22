@@ -1,10 +1,10 @@
-import { Pressable, Text, View, I18nManager } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { ArrowLeft, ArrowRight, User } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { BRAND, BRAND_BG_STRONG } from '../../lib/theme';
 
 export function AccountHeader({ title, onBack }: { title: string; onBack: () => void }) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
 
   return (
     <View style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}>
@@ -31,7 +31,7 @@ export function AccountHeader({ title, onBack }: { title: string; onBack: () => 
             justifyContent: 'center',
           }}
         >
-          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
+          {isRTL ? <ArrowRight size={16} color={colors.textSub} /> : <ArrowLeft size={16} color={colors.textSub} />}
         </Pressable>
 
         <View

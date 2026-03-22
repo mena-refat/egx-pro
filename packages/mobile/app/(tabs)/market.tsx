@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, Pressable, RefreshControl,
-  TextInput, useWindowDimensions, I18nManager,
+  TextInput, useWindowDimensions,
 } from 'react-native';
 import type { ListRenderItem } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -68,7 +68,7 @@ function IndexCard({ label, value, changePercent }: { label: string; value: numb
 
 // ─── CommodityKaratTable ─────────────────────────────────────────
 function CommodityKaratTable({ buy24, sell24, karats }: { buy24: number; sell24: number; karats: { label: string; ratio: number }[] }) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   return (
     <View style={{
       backgroundColor: colors.bg, borderRadius: RADIUS.md,
@@ -76,7 +76,7 @@ function CommodityKaratTable({ buy24, sell24, karats }: { buy24: number; sell24:
       borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
     }}>
       <View style={{
-        flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between',
+        flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between',
         paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm,
         backgroundColor: colors.hover, borderBottomWidth: 1, borderBottomColor: colors.border,
       }}>
@@ -88,7 +88,7 @@ function CommodityKaratTable({ buy24, sell24, karats }: { buy24: number; sell24:
         <View
           key={k.label}
           style={{
-            flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center',
+            flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center',
             paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm + 2,
             borderBottomWidth: i < karats.length - 1 ? 1 : 0, borderBottomColor: colors.border,
           }}
@@ -108,14 +108,14 @@ function CommodityKaratTable({ buy24, sell24, karats }: { buy24: number; sell24:
 
 // ─── ForexBuySellPanel ─────────────────────────────────────────
 function ForexBuySellPanel({ buy, sell }: { buy: number; sell: number }) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   return (
     <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: SPACE.md, paddingHorizontal: SPACE.lg, gap: 6 }}>
-      <View style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', gap: SPACE.md }}>
+      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', gap: SPACE.md }}>
         <Text style={{ color: GREEN, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>شراء</Text>
         <Text style={{ color: colors.text, fontSize: FONT.xs, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>{n(buy, 2)} EGP</Text>
       </View>
-      <View style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', gap: SPACE.md }}>
+      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', gap: SPACE.md }}>
         <Text style={{ color: RED, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>بيع</Text>
         <Text style={{ color: colors.text, fontSize: FONT.xs, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>{n(sell, 2)} EGP</Text>
       </View>

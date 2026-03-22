@@ -1,5 +1,4 @@
 import { View, Text, Pressable } from 'react-native';
-import { I18nManager } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useTheme } from '../../../hooks/useTheme';
 
@@ -11,8 +10,8 @@ interface Props {
 }
 
 export function SectionHeader({ title, icon: Icon, linkLabel, onLink }: Props) {
-  const { colors } = useTheme();
-  const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
+  const { colors, isRTL } = useTheme();
+  const ChevronIcon = isRTL ? ChevronRight : ChevronLeft;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>

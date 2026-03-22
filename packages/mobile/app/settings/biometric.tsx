@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Fingerprint, Hash } from 'lucide-react-native';
-import { I18nManager } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
@@ -20,7 +19,7 @@ type PinStep = 'idle' | 'enter' | 'confirm' | 'remove';
 export default function BiometricPage() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
 
   const [supported, setSupported] = useState(false);
   const [enrolled, setEnrolled] = useState(false);
@@ -171,7 +170,7 @@ export default function BiometricPage() {
             tw('w-9 h-9 rounded-xl border items-center justify-center'),
           ]}
         >
-          {I18nManager.isRTL ? <ArrowRight size={16} color={colors.textMuted} /> : <ArrowLeft size={16} color={colors.textMuted} />}
+          {isRTL ? <ArrowRight size={16} color={colors.textMuted} /> : <ArrowLeft size={16} color={colors.textMuted} />}
         </Pressable>
         <View style={tw('w-8 h-8 rounded-xl bg-brand/15 items-center justify-center')}>
           {pinStep !== 'idle' ? <Hash size={15} color="#8b5cf6" /> : <Fingerprint size={15} color="#8b5cf6" />}

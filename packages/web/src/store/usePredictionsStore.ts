@@ -9,14 +9,14 @@ export type PredictionMode = 'TIER' | 'EXACT';
 
 export interface FeedPrediction {
   id: string;
-  userId: string;
+  userId: number;
   ticker: string;
   direction: PredictionDir;
   mode: PredictionMode;
   moveTier?: MoveTier;
   targetPrice?: number;
   priceAtCreation: number;
-  timeframe: PredictionTime;
+  timeframe?: PredictionTime; // undefined for EXACT mode
   reason: string | null;
   status: PredictionStatus;
   pointsEarned: number | null;
@@ -29,7 +29,7 @@ export interface FeedPrediction {
   likeCount: number;
   isLikedByMe: boolean;
   user?: {
-    id: string;
+    id: number;
     username: string | null;
     avatarUrl: string | null;
   };
@@ -40,7 +40,7 @@ export interface FeedPrediction {
 
 export interface UserPredictionStats {
   id?: number;
-  userId: string;
+  userId: number;
   totalPredictions: number;
   correctPredictions: number;
   totalPoints: number;
@@ -53,13 +53,13 @@ export interface UserPredictionStats {
 
 export interface LeaderboardEntry {
   position: number;
-  userId: string;
+  userId: number;
   totalPoints: number;
   totalPredictions: number;
   correctPredictions: number;
   accuracyRate: number;
   rank: UserRank;
-  user: { id: string; username: string | null; avatarUrl: string | null };
+  user: { id: number; username: string | null; avatarUrl: string | null };
 }
 
 export interface DailyLimits {
@@ -120,6 +120,7 @@ interface PredictionsState {
   setLimitsLoading: (v: boolean) => void;
   setLikeOnFeed: (predictionId: string, liked: boolean, likeCount: number) => void;
   setLikeOnMy: (predictionId: string, liked: boolean, likeCount: number) => void;
+  removePrediction: (id: string) => void;
 }
 
 const initialDraft: NewPredictionDraft = {
@@ -179,5 +180,10 @@ export const usePredictionsStore = create<PredictionsState>((set) => ({
       myPredictions: s.myPredictions.map((p) =>
         p.id === predictionId ? { ...p, isLikedByMe: liked, likeCount } : p
       ),
+    })),
+  removePrediction: (id) =>
+    set((s) => ({
+      myPredictions: s.myPredictions.filter((p) => p.id !== id),
+      feedPredictions: s.feedPredictions.filter((p) => p.id !== id),
     })),
 }));

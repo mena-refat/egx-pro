@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   Pressable,
-  I18nManager,
   type TextInputProps,
   type StyleProp,
   type ViewStyle,
@@ -41,9 +40,7 @@ export function Input({
 }: Props) {
   const [showPw, setShowPw] = useState(false);
   const [focused, setFocused] = useState(false);
-  const { colors } = useTheme();
-
-  const isRTL       = I18nManager.isRTL;
+  const { colors, isRTL } = useTheme();
   const isPw        = isPassword || (secureTextEntry !== undefined);
   const secure      = isPw && !showPw;
 

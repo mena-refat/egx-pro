@@ -1,4 +1,4 @@
-import { View, I18nManager } from 'react-native';
+import { View } from 'react-native';
 import { Tabs, Redirect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -58,10 +58,9 @@ export default function TabsLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { i18n }        = useTranslation();
   const insets          = useSafeAreaInsets();
-  const { colors }      = useTheme();
+  const { colors, isRTL } = useTheme();
   const unreadCount     = useUnreadCount();
   const lang            = i18n.language?.startsWith('ar') ? 'ar' : 'en';
-  const isRTL           = I18nManager.isRTL;
 
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
 

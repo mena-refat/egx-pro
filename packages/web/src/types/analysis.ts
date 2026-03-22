@@ -86,50 +86,74 @@ export interface AnalysisResult {
   learnCards?: LearnCard[];
   suitability?: string;
   disclaimer: string;
+  mode?: 'beginner' | 'professional';
 
   verdict?: string;
   shortTermOutlook?: string;
   mediumTermOutlook?: string;
   longTermOutlook?: string;
+
+  /** Professional mode only — deep technical analysis extras */
+  proAnalysis?: {
+    wavePosition?: string;
+    fibonacciKey?: string;
+    volumeProfile?: string;
+    stopLossMethod?: string;
+    fairValueMethod?: string;
+    sectorRelativeStrength?: string;
+  };
+}
+
+interface CompareStockTimeframe {
+  verdict: string;
+  reason: string;
+}
+
+interface CompareStockData {
+  ticker: string;
+  name: string;
+  score: number;
+  verdictBadge: string;
+  fundamental: { score: number; summary: string };
+  technical: {
+    score: number;
+    summary: string;
+    keyIndicators?: Record<string, { value: string; explain: string }>;
+  };
+  strengths: string[];
+  weaknesses: string[];
+  risks: string[];
+  priceTarget?: { target: number; stopLoss: number };
+  shortTerm?: CompareStockTimeframe;
+  mediumTerm?: CompareStockTimeframe;
+  longTerm?: CompareStockTimeframe;
+  proAnalysis?: {
+    wavePosition?: string;
+    fibonacciKey?: string;
+    volumeProfile?: string;
+    stopLossMethod?: string;
+    sectorRelativeStrength?: string;
+  };
 }
 
 export interface CompareResult {
   summary: string;
   winner: string;
   winnerReason: string;
+  shortTermWinner?: string;
+  mediumTermWinner?: string;
+  longTermWinner?: string;
+  mode?: 'beginner' | 'professional';
 
-  stock1: {
-    ticker: string;
-    name: string;
-    score: number;
-    verdictBadge: string;
-    fundamental: { score: number; summary: string };
-    technical: { score: number; summary: string };
-    strengths: string[];
-    weaknesses: string[];
-    risks: string[];
-    priceTarget?: { target: number; stopLoss: number };
-  };
-
-  stock2: {
-    ticker: string;
-    name: string;
-    score: number;
-    verdictBadge: string;
-    fundamental: { score: number; summary: string };
-    technical: { score: number; summary: string };
-    strengths: string[];
-    weaknesses: string[];
-    risks: string[];
-    priceTarget?: { target: number; stopLoss: number };
-  };
+  stock1: CompareStockData;
+  stock2: CompareStockData;
 
   recommendation: string;
   learnCards?: LearnCard[];
   disclaimer?: string;
 
-  ticker1?: CompareResult['stock1'];
-  ticker2?: CompareResult['stock2'];
+  ticker1?: CompareStockData;
+  ticker2?: CompareStockData;
   reason?: string;
 }
 
@@ -164,6 +188,19 @@ export interface RecommendationsResult {
   sectorsToWatch?: string[];
   portfolioAdvice?: string;
   marketOutlook?: string;
+  personalizedInsight?: string;
+  goalProgress?: Array<{
+    goal: string;
+    currentAmount: number;
+    targetAmount: number;
+    gap: number;
+    suggestion: string;
+  }>;
+  watchlistOpinion?: Array<{
+    ticker: string;
+    opinion: string;
+    reason: string;
+  }>;
   learnCards?: LearnCard[];
   disclaimer?: string;
 }

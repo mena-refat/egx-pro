@@ -1,5 +1,5 @@
 import React, { memo, type Dispatch, type SetStateAction } from 'react';
-import { View, Text, Pressable, I18nManager } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { BarChart2, TrendingDown, TrendingUp } from 'lucide-react-native';
 import { useTheme } from '../../../hooks/useTheme';
@@ -26,7 +26,7 @@ const MarketTrendFilter = memo(function MarketTrendFilter({
   counts,
   compact,
 }: Props) {
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const { t } = useTranslation();
 
   const TABS: Array<{
@@ -71,7 +71,7 @@ const MarketTrendFilter = memo(function MarketTrendFilter({
         borderWidth: 1,
         borderRadius: RADIUS.lg,
         padding: 4,
-        flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         gap: 4,
       }}
     >

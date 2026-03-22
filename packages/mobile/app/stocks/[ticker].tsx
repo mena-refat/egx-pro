@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, Pressable, RefreshControl,
-  I18nManager, ActivityIndicator, Alert, Linking,
+  ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -54,10 +54,10 @@ export default function StockDetailPage() {
   const { ticker } = useLocalSearchParams<{ ticker: string }>();
   const router     = useRouter();
   const insets     = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const user       = useAuthStore((s) => s.user);
 
-  const BackIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
+  const BackIcon = isRTL ? ChevronRight : ChevronLeft;
 
   // ─── stock data ─────────────────────────────────────────────
   const [stock,       setStock]       = useState<Stock | null>(null);
@@ -350,7 +350,7 @@ export default function StockDetailPage() {
                   احصل على تحليل شامل لـ {ticker}
                 </Text>
               </View>
-              <ChevronLeft size={16} color={BRAND} style={{ transform: [{ scaleX: I18nManager.isRTL ? 1 : -1 }] }} />
+              <ChevronLeft size={16} color={BRAND} style={{ transform: [{ scaleX: isRTL ? 1 : -1 }] }} />
             </Pressable>
           )}
 

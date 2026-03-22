@@ -7,7 +7,6 @@ import {
   Dimensions,
   Alert,
   StatusBar,
-  I18nManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Wallet, AlertTriangle, Target, ChevronLeft, ChevronRight } from 'lucide-react-native';
@@ -62,8 +61,8 @@ export default function OnboardingPage() {
   const updateUser  = useAuthStore((s) => s.updateUser);
   const scrollRef   = useRef<ScrollView>(null);
   const insets      = useSafeAreaInsets();
-  const { colors }  = useTheme();
-  const BackIcon    = I18nManager.isRTL ? ChevronRight : ChevronLeft;
+  const { colors, isRTL } = useTheme();
+  const BackIcon    = isRTL ? ChevronRight : ChevronLeft;
 
   const [step,   setStep]   = useState(0);
   const [saving, setSaving] = useState(false);

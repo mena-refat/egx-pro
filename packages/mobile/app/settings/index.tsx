@@ -6,7 +6,6 @@ import {
   ChevronRight, ChevronLeft, Info, LogOut, Trash2, Moon, Sun, Monitor,
   Gift, Trophy, LifeBuoy, Globe, Users,
 } from 'lucide-react-native';
-import { I18nManager } from 'react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
@@ -25,8 +24,8 @@ interface MenuItemProps {
 }
 
 function MenuItem({ icon: Icon, label, sub, onPress, danger, last }: MenuItemProps) {
-  const { colors } = useTheme();
-  const ChevronIcon = I18nManager.isRTL ? ChevronRight : ChevronLeft;
+  const { colors, isRTL } = useTheme();
+  const ChevronIcon = isRTL ? ChevronRight : ChevronLeft;
   const iconColor = danger ? '#f87171' : colors.textSub;
 
   return (

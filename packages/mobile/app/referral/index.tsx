@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, ScrollView, Pressable, Share, I18nManager,
+  View, Text, ScrollView, Pressable, Share,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
@@ -39,12 +39,12 @@ function timeAgo(d: string) {
 
 export default function ReferralPage() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
   const [data, setData] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const mountedRef = useRef(true);
-  const ArrowIcon = I18nManager.isRTL ? ArrowRight : ArrowLeft;
+  const ArrowIcon = isRTL ? ArrowRight : ArrowLeft;
 
   useEffect(() => () => { mountedRef.current = false; }, []);
 

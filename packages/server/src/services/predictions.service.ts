@@ -1,4 +1,5 @@
 import { AppError } from '../lib/errors.ts';
+import { logger } from '../lib/logger.ts';
 import { createNotification } from '../lib/createNotification.ts';
 import { getStockPrice } from '../lib/stockData.ts';
 import { incrWithExpire, getCount, decrCount } from '../lib/redis.ts';
@@ -331,8 +332,15 @@ export const PredictionsService = {
       throw new AppError('DELETE_WINDOW_EXPIRED', 403, 'لا يمكن حذف التوقع بعد مرور 5 دقائق من إنشائه');
     }
     const dailyKey = `${DAILY_KEY_PREFIX}${userId}:${getCairoDateStringFromDate(prediction.createdAt)}`;
-    await PredictionRepository.delete(predictionId);
+    // Decrement Redis first — if DB delete fails the user keeps their slot (better UX than the reverse)
     await decrCount(dailyKey);
+    try {
+      await PredictionRepository.delete(predictionId);
+    } catch (err) {
+      // Restore Redis counter if DB delete fails
+      await incrWithExpire(dailyKey, getCairoMidnightExpirySeconds()).catch(() => null);
+      throw err;
+    }
   },
 
   async getFeed(viewerId: number, filter: 'all' | 'following' | 'top', ticker: string | undefined, page: number, limit: number) {
@@ -436,7 +444,18 @@ export const PredictionsService = {
 
     if (prediction.mode === 'EXACT') {
       // ── EXACT mode ─────────────────────────────────────────────────────────
-      if (!prediction.targetPrice) return; // should never happen
+      if (!prediction.targetPrice) {
+        // Data integrity issue — mark as EXPIRED rather than leaving it stuck in ACTIVE forever
+        await PredictionRepository.updateResolution(predictionId, {
+          status: 'MISSED',
+          resolvedPrice,
+          resolvedAt: new Date(),
+          pointsEarned: 0,
+          accuracyPct: 0,
+        });
+        logger.error('EXACT prediction missing targetPrice', { predictionId });
+        return;
+      }
       const r = scoreExact(
         prediction.targetPrice, resolvedPrice,
         prediction.priceAtCreation, prediction.createdAt, prediction.expiresAt

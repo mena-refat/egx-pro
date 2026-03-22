@@ -104,6 +104,45 @@ export default function AIRecommendationsPage() {
             {t('ai.recommendationsReady', 'نتيجة التوصيات')}
           </h2>
           <p className={styles.summary}>{result.summary}</p>
+
+          {result.personalizedInsight && (
+            <div className={styles.personalizedInsight} role="note">
+              <span className={styles.insightIcon}>🎯</span>
+              <p>{result.personalizedInsight}</p>
+            </div>
+          )}
+
+          {result.goalProgress && result.goalProgress.length > 0 && (
+            <div className={styles.goalsSection}>
+              <h3 className={styles.goalsTitle}>🎯 أهدافك المالية</h3>
+              {result.goalProgress.map((g, i) => (
+                <div key={i} className={styles.goalRow}>
+                  <div className={styles.goalHeader}>
+                    <span className={styles.goalName}>{g.goal}</span>
+                    <span className={styles.goalGap}>متبقي: {g.gap?.toLocaleString()} ج</span>
+                  </div>
+                  {g.suggestion && <p className={styles.goalSuggestion}>{g.suggestion}</p>}
+                  <div className={styles.goalBar} role="progressbar" aria-valuenow={g.targetAmount > 0 ? Math.round((g.currentAmount / g.targetAmount) * 100) : 0} aria-valuemin={0} aria-valuemax={100}>
+                    <div className={styles.goalBarFill} style={{ width: `${g.targetAmount > 0 ? Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100)) : 0}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {result.watchlistOpinion && result.watchlistOpinion.length > 0 && (
+            <div className={styles.watchlistSection}>
+              <h3 className={styles.watchlistTitle}>👁 رأي AI في قائمة مراقبتك</h3>
+              {result.watchlistOpinion.map((w, i) => (
+                <div key={i} className={styles.watchlistRow}>
+                  <span className={styles.wTicker}>{w.ticker}</span>
+                  <span className={`${styles.wOpinion} ${w.opinion === 'ادخل الآن' ? styles.wBuy : w.opinion === 'تجنّب' ? styles.wSell : styles.wWait}`}>{w.opinion}</span>
+                  <span className={styles.wReason}>{w.reason}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {result.portfolioHealth && (
             <div className={styles.portfolioHealth}>
               <div className={styles.healthRow}>
