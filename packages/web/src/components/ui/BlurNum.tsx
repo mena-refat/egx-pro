@@ -6,14 +6,18 @@ interface BlurNumProps {
   className?: string;
 }
 
-/** Wraps a monetary value — blurs it when privacy mode is on. Percentages stay visible. */
+/** Wraps a monetary value — replaces it with •••• when privacy mode is on. Percentages stay visible. */
 export function BlurNum({ children, className = '' }: BlurNumProps) {
   const isPrivate = usePrivacyStore((s) => s.isPrivate);
-  return (
-    <span
-      className={`transition-[filter] duration-200 ${isPrivate ? 'blur-sm select-none' : ''} ${className}`}
-    >
-      {children}
-    </span>
-  );
+  if (isPrivate) {
+    return (
+      <span
+        className={`select-none tracking-widest text-[var(--text-muted)] ${className}`}
+        aria-hidden="true"
+      >
+        ••••
+      </span>
+    );
+  }
+  return <span className={className}>{children}</span>;
 }

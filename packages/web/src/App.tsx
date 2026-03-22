@@ -159,7 +159,7 @@ export default function App() {
   if (!isAuthenticated) return <AuthPage />;
 
   return (
-    <div className="min-h-screen w-full max-w-[100vw] bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row overflow-x-hidden">
+    <div className="h-screen w-full max-w-[100vw] bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row overflow-hidden">
       <ToastContainer />
       <Sidebar activeRoute={pathname} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} supportUnreadCount={supportUnreadCount} />
       <main className="main-content flex-1 p-4 sm:p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto overflow-x-hidden">

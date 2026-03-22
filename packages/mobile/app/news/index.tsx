@@ -25,7 +25,7 @@ interface NewsItem {
 }
 
 type NewsFilter = 'all' | 'interests';
-type NewsScope  = 'twoDays' | 'today' | 'yesterday' | 'all';
+type NewsScope  = 'today' | 'yesterday' | 'all';
 
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -187,7 +187,7 @@ export default function NewsPage() {
   const [error, setError]         = useState<string | null>(null);
   const [selected, setSelected]   = useState<NewsItem | null>(null);
   const [filter, setFilter]       = useState<NewsFilter>('all');
-  const [scope, setScope]         = useState<NewsScope>('twoDays');
+  const [scope, setScope]         = useState<NewsScope>('today');
 
   const stockInfo   = ticker ? getStockInfo(ticker) : null;
   const isStockNews = !!ticker;
@@ -242,7 +242,6 @@ export default function NewsPage() {
   }
 
   const scopeTabs: { id: NewsScope; label: string }[] = [
-    { id: 'twoDays',   label: 'اليومين' },
     { id: 'today',     label: 'اليوم' },
     { id: 'yesterday', label: 'أمس' },
     { id: 'all',       label: 'الكل' },
@@ -275,9 +274,8 @@ export default function NewsPage() {
       const t = new Date(item.publishedAt).getTime();
       if (!Number.isFinite(t)) return false;
       if (scope === 'today')     return t >= msToday && t < msTomorrow;
-      if (scope === 'yesterday') return t >= msYesterday && t < msToday;
-      // twoDays
-      return t >= msYesterday && t < msTomorrow;
+      // yesterday
+      return t >= msYesterday && t < msToday;
     });
   }, [scope, sortedNews]);
 

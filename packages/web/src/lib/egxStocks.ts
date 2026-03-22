@@ -301,125 +301,380 @@ export const EGX_STOCKS: EGXStock[] = [
 // Covers major EGX-listed companies. Remaining companies show a default fallback.
 const EGX_DESCRIPTIONS: Record<string, { ar: string; en: string }> = {
   // Banks
-  COMI: { ar: "أكبر بنك خاص في مصر، تأسس عام 1975 ويقدم خدمات مصرفية شاملة للأفراد والشركات والمؤسسات.", en: "Egypt's largest private-sector bank, founded in 1975, providing comprehensive banking services to individuals and corporates." },
-  CIEB: { ar: "بنك فرنسي-مصري مشترك تابع لمجموعة كريدي أجريكول الفرنسية، يقدم خدمات مصرفية متنوعة للأفراد والشركات في مصر.", en: "A French-Egyptian joint-venture bank affiliated with Crédit Agricole Group, offering retail and corporate banking in Egypt." },
-  ADIB: { ar: "بنك إسلامي يقدم خدمات مصرفية متوافقة مع أحكام الشريعة الإسلامية، تابع لمجموعة بنك أبوظبي الإسلامي.", en: "An Islamic bank providing Sharia-compliant banking services in Egypt, part of Abu Dhabi Islamic Bank Group." },
-  SAUD: { ar: "بنك إسلامي متخصص في الخدمات المصرفية المتوافقة مع الشريعة الإسلامية، يتبع مجموعة البركة المصرفية الدولية.", en: "An Islamic bank specializing in Sharia-compliant financial services, part of Al Baraka Banking Group." },
-  EGBE: { ar: "بنك مصري-خليجي يقدم خدمات مصرفية شاملة للأفراد والشركات في مصر، مع تركيز على تسهيل الأعمال بين مصر ودول الخليج.", en: "An Egyptian-Gulf bank offering retail and corporate banking, focused on facilitating business between Egypt and the Gulf." },
-  FAIT: { ar: "أول بنك إسلامي في مصر، تأسس عام 1977 ويقدم خدمات مصرفية متوافقة مع أحكام الشريعة الإسلامية.", en: "Egypt's first Islamic bank, founded in 1977, offering Sharia-compliant banking products and services." },
-  FAITA: { ar: "أول بنك إسلامي في مصر (حسابات بالدولار)، تأسس عام 1977 ويقدم خدمات مصرفية متوافقة مع أحكام الشريعة.", en: "Egypt's first Islamic bank (USD accounts), founded in 1977, offering Sharia-compliant banking services." },
-  HDBK: { ar: "بنك حكومي متخصص في تمويل الإسكان وقطاع التعمير، يقدم خدمات مصرفية للأفراد والمطورين العقاريين.", en: "A government bank specialized in housing and construction finance, serving individuals and real-estate developers." },
-  EXPA: { ar: "بنك حكومي مصري متخصص في دعم الصادرات وتمويل المصدرين المصريين، يلعب دوراً محورياً في تنمية التجارة الخارجية.", en: "A state-owned bank specialized in supporting Egyptian exporters and financing foreign-trade operations." },
-  CANA: { ar: "بنك تجاري مصري يقدم خدمات مصرفية شاملة للأفراد والشركات، ويُركز على تمويل المشروعات الصغيرة والمتوسطة.", en: "An Egyptian commercial bank offering comprehensive banking services with a focus on SME financing." },
-  QNBA: { ar: "أحد أكبر البنوك في مصر، تابع لمجموعة بنك قطر الوطني (QNB)، يقدم خدمات مصرفية متكاملة للأفراد والشركات.", en: "One of Egypt's largest banks, part of QNB Group, offering integrated banking services to retail and corporate clients." },
-  NBKE: { ar: "فرع بنك الكويت الوطني في مصر، يقدم خدمات مصرفية شاملة ويُعد من البنوك الكبرى في السوق المصري.", en: "The Egyptian arm of National Bank of Kuwait, offering comprehensive banking services and ranked among Egypt's top banks." },
-  SAIB: { ar: "بنك دولي متخصص في تمويل التجارة الخارجية وخدمات الشركات الكبرى، يتميز بشبكة علاقات عربية ودولية واسعة.", en: "An international bank specializing in trade finance and corporate services, with extensive Arab and global relationships." },
-  UNBE: { ar: "فرع البنك الاتحادي الوطني الإماراتي في مصر، يقدم حلولاً مصرفية متنوعة للأفراد والشركات.", en: "The Egyptian branch of UAE's Union National Bank, offering diverse banking solutions for retail and corporate clients." },
+  COMI: {
+    ar: "البنك التجاري الدولي (CIB) أكبر بنك خاص في مصر، تأسس عام 1975 بشراكة مصرية أمريكية مع مجموعة تشيس مانهاتن. يُقدم خدمات مصرفية متكاملة للأفراد والشركات والمؤسسات، ويمتلك أكبر شبكة صراف آلي بين البنوك الخاصة في مصر، مع توسع نشط نحو أسواق أفريقيا جنوب الصحراء.",
+    en: "Commercial International Bank (CIB), Egypt's largest private bank, founded in 1975 as a joint venture with Chase Manhattan. Delivers full-spectrum retail and corporate banking, commands Egypt's biggest private ATM network, and is actively expanding into sub-Saharan African markets.",
+  },
+  CIEB: {
+    ar: "بنك كريدي أجريكول مصر، تأسس عام 1990 بشراكة مصرية فرنسية وهو الذراع المصرية لمجموعة كريدي أجريكول الفرنسية إحدى أكبر المجموعات المصرفية في العالم بحضور في أكثر من 47 دولة. يُقدم حلولاً مصرفية شاملة للأفراد والشركات الصغيرة والمتوسطة والمؤسسات الكبرى في مصر.",
+    en: "Crédit Agricole Egypt, founded in 1990 as a French-Egyptian partnership, is the Egyptian arm of Crédit Agricole Group—one of the world's largest banking groups with presence in 47+ countries. Provides comprehensive banking solutions for individuals, SMEs and large corporates in Egypt.",
+  },
+  ADIB: {
+    ar: "بنك أبوظبي الإسلامي مصر، الفرع المصري لمجموعة بنك أبوظبي الإسلامي الإماراتي العملاق العامل في أكثر من 7 دول. يُقدم خدمات مصرفية إسلامية متوافقة تماماً مع أحكام الشريعة في مجالات التجزئة والتمويل المؤسسي وإدارة الثروات للأفراد والشركات في مصر.",
+    en: "Abu Dhabi Islamic Bank Egypt, the Egyptian branch of UAE's ADIB Group operating in 7+ countries. Provides fully Sharia-compliant banking across retail, corporate finance and wealth-management segments for individuals and businesses in Egypt.",
+  },
+  SAUD: {
+    ar: "بنك البركة مصر، تأسس عام 1980 ويُعد أحد الفروع الرائدة لمجموعة البركة المصرفية الدولية العاملة في 17 دولة حول العالم. يُقدم باقة متكاملة من الخدمات المصرفية الإسلامية المتوافقة مع أحكام الشريعة للأفراد والشركات والمؤسسات في السوق المصري.",
+    en: "Al Baraka Bank Egypt, founded in 1980, a flagship subsidiary of Al Baraka Banking Group which operates in 17 countries worldwide. Delivers a comprehensive suite of Sharia-compliant Islamic banking services for individuals, businesses and institutions in the Egyptian market.",
+  },
+  EGBE: {
+    ar: "بنك إي جي بنك (المصرف المتحد سابقاً) تأسس عام 1981 ليُقدم خدمات مصرفية متنوعة للأفراد والشركات في مصر. يُركز على التجزئة المصرفية وتمويل الشركات الصغيرة والمتوسطة، وشهد في السنوات الأخيرة توسعاً ملحوظاً في شبكة فروعه ومنتجاته الرقمية وخدمات الدفع الإلكتروني.",
+    en: "EG Bank, founded in 1981, offers diverse banking services for individuals and businesses in Egypt. Focuses on retail banking and SME financing, with notable recent expansion in its branch network, digital products and electronic-payment services.",
+  },
+  FAIT: {
+    ar: "بنك فيصل الإسلامي المصري، أول بنك إسلامي في مصر وأفريقيا، تأسس عام 1977 بموجب قانون خاص. يُقدم منتجات مصرفية إسلامية متكاملة تشمل المرابحة والمشاركة والإجارة والمضاربة وفقاً لأحكام الشريعة الإسلامية للأفراد والشركات والمستثمرين في مختلف القطاعات.",
+    en: "Faisal Islamic Bank of Egypt, the first Islamic bank in Egypt and Africa, established in 1977 under a special law. Offers a full range of Islamic banking products—murabaha, musharaka, ijara and mudaraba—to individuals, businesses and investors across all sectors.",
+  },
+  FAITA: {
+    ar: "بنك فيصل الإسلامي المصري (حسابات الدولار)، أول بنك إسلامي في مصر وأفريقيا، تأسس عام 1977 بموجب قانون خاص. يُقدم منتجات مصرفية إسلامية متوافقة مع الشريعة للأفراد والشركات، وتُمثل هذه الأسهم الشريحة المقومة بالدولار الأمريكي من رأس مال البنك.",
+    en: "Faisal Islamic Bank of Egypt (USD accounts), Africa's first Islamic bank, established in 1977 under a special law. Offers Sharia-compliant Islamic banking products for individuals and businesses; these shares represent the USD-denominated tranche of the bank's capital.",
+  },
+  HDBK: {
+    ar: "بنك التعمير والإسكان، بنك حكومي متخصص تأسس عام 1979 بهدف تمويل مشاريع الإسكان والتعمير في مصر. يُقدم قروضاً عقارية بأسعار ميسّرة للأفراد وتمويلاً للمطورين العقاريين، ويُسهم بدور محوري في المنظومة الحكومية لتوفير الإسكان لمحدودي الدخل.",
+    en: "Housing and Development Bank, a state-owned specialist bank founded in 1979 to finance housing and construction in Egypt. Offers affordable mortgages for individuals and developer finance, playing a key role in the government's affordable-housing programme for low-income citizens.",
+  },
+  EXPA: {
+    ar: "بنك تنمية الصادرات، بنك حكومي مصري تأسس عام 1983 بهدف دعم وتمويل المصدرين المصريين. يُقدم تسهيلات ائتمانية مُخصصة وضمانات تصديرية وخدمات مصرفية دولية تُسهم في تنمية الصادرات غير النفطية المصرية وفتح أسواق جديدة أمام المنتجات المصرية في الخارج.",
+    en: "Export Development Bank of Egypt, a state-owned bank founded in 1983 to support and finance Egyptian exporters. Offers tailored credit facilities, export guarantees and international banking services that help grow Egypt's non-oil exports and open new foreign markets for Egyptian products.",
+  },
+  CANA: {
+    ar: "بنك القاهرة، أحد أعرق البنوك التجارية في مصر وأكبرها، تأسس عام 1952 بشبكة فروع واسعة تمتد عبر مختلف المحافظات. يُقدم خدمات مصرفية شاملة للأفراد والشركات والمؤسسات، مع اهتمام خاص بالشمول المالي ودعم المشاريع الصغيرة والمتوسطة في مصر.",
+    en: "Banque du Caire, one of Egypt's oldest and largest commercial banks, founded in 1952 with a wide branch network across all governorates. Provides comprehensive banking to individuals, businesses and institutions, with special focus on financial inclusion and SME support.",
+  },
+  QNBA: {
+    ar: "بنك QNB الأهلي، أحد أكبر البنوك في مصر، يتبع مجموعة بنك قطر الوطني (QNB) أكبر بنك في الشرق الأوسط وأفريقيا بحضور في 31 دولة. يُقدم خدمات مصرفية متكاملة للأفراد والشركات في مصر مع ربطها بشبكة QNB العالمية لتيسير المعاملات الدولية.",
+    en: "QNB Al Ahli, one of Egypt's largest banks, part of QNB Group—the largest bank in the Middle East and Africa with presence in 31 countries. Offers integrated banking for retail and corporate clients in Egypt, connected to QNB's extensive global network to facilitate international transactions.",
+  },
+  NBKE: {
+    ar: "بنك الكويت الوطني مصر، تابع لمجموعة بنك الكويت الوطني (NBK) أعرق وأكبر بنك كويتي بتاريخ يمتد لأكثر من 70 عاماً وحضور في 16 دولة. يُقدم خدمات مصرفية شاملة للأفراد والشركات في مصر مستفيداً من الخبرة والشبكة الإقليمية الواسعة للمجموعة.",
+    en: "NBK Egypt, part of National Bank of Kuwait Group—Kuwait's oldest and largest bank with 70+ years of history and presence in 16 countries. Provides comprehensive banking for retail and corporate clients in Egypt, leveraging the group's deep expertise and broad regional network.",
+  },
+  SAIB: {
+    ar: "الشركة العربية الدولية للبنوك (SAIB)، بنك متخصص في تمويل التجارة الخارجية والخدمات المؤسسية، تأسس عام 1976 بشراكة عربية دولية متعددة الأطراف. يمتاز بشبكة علاقات مصرفية مراسلة دولية واسعة وخبرة متراكمة في تمويل المشاريع وخطابات الاعتماد والضمانات البنكية.",
+    en: "Societe Arabe Internationale de Banque (SAIB), a trade-finance and corporate-services specialist founded in 1976 as a multi-lateral Arab-international banking partnership. Boasts an extensive global correspondent banking network and long expertise in project finance, letters of credit and bank guarantees.",
+  },
+  UNBE: {
+    ar: "بنك يونيون ناشيونال مصر، الفرع المصري لمجموعة مصرفية إماراتية تعمل في أكثر من 5 دول. يُقدم حلولاً مصرفية متنوعة للأفراد والشركات في مصر، ويستفيد من الربط مع شبكة المجموعة الإماراتية لتيسير التدفقات المالية والأعمال بين مصر ودول الخليج العربي.",
+    en: "Union National Bank Egypt, the Egyptian branch of a UAE banking group operating in 5+ countries. Provides diverse banking solutions for retail and corporate clients in Egypt, leveraging group connectivity to facilitate financial flows and business between Egypt and the Gulf states.",
+  },
 
   // Telecoms
-  ETEL: { ar: "الشركة الوطنية للاتصالات في مصر ومشغل البنية التحتية للإنترنت الثابت والكابلات البحرية، تأسست عام 1854 وتمتلك أكبر شبكة ألياف ضوئية في مصر.", en: "Egypt's national telecoms operator and fixed-line infrastructure owner, founded in 1854, operating the country's largest fibre-optic network." },
-  OREG: { ar: "شركة اتصالات رائدة في مصر تقدم خدمات الهاتف المحمول والإنترنت للأفراد والشركات بقاعدة عملاء تجاوزت 40 مليون مشترك.", en: "A leading Egyptian telecom company providing mobile and internet services to over 40 million subscribers." },
-  VODE: { ar: "إحدى كبرى شركات الاتصالات في مصر، تتبع مجموعة فودافون العالمية وتقدم خدمات الهاتف المحمول والإنترنت والدفع الإلكتروني.", en: "One of Egypt's top telecom operators, part of Vodafone Group, providing mobile, internet and e-payment services." },
-  GTHE: { ar: "شركة اتصالات دولية تعمل في أفريقيا وآسيا وأوروبا، ومن كبرى شركات الاتصالات في الأسواق الناشئة.", en: "An international telecom company operating across Africa, Asia and Europe, and among the largest in emerging markets." },
+  ETEL: {
+    ar: "المصرية للاتصالات، الشركة الوطنية للاتصالات في مصر ذات التاريخ العريق الممتد منذ إنشاء أولى شبكات التلغراف عام 1854. تتولى تشغيل البنية التحتية الوطنية للاتصالات الثابتة وشبكة الألياف الضوئية وكابلات الإنترنت البحرية الدولية، وهي المشغل الوحيد للخطوط الأرضية في مصر.",
+    en: "Telecom Egypt, the national operator with a heritage stretching to Egypt's first telegraph network in 1854. Operates the country's fixed-line infrastructure, national fibre-optic network and international submarine-cable systems, and remains Egypt's sole fixed-line carrier.",
+  },
+  OREG: {
+    ar: "أورانج مصر (موبينيل سابقاً)، تأسست عام 1998 لتكون من أوائل مشغلي الهاتف المحمول في مصر، وأُعيدت تسميتها عام 2016 ضمن مجموعة أورانج الفرنسية العاملة في أكثر من 26 دولة. تخدم أكثر من 40 مليون مشترك وتُقدم خدمات الاتصال والإنترنت الجوال والمدفوعات الرقمية في مصر.",
+    en: "Orange Egypt (formerly Mobinil), one of Egypt's first mobile operators, founded in 1998 and rebranded in 2016 under Orange Group (France), which operates in 26+ countries. Serves over 40 million subscribers with mobile, mobile internet and digital-payment services.",
+  },
+  VODE: {
+    ar: "فودافون مصر، تأسست عام 1998 ضمن مجموعة فودافون البريطانية العملاقة العاملة في أكثر من 20 دولة حول العالم. تُقدم خدمات الهاتف المحمول والإنترنت الجوال والمدفوعات الإلكترونية (فودافون كاش) لعشرات الملايين من العملاء في مختلف أنحاء مصر.",
+    en: "Vodafone Egypt, founded in 1998 as part of Vodafone Group (UK), operating in 20+ countries worldwide. Provides mobile, broadband and e-payment services (Vodafone Cash) to tens of millions of customers across Egypt.",
+  },
+  GTHE: {
+    ar: "جلوبال تيليكوم هولدينج، شركة اتصالات دولية متعددة الأسواق تابعة لمجموعة VEON الهولندية، تمتلك تراخيص اتصالات وعمليات في عدة أسواق ناشئة بأفريقيا وآسيا. تُعد من أبرز الاستثمارات في قطاع الاتصالات في الأسواق الناشئة والحدودية حول العالم.",
+    en: "Global Telecom Holding, an international multi-market telecom company under VEON Group (Netherlands), holding telecom licences and operations in several emerging markets across Africa and Asia. A significant investment vehicle in frontier and emerging-market telecommunications worldwide.",
+  },
 
   // Real Estate
-  TMGH: { ar: "أكبر شركة تطوير عقاري في مصر والشرق الأوسط، تطور مشروع مدينتي (أكبر مشروع عقاري في المنطقة) ومجمعات سكنية ضخمة في القاهرة الجديدة.", en: "The largest real-estate developer in Egypt and the Middle East, developing Madinaty (the region's largest project) and major communities in New Cairo." },
-  PHDC: { ar: "شركة تطوير عقاري رائدة متخصصة في المجتمعات السكنية الفاخرة والمتكاملة في القاهرة الجديدة وأكتوبر والساحل الشمالي.", en: "A leading real-estate developer specializing in premium integrated residential communities in New Cairo, October City and the North Coast." },
-  OCDI: { ar: "شركة تطوير عقاري راقية تُركز على مجتمعات السكن الفاخر (سوديك)، تمتلك مشروعات في أكتوبر والقاهرة الجديدة.", en: "A premium real-estate developer focused on upscale residential communities (SODIC), with projects in October City and New Cairo." },
-  EMFD: { ar: "شركة تطوير عقاري مصرية-إماراتية تابعة لمجموعة إعمار الإماراتية، تطور مشروعات ميفيدا وأبراج مميزة في القاهرة الجديدة.", en: "An Egyptian-UAE real-estate developer, a subsidiary of Emaar Properties, developing Mivida and landmark projects in New Cairo." },
-  MNHD: { ar: "شركة حكومية تتولى تطوير وبيع الأراضي والوحدات السكنية في مدينة نصر، ومن أقدم شركات التطوير العقاري في مصر.", en: "A state-owned developer managing land and residential-unit sales in Nasr City, one of Egypt's oldest real-estate companies." },
-  HELI: { ar: "شركة متخصصة في تطوير الإسكان والمجمعات العمرانية في منطقة مصر الجديدة (هليوبوليس)، إحدى أعرق مناطق القاهرة.", en: "A company specializing in housing and urban development in the Heliopolis district, one of Cairo's most historic areas." },
-  ARAB: { ar: "شركة قابضة عقارية تمتلك محفظة متنوعة من المشروعات السكنية والتجارية في مصر.", en: "A real-estate holding company with a diversified portfolio of residential and commercial projects across Egypt." },
+  TMGH: {
+    ar: "مجموعة طلعت مصطفى، أكبر شركة تطوير عقاري في مصر والشرق الأوسط، تُطوّر مشروع مدينتي أكبر مجتمع عمراني متكامل في المنطقة بمساحة 8,000 فدان ويضم أكثر من 250,000 وحدة سكنية. تمتلك أيضاً مشروع الرحاب والنور وفنادق ومنتجعات في شرم الشيخ والساحل الشمالي.",
+    en: "Talaat Mostafa Group, the largest real-estate developer in Egypt and the Middle East. Develops Madinaty—the region's largest master-planned community spanning 8,000 feddans with 250,000+ units—plus Al Rehab, Al Nour, and hotel and resort projects on the Red Sea and North Coast.",
+  },
+  PHDC: {
+    ar: "بالم هيلز للتطوير، شركة تطوير عقاري رائدة تأسست عام 2005 متخصصة في المجتمعات السكنية المتكاملة الفاخرة. تمتلك مشروعات ضخمة في القاهرة الجديدة ومدينة السادس من أكتوبر والساحل الشمالي وسيناء، بمحفظة أراضٍ تتجاوز 30 مليون متر مربع.",
+    en: "Palm Hills Developments, a leading real-estate developer founded in 2005, specialising in premium integrated residential communities. Holds major projects in New Cairo, 6th October, the North Coast and Sinai, with a land bank exceeding 30 million square metres.",
+  },
+  OCDI: {
+    ar: "سوديك (شركة السادس من أكتوبر للتنمية والاستثمار)، مطور عقاري راقٍ تأسس عام 1996 ومتخصص في المجتمعات السكنية الفاخرة. تمتلك مشروعات SODIC West وEast وVYE والنور في مدينة أكتوبر والقاهرة الجديدة، وتستهدف شريحة العملاء ذوي الدخل المرتفع.",
+    en: "SODIC (6th of October for Development and Investment), a premium real-estate developer founded in 1996. Operates SODIC West, East, VYE and Al Nour projects in October City and New Cairo, targeting high-income residential buyers.",
+  },
+  EMFD: {
+    ar: "إعمار مصر، الفرع المصري لشركة إعمار العقارية الإماراتية إحدى أكبر شركات التطوير العقاري في العالم. تُطوّر مشروعات ميفيدا وكايرو جيت وأبراج إعمار في القاهرة الجديدة، مُقدِّمةً نموذج الحياة المتكامل الذي أثبتت إعمار نجاحه في دبي والأسواق الدولية.",
+    en: "Emaar Misr, the Egyptian subsidiary of Emaar Properties UAE—one of the world's largest real-estate developers. Develops Mivida, Cairo Gate and Emaar Towers in New Cairo, bringing Emaar's proven master-planned community model from Dubai to the Egyptian market.",
+  },
+  MNHD: {
+    ar: "مدينة نصر للإسكان والتعمير، شركة حكومية مصرية تأسست عام 1959 لتُدير وتُطوّر أراضي مدينة نصر إحدى أعرق أحياء القاهرة. تبيع وحدات سكنية وأراضي تجارية وإدارية في محيط مدينة نصر، وتُعد من أعرق وأقدم شركات التطوير العقاري في مصر.",
+    en: "Madinet Nasr for Housing and Development, a state-owned company founded in 1959 to manage and develop land in Nasr City, one of Cairo's most established districts. Sells residential, commercial and administrative units and plots in Nasr City, one of Egypt's oldest real-estate companies.",
+  },
+  HELI: {
+    ar: "شركة هيليوبوليس للإسكان والتعمير، من أعرق شركات التطوير العقاري في مصر والعالم، أُسست عام 1906 على يد البارون الإمبراطوري البلجيكي إمبان لتطوير حي مصر الجديدة (هيليوبوليس). تُطوّر وتبيع وحدات سكنية وتجارية في هذا الحي التاريخي الراقي الذي صممه المهندسون الأوروبيون.",
+    en: "Heliopolis Housing and Development, one of Egypt's oldest real-estate companies, founded in 1906 by Belgian Baron Empain to develop the Heliopolis district. Develops and sells residential and commercial units in this prestigious historic neighbourhood originally designed by European architects.",
+  },
+  ARAB: {
+    ar: "الشركة العربية للاستثمار العقاري، شركة قابضة عقارية مصرية تمتلك محفظة متنوعة من المشروعات السكنية والتجارية في أرجاء مختلفة من مصر. تسعى لتوسيع محفظتها العقارية والاستفادة من الطفرة العمرانية الكبيرة التي تشهدها مصر في إطار المشروعات القومية الكبرى.",
+    en: "Arab Real Estate Investment Company, an Egyptian real-estate holding company with a diversified portfolio of residential and commercial projects across Egypt. Seeks to grow its property portfolio and capitalise on Egypt's major urban expansion driven by large-scale national development initiatives.",
+  },
 
   // Fertilizers & Chemicals
-  ABUK: { ar: "من أكبر منتجي الأسمدة النيتروجينية في الشرق الأوسط، تنتج الأمونيا واليوريا ويقع مصنعها الرئيسي في أبو قير بالإسكندرية.", en: "One of the Middle East's largest nitrogen-fertilizer producers, manufacturing ammonia and urea from its Abu Qir plant in Alexandria." },
-  MFPC: { ar: "مصنع ضخم لإنتاج الأسمدة النيتروجينية في دمياط (موبكو)، يُنتج اليوريا والأمونيا للاستهلاك المحلي والتصدير.", en: "A large nitrogen-fertilizer complex at Damietta (MOPCO) producing urea and ammonia for domestic use and export." },
-  SMFR: { ar: "شركة مصنعة للأسمدة النيتروجينية تعتمد على الغاز الطبيعي كمدخل أساسي، وتُسهم في تلبية احتياجات السوق المحلي.", en: "A nitrogen-fertilizer producer that uses natural gas as its primary feedstock, contributing to Egypt's domestic supply." },
-  EGCH: { ar: "مصنع حيوي في أسوان يُنتج الأسمدة النيتروجينية والكيماويات (كيما) باستخدام الطاقة الكهرومائية من السد العالي.", en: "A key industrial plant in Aswan (Kima) producing nitrogen fertilizers and chemicals powered by Aswan High Dam hydroelectricity." },
-  SKPC: { ar: "شركة متخصصة في إنتاج البتروكيماويات وبخاصة البولي إيثيلين، تقع في سيدي كرير على ساحل البحر المتوسط.", en: "A petrochemicals company specializing in polyethylene production, located on the Mediterranean coast at Sidi Kerir." },
+  ABUK: {
+    ar: "شركة أبو قير للأسمدة والصناعات الكيماوية، من أكبر منتجي الأسمدة النيتروجينية في الشرق الأوسط وأفريقيا، تأسست عام 1976 ومصنعها الرئيسي في أبو قير بالإسكندرية. تُنتج الأمونيا واليوريا ونترات الأمونيوم وتُصدّر نسبة كبيرة من إنتاجها إلى أسواق أوروبا وآسيا وأمريكا.",
+    en: "Abu Qir Fertilizers & Chemical Industries, one of the largest nitrogen-fertilizer producers in MENA and Africa, founded in 1976 with its main plant in Abu Qir, Alexandria. Produces ammonia, urea and ammonium nitrate, exporting a substantial share to European, Asian and American markets.",
+  },
+  MFPC: {
+    ar: "موبكو (شركة مصر لإنتاج الأسمدة)، منشأة صناعية كيماوية ضخمة تأسست عام 2002 في دمياط على ساحل البحر المتوسط. تُنتج اليوريا والأمونيا بطاقة إنتاجية كبيرة معتمدةً على الغاز الطبيعي المصري مدخلاً أساسياً، وتُعد من أحدث وأكبر مصانع الأسمدة في مصر.",
+    en: "MOPCO (Misr Fertilizers Production Company), a large chemical-industrial complex founded in 2002 at Damietta on the Mediterranean coast. Produces urea and ammonia at high capacity using Egyptian natural gas as primary feedstock, among the newest and largest fertilizer plants in Egypt.",
+  },
+  SMFR: {
+    ar: "شركة أسمدة مصرية متخصصة في إنتاج الأسمدة النيتروجينية تعتمد على الغاز الطبيعي المحلي مدخلاً أساسياً في العملية الإنتاجية. تُسهم في تلبية احتياجات سوق الأسمدة المحلي وتدعم قطاع الزراعة المصري بمنتجاتها من اليوريا والأمونيا لزيادة الإنتاجية الزراعية.",
+    en: "An Egyptian nitrogen-fertilizer producer using local natural gas as its primary feedstock. Contributes to meeting domestic fertilizer-market needs and supports the Egyptian agricultural sector with urea and ammonia products to boost farm productivity.",
+  },
+  EGCH: {
+    ar: "كيما (الشركة المصرية للصناعات الكيماوية)، مصنع صناعي تاريخي في أسوان تأسس عام 1960، يعتمد كلياً على الطاقة الكهرومائية الرخيصة من السد العالي. يُنتج الأسمدة النيتروجينية والكيماويات الصناعية، وكان له دور محوري في مسيرة التصنيع المصري منذ ستينيات القرن الماضي.",
+    en: "Kima (Egyptian Chemical Industries), a historic industrial plant in Aswan founded in 1960, running entirely on cheap hydroelectric power from the Aswan High Dam. Produces nitrogen fertilizers and industrial chemicals, and has played a pivotal role in Egypt's industrial history since the 1960s.",
+  },
+  SKPC: {
+    ar: "شركة سيدي كرير للبتروكيماويات (سيكبيك)، متخصصة في إنتاج البولي إيثيلين ومشتقات بتروكيماوية أخرى، تقع في سيدي كرير على ساحل البحر المتوسط غرب الإسكندرية. تُعد من الشركات الريادية في صناعة البتروكيماويات في مصر وتُغذي صناعات تحويلية محلية متعددة.",
+    en: "Sidi Kerir Petrochemicals (SIDPEC), specialised in polyethylene and other petrochemical derivatives, located at Sidi Kerir on the Mediterranean coast west of Alexandria. A pioneer in Egypt's petrochemical industry, supplying feedstock to numerous domestic downstream manufacturers.",
+  },
 
   // Steel & Heavy Industry
-  ESRS: { ar: "أكبر منتج للصلب في مصر وأحد أبرز المنتجين في منطقة الشرق الأوسط، يُسيطر على الجزء الأكبر من سوق حديد التسليح المحلي.", en: "Egypt's largest steel producer and one of the region's biggest, dominating the domestic rebar market." },
-  IRAX: { ar: "مصنع كبير للحديد والصلب في الإسكندرية (العز الدخيلة)، يُنتج حديد التسليح وشرائح الصلب للسوق المحلي والتصدير.", en: "A large steel mill in Alexandria (El Dekheila) producing rebar and steel sections for domestic and export markets." },
-  SWDY: { ar: "شركة عالمية رائدة في صناعة الكابلات الكهربائية وأنظمة نقل الطاقة، تعمل في أكثر من 40 دولة وتُعد من أكبر منتجي الكابلات في العالم.", en: "A global leader in electrical cables and energy-transmission systems, operating in 40+ countries and one of the world's top cable manufacturers." },
-  EGAL: { ar: "الشركة الحكومية المنتجة للألومنيوم في مصر، تقع في نجع حمادي وتعتمد على الطاقة الكهرومائية من السد العالي في عملياتها.", en: "Egypt's state-owned aluminium producer, located in Nag Hammadi and powered by hydroelectric energy from the Aswan High Dam." },
+  ESRS: {
+    ar: "شركة حديد عز، أكبر منتج للصلب في مصر ومنطقة الشرق الأوسط وأفريقيا، تأسست عام 1994 وسيطرت على حصة كبيرة من سوق حديد التسليح المحلي بتقنية الفرن القوسي الكهربائي الحديثة. تمتلك طاقة إنتاجية ضخمة وتُصدّر جزءاً من إنتاجها إلى أسواق أفريقيا والشرق الأوسط وأوروبا.",
+    en: "Ezz Steel, Egypt's largest steelmaker and one of the biggest in MENA and Africa, founded in 1994. Dominates the domestic rebar market using modern electric-arc furnace technology, holds massive production capacity and exports a portion of output to African, Middle Eastern and European markets.",
+  },
+  IRAX: {
+    ar: "شركة عز الدخيلة للصلب، مصنع صلب رائد يقع في منطقة الدخيلة بالإسكندرية ضمن مجموعة حديد عز. يُنتج حديد التسليح والأشكال الصلبية المتنوعة، ويستفيد من موقعه الاستراتيجي في الميناء لاستيراد الخامات وتصدير المنتجات إلى الأسواق الأوروبية والأفريقية والمتوسطية.",
+    en: "Ezz El-Dekheila Steel, a major steel plant in Alexandria's El Dekheila port zone, part of Ezz Steel Group. Produces rebar and various structural steel shapes, leveraging its strategic port location to import raw materials and export products to European, African and Mediterranean markets.",
+  },
+  SWDY: {
+    ar: "السويدي إلكتريك، شركة عالمية رائدة في صناعة الكابلات الكهربائية وحلول نقل الطاقة والطاقة المتجددة والعدادات الذكية، تأسست عام 1938 وتعمل في أكثر من 40 دولة عبر القارات. من أكبر منتجي الكابلات الكهربائية في العالم وتضم أكثر من 25,000 موظف على مستواه.",
+    en: "Elsewedy Electric, a global leader in electrical cables, energy-transmission solutions, renewables and smart meters, founded in 1938 and operating in 40+ countries across continents. One of the world's largest cable manufacturers with over 25,000 employees worldwide.",
+  },
+  EGAL: {
+    ar: "الشركة المصرية للألومنيوم (إيجال)، الشركة الحكومية الوحيدة لإنتاج الألومنيوم الأولي في مصر، تأسست عام 1975 ومصنعها في نجع حمادي بصعيد مصر. تعتمد على الطاقة الكهرومائية الرخيصة من السد العالي، وتُنتج سبائك الألومنيوم التي تُغذي صناعات التغليف والإنشاءات والمركبات.",
+    en: "Egyptian Aluminium (EGAL), Egypt's sole state-owned primary aluminium producer, founded in 1975 and located in Nag Hammadi, Upper Egypt. Powered by cheap hydroelectric energy from the Aswan High Dam, it produces aluminium ingots that feed packaging, construction and automotive industries.",
+  },
 
   // Finance & Investment
-  HRHO: { ar: "أكبر بنك استثماري وشركة خدمات مالية في منطقة الأسواق الناشئة والحدودية بالشرق الأوسط وأفريقيا (EFG Hermes)، تقدم خدمات إدارة الأصول والوساطة والاكتتابات.", en: "The largest investment bank and financial-services firm in MENA/frontier markets (EFG Hermes), offering asset management, brokerage and capital-markets services." },
-  FWRY: { ar: "الشركة الرائدة في مجال الدفع الإلكتروني ومدفوعات الفواتير في مصر، تُعالج مئات الملايين من المعاملات سنوياً عبر شبكتها الواسعة.", en: "Egypt's leading e-payment and bill-payment company, processing hundreds of millions of transactions annually across its extensive network." },
-  EFIH: { ar: "منصة الدفع الرقمي الحكومية في مصر (إي-فاينانس)، تُشغّل منظومة مدفوعات الحكومة الإلكترونية وخدمات التحصيل الرقمي للدولة.", en: "Egypt's government digital-payment platform (e-Finance), operating the state's electronic payment and collection infrastructure." },
-  CNFN: { ar: "شركة خدمات مالية متكاملة رائدة في التمويل الاستهلاكي والتأجير التمويلي وإدارة المدفوعات في مصر.", en: "A leading integrated financial-services company specializing in consumer finance, leasing and payments management in Egypt." },
-  CICH: { ar: "مجموعة خدمات مالية متكاملة تضم CI Capital لبنك الاستثمار ومنصات متنوعة للتمويل الاستهلاكي.", en: "An integrated financial-services group comprising CI Capital investment banking and various consumer-finance platforms." },
-  SRWA: { ar: "شركة مالية متخصصة في التمويل الاستهلاكي والتأجير التمويلي وإدارة الأصول في مصر.", en: "A financial company specializing in consumer finance, leasing and asset management in Egypt." },
-  BTFH: { ar: "شركة خدمات مالية متخصصة في إدارة الأصول والوساطة المالية وبنك الاستثمار في مصر والمنطقة.", en: "A financial-services company specializing in asset management, brokerage and investment banking in Egypt and the region." },
-  CCAP: { ar: "شركة قابضة متنوعة تستثمر في قطاعات الطاقة والبنية التحتية والإعلام واللوجستيات عبر محفظة واسعة من الشركات التابعة.", en: "A diversified holding company investing in energy, infrastructure, media and logistics through a wide portfolio of subsidiaries." },
-  OFH: { ar: "الذراع المالية لمجموعة أوراسكوم، تُركز على الاستثمار في الخدمات المالية في مصر ومنطقة الشرق الأوسط وأفريقيا.", en: "The financial arm of Orascom Group, focused on investing in financial services across Egypt, MENA and Africa." },
-  EKHO: { ar: "شركة قابضة مصرية-كويتية متنوعة تستثمر في قطاعات البتروكيماويات والتأمين والخدمات المالية في مصر.", en: "An Egyptian-Kuwaiti diversified holding company investing in petrochemicals, insurance and financial services in Egypt." },
+  HRHO: {
+    ar: "إي إف جي هيرميس، أكبر بنك استثماري وشركة خدمات مالية متكاملة في منطقة الأسواق الناشئة والحدودية بالشرق الأوسط وأفريقيا، تأسس عام 1984. يعمل في أكثر من 14 دولة منها الإمارات والسعودية والكويت والأردن وباكستان وبنغلاديش وكينيا، ويُقدم إدارة الأصول والوساطة وبنك الاستثمار وإدارة الثروات.",
+    en: "EFG Hermes, the largest investment bank and integrated financial-services firm in MENA and frontier markets, founded in 1984. Operates in 14+ countries including UAE, Saudi Arabia, Kuwait, Jordan, Pakistan, Bangladesh and Kenya, offering asset management, brokerage, investment banking and wealth services.",
+  },
+  FWRY: {
+    ar: "فوري لتكنولوجيا البنوك والمدفوعات الإلكترونية، رائدة الدفع الإلكتروني ودفع الفواتير في مصر، تأسست عام 2008 وأُدرجت في البورصة المصرية عام 2019. تخدم أكثر من 30 مليون عميل وتعالج مئات الملايين من المعاملات سنوياً عبر شبكة تتجاوز 300,000 نقطة بيع وخدمة في مصر.",
+    en: "Fawry, Egypt's leading e-payment and bill-payment company, founded in 2008 and listed on the EGX in 2019. Serves over 30 million customers and processes hundreds of millions of transactions annually across a network of 300,000+ payment and service points.",
+  },
+  EFIH: {
+    ar: "إي-فاينانس للاستثمارات الرقمية والمالية، منصة الدفع الحكومي الرقمي في مصر تأسست عام 2005. تُشغّل منظومة صرف رواتب الحكومة والمعاشات والدعم النقدي وتحصيل الضرائب والرسوم، وتعالج تريليونات الجنيهات سنوياً لتكون العمود الفقري للتحول الرقمي المالي للدولة المصرية.",
+    en: "E-Finance for Digital and Financial Investments, Egypt's government digital-payment platform founded in 2005. Operates the state's salary, pension, cash-subsidy, tax and fee-collection systems, processing trillions of Egyptian pounds annually as the backbone of Egypt's government financial digitalisation.",
+  },
+  CNFN: {
+    ar: "كونتكت للخدمات المالية المتكاملة، شركة رائدة في مجال التمويل الاستهلاكي والتأجير التمويلي وإدارة المدفوعات في مصر. تُقدم حلول التمويل للتجزئة والمستهلكين والشركات، بمحفظة متنوعة من المنتجات المالية تستهدف شرائح الطبقة المتوسطة والمشاريع الصغيرة والمتوسطة.",
+    en: "Contact Financial Holding, a leading integrated financial-services company in Egypt providing consumer finance, leasing and payments management. Offers financing solutions for retail, consumer and corporate segments, with a diversified product portfolio targeting middle-income consumers and small businesses.",
+  },
+  CICH: {
+    ar: "مجموعة CI كابيتال للخدمات المالية المتكاملة، تضم CI Capital لخدمات بنك الاستثمار والاكتتابات وإدارة الأصول والوساطة إلى جانب منصات التمويل الاستهلاكي والتأجير التمويلي. من أبرز مجموعات الخدمات المالية في مصر مع طموح للتوسع في الشرق الأوسط وأفريقيا.",
+    en: "CI Capital Holding, an integrated financial-services group comprising CI Capital investment banking, underwriting, asset management and brokerage, alongside consumer-finance and leasing platforms. One of Egypt's most prominent financial-services groups with ambitions to expand in MENA and Africa.",
+  },
+  SRWA: {
+    ar: "سروة كابيتال للخدمات المالية، شركة مالية مصرية متخصصة في التمويل الاستهلاكي والتأجير التمويلي وإدارة الأصول وخدمات التحصيل. تُقدم منتجات تمويلية مبتكرة للأفراد والشركات الصغيرة وتسعى لتوسيع قاعدة عملائها عبر القنوات الرقمية الحديثة.",
+    en: "Sarwa Capital Financial Services, an Egyptian financial company specialising in consumer finance, leasing, asset management and collection services. Offers innovative financing products for individuals and small businesses, seeking to grow its customer base through modern digital channels.",
+  },
+  BTFH: {
+    ar: "بلتون المالية القابضة، شركة خدمات مالية متكاملة تعمل في إدارة الأصول والوساطة في الأوراق المالية وبنك الاستثمار في مصر والمنطقة. تمتلك خبرة متراكمة في أسواق المال المصرية والعربية وتستهدف المستثمرين من القطاع الخاص والمؤسسي بحلول مالية متطورة.",
+    en: "Beltone Financial Holding, an integrated financial-services company providing asset management, securities brokerage and investment banking in Egypt and the region. Holds accumulated expertise in Egyptian and Arab capital markets and targets both private and institutional investors with sophisticated financial solutions.",
+  },
+  CCAP: {
+    ar: "سيتادل كابيتال، شركة قابضة استراتيجية متنوعة تستثمر في قطاعات الطاقة والبنية التحتية والإعلام واللوجستيات والزراعة عبر محفظة واسعة من الشركات التابعة في مصر وأفريقيا. تُركز على الاستثمارات ذات الطابع التنموي والتأثير الاقتصادي في الأسواق الناشئة والحدودية.",
+    en: "Citadel Capital, a diversified strategic holding company investing in energy, infrastructure, media, logistics and agriculture through a broad portfolio of subsidiaries in Egypt and Africa. Focuses on development-oriented investments with real economic impact in emerging and frontier markets.",
+  },
+  OFH: {
+    ar: "أوراسكوم للاستثمار المالي، الذراع المالية لمجموعة أوراسكوم القابضة المصرية، متخصصة في الاستثمار في قطاعات الخدمات المالية والتكنولوجيا المالية في مصر ومنطقة الشرق الأوسط وأفريقيا. تُشارك في تأسيس وامتلاك وإدارة شركات مالية واعدة في الأسواق الناشئة.",
+    en: "Orascom Financial Holding, the financial arm of Orascom Holding Group, specialising in investments in financial services and fintech in Egypt, MENA and Africa. Participates in founding, owning and managing promising financial companies across emerging markets.",
+  },
+  EKHO: {
+    ar: "المصرية الكويتية القابضة (EKH)، شركة قابضة مصرية-كويتية متنوعة تستثمر في قطاعات الطاقة والبتروكيماويات والأسمدة والتأمين والخدمات المالية. تمتلك حصصاً استراتيجية في عدد من شركات الطاقة والصناعة في مصر وتسعى لتوسيع محفظتها الاستثمارية.",
+    en: "Egyptian-Kuwaiti Holding (EKH), a diversified Egyptian-Kuwaiti holding company investing in energy, petrochemicals, fertilizers, insurance and financial services. Holds strategic stakes in several energy and industrial companies in Egypt and pursues ongoing portfolio expansion.",
+  },
 
   // Healthcare
-  CLHO: { ar: "سلسلة مستشفيات خاصة رائدة في مصر، تضم عدة مستشفيات في القاهرة وتقدم خدمات صحية شاملة عبر طاقم طبي متخصص.", en: "A leading private hospital chain in Egypt comprising multiple Cairo hospitals and offering comprehensive healthcare services." },
-  IDHC: { ar: "أكبر مجموعة مختبرات تشخيصية طبية في مصر والشرق الأوسط، تمتلك شبكة واسعة من مختبرات التحاليل الطبية (IDH).", en: "The largest medical-diagnostic laboratory group in Egypt and the Middle East, operating a broad IDH laboratory network." },
-  ISPH: { ar: "أكبر موزع دوائي في مصر (ابن سينا فارما)، يربط شركات الأدوية بأكثر من 60,000 صيدلية ومستشفى على مستوى الجمهورية.", en: "Egypt's largest pharmaceutical distributor (Ibnsina Pharma), linking drug manufacturers to over 60,000 pharmacies and hospitals nationwide." },
-  RMDA: { ar: "شركة أدوية مصرية رائدة متخصصة في إنتاج الأدوية الجنيسة عالية الجودة والكواشف التشخيصية (راميدا).", en: "A leading Egyptian pharmaceutical company specialized in high-quality generics and diagnostic reagents (Rameda)." },
-  MIPH: { ar: "شركة أدوية متخصصة في تطوير وتصنيع الأدوية الحيوية والبروتينات الطبية لعلاج الأمراض المزمنة.", en: "A pharmaceutical company specializing in developing and manufacturing biopharmaceuticals and medical proteins for chronic diseases." },
-  MCRO: { ar: "شركة قابضة دوائية متنوعة تعمل في توزيع وتصنيع الأدوية في مصر والأسواق الإقليمية.", en: "A diversified pharmaceutical holding company engaged in drug distribution and manufacturing in Egypt and regional markets." },
-  SPMD: { ar: "شركة رائدة في تقديم خدمات التحاليل الطبية وإدارة المعامل، تمتلك شبكة من مراكز التحاليل في مصر.", en: "A leading medical-laboratory services company, operating a network of testing centers across Egypt." },
-  NINH: { ar: "مستشفى دولي متخصص في تقديم خدمات الرعاية الصحية المتقدمة في منطقة النزهة بالقاهرة.", en: "An international hospital providing advanced healthcare services in the Nozha area of Cairo." },
+  CLHO: {
+    ar: "مجموعة مستشفيات كليوباترا، سلسلة مستشفيات خاصة رائدة في مصر تأسست عام 1978. تضم عدة مستشفيات في القاهرة الكبرى تُقدم خدمات صحية شاملة في الجراحة والأمومة والطوارئ والرعاية المركزة، وتعمل على توسيع شبكتها لتشمل مزيداً من المحافظات المصرية.",
+    en: "Cleopatra Hospitals Group, a leading private hospital chain in Egypt founded in 1978. Comprises multiple hospitals across Greater Cairo offering comprehensive healthcare in surgery, maternity, emergency and critical-care specialties, with ongoing plans to expand its network to more governorates.",
+  },
+  IDHC: {
+    ar: "المجموعة المتكاملة للتشخيص (IDH)، أكبر مجموعة مختبرات تشخيصية طبية في مصر والشرق الأوسط، مُدرجة في البورصة المصرية وبورصة لندن. تمتلك شبكة واسعة من المختبرات في مصر وتمتلك Biolab في الأردن وعمليات في السودان، وتخدم ملايين المرضى سنوياً.",
+    en: "Integrated Diagnostics Holdings (IDH), the largest medical-diagnostic laboratory group in Egypt and the Middle East, listed on both the EGX and London Stock Exchange. Operates an extensive lab network in Egypt, owns Biolab in Jordan and has operations in Sudan, serving millions of patients annually.",
+  },
+  ISPH: {
+    ar: "ابن سينا فارما، أكبر موزع أدوية في مصر، تأسست عام 2001 وتُدير منظومة لوجستية دوائية متطورة تربط شركات الأدوية بأكثر من 60,000 صيدلية ومستشفى على مستوى الجمهورية. تُعد العمود الفقري لسلسلة توريد الدواء في مصر وتتمتع بتغطية جغرافية شاملة.",
+    en: "Ibnsina Pharma, Egypt's largest pharmaceutical distributor, founded in 2001. Operates a sophisticated pharma-logistics network connecting manufacturers to over 60,000 pharmacies and hospitals nationwide, serving as the backbone of Egypt's drug-supply chain with comprehensive geographic coverage.",
+  },
+  RMDA: {
+    ar: "راميدا للأدوية والمستلزمات الطبية، شركة أدوية مصرية رائدة متخصصة في تطوير وإنتاج الأدوية الجنيسة عالية الجودة والكواشف التشخيصية. تعتمد على تكنولوجيا متقدمة وتستهدف أسواق تصدير في الشرق الأوسط وأفريقيا إضافة إلى السوق المحلي.",
+    en: "Rameda Pharmaceuticals, a leading Egyptian drug company specialising in developing and manufacturing high-quality generic medicines and diagnostic reagents. Employs advanced technology and targets export markets in MENA and Africa alongside the domestic Egyptian market.",
+  },
+  MIPH: {
+    ar: "مينافارم للأدوية والتكنولوجيا الحيوية، شركة متخصصة في تطوير وتصنيع الأدوية الحيوية (البيولوجيكس) والبروتينات الطبية المعقدة لعلاج الأمراض المزمنة كالسرطان والسكري. تأسست عام 1995 وتستخدم تقنيات بيوتكنولوجية متقدمة نادراً ما تتوفر في مصر والمنطقة.",
+    en: "Minapharm Pharmaceuticals, founded in 1995, specialising in developing and manufacturing biopharmaceuticals and complex medical proteins for chronic conditions such as cancer and diabetes. Employs advanced biotech technologies rarely available in Egypt and the wider region.",
+  },
+  MCRO: {
+    ar: "ماكرو جروب للأدوية، شركة قابضة دوائية متنوعة تعمل في توزيع وتصنيع وتسويق الأدوية البشرية في مصر والأسواق الإقليمية. تمتلك شبكة توزيع واسعة وعلاقات مع كبرى الشركات الدوائية العالمية، وتسعى لتوسيع قدراتها التصنيعية والتصديرية.",
+    en: "Macro Group Pharmaceuticals, a diversified pharma holding company engaged in drug distribution, manufacturing and marketing for human medicines in Egypt and regional markets. Holds a wide distribution network and partnerships with major global drug companies, while expanding manufacturing and export capabilities.",
+  },
+  SPMD: {
+    ar: "شركة خدمات طبية متخصصة رائدة في مجال إدارة معامل التحاليل الطبية وتقديم خدمات التشخيص الدقيق في مصر. تمتلك شبكة من مراكز التحاليل توفر خدمات تشخيصية شاملة للمرضى في مختلف التخصصات وفق معايير جودة عالمية.",
+    en: "A leading specialist medical-services company in medical-laboratory management and precision diagnostics in Egypt. Operates a network of testing centres providing comprehensive diagnostic services across specialties, following international quality standards.",
+  },
+  NINH: {
+    ar: "مستشفى النيل الدولي، منشأة طبية خاصة متخصصة تُقدم خدمات الرعاية الصحية المتقدمة في منطقة النزهة بالقاهرة. تُغطي طيفاً واسعاً من التخصصات الطبية والجراحية وتستهدف تقديم رعاية بمستويات دولية للمرضى المصريين والوافدين على حد سواء.",
+    en: "Nile International Hospital, a private specialist medical facility offering advanced healthcare services in Cairo's Nozha district. Covers a wide spectrum of medical and surgical specialties, targeting international-standard care for both Egyptian and foreign patients.",
+  },
 
   // Education
-  TALM: { ar: "شركة رائدة في إدارة المدارس الخاصة والدولية في مصر، تُشغّل مجموعة من المدارس ذات المناهج الدولية وتخدم آلاف الطلاب.", en: "A leading operator of private and international schools in Egypt, running internationally-accredited campuses serving thousands of students." },
-  MOED: { ar: "شركة متخصصة في تقديم خدمات وحلول التعليم الحديث، تمتلك شبكة من المدارس والمراكز التعليمية في مصر.", en: "A company specializing in modern educational services and solutions, operating a network of schools and learning centers in Egypt." },
-  CIRA: { ar: "شركة قابضة متنوعة في قطاع التعليم والتطوير العقاري في مصر، تمتلك مؤسسات تعليمية مرموقة.", en: "A diversified holding company in education and real-estate development in Egypt, owning prestigious educational institutions." },
+  TALM: {
+    ar: "تعليم القابضة، شركة رائدة في إدارة وتشغيل المدارس الخاصة والدولية في مصر. تُشغّل مجموعة من المدارس الدولية والوطنية ذات المناهج المعتمدة دولياً وتخدم عشرات الآلاف من الطلاب، وتستثمر في التوسع بقطاع التعليم قبل الجامعي في ظل الطلب المتنامي.",
+    en: "TALEEM Holding, a leading operator of private and international schools in Egypt. Manages internationally accredited national and international-curriculum schools serving tens of thousands of students, investing in pre-university education expansion amid growing demand.",
+  },
+  MOED: {
+    ar: "المجموعة المصرية للتعليم الحديث، شركة متخصصة في تقديم خدمات وحلول التعليم الحديث وإدارة المدارس والمراكز التعليمية في مصر. تُركز على تطوير المناهج الرقمية وتطبيقات التعليم الإلكتروني ودمج التكنولوجيا في العملية التعليمية لتحسين المخرجات.",
+    en: "Modern Education Group, a company specialising in modern educational services, school management and learning-centre operations in Egypt. Focuses on developing digital curricula, e-learning applications and integrating technology into the educational process to improve student outcomes.",
+  },
+  CIRA: {
+    ar: "سيرا للاستثمار والتطوير، مجموعة قابضة متنوعة تعمل في قطاع التعليم الجامعي والمدارس الدولية والتطوير العقاري في مصر. تمتلك جامعة سيرا ومدارس دولية وعدداً من مشروعات التطوير العقاري المتكاملة بهدف توفير بيئة تعليمية وسكنية متميزة.",
+    en: "CIRA for Investment and Development, a diversified holding group in education (universities and international schools) and real-estate development in Egypt. Owns CIRA University, international schools and integrated real-estate projects, aiming to deliver excellent educational and residential environments.",
+  },
 
   // Food & Consumer
-  JUFO: { ar: "أكبر شركة لإنتاج الألبان والعصائر في مصر، تمتلك ماركة جهينة الشهيرة في الألبان والعصائر والمنتجات الغذائية المتنوعة.", en: "Egypt's largest dairy and juice producer, owning the iconic Juhayna brand across dairy, juice and diverse food products." },
-  EFID: { ar: "شركة رائدة في صناعة الحلوى والمخبوزات المعلبة في مصر والشرق الأوسط، تمتلك ماركات شهيرة مثل هوهوز وتايكي وكريمي.", en: "A leading packaged-snack and baked-goods company in Egypt and the MENA region, owning popular brands like HoHos, Twinkies and Creemy." },
-  DOMT: { ar: "أكبر منتج للجبن المعالج في مصر (دومتي)، يمتلك حصة سوقية كبيرة في قطاع الألبان ويُصدّر منتجاته إلى أكثر من 25 دولة.", en: "Egypt's largest processed-cheese producer (Domty) with a dominant dairy market share, exporting to over 25 countries." },
-  OLFI: { ar: "شركة متنوعة في الصناعات الغذائية تُنتج مجموعة واسعة من منتجات الألبان والأجبان والأغذية المصنعة من مدينة العبور الصناعية.", en: "A diversified food-industry company producing a wide range of dairy, cheese and processed-food products from its Obour industrial base." },
-  EAST: { ar: "شركة حكومية تحتكر إنتاج وتوزيع السجائر والتبغ في مصر، وتُعد من أكبر الشركات من حيث الإيرادات والأرباح في البورصة المصرية.", en: "A state-owned monopoly producing and distributing cigarettes and tobacco in Egypt, one of the highest-earning companies on the EGX." },
-  ADPC: { ar: "شركة مصرية منتجة لمجموعة متنوعة من منتجات الألبان والأجبان العربية.", en: "An Egyptian company producing a diverse range of Arab-style dairy products and cheeses." },
+  JUFO: {
+    ar: "جهينة للصناعات الغذائية، أكبر منتج للألبان والعصائر والأغذية في مصر، تأسست عام 1983 وتمتلك ماركة جهينة الأشهر في السوق المصري. تمتلك محطات تجميع حليب على مستوى الجمهورية وخطوط إنتاج متنوعة للألبان والعصائر والمياه، وتُصدّر منتجاتها إلى أسواق عربية وأفريقية.",
+    en: "Juhayna Food Industries, Egypt's largest dairy, juice and food producer, founded in 1983 and owning the iconic Juhayna brand. Operates milk-collection stations nationwide and diverse production lines for dairy, juice and water, exporting to Arab and African markets.",
+  },
+  EFID: {
+    ar: "إديتا للصناعات الغذائية، شركة رائدة في صناعة الحلوى والمخبوزات المعلبة في مصر والشرق الأوسط، تأسست عام 1996 وتمتلك ماركات شهيرة كهوهوز وتايكي وكريمي. مُدرَجة في بورصتي مصر ولندن، وتُصدّر منتجاتها إلى أكثر من 25 دولة في المنطقة.",
+    en: "Edita Food Industries, a leading packaged-snack and baked-goods company in Egypt and MENA, founded in 1996 and owning popular brands including HoHos, Twinkies and Creemy. Listed on both the EGX and London Stock Exchange, exporting products to 25+ countries in the region.",
+  },
+  DOMT: {
+    ar: "دومتي لمنتجات الألبان، أكبر منتج للجبن المطبوخ في مصر، تأسست عام 1990 وتمتلك حصة سوقية تزيد على 60% في فئة الجبن المعالج. تُصدّر منتجاتها إلى أكثر من 25 دولة حول العالم وتمتلك خطوط إنتاج متطورة لمجموعة واسعة من منتجات الألبان والجبن.",
+    en: "Domty Dairy Products, Egypt's largest processed-cheese manufacturer, founded in 1990 with a market share exceeding 60% in the processed-cheese segment. Exports to over 25 countries worldwide and operates advanced production lines for a wide range of dairy and cheese products.",
+  },
+  OLFI: {
+    ar: "شركة أراضي العبور للصناعات الغذائية، شركة صناعات غذائية متنوعة تمتلك مصانع في مدينة العبور الصناعية لإنتاج الألبان والأجبان والمنتجات الغذائية المصنعة. من الموردين الرئيسيين لمنتجات الألبان في السوق المصري وتُركز على الجودة والابتكار.",
+    en: "Obour Land for Food Industries, a diversified food company with manufacturing plants in Obour Industrial City producing dairy, cheese and processed-food products. A key dairy supplier in the Egyptian market, focused on quality and product innovation.",
+  },
+  EAST: {
+    ar: "الشركة الشرقية للدخان، الشركة الحكومية المحتكرة لإنتاج وتوزيع السجائر ومنتجات التبغ في مصر منذ تأسيسها عام 1920. من أكثر الشركات ربحية في البورصة المصرية، تمتلك ماركات محلية شهيرة وترخيص إنتاج ماركات عالمية كمارلبورو وكنت ووينستون.",
+    en: "Eastern Company, the state-owned monopoly for cigarette and tobacco production and distribution in Egypt, established in 1920. One of the EGX's most profitable companies, it owns well-known domestic brands and holds licensed production rights for international brands including Marlboro, Kent and Winston.",
+  },
+  ADPC: {
+    ar: "شركة المنتجات الألبانية العربية، شركة مصرية متخصصة في إنتاج وتسويق مجموعة متنوعة من منتجات الألبان والأجبان العربية الطراز. تُركز على تلبية احتياجات المستهلك المصري من المنتجات الألبانية التقليدية وتعمل على توسيع خطوط منتجاتها ومناطق توزيعها.",
+    en: "Arab Dairy Products Company, an Egyptian company specialising in producing and marketing a diverse range of traditional Arab-style dairy and cheese products. Focuses on meeting Egyptian consumer demand for traditional dairy items and works to expand its product lines and distribution reach.",
+  },
 
   // Autos
-  AUTO: { ar: "أكبر موزع للسيارات في مصر ومنطقة الشرق الأوسط وأفريقيا (جي بي أوتو)، يمثل علامات تجارية عالمية كبرى كهيونداي وشيري وغيرها.", en: "The largest vehicle distributor in Egypt, MENA and Africa (GB Auto), representing major global brands including Hyundai and Chery." },
+  AUTO: {
+    ar: "جي بي أوتو، أكبر موزع للسيارات والمركبات في مصر ومنطقة الشرق الأوسط وأفريقيا، تأسست عام 1997 ومُدرجة في بورصتي القاهرة ولندن. تُمثّل علامات عالمية كهيونداي وجيلي وشيري وباجاج، وتعمل في قطاعات السيارات الركاب والتجارية والموتوسيكلات والتمويل والضمان.",
+    en: "GB Auto, Egypt's largest vehicle distributor and a major MENA/Africa automotive group, founded in 1997 and listed on both the Cairo and London exchanges. Represents global brands including Hyundai, Geely, Chery and Bajaj across passenger cars, commercial vehicles, motorcycles, and vehicle financing and aftersales.",
+  },
 
   // Construction & Engineering
-  OCIC: { ar: "شركة مقاولات عالمية رائدة (أوراسكوم للإنشاء)، تُنفذ مشاريع البنية التحتية والطاقة والصناعة في أمريكا الشمالية والشرق الأوسط وأفريقيا وأوروبا.", en: "A leading global contractor (Orascom Construction) executing infrastructure, energy and industrial projects across North America, MENA, Africa and Europe." },
+  OCIC: {
+    ar: "أوراسكوم للإنشاء، شركة مقاولات عالمية عملاقة تمتد جذورها إلى خمسينيات القرن الماضي وتأسست في شكلها الحالي عام 2015، مُدرجة في بورصة مصر وناسداك دبي. تُنفّذ مشاريع البنية التحتية والطاقة والصناعة والمباني في أمريكا الشمالية والشرق الأوسط وأفريقيا وأوروبا.",
+    en: "Orascom Construction, a global construction giant with roots in the 1950s, incorporated in its current form in 2015 and listed on the EGX and NASDAQ Dubai. Executes infrastructure, energy, industrial and building projects across North America, MENA, Africa and Europe.",
+  },
 
   // Media & Tech
-  MPRC: { ar: "أكبر مجمع للإنتاج الإعلامي في منطقة الشرق الأوسط وأفريقيا، يضم استوديوهات تلفزيونية وسينمائية وبنية تحتية متكاملة للإنتاج الإعلامي.", en: "The largest media production complex in MENA and Africa, housing TV and film studios with full production infrastructure." },
-  RAYA: { ar: "مجموعة قابضة متنوعة تعمل في قطاعات تكنولوجيا المعلومات والاتصالات والتعليم وتوزيع المعدات والخدمات اللوجستية.", en: "A diversified holding group operating in IT, telecoms, education, equipment distribution and logistics." },
-  RACC: { ar: "شركة رائدة في مجال مراكز الاتصال وإدارة تجربة العملاء في مصر والمنطقة، تُقدم خدمات الـ outsourcing لكبرى الشركات العالمية.", en: "A leading contact-centre and customer-experience management company in Egypt, providing outsourcing services to major global firms." },
-  EGSA: { ar: "تُشغّل منظومة الأقمار الصناعية المصرية (نايل سات) التي تبث مئات القنوات التلفزيونية لمنطقة الشرق الأوسط وشمال أفريقيا وأوروبا.", en: "Operates Egypt's NileSat satellite system, broadcasting hundreds of TV channels across MENA and Europe." },
+  MPRC: {
+    ar: "مدينة الإنتاج الإعلامي، أكبر مجمع للإنتاج الإعلامي والتلفزيوني في منطقة الشرق الأوسط وأفريقيا. تمتلك استوديوهات تلفزيونية وسينمائية ضخمة وبنية تحتية متكاملة لما بعد الإنتاج، وتستضيف عشرات القنوات الفضائية ومنتجات الإعلام العربي بمعايير تقنية عالية.",
+    en: "Media Production City, the largest media and TV production complex in MENA and Africa. Houses extensive TV and film studios with full post-production infrastructure, hosting dozens of satellite channels and Arab media productions to high technical standards.",
+  },
+  RAYA: {
+    ar: "راية القابضة، مجموعة قابضة مصرية متنوعة تأسست عام 2000 وتعمل في قطاعات تكنولوجيا المعلومات والاتصالات وإدارة المعرفة وتوزيع معدات تكنولوجيا المعلومات والخدمات اللوجستية والتعليم. تمتلك حصصاً في شركات تكنولوجية وخدمية ناجحة في مصر والمنطقة.",
+    en: "Raya Holding, a diversified Egyptian holding group founded in 2000, operating in IT, telecoms, knowledge management, IT-equipment distribution, logistics and education. Holds stakes in successful tech and service companies in Egypt and the region.",
+  },
+  RACC: {
+    ar: "راية لمراكز الاتصال وإدارة الأعمال، من أكبر مزودي خدمات مراكز الاتصال وإدارة تجربة العملاء في مصر والشرق الأوسط. تُقدم خدمات outsourcing للتواصل مع العملاء لكبرى الشركات العالمية، وتعمل من عدة مراكز في مصر بفريق عمل يتجاوز الآلاف.",
+    en: "Raya Contact Center, one of Egypt's and the Middle East's largest contact-centre and customer-experience management providers. Delivers customer-operations outsourcing to major global companies, operating from multiple centres in Egypt with a workforce of thousands.",
+  },
+  EGSA: {
+    ar: "شركة النيل للاتصالات الفضائية (نايل سات)، تأسست عام 1996 وتُشغّل منظومة الأقمار الصناعية المصرية (نايل سات 201 و204) التي تبث مئات القنوات التلفزيونية وخدمات الإنترنت لجمهور الشرق الأوسط وشمال أفريقيا وأوروبا وجنوب آسيا.",
+    en: "NileSat (Nile for Space Communications), founded in 1996, operates Egypt's NileSat 201 and 204 satellite fleet broadcasting hundreds of TV channels and internet services to audiences across MENA, Europe and South Asia.",
+  },
 
   // Textiles
-  ORWE: { ar: "أكبر منتج للسجاد في العالم (النساجون الشرقيون)، يُصدّر إلى أكثر من 130 دولة ويُسيطر على حصة سوقية عالمية كبيرة.", en: "The world's largest carpet manufacturer (Oriental Weavers), exporting to over 130 countries and holding a major global market share." },
+  ORWE: {
+    ar: "النساجون الشرقيون، أكبر منتج للسجاد في العالم، تأسست عام 1979 وتُصدّر إلى أكثر من 130 دولة. تمتلك مصانع في مصر والولايات المتحدة الأمريكية (دالتون - جورجيا) وتُسيطر على حصة سوقية عالمية تتجاوز 11% من سوق السجاد الآلي العالمي، وتخدم كبرى العلامات التجارية العالمية.",
+    en: "Oriental Weavers, the world's largest carpet manufacturer, founded in 1979 and exporting to 130+ countries. Operates plants in Egypt and the United States (Dalton, Georgia), commands over 11% of the global machine-made carpet market and serves major international brands.",
+  },
 
   // Cement
-  ARCC: { ar: "من أكبر منتجي الأسمنت في مصر (الأسمنت العربية)، تمتلك طاقة إنتاجية كبيرة وتُصدّر جزءاً من إنتاجها.", en: "One of Egypt's largest cement producers (Arabian Cement), with substantial production capacity and some export activity." },
-  SUCE: { ar: "من أبرز شركات الأسمنت في مصر، تمتلك مصانع في السويس وتُعد من أوائل شركات الأسمنت تأسيساً في مصر.", en: "One of Egypt's most prominent cement companies with plants in Suez, and one of the earliest cement producers in the country." },
-  ALEXA: { ar: "مصنع أسمنت رائد في الإسكندرية، من أوائل شركات الأسمنت في مصر ويخدم أسواق شمال مصر والتصدير.", en: "A leading cement plant in Alexandria, one of Egypt's pioneer cement producers serving northern Egypt and export markets." },
-  SVCE: { ar: "شركة أسمنت تعمل في منطقة جنوب الوادي بالصعيد، وتُعد رافداً مهماً للبنية التحتية في جنوب مصر.", en: "A cement company operating in South Valley (Upper Egypt), a key infrastructure supplier for southern Egypt." },
-  TORA: { ar: "مصنع أسمنت عريق يقع في منطقة طرة جنوب القاهرة، من أقدم وأعرق مصانع الأسمنت في مصر.", en: "A historic cement plant in Tourah south of Cairo, one of Egypt's oldest and most established cement factories." },
-  SCEM: { ar: "شركة أسمنت تعمل في شبه جزيرة سيناء، تستفيد من الموقع الاستراتيجي للمواد الخام في المنطقة.", en: "A cement company operating in Sinai, benefiting from the region's strategic raw-material resources." },
+  ARCC: {
+    ar: "الأسمنت العربية، من أكبر منتجي الأسمنت في مصر، تأسست عام 1997 ومصنعها في السويس بطاقة إنتاجية تتجاوز 5 مليون طن سنوياً. تُزود مشاريع البنية التحتية والإسكان في مصر بالأسمنت، وتُصدّر جزءاً من إنتاجها إلى أسواق شرق أفريقيا والشرق الأوسط.",
+    en: "Arabian Cement, one of Egypt's largest cement producers, founded in 1997 with its plant in Suez and annual capacity exceeding 5 million tonnes. Supplies Egypt's infrastructure and housing projects and exports part of its output to East African and Middle Eastern markets.",
+  },
+  SUCE: {
+    ar: "مجموعة أسمنت السويس، من أعرق شركات الأسمنت في مصر، تأسست عام 1927 وتتبع الآن مجموعة هايدلبرغ ماتيريالز الألمانية إحدى أكبر شركات مواد البناء في العالم بحضور في أكثر من 50 دولة. تمتلك مصانع في السويس وعطاقة بطاقة إجمالية تتجاوز 10 ملايين طن سنوياً.",
+    en: "Suez Cement Group, one of Egypt's oldest cement companies, founded in 1927 and now part of Heidelberg Materials (Germany)—one of the world's largest building-materials companies with presence in 50+ countries. Operates plants in Suez and Ataka with combined annual capacity exceeding 10 million tonnes.",
+  },
+  ALEXA: {
+    ar: "أسمنت الإسكندرية (بورتلاند)، من أوائل وأعرق شركات الأسمنت في مصر، تأسست عام 1948 ومصنعها في منطقة أبو قير بالإسكندرية. تخدم أسواق شمال مصر ومتطلبات البنية التحتية والإسكان، وتُصدّر جزءاً من إنتاجها بطاقة إنتاجية تلبي احتياجات الإنشاءات في المنطقة.",
+    en: "Alexandria Portland Cement, one of Egypt's earliest and most established cement companies, founded in 1948 with its plant in the Abu Qir district of Alexandria. Serves northern Egypt's infrastructure and housing demands and exports a portion of its output to meet regional construction needs.",
+  },
+  SVCE: {
+    ar: "أسمنت جنوب الوادي، شركة أسمنت تُشغّل مصانعها في منطقة جنوب الوادي بصعيد مصر. تُسهم بدور محوري في تلبية احتياجات مواد البناء لمشروعات الإسكان والبنية التحتية في جنوب مصر، وتستفيد من القرب الجغرافي من احتياطيات الحجر الجيري الضخمة في الصعيد.",
+    en: "South Valley Cement, a cement company operating plants in Upper Egypt's South Valley region. Plays a key role in supplying construction materials for housing and infrastructure projects in southern Egypt, benefiting from proximity to the region's extensive limestone reserves.",
+  },
+  TORA: {
+    ar: "أسمنت طرة، من أقدم وأعرق مصانع الأسمنت في مصر والشرق الأوسط، تأسست عام 1927 ومصنعها في منطقة طرة جنوب القاهرة. تمتلك تاريخاً صناعياً عريقاً وخبرة متراكمة لأكثر من 90 عاماً في صناعة الأسمنت وتُسهم في تلبية احتياجات القاهرة الكبرى من مواد البناء.",
+    en: "Tourah Portland Cement, one of Egypt's and the Middle East's oldest cement factories, founded in 1927 with its plant south of Cairo in Tourah. Holds an industrial legacy and accumulated expertise spanning 90+ years in cement manufacturing, supplying the Greater Cairo area.",
+  },
+  SCEM: {
+    ar: "أسمنت سيناء، شركة أسمنت تُشغّل مصانعها في شبه جزيرة سيناء مستفيدةً من الموقع الاستراتيجي والثروات الطبيعية الوفيرة من الحجر الجيري في المنطقة. تُلبي احتياجات مشاريع البنية التحتية والإسكان في سيناء وشرق القناة وتُسهم في التنمية العمرانية بالمنطقة.",
+    en: "Sinai Cement, a cement company operating plants in the Sinai Peninsula, leveraging the region's strategic location and abundant natural limestone resources. Serves construction and infrastructure projects in Sinai and the eastern Canal Zone, contributing to urban development in the area.",
+  },
 
   // Oil & Gas
-  EGAS: { ar: "الشركة الحكومية المتخصصة في توزيع الغاز الطبيعي للمنازل والمصانع والشركات في مختلف محافظات مصر.", en: "The state-owned company specializing in natural gas distribution to homes, factories and businesses across Egypt." },
-  MOIL: { ar: "شركة متخصصة في خدمات الحفر البحري ودعم عمليات إنتاج النفط والغاز في البحر الأحمر وشمال أفريقيا.", en: "A company specialized in offshore drilling and oil-and-gas production support services in the Red Sea and North Africa." },
+  EGAS: {
+    ar: "مصر للغاز، الشركة الحكومية المتخصصة في توزيع الغاز الطبيعي للاستخدامات المنزلية والصناعية والتجارية في عدد من المحافظات المصرية. تُدير شبكة أنابيب توزيع واسعة وتلعب دوراً محورياً في المنظومة الوطنية للطاقة ومخطط تحويل المنازل المصرية للغاز الطبيعي.",
+    en: "Egypt Gas, the state-owned specialist in natural gas distribution for domestic, industrial and commercial uses across Egyptian governorates. Manages an extensive gas-distribution pipeline network and plays a pivotal role in the national energy system and Egypt's home gas-conversion programme.",
+  },
+  MOIL: {
+    ar: "شركة حفر بترول البحر المتوسط، متخصصة في خدمات الحفر البحري وإدارة عمليات إنتاج النفط والغاز في البحر الأحمر وشمال أفريقيا والمتوسط. تمتلك أسطولاً من الوحدات البحرية الحفّارة وتُقدم خدمات فنية متخصصة لكبرى شركات النفط الدولية والمحلية.",
+    en: "Mediterranean Offshore Leasing, specialised in offshore drilling services and oil-and-gas production management in the Red Sea, North Africa and Mediterranean. Operates a fleet of offshore drilling units and provides specialist technical services to major international and domestic oil companies.",
+  },
 
   // Orascom Group
-  ODHN: { ar: "شركة سياحية-عقارية كبرى مدرجة في بورصتي مصر وسويسرا، تمتلك مشروعات ضخمة في مصر والمغرب والأردن وسويسرا وعُمان.", en: "A major tourism-real estate developer listed in Egypt and Switzerland, with mega-projects in Egypt, Morocco, Jordan, Switzerland and Oman." },
-  OTMT: { ar: "الشركة القابضة لمجموعة أوراسكوم للاستثمار، تمتلك محفظة متنوعة من الاستثمارات في قطاعات الطاقة والإنشاء والسياحة.", en: "Orascom Investment Holding, controlling a diversified portfolio across energy, construction and tourism sectors." },
-  ORHD: { ar: "شركة متخصصة في تطوير الفنادق والمنتجعات السياحية والمشروعات العقارية في مصر والخارج.", en: "A company specialized in developing hotels, tourist resorts and real-estate projects in Egypt and abroad." },
+  ODHN: {
+    ar: "أوراسكوم للتنمية القابضة (ODH)، شركة سياحية-عقارية عملاقة تأسست عام 1989 ومُدرجة في بورصتي مصر وسويسرا. تمتلك وتُشغّل مدناً ومنتجعات سياحية متكاملة في مصر (الجونة ومكادي باي وطابا) وسلطنة عُمان (حوانا صلالة) وسويسرا (أندرمات) والمغرب والأردن.",
+    en: "Orascom Development Holding (ODH), a major tourism and real-estate developer founded in 1989, listed on both the Egyptian Exchange and SIX Swiss Exchange. Owns and operates integrated tourist destinations in Egypt (El Gouna, Makadi Bay, Taba), Oman (Hawana Salalah), Switzerland (Andermatt), Morocco and Jordan.",
+  },
+  OTMT: {
+    ar: "أوراسكوم للاستثمار القابضة، الشركة القابضة الرئيسية لمجموعة أوراسكوم إحدى أكبر التكتلات الاستثمارية المصرية. تمتلك محفظة متنوعة من الاستثمارات في قطاعات الطاقة والبتروكيماويات والإنشاء والخدمات المالية في مصر ومنطقة الشرق الأوسط وأفريقيا.",
+    en: "Orascom Investment Holding, the main holding company of Orascom Group, one of Egypt's largest conglomerates. Holds a diversified portfolio of investments in energy, petrochemicals, construction and financial services in Egypt, MENA and Africa.",
+  },
+  ORHD: {
+    ar: "أوراسكوم للفنادق والتنمية، شركة متخصصة في تطوير وإدارة الفنادق الفاخرة والمنتجعات السياحية والمشروعات العقارية في مصر وعدد من الأسواق الدولية. تمتلك محفظة من العقارات الفندقية الراقية في المناطق السياحية البارزة وتستهدف التوسع الدولي.",
+    en: "Orascom Hotels & Development, specialising in developing and managing luxury hotels, tourist resorts and real-estate projects in Egypt and select international markets. Holds a portfolio of upscale hotel properties in prominent tourist destinations and targets international expansion.",
+  },
 
   // Pharma (additional)
-  PHAR: { ar: "شركة دوائية مصرية متكاملة تعمل في تصنيع وتسويق الأدوية البشرية والبيطرية في مصر والأسواق الإقليمية.", en: "An integrated Egyptian pharmaceutical company manufacturing and marketing human and veterinary medicines in Egypt and regional markets." },
-  AXPH: { ar: "شركة دوائية راسخة في الإسكندرية تُنتج مجموعة متنوعة من المستحضرات الدوائية والكيماوية.", en: "An established Alexandria-based pharmaceutical company producing a diverse range of medicinal and chemical preparations." },
+  PHAR: {
+    ar: "فاركو للأدوية والصناعات الكيماوية، شركة أدوية مصرية رائدة تأسست عام 1983 متخصصة في تطوير وتصنيع الأدوية الجنيسة والمستحضرات الطبية. تُصدّر منتجاتها إلى أكثر من 50 دولة في أفريقيا والشرق الأوسط وآسيا وأمريكا اللاتينية، وتمتلك مصانع بمعايير GMP الدولية.",
+    en: "Pharco Pharmaceuticals & Chemical Industries, a leading Egyptian pharmaceutical company founded in 1983, specialising in generic medicines and pharmaceutical preparations. Exports to 50+ countries across Africa, MENA, Asia and Latin America, with GMP-certified manufacturing plants.",
+  },
+  AXPH: {
+    ar: "أكسيس للأدوية (الإسكندرية للأدوية سابقاً)، شركة دوائية راسخة في الإسكندرية تُنتج مجموعة متنوعة من المستحضرات الدوائية والكيماوية للاستخدام البشري. تمتلك خبرة صناعية دوائية طويلة في السوق المصري وتُركز على تعزيز جودة منتجاتها وتوسيع شبكة توزيعها.",
+    en: "Axis Pharmaceuticals (formerly Alexandria Pharmaceuticals), an established Alexandria-based pharmaceutical company producing a wide range of medicinal and chemical preparations for human use. Holds long industrial expertise in the Egyptian pharma market, focused on quality improvement and distribution expansion.",
+  },
 
   // Flour Mills
-  AFMC: { ar: "شركة طحن وإنتاج الدقيق في الإسكندرية، تُزود السوق المحلي بالدقيق والمنتجات المطحونة.", en: "An Alexandria-based flour milling company supplying the domestic market with flour and milled products." },
-  EDFM: { ar: "شركة مطاحن تعمل في شرق الدلتا المصرية، تُنتج الدقيق والردة وتُسهم في سلسلة الغذاء الوطنية.", en: "A flour-milling company in the eastern Nile Delta, producing flour and bran and contributing to the national food chain." },
-  MILS: { ar: "شركة مطاحن تعمل في منطقة شمال القاهرة، وتُعد من الروافد الأساسية لإمداد العاصمة بالدقيق.", en: "A flour-milling company in north Cairo, one of the primary suppliers of flour to the Egyptian capital." },
-  WCDF: { ar: "شركة مطاحن تخدم أسواق وسط وغرب الدلتا المصرية بمنتجات الدقيق والحبوب.", en: "A flour-milling company serving the central and western Nile Delta markets with flour and grain products." },
+  AFMC: {
+    ar: "شركة مطاحن الإسكندرية لتصنيع الدقيق، من أكبر شركات طحن الحبوب في شمال مصر. تمتلك منشآت طحن متطورة في الإسكندرية وتُزود السوق المحلي بالدقيق وردة القمح ومنتجات المطاحن الأخرى، وتُسهم في تحقيق الأمن الغذائي الوطني.",
+    en: "Alexandria Flour Mills & Baking, one of northern Egypt's largest grain-milling companies. Operates advanced milling facilities in Alexandria supplying the domestic market with flour, wheat bran and other milled products, contributing to national food security.",
+  },
+  EDFM: {
+    ar: "مطاحن شرق الدلتا، شركة طحن حبوب رائدة تعمل في منطقة شرق دلتا النيل وتُزود المحافظات الشرقية باحتياجاتها من الدقيق ومنتجات الطحن. تمتلك طاقة إنتاجية كبيرة وترتبط بمنظومة الدعم الحكومي لدقيق الخبز المدعم في مصر.",
+    en: "East Delta Flour Mills, a leading grain-milling company in Egypt's eastern Nile Delta supplying eastern governorates with flour and milling products. Commands substantial production capacity and is linked to the government's subsidised bread-flour supply programme.",
+  },
+  MILS: {
+    ar: "مطاحن شمال القاهرة، شركة طحن حبوب تعمل في منطقة شمال القاهرة وتُعد من الموردين الرئيسيين للدقيق للعاصمة المصرية. تمتلك طاقة إنتاجية جيدة وتُسهم في منظومة إمداد الخبز المدعم وتلبية احتياجات المخابز والمصانع في القاهرة الكبرى.",
+    en: "North Cairo Flour Mills, a grain-milling company north of Cairo and a primary flour supplier to the Egyptian capital. Holds good production capacity and contributes to the subsidised bread-supply system, meeting the flour needs of bakeries and factories across Greater Cairo.",
+  },
+  WCDF: {
+    ar: "مطاحن وسط وغرب الدلتا، شركة طحن حبوب تُشغّل مصانعها في منطقة وسط وغرب دلتا النيل لإمداد المحافظات المجاورة بالدقيق ومنتجات الطحن الأخرى. تمتلك طاقة طحن وافية وتستفيد من قرب المصانع من مناطق زراعة القمح الرئيسية في الدلتا.",
+    en: "West and Central Delta Flour Mills, a grain-milling company operating plants in the central and western Nile Delta, supplying neighbouring governorates with flour and other milled products. Has sufficient milling capacity and benefits from proximity to the Delta's main wheat-growing areas.",
+  },
 };
 
 export function getStockName(ticker: string, lang: "ar" | "en" = "ar"): string {
