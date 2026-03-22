@@ -1207,7 +1207,11 @@
     "newsHoursAgo": "{{h}}h ago",
     "newsDaysAgo": "{{d}}d ago",
     "newsNoSummary": "No summary available for this article",
-    "newsAffectedTickers": "Affected Stocks"
+    "newsAffectedTickers": "Affected Stocks",
+    "periodDay": "Day",
+    "periodWeek": "Week",
+    "periodMonth": "Month",
+    "periodYear": "Year"
   },
   "delay": {
     "noticeTitle": "Stock prices are delayed by 10 minutes",

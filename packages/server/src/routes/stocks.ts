@@ -15,6 +15,7 @@ router.get('/market/status', MarketController.getStatus);
 router.get('/market-status', StocksController.getMarketStatus);
 router.get('/market/overview', optionalAuth, MarketController.getOverview);
 router.get('/prices', optionalAuth, StocksController.getPrices);
+router.get('/gainers-losers', optionalAuth, StocksController.getGainersLosers);
 router.get('/search', validate(searchQuerySchema, 'query'), StocksController.search);
 router.get('/quote/:ticker', authenticate, validate(tickerParamSchema, 'params'), StocksController.getQuote);
 router.post('/quotes', authenticate, idempotencyMiddleware, StocksController.postQuotes);

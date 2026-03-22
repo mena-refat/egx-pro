@@ -76,6 +76,23 @@ function stripHtml(value: string): string {
   return decodeHtml(value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')).trim();
 }
 
+/**
+ * Strips the source-name suffix that news aggregators append to article titles.
+ * Google RSS: "Article - Source", "Article – Source", "Article Source" (no separator)
+ * NewsAPI:    "Article - Source Name"
+ */
+function stripSourceSuffix(title: string, sourceName: string): string {
+  if (!sourceName) return title;
+  const escaped = sourceName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Try: "Title - Source" (with separator)
+  let cleaned = title.replace(new RegExp(`\\s*[-–—|]\\s*${escaped}\\s*$`, 'i'), '').trim();
+  // Try: "Title Source" (without separator, at end)
+  if (cleaned === title) {
+    cleaned = title.replace(new RegExp(`\\s+${escaped}\\s*$`, 'i'), '').trim();
+  }
+  return cleaned.length > 5 ? cleaned : title;
+}
+
 function pickTag(block: string, tag: string): string {
   const match = block.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, 'i'));
   return match ? decodeHtml(match[1]) : '';
@@ -239,15 +256,17 @@ async function fetchNewsApi(query: string, explicitTicker?: string, isMarketWide
   return (data.articles ?? [])
     .filter((article) => article.title && article.url && article.publishedAt)
     .flatMap((article) => {
-      const title = stripHtml(article.title ?? '').trim();
-      if (!title) return [];   // Fix 6: skip whitespace-only titles
+      const source = article.source?.name?.trim() || 'NewsAPI';
+      const rawTitle = stripHtml(article.title ?? '').trim();
+      if (!rawTitle) return [];   // Fix 6: skip whitespace-only titles
+      const title = stripSourceSuffix(rawTitle, source);
       const summary = stripHtml(article.description || article.content || '');
       const tickers = resolveTickers(`${title} ${summary}`, explicitTicker);
       return [{
         externalId: buildExternalId(title),
         title,
         summary,
-        source: article.source?.name?.trim() || 'NewsAPI',
+        source,
         sourceType: 'NEWS_API' as const,
         url: article.url ?? '',
         publishedAt: new Date(article.publishedAt ?? fetchedAt.toISOString()),
@@ -266,8 +285,10 @@ async function fetchGoogleRss(query: string, explicitTicker?: string, isMarketWi
   const fetchedAt = new Date();
   const items = xml.match(/<item>[\s\S]*?<\/item>/gi) ?? [];
   return items.flatMap((item) => {
-    const title = stripHtml(pickTag(item, 'title')).trim();
-    if (!title) return [];   // Fix 6: skip whitespace-only titles
+    const source = stripHtml(pickTag(item, 'source')) || 'Google News';
+    const rawTitle = stripHtml(pickTag(item, 'title')).trim();
+    if (!rawTitle) return [];   // Fix 6: skip whitespace-only titles
+    const title = stripSourceSuffix(rawTitle, source);
     const url = pickTag(item, 'link');
     if (!url) return [];
     const summary = stripHtml(pickTag(item, 'description'));
@@ -277,7 +298,7 @@ async function fetchGoogleRss(query: string, explicitTicker?: string, isMarketWi
       externalId: buildExternalId(title),
       title,
       summary,
-      source: stripHtml(pickTag(item, 'source')) || 'Google News',
+      source,
       sourceType: 'GOOGLE_RSS' as const,
       url,
       publishedAt: publishedAt ? new Date(publishedAt) : fetchedAt,
@@ -335,8 +356,8 @@ async function isStale(maxAgeMs: number, ticker?: string): Promise<boolean> {
 // AI ingest summarization — runs BEFORE persist()
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Minimum description length to bother summarizing (saves API calls on stubs) */
-const MIN_DESC_FOR_SUMMARY = 80;
+/** Minimum combined content length (title + description) to bother summarizing */
+const MIN_CONTENT_FOR_SUMMARY = 40;
 /** Process N articles in parallel — avoids hammering the AI API */
 const INGEST_BATCH = 5;
 /** Redis TTL for ingest cache — 7 days (same article won't be re-summarized) */
@@ -353,8 +374,11 @@ function parseIngestJson(text: string): { title: string; summary: string } | nul
     const raw = JSON.parse(text) as unknown;
     if (raw && typeof raw === 'object' && 'title' in raw && 'summary' in raw) {
       const r = raw as Record<string, unknown>;
-      const title   = typeof r.title   === 'string' ? r.title.trim().slice(0, 120)   : '';
-      const summary = typeof r.summary === 'string' ? r.summary.trim().slice(0, 200) : '';
+      const rawTitle   = typeof r.title   === 'string' ? r.title.trim()   : '';
+      const rawSummary = typeof r.summary === 'string' ? r.summary.trim() : '';
+      // Hard-enforce: max 7 words for title, max 40 words for summary
+      const title   = rawTitle.split(/\s+/).slice(0, 7).join(' ').slice(0, 80);
+      const summary = rawSummary.split(/\s+/).slice(0, 40).join(' ').slice(0, 320);
       if (title && summary) return { title, summary };
     }
     return null;
@@ -370,9 +394,10 @@ function parseIngestJson(text: string): { title: string; summary: string } | nul
 
 async function summarizeOne(item: IngestedNews): Promise<IngestedNews> {
   const description = item.summary?.trim() ?? '';
+  const contentLen = item.title.length + description.length;
 
-  // Skip stubs — EGX disclosures have very short descriptions, not worth summarizing
-  if (description.length < MIN_DESC_FOR_SUMMARY) return item;
+  // Skip stubs — not enough content to meaningfully summarize
+  if (contentLen < MIN_CONTENT_FOR_SUMMARY) return item;
 
   // Fix 4 + Fix 8: key uses normalized title; Redis errors are non-fatal
   const key = ingestCacheKey(item.title);
@@ -642,7 +667,7 @@ export const NewsService = {
         chunk.map(async (article) => {
           const description = article.summary?.trim() ?? '';
           // Skip stubs — same threshold as summarizeOne
-          if (description.length < MIN_DESC_FOR_SUMMARY) {
+          if ((article.title.length + description.length) < MIN_CONTENT_FOR_SUMMARY) {
             skipped++;
             return;
           }

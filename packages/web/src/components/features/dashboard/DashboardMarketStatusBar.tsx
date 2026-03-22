@@ -14,7 +14,12 @@ export function DashboardMarketStatusBar({ isConnected, showMarketOverview, onTo
   return (
     <div className="flex justify-between items-center">
       <div className="flex items-center gap-2">
-        <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-[var(--positive)]' : 'bg-[var(--negative)]'}`} />
+        <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
+          {isConnected && (
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--positive)] opacity-60" />
+          )}
+          <span className={`relative inline-flex h-2 w-2 rounded-full ${isConnected ? 'bg-[var(--positive)]' : 'bg-[var(--negative)]'}`} />
+        </span>
         <span className="text-body font-medium text-[var(--text-secondary)]">
           {isConnected ? t('header.market_open') : t('dashboard.connecting')}
         </span>

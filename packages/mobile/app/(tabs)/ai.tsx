@@ -11,7 +11,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
   Brain, GitCompare, Sparkles, Zap, Calculator,
-  Target, TrendingUp, TrendingDown, ChevronLeft, ChevronRight,
+  TrendingUp, TrendingDown, ChevronLeft, ChevronRight,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
@@ -21,37 +21,59 @@ import { BRAND, BRAND_DARK, BRAND_LIGHT, FONT, WEIGHT, RADIUS, SPACE } from '../
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
-interface Prediction {
+interface FeedPred {
   id: string;
   ticker: string;
   direction: 'UP' | 'DOWN';
-  targetPrice?: number | null;
-  deadline: string;
-  status: 'PENDING' | 'CORRECT' | 'WRONG' | 'EXPIRED';
+  likeCount?: number;
+  user?: { username?: string };
+  userRank?: string;
 }
 
+interface LeaderEntry {
+  position: number;
+  user: { id: number; username: string };
+  accuracyRate: number;
+  rank: string;
+}
+
+const RANK_COLOR: Record<string, string> = {
+  LEGEND:   '#f59e0b',
+  EXPERT:   '#a78bfa',
+  SENIOR:   '#60a5fa',
+  ANALYST:  '#34d399',
+  BEGINNER: '#9ca3af',
+};
+
 function usePredictionsPreview() {
-  const [preds, setPreds]     = useState<Prediction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [topPreds, setTopPreds] = useState<FeedPred[]>([]);
+  const [topUsers, setTopUsers] = useState<LeaderEntry[]>([]);
+  const [loading, setLoading]   = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const res  = await apiClient.get('/api/predictions');
-      const data = res.data as { items?: Prediction[] };
-      setPreds(data.items ?? (Array.isArray(res.data) ? (res.data as Prediction[]) : []));
-    } catch { setPreds([]); }
-    finally   { setLoading(false); }
+      const [feedRes, lbRes] = await Promise.all([
+        apiClient.get('/api/predictions/feed?filter=all&limit=20'),
+        apiClient.get('/api/predictions/leaderboard?period=alltime'),
+      ]);
+      const feedData = feedRes.data as { items?: FeedPred[] };
+      const sorted = [...(feedData.items ?? [])]
+        .sort((a, b) => (b.likeCount ?? 0) - (a.likeCount ?? 0))
+        .slice(0, 3);
+      setTopPreds(sorted);
+      const lbData = lbRes.data as { items?: LeaderEntry[] };
+      setTopUsers((lbData.items ?? []).slice(0, 3));
+    } catch {
+      setTopPreds([]);
+      setTopUsers([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
 
-  const total   = preds.length;
-  const correct = preds.filter((p) => p.status === 'CORRECT').length;
-  const wrong   = preds.filter((p) => p.status === 'WRONG').length;
-  const winRate = correct + wrong > 0 ? Math.round((correct / (correct + wrong)) * 100) : null;
-  const recent  = preds.filter((p) => p.status === 'PENDING').slice(0, 3);
-
-  return { total, winRate, recent, loading };
+  return { topPreds, topUsers, loading };
 }
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
@@ -317,7 +339,7 @@ export default function AnalyticsPage() {
   const { colors, isRTL } = useTheme();
   const user   = useAuthStore((s) => s.user);
   const used   = user?.aiAnalysisUsedThisMonth ?? 0;
-  const { total, winRate, recent, loading: predsLoading } = usePredictionsPreview();
+  const { topPreds, topUsers, loading: predsLoading } = usePredictionsPreview();
   const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
 
   // Single shimmer shared across all 3 tool cards → synchronized
@@ -393,12 +415,12 @@ export default function AnalyticsPage() {
             ))}
           </View>
 
-          {/* ─── My Predictions ─── */}
+          {/* ─── Predictions ─── */}
           <Animated.View entering={FadeInDown.duration(450).delay(520)} style={{ gap: SPACE.md }}>
             <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm }}>
                 <View style={[styles.sectionDot, { backgroundColor: BRAND }]} />
-                <Text style={[styles.sectionLabel, { color: colors.textSub }]}>{t('predictions.myPredictions')}</Text>
+                <Text style={[styles.sectionLabel, { color: colors.textSub }]}>{t('predictions.title')}</Text>
               </View>
               <Pressable onPress={() => router.push('/predictions')} style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 4 }}>
                 <Text style={{ fontSize: FONT.xs, color: BRAND }}>{t('common.seeAll')}</Text>
@@ -412,85 +434,109 @@ export default function AnalyticsPage() {
               end={{ x: 1, y: 1 }}
               style={[styles.predsCard, { borderColor: 'rgba(139,92,246,0.2)' }]}
             >
-              {/* Stats row */}
-              <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}>
-                <View style={{ flex: 1, alignItems: 'center', paddingVertical: SPACE.md, borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.06)' }}>
-                  <Text style={{ color: '#f1f5f9', fontSize: FONT.xl, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>{total}</Text>
-                  <Text style={{ color: 'rgba(148,163,184,0.7)', fontSize: 11, marginTop: 2 }}>{t('ai.totalPredictions')}</Text>
-                </View>
-                <View style={{ flex: 1, alignItems: 'center', paddingVertical: SPACE.md }}>
-                  {winRate !== null ? (
-                    <>
-                      <Text style={{ color: '#4ade80', fontSize: FONT.xl, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>{winRate}%</Text>
-                      <Text style={{ color: 'rgba(148,163,184,0.7)', fontSize: 11, marginTop: 2 }}>{t('ai.winRate')}</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={{ color: 'rgba(148,163,184,0.4)', fontSize: FONT.xl, fontWeight: WEIGHT.bold }}>—</Text>
-                      <Text style={{ color: 'rgba(148,163,184,0.7)', fontSize: 11, marginTop: 2 }}>{t('ai.noResults')}</Text>
-                    </>
-                  )}
-                </View>
-              </View>
-
-              {/* Pending predictions */}
               {predsLoading ? (
                 <View style={{ padding: SPACE.lg, gap: SPACE.md }}>
-                  {[1, 2].map((i) => (
-                    <View key={i} style={{ backgroundColor: 'rgba(255,255,255,0.04)', height: 40, borderRadius: RADIUS.sm }} />
+                  {[1, 2, 3].map((i) => (
+                    <View key={i} style={{ backgroundColor: 'rgba(255,255,255,0.04)', height: 36, borderRadius: RADIUS.sm }} />
                   ))}
                 </View>
-              ) : recent.length === 0 ? (
-                <Pressable onPress={() => router.push('/predictions')} style={{ paddingVertical: 32, alignItems: 'center', gap: SPACE.sm }}>
-                  <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: BRAND + '18', alignItems: 'center', justifyContent: 'center' }}>
-                    <Target size={20} color={BRAND} />
-                  </View>
-                  <Text style={{ color: 'rgba(148,163,184,0.7)', fontSize: FONT.sm }}>{t('ai.noActivePredictions')}</Text>
-                  <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>{t('ai.addPredictions')}</Text>
-                </Pressable>
               ) : (
-                recent.map((p, i) => (
-                  <Pressable
-                    key={p.id}
-                    onPress={() => router.push('/predictions')}
-                    style={({ pressed }) => [{
-                      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                      paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
-                      backgroundColor: pressed ? 'rgba(255,255,255,0.03)' : 'transparent',
-                      borderBottomWidth: i < recent.length - 1 ? 1 : 0,
-                      borderBottomColor: 'rgba(255,255,255,0.06)',
-                    }]}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.md }}>
-                      <LinearGradient
-                        colors={p.direction === 'UP' ? ['#052a10', '#0a3d18'] : ['#2a0505', '#3d0a0a']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={{ width: 34, height: 34, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        {p.direction === 'UP'
-                          ? <TrendingUp   size={15} color="#4ade80" />
-                          : <TrendingDown size={15} color="#f87171" />}
-                      </LinearGradient>
-                      <View>
-                        <Text style={{ color: '#f1f5f9', fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{p.ticker}</Text>
-                        <Text style={{ color: 'rgba(148,163,184,0.6)', fontSize: 11 }}>
-                          {new Date(p.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={{
-                      paddingHorizontal: SPACE.sm, paddingVertical: 4, borderRadius: RADIUS.md,
-                      backgroundColor: p.direction === 'UP' ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)',
-                      borderWidth: 1,
-                      borderColor: p.direction === 'UP' ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)',
-                    }}>
-                      <Text style={{ fontSize: FONT.xs, fontWeight: WEIGHT.bold, color: p.direction === 'UP' ? '#4ade80' : '#f87171' }}>
-                        {p.direction === 'UP' ? `▲ ${t('predictions.up')}` : `▼ ${t('predictions.down')}`}
+                <>
+                  {/* ── Top Picks ── */}
+                  <View style={{ paddingHorizontal: SPACE.lg, paddingTop: SPACE.md, paddingBottom: SPACE.sm }}>
+                    <Text style={{ color: 'rgba(148,163,184,0.55)', fontSize: 10, fontWeight: WEIGHT.semibold, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: SPACE.sm }}>
+                      🔥 {t('ai.topPicks')}
+                    </Text>
+                    {topPreds.length === 0 ? (
+                      <Text style={{ color: 'rgba(148,163,184,0.45)', fontSize: FONT.xs, textAlign: 'center', paddingVertical: SPACE.sm }}>
+                        {t('ai.noPredictions')}
                       </Text>
-                    </View>
-                  </Pressable>
-                ))
+                    ) : (
+                      topPreds.map((p, i) => (
+                        <Pressable
+                          key={p.id}
+                          onPress={() => router.push('/predictions')}
+                          style={({ pressed }) => [{
+                            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                            paddingVertical: SPACE.sm,
+                            backgroundColor: pressed ? 'rgba(255,255,255,0.03)' : 'transparent',
+                            borderBottomWidth: i < topPreds.length - 1 ? 1 : 0,
+                            borderBottomColor: 'rgba(255,255,255,0.05)',
+                          }]}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
+                            <LinearGradient
+                              colors={p.direction === 'UP' ? ['#052a10', '#0a3d18'] : ['#2a0505', '#3d0a0a']}
+                              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                              style={{ width: 28, height: 28, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              {p.direction === 'UP'
+                                ? <TrendingUp size={13} color="#4ade80" />
+                                : <TrendingDown size={13} color="#f87171" />}
+                            </LinearGradient>
+                            <View>
+                              <Text style={{ color: '#f1f5f9', fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{p.ticker}</Text>
+                              {p.user?.username ? (
+                                <Text style={{ color: 'rgba(148,163,184,0.55)', fontSize: 10 }}>@{p.user.username}</Text>
+                              ) : null}
+                            </View>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
+                            {p.userRank ? (
+                              <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: RADIUS.sm, backgroundColor: (RANK_COLOR[p.userRank] ?? '#9ca3af') + '22' }}>
+                                <Text style={{ fontSize: 9, fontWeight: WEIGHT.bold, color: RANK_COLOR[p.userRank] ?? '#9ca3af' }}>{p.userRank}</Text>
+                              </View>
+                            ) : null}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                              <Text style={{ color: '#f87171', fontSize: 11 }}>♥</Text>
+                              <Text style={{ color: 'rgba(148,163,184,0.7)', fontSize: 11, fontVariant: ['tabular-nums'] }}>{p.likeCount ?? 0}</Text>
+                            </View>
+                          </View>
+                        </Pressable>
+                      ))
+                    )}
+                  </View>
+
+                  {/* ── Divider ── */}
+                  <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginHorizontal: SPACE.lg }} />
+
+                  {/* ── Top Forecasters ── */}
+                  <View style={{ paddingHorizontal: SPACE.lg, paddingTop: SPACE.sm, paddingBottom: SPACE.md }}>
+                    <Text style={{ color: 'rgba(148,163,184,0.55)', fontSize: 10, fontWeight: WEIGHT.semibold, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: SPACE.sm }}>
+                      🏆 {t('ai.topForecasters')}
+                    </Text>
+                    {topUsers.length === 0 ? (
+                      <Text style={{ color: 'rgba(148,163,184,0.45)', fontSize: FONT.xs, textAlign: 'center', paddingVertical: SPACE.sm }}>
+                        {t('ai.noPredictions')}
+                      </Text>
+                    ) : (
+                      topUsers.map((u, i) => (
+                        <View
+                          key={u.user.id}
+                          style={{
+                            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                            paddingVertical: SPACE.sm,
+                            borderBottomWidth: i < topUsers.length - 1 ? 1 : 0,
+                            borderBottomColor: 'rgba(255,255,255,0.05)',
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
+                            <Text style={{ color: BRAND_LIGHT, fontSize: 12, fontWeight: WEIGHT.bold, width: 20, textAlign: 'center' }}>#{u.position}</Text>
+                            <Text style={{ color: '#f1f5f9', fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>@{u.user.username}</Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
+                            <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: RADIUS.sm, backgroundColor: (RANK_COLOR[u.rank] ?? '#9ca3af') + '22' }}>
+                              <Text style={{ fontSize: 9, fontWeight: WEIGHT.bold, color: RANK_COLOR[u.rank] ?? '#9ca3af' }}>{u.rank}</Text>
+                            </View>
+                            <Text style={{ color: '#4ade80', fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>
+                              {u.accuracyRate}%
+                            </Text>
+                          </View>
+                        </View>
+                      ))
+                    )}
+                  </View>
+                </>
               )}
             </LinearGradient>
           </Animated.View>

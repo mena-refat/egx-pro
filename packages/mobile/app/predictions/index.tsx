@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, ArrowRight, TrendingUp, TrendingDown,
   Plus, Clock, CheckCircle, XCircle, Search,
@@ -34,27 +35,34 @@ interface Prediction {
   expiresAt?: string;
 }
 
-const TIMEFRAME_LABELS: Record<Timeframe, string> = {
-  WEEK: 'أسبوع',
-  MONTH: 'شهر',
-  THREE_MONTHS: '3 أشهر',
-  SIX_MONTHS: '6 أشهر',
-  NINE_MONTHS: '9 أشهر',
-  YEAR: 'سنة',
-};
+type TFunc = ReturnType<typeof useTranslation>['t'];
 
-const STATUS_CONFIG: Record<PredStatus, { label: string; color: string; icon: typeof Clock }> = {
-  PENDING:  { label: 'جارية',  color: '#f59e0b', icon: Clock },
-  CORRECT:  { label: 'صحيحة',  color: '#4ade80', icon: CheckCircle },
-  WRONG:    { label: 'خاطئة',  color: '#f87171', icon: XCircle },
-  EXPIRED:  { label: 'منتهية', color: '#9ca3af', icon: Clock },
+function getTimeframeLabel(key: Timeframe, t: TFunc): string {
+  const map: Record<Timeframe, string> = {
+    WEEK:         t('predictions.timeWeek'),
+    MONTH:        t('predictions.timeMonth'),
+    THREE_MONTHS: t('predictions.time3Months'),
+    SIX_MONTHS:   t('predictions.time6Months'),
+    NINE_MONTHS:  t('predictions.time9Months'),
+    YEAR:         t('predictions.timeYear'),
+  };
+  return map[key] ?? key;
+}
+
+const STATUS_CONFIG: Record<PredStatus, { color: string; icon: typeof Clock }> = {
+  PENDING:  { color: '#f59e0b', icon: Clock },
+  CORRECT:  { color: '#4ade80', icon: CheckCircle },
+  WRONG:    { color: '#f87171', icon: XCircle },
+  EXPIRED:  { color: '#9ca3af', icon: Clock },
 };
 
 function PredictionCard({ pred }: { pred: Prediction }) {
   const { colors } = useTheme();
+  const { t, i18n } = useTranslation();
   const isUp = pred.direction === 'UP';
   const st = STATUS_CONFIG[pred.status] ?? STATUS_CONFIG.PENDING;
   const StatusIcon = st.icon;
+  const dateLocale = i18n.language === 'ar' ? 'ar-EG' : 'en-US';
 
   return (
     <View
@@ -73,30 +81,32 @@ function PredictionCard({ pred }: { pred: Prediction }) {
               ? <TrendingUp size={11} color="#4ade80" />
               : <TrendingDown size={11} color="#f87171" />}
             <Text style={[{ color: isUp ? '#4ade80' : '#f87171' }, tw('text-xs font-bold')]}>
-              {isUp ? 'صعود' : 'هبوط'}
+              {isUp ? t('predictions.up') : t('predictions.down')}
             </Text>
           </View>
         </View>
         <View style={tw('flex-row items-center gap-1.5')}>
           <StatusIcon size={12} color={st.color} />
-          <Text style={[{ color: st.color }, tw('text-xs font-medium')]}>{st.label}</Text>
+          <Text style={[{ color: st.color }, tw('text-xs font-medium')]}>
+            {t(`predictions.status.${pred.status.toLowerCase()}`)}
+          </Text>
         </View>
       </View>
 
       <View style={tw('flex-row gap-4')}>
         <View style={tw('gap-0.5')}>
-          <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>السعر المستهدف</Text>
-          <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>{pred.targetPrice} EGP</Text>
+          <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>{t('predictions.targetPrice')}</Text>
+          <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>{pred.targetPrice?.toFixed(2)} EGP</Text>
         </View>
         {pred.priceAtCreation != null && (
           <View style={tw('gap-0.5')}>
-            <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>عند الإنشاء</Text>
-            <Text style={[{ color: colors.textSub }, tw('text-sm font-medium')]}>{pred.priceAtCreation} EGP</Text>
+            <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>{t('predictions.atCreation')}</Text>
+            <Text style={[{ color: colors.textSub }, tw('text-sm font-medium')]}>{pred.priceAtCreation?.toFixed(2)} EGP</Text>
           </View>
         )}
         <View style={tw('gap-0.5')}>
-          <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>المدة</Text>
-          <Text style={[{ color: colors.textSub }, tw('text-sm font-medium')]}>{TIMEFRAME_LABELS[pred.timeframe]}</Text>
+          <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>{t('predictions.timeframe')}</Text>
+          <Text style={[{ color: colors.textSub }, tw('text-sm font-medium')]}>{getTimeframeLabel(pred.timeframe, t)}</Text>
         </View>
       </View>
 
@@ -110,7 +120,7 @@ function PredictionCard({ pred }: { pred: Prediction }) {
       ) : null}
 
       <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>
-        {new Date(pred.createdAt).toLocaleDateString('ar-EG')}
+        {new Date(pred.createdAt).toLocaleDateString(dateLocale)}
       </Text>
     </View>
   );
@@ -118,6 +128,7 @@ function PredictionCard({ pred }: { pred: Prediction }) {
 
 export default function PredictionsPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors, isRTL } = useTheme();
 
   // Main tabs: my / feed
@@ -180,17 +191,17 @@ export default function PredictionsPage() {
   }, [fetchFeed]);
 
   const handleCreate = async () => {
-    const t = ticker.trim().toUpperCase();
+    const tk = ticker.trim().toUpperCase();
     const price = parseFloat(targetPrice.replace(/,/g, ''));
-    if (!t) { setCreateError('أدخل رمز السهم'); return; }
-    if (!reason.trim()) { setCreateError('أدخل سبب توقعك'); return; }
-    if (isNaN(price) || price <= 0) { setCreateError('أدخل السعر المستهدف'); return; }
+    if (!tk) { setCreateError(t('predictions.errorNoTicker')); return; }
+    if (!reason.trim()) { setCreateError(t('predictions.errorNoReason')); return; }
+    if (isNaN(price) || price <= 0) { setCreateError(t('predictions.errorNoPrice')); return; }
 
     setCreating(true);
     setCreateError(null);
     try {
       const res = await apiClient.post('/api/predictions', {
-        ticker: t, direction, timeframe,
+        ticker: tk, direction, timeframe,
         targetPrice: price, reason: reason.trim(), isPublic: true,
       });
       const newPred = res.data as Prediction;
@@ -200,9 +211,9 @@ export default function PredictionsPage() {
       setTargetPrice(''); setReason('');
     } catch (err: unknown) {
       const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      if (code === 'PREDICTION_LIMIT_REACHED') setCreateError('وصلت الحد اليومي من التوقعات');
-      else if (code === 'DUPLICATE_PREDICTION') setCreateError('لديك توقع نشط على هذا السهم');
-      else setCreateError('حدث خطأ، حاول مرة أخرى');
+      if (code === 'PREDICTION_LIMIT_REACHED') setCreateError(t('predictions.errorLimitReached'));
+      else if (code === 'DUPLICATE_PREDICTION') setCreateError(t('predictions.errorDuplicate'));
+      else setCreateError(t('common.error'));
     } finally {
       setCreating(false);
     }
@@ -232,7 +243,7 @@ export default function PredictionsPage() {
           <View style={tw('w-8 h-8 rounded-xl bg-blue-500/15 items-center justify-center')}>
             <TrendingUp size={16} color="#3b82f6" />
           </View>
-          <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>التوقعات</Text>
+          <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>{t('predictions.title')}</Text>
         </View>
         <Pressable
           onPress={() => { setShowCreate(true); setCreateError(null); }}
@@ -244,26 +255,26 @@ export default function PredictionsPage() {
 
       {/* Main Tabs */}
       <View style={tw('flex-row px-4 pt-3 gap-2')}>
-        {(['my', 'feed'] as const).map((t) => (
+        {(['my', 'feed'] as const).map((tabKey) => (
           <Pressable
-            key={t}
-            onPress={() => setTab(t)}
+            key={tabKey}
+            onPress={() => setTab(tabKey)}
             style={[
               tw('flex-1 py-2 rounded-xl items-center'),
               {
-                backgroundColor: tab === t ? '#8b5cf615' : colors.card,
+                backgroundColor: tab === tabKey ? '#8b5cf615' : colors.card,
                 borderWidth: 1,
-                borderColor: tab === t ? '#8b5cf640' : colors.border,
+                borderColor: tab === tabKey ? '#8b5cf640' : colors.border,
               },
             ]}
           >
             <Text
               style={[
-                { color: tab === t ? '#8b5cf6' : colors.textSub },
+                { color: tab === tabKey ? '#8b5cf6' : colors.textSub },
                 tw('text-sm font-medium'),
               ]}
             >
-              {t === 'my' ? 'توقعاتي' : 'الخلاصة'}
+              {tabKey === 'my' ? t('predictions.myPredictions') : t('predictions.feed')}
             </Text>
           </Pressable>
         ))}
@@ -273,9 +284,9 @@ export default function PredictionsPage() {
       {tab === 'feed' && (
         <View style={tw('flex-row px-4 pt-2 gap-2')}>
           {([
-            { key: 'all', label: 'الكل' },
-            { key: 'following', label: 'المتابَعون' },
-          ] as { key: FeedFilter; label: string }[]).map(({ key, label }) => (
+            { key: 'all' as FeedFilter, label: t('market.all') },
+            { key: 'following' as FeedFilter, label: t('predictions.following') },
+          ]).map(({ key, label }) => (
             <Pressable
               key={key}
               onPress={() => { void handleFeedFilter(key); }}
@@ -314,22 +325,22 @@ export default function PredictionsPage() {
               </View>
               <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>
                 {tab === 'my'
-                  ? 'لا توجد توقعات بعد'
+                  ? t('predictions.noMyPreds')
                   : feedFilter === 'following'
-                    ? 'لا توجد توقعات من المتابَعين'
-                    : 'لا توجد توقعات في الخلاصة'}
+                    ? t('predictions.noFollowingPreds')
+                    : t('predictions.noFeedPreds')}
               </Text>
               {tab === 'my' && (
                 <Pressable
                   onPress={() => setShowCreate(true)}
                   style={tw('bg-brand rounded-xl px-5 py-2.5 mt-2')}
                 >
-                  <Text style={tw('text-sm font-bold text-white')}>أضف توقعك الأول</Text>
+                  <Text style={tw('text-sm font-bold text-white')}>{t('predictions.addFirst')}</Text>
                 </Pressable>
               )}
               {tab === 'feed' && feedFilter === 'following' && (
                 <Text style={[{ color: colors.textMuted }, tw('text-xs text-center px-8')]}>
-                  تابع مستخدمين آخرين لترى توقعاتهم هنا
+                  {t('predictions.followToSee')}
                 </Text>
               )}
             </View>
@@ -351,7 +362,7 @@ export default function PredictionsPage() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={tw('flex-row items-center justify-between mb-1')}>
-            <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>توقع جديد</Text>
+            <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>{t('predictions.newTitle')}</Text>
             <Pressable onPress={() => setShowCreate(false)} style={tw('p-1')}>
               <Text style={{ color: colors.textSub }}>✕</Text>
             </Pressable>
@@ -365,7 +376,7 @@ export default function PredictionsPage() {
 
           {/* Ticker */}
           <View style={tw('gap-1')}>
-            <Text style={[{ color: colors.textSub }, tw('text-xs')]}>رمز السهم</Text>
+            <Text style={[{ color: colors.textSub }, tw('text-xs')]}>{t('predictions.ticker')}</Text>
             <View
               style={[
                 { backgroundColor: colors.bg, borderColor: colors.border },
@@ -377,7 +388,7 @@ export default function PredictionsPage() {
                 value={ticker}
                 onChangeText={(v) => { setTicker(v); setTickerOpen(true); }}
                 onFocus={() => setTickerOpen(true)}
-                placeholder="مثال: COMI"
+                placeholder={t('predictions.tickerPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 autoCapitalize="characters"
                 style={[{ color: colors.text }, tw('flex-1 py-3 text-sm')]}
@@ -413,7 +424,7 @@ export default function PredictionsPage() {
 
           {/* Direction */}
           <View style={tw('gap-1')}>
-            <Text style={[{ color: colors.textSub }, tw('text-xs')]}>الاتجاه</Text>
+            <Text style={[{ color: colors.textSub }, tw('text-xs')]}>{t('predictions.direction')}</Text>
             <View style={tw('flex-row gap-3')}>
               <Pressable
                 onPress={() => setDirection('UP')}
@@ -427,7 +438,7 @@ export default function PredictionsPage() {
               >
                 <TrendingUp size={16} color="#4ade80" />
                 <Text style={[{ color: direction === 'UP' ? '#4ade80' : colors.textSub }, tw('text-sm font-bold')]}>
-                  صعود
+                  {t('predictions.up')}
                 </Text>
               </Pressable>
               <Pressable
@@ -442,7 +453,7 @@ export default function PredictionsPage() {
               >
                 <TrendingDown size={16} color="#f87171" />
                 <Text style={[{ color: direction === 'DOWN' ? '#f87171' : colors.textSub }, tw('text-sm font-bold')]}>
-                  هبوط
+                  {t('predictions.down')}
                 </Text>
               </Pressable>
             </View>
@@ -450,13 +461,13 @@ export default function PredictionsPage() {
 
           {/* Timeframe */}
           <View style={tw('gap-1')}>
-            <Text style={[{ color: colors.textSub }, tw('text-xs')]}>المدة</Text>
+            <Text style={[{ color: colors.textSub }, tw('text-xs')]}>{t('predictions.timeframe')}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={tw('flex-row gap-2')}
             >
-              {(Object.entries(TIMEFRAME_LABELS) as [Timeframe, string][]).map(([key, label]) => (
+              {(['WEEK', 'MONTH', 'THREE_MONTHS', 'SIX_MONTHS', 'NINE_MONTHS', 'YEAR'] as Timeframe[]).map((key) => (
                 <Pressable
                   key={key}
                   onPress={() => setTimeframe(key)}
@@ -474,7 +485,7 @@ export default function PredictionsPage() {
                       tw('text-xs font-medium'),
                     ]}
                   >
-                    {label}
+                    {getTimeframeLabel(key, t)}
                   </Text>
                 </Pressable>
               ))}
@@ -483,7 +494,7 @@ export default function PredictionsPage() {
 
           {/* Target Price */}
           <View style={tw('gap-1')}>
-            <Text style={[{ color: colors.textSub }, tw('text-xs')]}>السعر المستهدف (EGP)</Text>
+            <Text style={[{ color: colors.textSub }, tw('text-xs')]}>{t('predictions.targetPriceEgp')}</Text>
             <TextInput
               value={targetPrice}
               onChangeText={setTargetPrice}
@@ -503,11 +514,11 @@ export default function PredictionsPage() {
 
           {/* Reason */}
           <View style={tw('gap-1')}>
-            <Text style={[{ color: colors.textSub }, tw('text-xs')]}>سبب التوقع</Text>
+            <Text style={[{ color: colors.textSub }, tw('text-xs')]}>{t('predictions.reason')}</Text>
             <TextInput
               value={reason}
               onChangeText={setReason}
-              placeholder="اشرح لماذا تتوقع هذا الاتجاه..."
+              placeholder={t('predictions.reasonPlaceholder')}
               placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={3}
@@ -531,7 +542,7 @@ export default function PredictionsPage() {
           >
             {creating
               ? <ActivityIndicator color="#fff" />
-              : <Text style={tw('text-sm font-bold text-white')}>نشر التوقع</Text>}
+              : <Text style={tw('text-sm font-bold text-white')}>{t('predictions.publish')}</Text>}
           </Pressable>
         </ScrollView>
       </Modal>

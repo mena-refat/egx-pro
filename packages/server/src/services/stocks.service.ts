@@ -5,6 +5,7 @@ import { StockRepository } from '../repositories/stock.repository.ts';
 import type { GicsSector } from '@prisma/client';
 import { marketDataService } from './market-data/market-data.service.ts';
 import { NewsService } from './news.service.ts';
+import { getCache, setCache } from '../lib/redis.ts';
 
 const GICS_VALUES: GicsSector[] = [
   'INFORMATION_TECHNOLOGY', 'HEALTH_CARE', 'FINANCIALS', 'CONSUMER_DISCRETIONARY',
@@ -116,5 +117,53 @@ export const StocksService = {
 
   getNews(ticker: string) {
     return NewsService.getByTicker(ticker);
+  },
+
+  async gainersLosers(period: 'day' | 'week' | 'month' | 'year', limit = 10) {
+    const cacheKey = `gainers-losers:${period}`;
+    const ttlMap = { day: 60, week: 1_800, month: 14_400, year: 43_200 };
+
+    // Day: derive directly from live quotes
+    if (period === 'day') {
+      const quotes = await marketDataService.getCachedQuotes(EGX_TICKERS);
+      const rows = Array.from(quotes.entries())
+        .filter(([, q]) => q.price > 0 && Number.isFinite(q.changePercent))
+        .map(([ticker, q]) => ({ ticker, changePercent: q.changePercent, price: q.price }))
+        .sort((a, b) => b.changePercent - a.changePercent);
+      return { gainers: rows.slice(0, limit), losers: [...rows].reverse().slice(0, limit) };
+    }
+
+    // Try Redis cache first
+    const cached = await getCache<{ gainers: unknown[]; losers: unknown[] }>(cacheKey);
+    if (cached) return cached;
+
+    // Compute from history — batch 25 at a time to avoid overwhelming Yahoo Finance
+    const rangeMap = { week: '5d', month: '1mo', year: '1y' } as const;
+    const range = rangeMap[period];
+    const BATCH = 25;
+    const results: Array<{ ticker: string; changePercent: number; price: number }> = [];
+
+    for (let i = 0; i < EGX_TICKERS.length; i += BATCH) {
+      const batch = EGX_TICKERS.slice(i, i + BATCH);
+      const settled = await Promise.allSettled(
+        batch.map(async (ticker) => {
+          const h = await getStockHistory(ticker, range);
+          if (h.length < 2) return null;
+          const first = h[0].close;
+          const last = h[h.length - 1].close;
+          if (!first || !last) return null;
+          const changePercent = ((last - first) / first) * 100;
+          return { ticker, changePercent, price: last };
+        }),
+      );
+      for (const r of settled) {
+        if (r.status === 'fulfilled' && r.value) results.push(r.value);
+      }
+    }
+
+    results.sort((a, b) => b.changePercent - a.changePercent);
+    const data = { gainers: results.slice(0, limit), losers: [...results].reverse().slice(0, limit) };
+    await setCache(cacheKey, data, ttlMap[period]);
+    return data;
   },
 };

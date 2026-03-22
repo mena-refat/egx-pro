@@ -72,6 +72,13 @@ export const StocksController = {
     sendSuccess(res, news);
   }),
 
+  getGainersLosers: run(async (req, res) => {
+    const raw = typeof req.query.period === 'string' ? req.query.period : 'day';
+    const period = ['day', 'week', 'month', 'year'].includes(raw) ? (raw as 'day' | 'week' | 'month' | 'year') : 'day';
+    const data = await StocksService.gainersLosers(period);
+    sendSuccess(res, data);
+  }),
+
   orderDepth: (_req: AuthRequest, res: Response) => {
     sendSuccess(res, { available: false, message: 'Order depth data not available' });
   },

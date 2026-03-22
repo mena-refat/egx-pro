@@ -17,6 +17,18 @@ type Props = {
   onFilterChange: (f: Filter) => void;
 };
 
+/** Strips source-name suffixes that aggregators embed in titles (client-side safety net for existing DB data) */
+function cleanTitle(title: string, source?: string): string {
+  // Strip domain names (e.g. "... vetogate.com")
+  let out = title.replace(/\s+\S+\.\w{2,6}\s*$/, '').trim();
+  // Strip known source suffix: "Title - Source" or "Title Source" at end
+  if (source && source !== 'Google News' && source !== 'NewsAPI') {
+    const escaped = source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    out = out.replace(new RegExp(`\\s*[-–—|]?\\s*${escaped}\\s*$`, 'i'), '').trim();
+  }
+  return out.length > 5 ? out : title;
+}
+
 function relativeTime(dateStr: string, t: ReturnType<typeof useTranslation<'common'>>['t']): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60_000);
@@ -126,7 +138,7 @@ function NewsModal({ item, isRtl, onClose, t }: ModalProps) {
 
           {/* Title */}
           <h2 className="text-base font-bold text-[var(--text-primary)] leading-snug mb-3">
-            {item.title}
+            {cleanTitle(item.title, item.source)}
           </h2>
 
           {/* Summary */}
@@ -256,7 +268,7 @@ export function MarketNewsSection({ news, loading, locale, filter, onFilterChang
 
                 {/* Title */}
                 <h3 className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-2 group-hover:text-[var(--brand)] transition-colors mb-1.5">
-                  {item.title}
+                  {cleanTitle(item.title, item.source)}
                 </h3>
 
                 {/* Summary */}
