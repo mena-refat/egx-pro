@@ -155,7 +155,17 @@ export const PredictionRepository = {
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { likes: true } } },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+            predictionStats: { select: { rank: true, accuracyRate: true, totalPredictions: true } },
+          },
+        },
+        _count: { select: { likes: true } },
+      },
     });
   },
 

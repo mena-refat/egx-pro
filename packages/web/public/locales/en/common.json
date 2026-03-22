@@ -1113,7 +1113,9 @@
     "newsSentimentNeutral": "Neutral",
     "newsMinAgo": "{{m}}m ago",
     "newsHoursAgo": "{{h}}h ago",
-    "newsDaysAgo": "{{d}}d ago"
+    "newsDaysAgo": "{{d}}d ago",
+    "newsNoSummary": "No summary available for this article",
+    "newsAffectedTickers": "Affected Stocks"
   },
   "delay": {
     "noticeTitle": "Stock prices are delayed by 10 minutes",

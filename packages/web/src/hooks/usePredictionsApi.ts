@@ -47,8 +47,8 @@ export function usePredictionsApi() {
         const res = await fetch(`${API}/feed?${q}`, { headers: getAuthHeaders(accessToken) });
         if (!res.ok) throw new Error('Feed failed');
         const json = await res.json();
-        const items = (json.items ?? []) as FeedPrediction[];
-        const pag = json.pagination ?? {};
+        const items = (json.data?.items ?? []) as FeedPrediction[];
+        const pag = json.data?.pagination ?? {};
         usePredictionsStore.getState().setFeedPredictions(items, {
           page: pag.page ?? page,
           total: pag.total ?? 0,
@@ -71,8 +71,8 @@ export function usePredictionsApi() {
         const res = await fetch(`${API}/my?${q}`, { headers: getAuthHeaders(accessToken) });
         if (!res.ok) throw new Error('My predictions failed');
         const json = await res.json();
-        const items = (json.items ?? []) as FeedPrediction[];
-        const pag = json.pagination ?? {};
+        const items = (json.data?.items ?? []) as FeedPrediction[];
+        const pag = json.data?.pagination ?? {};
         setMyPredictions(items, {
           page: pag.page ?? page,
           total: pag.total ?? 0,
@@ -95,7 +95,7 @@ export function usePredictionsApi() {
         });
         if (!res.ok) throw new Error('Leaderboard failed');
         const json = await res.json();
-        const items = (json.items ?? []) as LeaderboardEntry[];
+        const items = (json.data?.items ?? []) as LeaderboardEntry[];
         setLeaderboard(items);
       } finally {
         setLeaderboardLoading(false);

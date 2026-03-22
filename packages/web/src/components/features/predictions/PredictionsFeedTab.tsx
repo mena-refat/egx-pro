@@ -1,14 +1,10 @@
-import React, { memo, useRef } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Crosshair } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { PredictionCard } from './PredictionCard';
 import EmptyState from '../../shared/EmptyState';
 import type { FeedPrediction } from '../../../store/usePredictionsStore';
-
-const ROW_ESTIMATE = 120;
-const OVERSCAN = 5;
 
 type Props = {
   predictions: FeedPrediction[];
@@ -32,17 +28,10 @@ export const PredictionsFeedTab = memo(function PredictionsFeedTab({
   onNewPrediction,
 }: Props) {
   const { t } = useTranslation('common');
-  const parentRef = useRef<HTMLDivElement>(null);
-
-  const virtualizer = useVirtualizer({
-    count: predictions.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => ROW_ESTIMATE,
-    overscan: OVERSCAN,
-  });
 
   return (
     <>
+      {/* Filter pills */}
       <div className="flex gap-2 flex-wrap">
         {(['all', 'following', 'top'] as const).map((f) => (
           <button
@@ -57,6 +46,8 @@ export const PredictionsFeedTab = memo(function PredictionsFeedTab({
           </button>
         ))}
       </div>
+
+      {/* Loading skeletons */}
       {loading && predictions.length === 0 ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -72,38 +63,17 @@ export const PredictionsFeedTab = memo(function PredictionsFeedTab({
           onAction={onNewPrediction}
         />
       ) : (
-        <div
-          ref={parentRef}
-          className="overflow-auto rounded-xl"
-          style={{ maxHeight: 'min(70vh, 560px)' }}
-        >
-          <div
-            className="relative w-full"
-            style={{ height: `${virtualizer.getTotalSize()}px` }}
-          >
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const p = predictions[virtualRow.index];
-              return (
-                <div
-                  key={p.id}
-                  className="absolute left-0 w-full px-0"
-                  style={{
-                    top: virtualRow.start,
-                    height: `${virtualRow.size}px`,
-                  }}
-                >
-                  <div className="pb-4">
-                    <PredictionCard
-                      prediction={p}
-                      showLikeButton
-                      onLike={() => onLike(p.id, 'feed', p.likeCount, p.isLikedByMe)}
-                      variant="feed"
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="space-y-3">
+          {predictions.map((p) => (
+            <PredictionCard
+              key={p.id}
+              prediction={p}
+              showLikeButton
+              onLike={() => onLike(p.id, 'feed', p.likeCount, p.isLikedByMe)}
+              variant="feed"
+            />
+          ))}
+
           {pagination && pagination.page < pagination.totalPages && (
             <div className="pt-2">
               <Button variant="secondary" onClick={onLoadMore} disabled={loading}>

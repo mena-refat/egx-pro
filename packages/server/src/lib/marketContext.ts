@@ -28,10 +28,14 @@ async function fetchEgx30(): Promise<{ price: number; changePercent: number } | 
   try {
     const YahooFinance = (await import('yahoo-finance2')).default;
     const yahoo = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
-    // ^CASE30 is the EGX30 index on Yahoo Finance
-    const quote = await (yahoo.quote as (s: string, q?: object, o?: object) => Promise<unknown>)(
+    // ^CASE30 is the EGX30 index on Yahoo Finance — 5 s timeout to prevent analysis hangs
+    const timeout = new Promise<null>((_, reject) =>
+      setTimeout(() => reject(new Error('EGX30 fetch timeout')), 5000),
+    );
+    const fetchQuote = (yahoo.quote as (s: string, q?: object, o?: object) => Promise<unknown>)(
       '^CASE30', {}, { validateResult: false },
     );
+    const quote = await Promise.race([fetchQuote, timeout]);
     const q = quote as { regularMarketPrice?: number; regularMarketChangePercent?: number } | null;
     const price = Number(q?.regularMarketPrice);
     const chg = Number(q?.regularMarketChangePercent);

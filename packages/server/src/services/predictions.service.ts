@@ -370,7 +370,14 @@ export const PredictionsService = {
     const likedIds = await PredictionRepository.findLikedPredictionIds(userId, items.map((p) => p.id));
     const likedSet = new Set(likedIds);
     return {
-      items: items.map((p) => ({ ...p, likeCount: p._count.likes, isLikedByMe: likedSet.has(p.id) })),
+      items: items.map((p) => ({
+        ...p,
+        likeCount: p._count.likes,
+        isLikedByMe: likedSet.has(p.id),
+        userRank: p.user.predictionStats?.rank ?? 'BEGINNER',
+        userAccuracyRate: p.user.predictionStats?.accuracyRate ?? 0,
+        userTotalPredictions: p.user.predictionStats?.totalPredictions ?? 0,
+      })),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   },

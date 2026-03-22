@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams, useBlocker } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../../store/authStore';
 import { useProfileStore } from '../../../store/profileStore';
 import { SettingsDirtyProvider, useSettingsDirty } from '../settings/SettingsDirtyContext';
@@ -95,8 +95,13 @@ function ProfilePageInner() {
   const { fetchMyStats } = usePredictionsApi();
   const { isDirty, clearAll } = useSettingsDirty();
 
-  // Block navigation away from the page when there are unsaved changes
-  const blocker = useBlocker(isDirty);
+  // Warn on browser tab close / refresh when there are unsaved changes
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
 
   // Pending tab switch — held until user confirms or cancels
   const [pendingTab, setPendingTab] = useState<ProfileTab | null>(null);
@@ -442,15 +447,6 @@ function ProfilePageInner() {
         }}
       />
 
-      {/* Unsaved changes — navigation away (back button / sidebar) */}
-      <UnsavedChangesDialog
-        isOpen={blocker.state === 'blocked'}
-        onStay={() => blocker.reset?.()}
-        onLeave={() => {
-          clearAll();
-          blocker.proceed?.();
-        }}
-      />
     </div>
   );
 }

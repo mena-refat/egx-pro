@@ -66,10 +66,11 @@ export function getFirstDayOfNextMonth(): Date {
 const COOLDOWN_SECONDS = 60;
 
 /**
- * Fast pre-check: throws ANALYSIS_LIMIT_REACHED if user is clearly over quota.
+ * Fast pre-check: throws ANALYSIS_LIMIT_REACHED if the user doesn't have enough quota.
  * Non-transactional (optimistic read). atomicConsumeQuota still does the final atomic check.
+ * @param points  How many quota points this operation will consume (default 1, compare = 2).
  */
-export async function preCheckQuota(userId: number): Promise<void> {
+export async function preCheckQuota(userId: number, points = 1): Promise<void> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -95,7 +96,7 @@ export async function preCheckQuota(userId: number): Promise<void> {
   };
   const quota = getLimit(planUser, 'aiAnalysisPerMonth') as number;
 
-  if (usedThisMonth >= quota) {
+  if (usedThisMonth + points > quota) {
     throw new AppError('ANALYSIS_LIMIT_REACHED', 402, 'تم استنفاد حصة التحليلات لهذا الشهر', {
       code: 'ANALYSIS_LIMIT_REACHED',
       used: usedThisMonth,

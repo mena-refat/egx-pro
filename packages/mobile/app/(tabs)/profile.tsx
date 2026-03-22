@@ -16,6 +16,7 @@ import {
 } from '../../lib/theme';
 import { usePredictionScore } from '../../hooks/usePredictionScore';
 import { useNewAchievementsCount } from '../../hooks/useNewAchievementsCount';
+import { ProfileCompletionBanner } from '../../components/shared/ProfileCompletionBanner';
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'مجاني', pro: 'Pro', yearly: 'Pro سنوي',
@@ -182,6 +183,10 @@ export default function ProfilePage() {
                 </View>
               ))}
             </View>
+
+            {/* ─── Profile Completion ─── */}
+            <ProfileCompletionBanner variant="inline" />
+
           </View>
         </View>
 

@@ -118,7 +118,7 @@ export async function compareAnalysis(
   }
 
   // فحص الكوتا والـ cooldown قبل استدعاء الـ AI (المقارنة تستهلك 2 نقطة)
-  await preCheckQuota(userId);
+  await preCheckQuota(userId, 2);
   const cooldownAcquired = await tryAcquireAnalysisCooldown(userId);
   if (!cooldownAcquired) {
     throw new AppError('ANALYSIS_COOLDOWN', 429, 'يرجى الانتظار دقيقة بين كل تحليل وآخر', {

@@ -1113,7 +1113,9 @@
     "newsSentimentNeutral": "محايد",
     "newsMinAgo": "منذ {{m}} د",
     "newsHoursAgo": "منذ {{h}} س",
-    "newsDaysAgo": "منذ {{d}} ي"
+    "newsDaysAgo": "منذ {{d}} ي",
+    "newsNoSummary": "لا يوجد ملخص متاح لهذا الخبر حالياً",
+    "newsAffectedTickers": "الأسهم المتأثرة"
   },
   "delay": {
     "noticeTitle": "أسعار الأسهم متأخرة 10 دقائق",

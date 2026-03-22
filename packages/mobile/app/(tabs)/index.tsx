@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Bell, Briefcase, Star, BarChart2, Newspaper, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { ProfileCompletionBanner } from '../../components/shared/ProfileCompletionBanner';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { MarketStatusBadge } from '../../components/shared/MarketStatusBadge';
@@ -252,6 +253,11 @@ export default function HomePage() {
         </View>
 
         <View style={{ paddingTop: SPACE.lg, gap: SPACE.xl }}>
+
+          {/* ─── 0. Profile Completion Banner ────────────── */}
+          <View style={{ paddingHorizontal: SPACE.lg, marginBottom: -SPACE.sm }}>
+            <ProfileCompletionBanner />
+          </View>
 
           {/* ─── 1. Portfolio Hero (LinearGradient) ─────── */}
           <View style={{ paddingHorizontal: SPACE.lg }}>

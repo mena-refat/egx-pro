@@ -24,12 +24,13 @@ function relativeTime(dateStr: string, t: ReturnType<typeof useTranslation<'comm
   return t('market.newsDaysAgo', { d });
 }
 
+// Uses border-s-* (logical property) so the bar is always on the outer edge regardless of RTL/LTR
 function sentimentBorder(sentiment?: string | null) {
-  if (!sentiment) return 'border-l-[var(--border)]';
+  if (!sentiment) return 'border-s-[var(--border)]';
   const s = sentiment.toLowerCase();
-  if (s === 'positive' || s === 'bullish') return 'border-l-green-500';
-  if (s === 'negative' || s === 'bearish') return 'border-l-red-500';
-  return 'border-l-[var(--border)]';
+  if (s === 'positive' || s === 'bullish') return 'border-s-green-500';
+  if (s === 'negative' || s === 'bearish') return 'border-s-red-500';
+  return 'border-s-[var(--border)]';
 }
 
 function NewsCardSkeleton() {
@@ -95,20 +96,20 @@ function NewsModal({ item, isRtl, onClose, t }: ModalProps) {
         <div className="px-5 pt-4 pb-8 sm:pt-6">
           {/* Top row: sentiment + time + close */}
           <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {isBullish && (
                 <span className="flex items-center gap-1 text-[11px] font-semibold text-green-600 bg-green-100 dark:bg-green-950/40 px-2.5 py-1 rounded-full">
-                  <TrendingUp className="w-3.5 h-3.5" /> إيجابي
+                  <TrendingUp className="w-3.5 h-3.5" /> {t('market.newsSentimentPositive')}
                 </span>
               )}
               {isBearish && (
                 <span className="flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-100 dark:bg-red-950/40 px-2.5 py-1 rounded-full">
-                  <TrendingDown className="w-3.5 h-3.5" /> سلبي
+                  <TrendingDown className="w-3.5 h-3.5" /> {t('market.newsSentimentNegative')}
                 </span>
               )}
               {!isBullish && !isBearish && (
                 <span className="text-[11px] font-semibold text-[var(--text-muted)] bg-[var(--bg-secondary)] px-2.5 py-1 rounded-full">
-                  عام
+                  {t('market.newsSentimentNeutral')}
                 </span>
               )}
               {item.publishedAt && (
@@ -127,41 +128,14 @@ function NewsModal({ item, isRtl, onClose, t }: ModalProps) {
           </div>
 
           {/* Title */}
-          <h2 className="text-sm font-semibold text-[var(--text-secondary)] leading-snug mb-3 line-clamp-2">
+          <h2 className="text-base font-bold text-[var(--text-primary)] leading-snug mb-4">
             {item.title}
           </h2>
 
           {/* Summary */}
-          <div className="rounded-2xl bg-[var(--bg-secondary)] p-4 mb-4">
-            {item.summary ? (
-              <p className="text-base text-[var(--text-primary)] leading-7">
-                {item.summary}
-              </p>
-            ) : (
-              <p className="text-sm text-[var(--text-muted)] text-center py-2">
-                لا يوجد ملخص متاح لهذا الخبر حالياً
-              </p>
-            )}
-          </div>
-
-          {/* Affected tickers */}
-          {item.tickers && item.tickers.length > 0 && (
-            <div>
-              <p className="text-[11px] font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-wide">
-                الأسهم المتأثرة
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {item.tickers.map(ticker => (
-                  <span
-                    key={ticker}
-                    className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border)]"
-                  >
-                    {ticker}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+          <p className="text-sm text-[var(--text-secondary)] leading-7">
+            {item.summary || t('market.newsNoSummary')}
+          </p>
         </div>
       </div>
     </div>
@@ -247,49 +221,49 @@ export function MarketNewsSection({ news, loading, locale, filter, onFilterChang
         {/* News list */}
         {!loading && news.slice(0, 15).map((item, idx) => (
           <button
-            key={idx}
+            key={item.url || idx}
             type="button"
             onClick={() => setSelected(item)}
-            className={`group w-full text-start flex gap-0 hover:bg-[var(--bg-card-hover)] transition-colors duration-150 ${isRtl ? 'flex-row-reverse' : ''}`}
+            className="group w-full text-start flex gap-0 hover:bg-[var(--bg-card-hover)] transition-colors duration-150"
           >
-            {/* Sentiment accent bar */}
-            <div className={`w-[3px] shrink-0 ${sentimentBorder(item.sentiment)} border-l-[3px]`} />
+            {/* Sentiment accent bar — border-s-* follows reading direction */}
+            <div className={`w-[3px] shrink-0 ${sentimentBorder(item.sentiment)} border-s-[3px]`} />
 
             {/* Content */}
             <div className="flex-1 min-w-0 px-4 py-4">
-                  {/* Top row: sentiment badge + time */}
-              <div className={`flex items-center gap-2 mb-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+              {/* Top row: sentiment badge + time */}
+              <div className="flex items-center justify-between gap-2 mb-2">
                 {(() => {
                   const sv = item.sentiment?.toLowerCase();
                   if (sv === 'positive' || sv === 'bullish') return (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-600 bg-green-100 dark:bg-green-950/40 px-2 py-0.5 rounded-full shrink-0">
-                      <TrendingUp className="w-3 h-3" /> إيجابي
+                      <TrendingUp className="w-3 h-3" /> {t('market.newsSentimentPositive')}
                     </span>
                   );
                   if (sv === 'negative' || sv === 'bearish') return (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-100 dark:bg-red-950/40 px-2 py-0.5 rounded-full shrink-0">
-                      <TrendingDown className="w-3 h-3" /> سلبي
+                      <TrendingDown className="w-3 h-3" /> {t('market.newsSentimentNegative')}
                     </span>
                   );
                   return (
                     <span className="text-[11px] font-semibold text-[var(--text-muted)] bg-[var(--bg-secondary)] px-2 py-0.5 rounded-full shrink-0">
-                      عام
+                      {t('market.newsSentimentNeutral')}
                     </span>
                   );
                 })()}
-                <span className="text-[11px] text-[var(--text-muted)] ml-auto shrink-0">
+                <span className="text-[11px] text-[var(--text-muted)] shrink-0">
                   {item.publishedAt ? relativeTime(item.publishedAt, t) : ''}
                 </span>
               </div>
 
               {/* Title */}
-              <h3 className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-1 group-hover:text-[var(--brand)] transition-colors mb-1.5">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-2 group-hover:text-[var(--brand)] transition-colors mb-1.5">
                 {item.title}
               </h3>
 
               {/* Summary preview */}
               {item.summary && (
-                <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed">
+                <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed">
                   {item.summary}
                 </p>
               )}

@@ -164,6 +164,44 @@ model Stock {
   @@index([isShariaCompliant])
 }
 
+/// Fundamental data per ticker — DB is source of truth, refreshed every 24 h.
+/// Redis L1 cache (5 min TTL) sits on top for hot reads.
+model StockFundamentals {
+  ticker          String   @id
+  pe              Float?
+  forwardPe       Float?
+  eps             Float?
+  roe             Float?
+  roa             Float?
+  debtToEquity    Float?
+  grossMargin     Float?
+  profitMargin    Float?
+  operatingMargin Float?
+  revenue         Float?
+  revenueGrowth   Float?
+  freeCashFlow    Float?
+  dividendYield   Float?
+  bookValue       Float?
+  priceToBook     Float?
+  beta            Float?
+  updatedAt       DateTime @updatedAt
+}
+
+/// Daily OHLCV candles — historical candles never change, stored once.
+/// Only today's candle is ever re-fetched during market hours.
+model StockCandle {
+  ticker String
+  date   DateTime @db.Date
+  open   Float
+  high   Float
+  low    Float
+  close  Float
+  volume Float
+
+  @@id([ticker, date])
+  @@index([ticker, date(sort: Desc)])
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Users
 // ─────────────────────────────────────────────────────────────────────────────

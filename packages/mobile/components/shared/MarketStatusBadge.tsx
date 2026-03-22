@@ -1,47 +1,60 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  withSequence,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
 import { isEgyptMarketOpen } from '../../lib/cairoTime';
 import { useTheme } from '../../hooks/useTheme';
-import { GREEN, FONT, WEIGHT, RADIUS, SPACE } from '../../lib/theme';
+import { FONT, WEIGHT, RADIUS, SPACE } from '../../lib/theme';
+
+// Open  → bright green
+// Closed → soft red (standard in trading apps — Robinhood, Yahoo Finance, etc.)
+const COLOR_OPEN   = '#4ade80';
+const COLOR_CLOSED = '#f87171';
 
 export function MarketStatusBadge() {
   const { colors } = useTheme();
   const [isOpen, setIsOpen] = useState(() => isEgyptMarketOpen());
 
   useEffect(() => {
-    const interval = setInterval(() => setIsOpen(isEgyptMarketOpen()), 30_000);
-    return () => clearInterval(interval);
+    const t = setInterval(() => setIsOpen(isEgyptMarketOpen()), 30_000);
+    return () => clearInterval(t);
   }, []);
 
-  // Pulsing dot animation when open
-  const pulseScale = useSharedValue(1);
+  const dotColor  = isOpen ? COLOR_OPEN : COLOR_CLOSED;
+  const ringColor = dotColor;
+
+  // Ring radiates outward: scale 0.6 → 1.8, opacity 0.7 → 0
+  const ringScale   = useSharedValue(0.6);
+  const ringOpacity = useSharedValue(0.7);
+
   useEffect(() => {
-    if (isOpen) {
-      pulseScale.value = withRepeat(
-        withTiming(1.5, { duration: 900, easing: Easing.inOut(Easing.ease) }),
-        -1,
-        true,
-      );
-    } else {
-      pulseScale.value = 1;
-    }
-  }, [isOpen]);
+    const duration = isOpen ? 1200 : 2000;
 
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-    opacity:   isOpen ? 0.6 : 1,
+    ringScale.value = withRepeat(
+      withTiming(1.9, { duration, easing: Easing.out(Easing.ease) }),
+      -1,
+      false,
+    );
+    ringOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.65, { duration: 0 }),
+        withTiming(0, { duration, easing: Easing.out(Easing.ease) }),
+      ),
+      -1,
+      false,
+    );
+  }, [isOpen, ringScale, ringOpacity]);
+
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ringScale.value }],
+    opacity: ringOpacity.value,
   }));
-
-  const dotColor = isOpen ? GREEN : colors.textMuted;
-  const bg       = isOpen ? `${GREEN}18` : colors.hover;
-  const textColor = isOpen ? GREEN : colors.textSub;
 
   return (
     <View
@@ -52,36 +65,40 @@ export function MarketStatusBadge() {
         paddingHorizontal: SPACE.md,
         paddingVertical:   SPACE.xs,
         borderRadius:      RADIUS.full,
-        backgroundColor:   bg,
+        backgroundColor:   isOpen ? `${COLOR_OPEN}18` : `${COLOR_CLOSED}15`,
       }}
     >
-      <View style={{ width: 8, height: 8, alignItems: 'center', justifyContent: 'center' }}>
-        {isOpen && (
-          <Animated.View
-            style={[
-              pulseStyle,
-              {
-                position:        'absolute',
-                top:             0,
-                left:            0,
-                width:           8,
-                height:          8,
-                borderRadius:    4,
-                backgroundColor: dotColor,
-              },
-            ]}
-          />
-        )}
+      {/* Dot + glow ring */}
+      <View style={{ width: 10, height: 10, alignItems: 'center', justifyContent: 'center' }}>
+        {/* Radiating glow ring */}
+        <Animated.View
+          style={[
+            ringStyle,
+            {
+              position:        'absolute',
+              width:           10,
+              height:          10,
+              borderRadius:    5,
+              backgroundColor: ringColor,
+            },
+          ]}
+        />
+        {/* Static inner dot */}
         <View
           style={{
-            width:           6,
-            height:          6,
-            borderRadius:    3,
+            width:           7,
+            height:          7,
+            borderRadius:    4,
             backgroundColor: dotColor,
           }}
         />
       </View>
-      <Text style={{ color: textColor, fontSize: FONT.xs, fontWeight: WEIGHT.medium }}>
+
+      <Text style={{
+        color:      isOpen ? COLOR_OPEN : COLOR_CLOSED,
+        fontSize:   FONT.xs,
+        fontWeight: WEIGHT.medium,
+      }}>
         {isOpen ? 'السوق مفتوح' : 'السوق مغلق'}
       </Text>
     </View>
