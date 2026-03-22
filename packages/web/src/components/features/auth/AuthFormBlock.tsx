@@ -1,7 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LogIn, UserPlus, Eye, EyeOff, Check } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useWatch } from 'react-hook-form';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
@@ -69,22 +68,20 @@ export function AuthFormBlock({
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <AnimatePresence mode="wait">
-        {!isLogin && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-            <Input
-              {...register('fullName')}
-              label={t('auth.fullName')}
-              type="text"
-              placeholder="Ahmed Mohamed"
-              autoComplete="name"
-              disabled={isSubmitting}
-              error={errors.fullName?.message}
-              aria-required="true"
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {!isLogin && (
+        <div className="dropdown-appear">
+          <Input
+            {...register('fullName')}
+            label={t('auth.fullName')}
+            type="text"
+            placeholder="Ahmed Mohamed"
+            autoComplete="name"
+            disabled={isSubmitting}
+            error={errors.fullName?.message}
+            aria-required="true"
+          />
+        </div>
+      )}
       <Input
         {...register('emailOrPhone')}
         label={t('auth.emailOrPhone')}

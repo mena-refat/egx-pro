@@ -4,7 +4,13 @@ export function AuthBranding() {
   return (
     <div className="text-center mb-8">
       <div className="flex items-center justify-center gap-3 mb-4">
-        <img src="/borsa-logo.webp" alt="" width={48} height={48} className="w-12 h-12 shrink-0 object-contain" aria-hidden fetchPriority="high" />
+        <img
+          src="/borsa-logo-96.webp"
+          srcSet="/borsa-logo-96.webp 1x, /borsa-logo.webp 2x"
+          alt="" width={48} height={48}
+          className="w-12 h-12 shrink-0 object-contain"
+          aria-hidden
+        />
         <h1 className="text-4xl font-bold tracking-tight mb-0">Borsa</h1>
       </div>
       <p className="text-[var(--text-muted)]">Stock Market Intelligence</p>

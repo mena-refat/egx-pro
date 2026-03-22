@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
-import api from './lib/api';
-import { useNotifications } from './hooks/useNotifications';
-import { useTheme } from './hooks/useTheme';
-import { useProfileCompletion } from './hooks/useProfileCompletion';
-import { useDashboardStats } from './hooks/useDashboardStats';
-const OnboardingWizard = lazy(() => import('./components/features/onboarding/OnboardingWizard'));
-const AuthPage         = lazy(() => import('./pages/AuthPage'));
+import PageLoader from './components/shared/PageLoader';
+
+const OnboardingWizard   = lazy(() => import('./components/features/onboarding/OnboardingWizard'));
+const AuthPage           = lazy(() => import('./pages/AuthPage'));
+const AuthenticatedApp   = lazy(() => import('./AuthenticatedApp'));
 
 /** Skeleton shown while AuthPage chunk loads — contains the LCP <h1> so it appears as early as possible */
 function AuthSkeleton() {
@@ -16,11 +14,8 @@ function AuthSkeleton() {
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--bg-primary)' }}>
       <div style={{ width: '100%', maxWidth: '28rem' }}>
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <img src="/borsa-logo.webp" alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'contain' }} fetchPriority="high" />
-            <h1 className="text-4xl font-bold tracking-tight mb-0">Borsa</h1>
-          </div>
-          <p style={{ color: 'var(--text-muted)' }}>Stock Market Intelligence</p>
+          <h1 className="text-4xl font-bold tracking-tight mb-0">Borsa</h1>
+          <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>Stock Market Intelligence</p>
         </div>
         <div className="rounded-3xl p-8" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', minHeight: '18rem' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
@@ -37,106 +32,56 @@ function AuthSkeleton() {
     </div>
   );
 }
-import DelayNotice from './components/shared/DelayNotice';
-import { Sidebar } from './components/layout/Sidebar';
-import { Header } from './components/layout/Header';
-import BottomNav from './components/layout/BottomNav';
-import { ToastContainer } from './components/shared/ToastContainer';
-import PageLoader from './components/shared/PageLoader';
-import { Navigate } from 'react-router-dom';
-import { AppRoutes } from './routes';
 
 export default function App() {
   const { i18n } = useTranslation('common');
-  const { isAuthenticated, user, logout, updateUser } = useAuthStore();
-  const [theme, setTheme] = useTheme(user);
-  const { profileCompletion } = useProfileCompletion(isAuthenticated);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => (typeof window !== 'undefined' && localStorage.getItem('sidebarCollapsed') === 'true'));
+  const { isAuthenticated, user, updateUser } = useAuthStore();
   const [authChecked, setAuthChecked] = useState(false);
   const location = useLocation();
   const pathname = location.pathname;
-  const { notifications, unreadCount: notificationsUnread, notificationsLoading, fetchNotifications, markAllRead: markNotificationsRead, markOneRead: markOneNotificationRead, clearAll: clearAllNotifications } = useNotifications(isAuthenticated);
-  const stats = useDashboardStats(isAuthenticated, pathname);
 
-  const supportUnreadCount = notifications.filter(n => n.type === 'support_reply' && !n.isRead).length;
-
-  useEffect(() => { localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed)); }, [sidebarCollapsed]);
-
-  const onToggleSidebar = useCallback(() => setSidebarCollapsed((c) => !c), []);
-  const onCompleteOnboarding = useCallback(() => updateUser({ isFirstLogin: false, onboardingCompleted: true }), [updateUser]);
-  const handleThemeChange = async (nextTheme: 'dark' | 'light' | 'system') => {
-    setTheme(nextTheme);
-    if (!isAuthenticated) return;
-    try {
-      const res = await api.put('/user/profile', { theme: nextTheme });
-      const body = res.data;
-      if (body) updateUser((body as { data?: Record<string, unknown> }).data ?? body);
-    } catch (err) {
-      if (import.meta.env.DEV) console.error('Failed to update theme from header', err);
-    }
-  };
-
-  const handleLanguageChange = async (lng: 'ar' | 'en') => {
-    i18n.changeLanguage(lng);
-    if (!isAuthenticated) return;
-    try {
-      const res = await api.put('/user/profile', { language: lng });
-      const body = res.data;
-      if (body) updateUser((body as { data?: Record<string, unknown> }).data ?? body);
-    } catch (err) {
-      if (import.meta.env.DEV) console.error('Failed to update language from header', err);
-    }
-  };
+  const onCompleteOnboarding = useCallback(
+    () => updateUser({ isFirstLogin: false, onboardingCompleted: true }),
+    [updateUser],
+  );
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (user?.language === 'ar' || user?.language === 'en') {
-      if (i18n.language !== user.language) i18n.changeLanguage(user.language);
-      return;
-    }
-    const stored = localStorage.getItem('i18nextLng');
-    if (stored === 'ar' || stored === 'en') return;
-    const navLang = (navigator.language || (Array.isArray(navigator.languages) && navigator.languages[0])) ?? 'en';
-    const nextLang = navLang.toLowerCase().startsWith('ar') ? 'ar' : 'en';
-    if (i18n.language !== nextLang) i18n.changeLanguage(nextLang);
-  }, [user?.language, i18n]);
+    document.documentElement.dir  = i18n.language.startsWith('ar') ? 'rtl' : 'ltr';
+    document.documentElement.lang = i18n.language;
+  }, [i18n.language]);
 
   useEffect(() => {
-    // استخدام ref بدل closure flag عشان نحل مشكلة React StrictMode
     const controller = new AbortController();
-    const timeoutMs = 6000;
-    let unlocked = false;
+    const timeoutMs  = 6000;
+    let unlocked     = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     const unlockUI = () => {
       if (unlocked) return;
       unlocked = true;
-      setAuthChecked(true); // دايمًا نـunlock الـ UI حتى لو الـ fetch اتعلّق
+      setAuthChecked(true);
     };
-    const API = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL?.trim();
+
+    const API  = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL?.trim();
     const base = API ? `${API.replace(/\/$/, '')}/api` : '/api';
 
     const checkAuth = async () => {
-      // لو السيرفر بطيء/اتعلّق، ما نخليش الصفحة loading للأبد
-      timeoutId = setTimeout(() => {
-        controller.abort();
-        unlockUI();
-      }, timeoutMs);
+      timeoutId = setTimeout(() => { controller.abort(); unlockUI(); }, timeoutMs);
       try {
-        const res = await fetch(`${base}/auth/me`, {
-          credentials: 'include',
-          signal: controller.signal,
-        });
+        const res = await fetch(`${base}/auth/me`, { credentials: 'include', signal: controller.signal });
 
         if (res.ok) {
           const data = await res.json();
-          const p = (data as { data?: { user?: unknown; accessToken?: string } })?.data ?? data;
+          const p            = (data as { data?: { user?: unknown; accessToken?: string } })?.data ?? data;
           const userPayload  = (p as { user?: unknown })?.user  ?? (data as { user?: unknown }).user;
           const accessToken  = (p as { accessToken?: string })?.accessToken ?? (data as { accessToken?: string }).accessToken;
           if (userPayload && typeof accessToken === 'string') {
             useAuthStore.getState().setAuth(userPayload as import('./types').User, accessToken);
+            // Pre-fetch the authenticated shell so it's ready when React renders it
+            void import('./AuthenticatedApp');
           }
         } else if (res.status === 403) {
-          const data = await res.json().catch(() => ({}));
+          const data  = await res.json().catch(() => ({}));
           const error = (data as { error?: string })?.error ?? (data as { data?: { error?: string } })?.data?.error;
           if (error === 'ACCOUNT_SUSPENDED') {
             useAuthStore.getState().logout();
@@ -147,7 +92,6 @@ export default function App() {
           useAuthStore.getState().logout();
         }
       } catch (err) {
-        // timeout أو network error → نبقي الجلسة الموجودة ولا نعمل logout
         if (import.meta.env.DEV) {
           const isTimeout = (err as { name?: string })?.name === 'AbortError';
           console.warn(isTimeout ? 'checkAuth: timeout, keeping session' : 'checkAuth: network error, keeping session');
@@ -159,18 +103,12 @@ export default function App() {
     };
 
     checkAuth();
-    return () => {
-      controller.abort();
-      if (timeoutId) clearTimeout(timeoutId);
-    };
+    return () => { controller.abort(); if (timeoutId) clearTimeout(timeoutId); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { document.documentElement.dir = i18n.language.startsWith('ar') ? 'rtl' : 'ltr'; document.documentElement.lang = i18n.language; }, [i18n.language]);
-
   // For non-root paths: wait for auth check so deep links restore sessions correctly.
-  // For root path (/): show AuthSkeleton immediately — this lets the LCP <h1> paint
-  // before the checkAuth API round-trip, dramatically reducing LCP time.
+  // For root path (/): show AuthSkeleton immediately — lets LCP <h1> paint before the API round-trip.
   if (!authChecked && !isAuthenticated && pathname !== '/') return <PageLoader />;
 
   if (isAuthenticated && user?.isFirstLogin) {
@@ -180,37 +118,13 @@ export default function App() {
       </Suspense>
     );
   }
-  if (isAuthenticated && !user?.username) {
-    return <Navigate to="/setup-username" replace />;
-  }
+  if (isAuthenticated && !user?.username) return <Navigate to="/setup-username" replace />;
   if (!isAuthenticated && pathname !== '/') return <Navigate to="/" replace />;
   if (!isAuthenticated) return <Suspense fallback={<AuthSkeleton />}><AuthPage /></Suspense>;
 
   return (
-    <div className="h-screen w-full max-w-[100vw] bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row overflow-hidden">
-      <ToastContainer />
-      <Sidebar activeRoute={pathname} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} supportUnreadCount={supportUnreadCount} />
-      <main className="main-content flex-1 p-4 sm:p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto overflow-x-hidden">
-        <Header
-          user={user ?? null}
-          notifications={notifications}
-          unreadCount={notificationsUnread}
-          notificationsLoading={notificationsLoading}
-          fetchNotifications={fetchNotifications}
-          markAllRead={markNotificationsRead}
-          markOneRead={markOneNotificationRead}
-          clearAll={clearAllNotifications}
-          onLogout={logout}
-          theme={theme}
-          onThemeChange={handleThemeChange}
-          profileCompletion={profileCompletion}
-        />
-        <div key={pathname} className="page-fade-in">
-            <DelayNotice showWhenStockPage={pathname === '/market' || pathname === '/stocks' || pathname.startsWith('/stocks/')} isPro={user?.plan === 'pro' || user?.plan === 'yearly' || false} />
-            <AppRoutes currentWealth={stats.totalValue} />
-        </div>
-      </main>
-      <BottomNav />
-    </div>
+    <Suspense fallback={<PageLoader />}>
+      <AuthenticatedApp />
+    </Suspense>
   );
 }
