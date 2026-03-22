@@ -328,7 +328,7 @@ function SettingsIndex() {
             <React.Fragment key={card.id}>
               {/* Danger zone separator */}
               {card.danger && (
-                <div className="pt-4 pb-1 flex items-center gap-3">
+                <div className="pt-8 pb-1 flex items-center gap-3">
                   <div className="flex-1 h-px bg-[var(--danger)]/20" />
                   <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--danger)]/70 uppercase tracking-widest select-none">
                     <Trash2 className="w-3 h-3" />

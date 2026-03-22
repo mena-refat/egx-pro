@@ -19,7 +19,11 @@ export const createGoalBodySchema = z.object({
       z.undefined(),
     ])
     .optional()
-    .transform((v) => (v == null || v === '' ? null : (v as string))),
+    .transform((v) => (v == null || v === '' ? null : (v as string)))
+    .refine(
+      (v) => v == null || new Date(v) > new Date(new Date().toISOString().slice(0, 10)),
+      { message: 'DEADLINE_IN_PAST' },
+    ),
 });
 
 export const updateGoalBodySchema = z.object({

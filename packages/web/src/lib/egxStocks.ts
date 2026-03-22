@@ -8,6 +8,7 @@ export interface EGXStock {
   nameEn: string;
   descriptionAr?: string;
   descriptionEn?: string;
+  indices?: string[]; // e.g. ['EGX30','EGX100'] | ['EGX70','EGX100'] | ['EGX30-ETF'] | []
 }
 
 export const EGX_STOCKS: EGXStock[] = [
@@ -675,6 +676,902 @@ const EGX_DESCRIPTIONS: Record<string, { ar: string; en: string }> = {
     ar: "مطاحن وسط وغرب الدلتا، شركة طحن حبوب تُشغّل مصانعها في منطقة وسط وغرب دلتا النيل لإمداد المحافظات المجاورة بالدقيق ومنتجات الطحن الأخرى. تمتلك طاقة طحن وافية وتستفيد من قرب المصانع من مناطق زراعة القمح الرئيسية في الدلتا.",
     en: "West and Central Delta Flour Mills, a grain-milling company operating plants in the central and western Nile Delta, supplying neighbouring governorates with flour and other milled products. Has sufficient milling capacity and benefits from proximity to the Delta's main wheat-growing areas.",
   },
+  ACRO: {
+    ar: "أكرو مصر شركة متخصصة في تصنيع وتأجير أنظمة السقالات والشدات المعدنية، تأسست عام 1971 كشركة مشتركة مع مجموعة Acrow البريطانية العالمية، وتخدم قطاعات الإنشاء والبناء والمشروعات الكبرى في مصر والمنطقة.",
+    en: "Acrow Misr is a specialist in manufacturing and renting steel scaffolding and formwork systems, established in 1971 as a joint venture with the British Acrow Group, serving construction and infrastructure sectors across Egypt and the region.",
+  },
+  APPC: {
+    ar: "شركة التعبئة الدوائية المتقدمة متخصصة في تصنيع عبوات الأدوية والمستلزمات الصيدلانية، وتعمل على تلبية احتياجات صناعة الدواء المصرية من حلول التعبئة والتغليف عالية الجودة وفق المعايير الدولية.",
+    en: "Advanced Pharmaceutical Packaging Co. specializes in manufacturing pharmaceutical packaging and supplies, meeting the needs of Egypt's pharmaceutical industry with high-quality packaging solutions conforming to international standards.",
+  },
+  AJWA: {
+    ar: "شركة عجوة للصناعات الغذائية متخصصة في إنتاج وتصنيع المواد الغذائية المتنوعة بمعايير جودة عالية، وتسعى إلى تلبية الطلب المحلي والتصدير للأسواق العربية والإقليمية بمنتجات مصرية عالية الجودة.",
+    en: "Ajwa for Food Industries specializes in producing and manufacturing diverse food products to high-quality standards, targeting domestic demand and exports to Arab and regional markets.",
+  },
+  FNAR: {
+    ar: "شركة الفنار للمقاولات والتشييد والتجارة والاستيراد والتصدير تعمل في مجال المقاولات العامة وتنفيذ المشروعات الإنشائية والبنية التحتية، وتوفر خدمات متكاملة للبناء والتشييد في السوق المصري.",
+    en: "Al Fanar Contracting, Construction, Trade, Import and Export operates in general contracting and infrastructure projects, providing integrated construction services in the Egyptian market.",
+  },
+  AMPI: {
+    ar: "شركة المعاصر للبرمجة ونشر المعلومات متخصصة في تطوير البرمجيات وتقنية المعلومات وتقديم الحلول الرقمية المتكاملة للمؤسسات والشركات، وتسهم في دعم التحول الرقمي بالسوق المصري.",
+    en: "Al Moasher for Programming and Information Dissemination specializes in software development, IT, and integrated digital solutions for enterprises, supporting Egypt's digital transformation.",
+  },
+  ATLC: {
+    ar: "شركة التوفيق للتأجير التمويلي من الشركات المرخصة في مصر لتقديم خدمات التأجير التمويلي للأصول والمعدات، وتساهم في تمويل احتياجات الشركات والمنشآت الصناعية والتجارية دون الحاجة إلى رأس مال ضخم مقدماً.",
+    en: "Al Tawfeek Leasing Company is a licensed financial leasing firm in Egypt, providing asset and equipment leasing services to industrial and commercial enterprises.",
+  },
+  ALCN: {
+    ar: "شركة الإسكندرية للحاويات والبضائع متخصصة في تداول الحاويات وخدمات اللوجستيات في ميناء الإسكندرية، أكبر موانئ مصر، وتقدم خدمات الشحن والتخليص الجمركي وإدارة سلاسل الإمداد.",
+    en: "Alexandria Containers and Goods specializes in container handling and logistics at the Port of Alexandria, Egypt's largest port, offering shipping, customs clearance, and supply chain services.",
+  },
+  AMOC: {
+    ar: "شركة الإسكندرية للزيوت المعدنية إحدى أعرق شركات تكرير المنتجات البترولية في مصر، تأسست عام 1936 وتنتج زيوت التشحيم والمنتجات البترولية المتخصصة، وهي من الشركات الرائدة في قطاع الطاقة والبتروكيماويات.",
+    en: "Alexandria Mineral Oils Company (AMOC) is one of Egypt's oldest petroleum refining companies, established in 1936, producing lubricating oils and specialty petroleum products.",
+  },
+  ANFI: {
+    ar: "شركة الإسكندرية الوطنية للاستثمارات المالية متخصصة في الاستثمار وإدارة المحافظ المالية وتقديم الخدمات المالية المتكاملة، وتستهدف تعظيم العوائد لمساهميها من خلال محفظة استثمارية متنوعة.",
+    en: "Alexandria National Company for Financial Investments specializes in investment, portfolio management, and integrated financial services, maximizing shareholder returns through a diversified portfolio.",
+  },
+  AMES: {
+    ar: "المركز الطبي الجديد بالإسكندرية يقدم خدمات الرعاية الصحية الشاملة ويضم كوادر طبية متخصصة في مختلف التخصصات الجراحية والتشخيصية، ويمثل أحد المراكز الطبية المتكاملة على الساحل المصري.",
+    en: "Alexandria New Medical Center provides comprehensive healthcare services with specialized medical staff across surgical and diagnostic disciplines, serving as a major integrated medical center on Egypt's coast.",
+  },
+  SPIN: {
+    ar: "شركة الإسكندرية للغزل والنسيج (سبينالكس) من أكبر شركات الغزل والنسيج في مصر، تأسست في خمسينيات القرن الماضي وتنتج الخيوط والأقمشة القطنية والمخلوطة، وتصدر منتجاتها لأسواق أوروبية وعربية عديدة.",
+    en: "Alexandria Spinning and Weaving (SPINALEX) is one of Egypt's largest textile companies, established in the 1950s, producing cotton and blended yarns and fabrics for European and Arab markets.",
+  },
+  AMEC: {
+    ar: "شركة أميكو للصناعات الطبية متخصصة في تصنيع المعدات والمستلزمات الطبية والجراحية، وتسهم في تلبية احتياجات القطاع الصحي المصري من المنتجات الطبية بمعايير عالمية وبأسعار تنافسية.",
+    en: "Ameco Medical Industries specializes in manufacturing medical and surgical equipment and supplies, meeting Egypt's healthcare sector needs with world-class products at competitive prices.",
+  },
+  AMER: {
+    ar: "مجموعة أمير جروب القابضة إحدى كبرى مجموعات التطوير العقاري والضيافة في مصر، تأسست في تسعينيات القرن الماضي وتمتلك مشروعات سياحية ضخمة مثل بورتو مارينا وبورتو السخنة وبورتو سوخنة، وتنشط في أكثر من موقع ساحلي.",
+    en: "Amer Group Holding is one of Egypt's largest real estate and hospitality conglomerates, founded in the 1990s, owning major resorts including Porto Marina and Porto Sokhna.",
+  },
+  ALUM: {
+    ar: "الشركة العربية للألومنيوم متخصصة في تصنيع منتجات الألومنيوم المتنوعة من أبواب ونوافذ وهياكل معدنية للقطاعين الإنشائي والصناعي، وتمتلك خطوط إنتاج متطورة تخدم السوق المصري والتصدير للخارج.",
+    en: "Arab Aluminum manufactures diverse aluminum products including doors, windows, and metallic structures for construction and industrial sectors, with production lines serving both local and export markets.",
+  },
+  CERA: {
+    ar: "شركة السيراميك العربي من الشركات المنتجة للبلاط الخزفي وسيراميك الجدران والأرضيات في مصر، وتوفر منتجاتها للسوق العقاري والإنشائي المتنامي مع الاهتمام بالجودة والتصميمات العصرية.",
+    en: "Arab Ceramic is an Egyptian producer of ceramic tiles and wall and floor ceramics, supplying the growing real estate and construction market with quality, modern designs.",
+  },
+  ACGC: {
+    ar: "الشركة العربية لحليج الأقطان تعمل في مجال حليج وتصنيع القطن المصري الشهير عالمياً بجودته الفائقة، وتسهم في تطوير سلسلة القيمة للقطن المصري بدءاً من الحليج وصولاً إلى التصدير للأسواق العالمية.",
+    en: "Arab Cotton Ginning operates in the ginning and processing of Egypt's world-famous premium cotton, contributing to the cotton value chain from ginning through export to global markets.",
+  },
+  AMIA: {
+    ar: "شركة العرب للملتقى الاستثماري تعمل في مجال الاستثمار المتنوع وتطوير الفرص الاستثمارية في السوق المصري، وتسعى إلى تحقيق عوائد مجزية لمساهميها من خلال محفظة متنوعة من الأصول والمشروعات.",
+    en: "Arab Moltaka Investments Co. operates in diversified investment and developing investment opportunities in the Egyptian market, seeking strong returns for shareholders through a diverse asset portfolio.",
+  },
+  ADCI: {
+    ar: "الشركة العربية للأدوية والصناعات الكيماوية تعمل في تصنيع الأدوية والمستحضرات الصيدلانية والمواد الكيماوية، وتسهم في تأمين الاحتياجات الدوائية المحلية وتوفير بدائل محلية للأدوية المستوردة.",
+    en: "Arab Drug Company for Pharmaceuticals and Chemicals manufactures pharmaceuticals, medicinal preparations, and chemicals, contributing to local drug supply and providing alternatives to imported medicines.",
+  },
+  APSW: {
+    ar: "الشركة العربية للغزل والنسيج بولفارا تأسست بشراكة إيطالية وتعمل في إنتاج الأقمشة الصناعية والمواد النسجية المتطورة، وتستفيد من الخبرة الأوروبية في تطوير منتجاتها النسجية وفق المعايير الدولية.",
+    en: "Arab Polvara Spinning and Weaving, established with Italian partnership, produces advanced synthetic fabrics and textiles, leveraging European expertise to develop products to international standards.",
+  },
+  RREI: {
+    ar: "الشركة العربية للاستثمار العقاري تعمل في مجال تطوير وإدارة المشروعات العقارية السكنية والتجارية في مصر، وتستهدف الاستفادة من النمو المتسارع لقطاع العقارات المصري لتحقيق عوائد قوية لمساهميها.",
+    en: "Arab Real Estate Investment Co. develops and manages residential and commercial real estate projects in Egypt, capitalizing on the rapidly growing Egyptian property sector.",
+  },
+  ARVA: {
+    ar: "شركة العربية للصمامات متخصصة في تصنيع الصمامات الصناعية ومعدات التحكم في التدفق المستخدمة في قطاعات النفط والغاز والصناعة والبنية التحتية، وتخدم كبار المشغلين الصناعيين في مصر والمنطقة.",
+    en: "Arab Valves Company specializes in manufacturing industrial valves and flow control equipment used in oil and gas, industrial, and infrastructure sectors, serving major industrial operators in Egypt and the region.",
+  },
+  AIND: {
+    ar: "شركة استثمارات العربية للتنمية شركة قابضة تعمل في إدارة الاستثمارات المالية وتنمية الأصول في قطاعات متعددة بالسوق المصري، وتسعى إلى بناء محفظة استثمارية متوازنة تحقق نمواً مستداماً.",
+    en: "Arabia Investments Development is a holding company managing financial investments and developing assets across multiple sectors in the Egyptian market with a balanced, sustainable growth approach.",
+  },
+  ASCM: {
+    ar: "شركة أسيك للتعدين (أسكوم) تعمل في مجال التعدين واستخراج المعادن الثمينة وخاصة الذهب في مصر وعدد من الدول الأفريقية، وتمتلك امتيازات تعدينية واسعة وتُعدّ من الشركات المصرية الرائدة في التعدين بأفريقيا.",
+    en: "Asek Company for Mining (Ascom) operates in mining and precious metals extraction, particularly gold, in Egypt and several African countries, holding extensive mining concessions as a leading Egyptian miner in Africa.",
+  },
+  AITG: {
+    ar: "شركة أسيوط الإسلامية للتجارة والتنمية تعمل وفق مبادئ التمويل الإسلامي في مجالات التجارة والتنمية الاقتصادية وإدارة المشروعات في صعيد مصر، وتسهم في تنمية محافظة أسيوط وتحريك عجلة الاقتصاد المحلي.",
+    en: "Assiut Islamic National Trade and Development operates in accordance with Islamic finance principles in trade, economic development, and project management in Upper Egypt, contributing to Assiut's economic growth.",
+  },
+  ALRA: {
+    ar: "شركة أطلس لاستصلاح الأراضي والتصنيع الزراعي تعمل في مجال استصلاح وزراعة الأراضي الصحراوية وتحويلها إلى أراضٍ منتجة، مما يسهم في تحقيق الأمن الغذائي وتوسيع الرقعة الزراعية في مصر.",
+    en: "Atlas for Land Reclamation and Agricultural Processing reclaims and cultivates desert land, converting it into productive agricultural land to enhance Egypt's food security and expand its agricultural area.",
+  },
+  BIGP: {
+    ar: "المجموعة الاستثمارية البربرية (BIG) تعمل في مجالات الاستثمار المتنوعة بالسوق المصري وتشمل محفظتها الاستثمارية أصولاً عقارية وصناعية وتجارية، وتسعى إلى تحقيق نمو مستدام وعوائد مجزية لمساهميها.",
+    en: "El Barbary Investment Group (BIG) operates in diversified investments in the Egyptian market, with a portfolio spanning real estate, industrial, and commercial assets.",
+  },
+  BCAP: {
+    ar: "شركة بلتون كابيتال القابضة للاستثمارات المالية إحدى شركات إدارة الاستثمارات الرائدة في مصر، وتقدم خدمات الاستثمار وإدارة الأصول والوساطة المالية لكبار المستثمرين والمؤسسات، مع حضور في عدة أسواق إقليمية.",
+    en: "Beltone Capital Holding for Financial Investments is one of Egypt's leading investment management firms, providing investment, asset management, and brokerage services to major investors and institutions with a regional presence.",
+  },
+  BSFR: {
+    ar: "شركة التضامن للإسكان والأمن الغذائي تجمع بين نشاطين رئيسيين هما التطوير العقاري وتوفير الأمن الغذائي، وتعمل على تقديم مشروعات سكنية ميسرة وتطوير المشروعات الزراعية والغذائية في مصر.",
+    en: "Brothers Solidarity for Real Estate Investment and Food Security combines real estate development with food security initiatives, offering affordable housing projects and developing agricultural ventures in Egypt.",
+  },
+  CIRF: {
+    ar: "شركة القاهرة للتنمية والاستثمار تعمل في مجال الاستثمار العقاري وتطوير المشروعات الإنشائية في العاصمة القاهرة ومحيطها، وتستهدف تطوير مشروعات سكنية وتجارية وإدارية متكاملة تلبيةً للطلب المتنامي.",
+    en: "Cairo Development and Investment operates in real estate investment and construction project development in Cairo and its surroundings, targeting integrated residential, commercial, and administrative projects.",
+  },
+  CAED: {
+    ar: "شركة القاهرة للخدمات التعليمية تعمل في قطاع التعليم الخاص وتقدم خدمات تعليمية متنوعة للمراحل الدراسية المختلفة، وتسهم في تطوير منظومة التعليم في مصر من خلال المدارس والمراكز التعليمية المتخصصة.",
+    en: "Cairo Educational Services operates in the private education sector, providing diverse educational services across various school levels and contributing to Egypt's education system through specialized schools and centers.",
+  },
+  COSG: {
+    ar: "شركة القاهرة للزيوت والصابون من الشركات العريقة في صناعة زيوت الطعام ومنتجات الصابون والمستحضرات الصناعية، تأسست في ستينيات القرن الماضي وتخدم السوق المحلي بمنتجات استهلاكية يومية.",
+    en: "Cairo Oils and Soap is a long-established manufacturer of cooking oils, soap products, and industrial preparations, founded in the 1960s, serving the local market with everyday consumer products.",
+  },
+  CPCI: {
+    ar: "شركة القاهرة للأدوية والصناعات الكيماوية تعمل في تصنيع الأدوية الجنيسة والمستحضرات الصيدلانية والمواد الكيماوية الطبية، وتسهم في تأمين احتياجات السوق الصيدلاني المصري بمنتجات محلية ذات جودة عالية.",
+    en: "Cairo Pharmaceuticals and Chemical Industries manufactures generic drugs, pharmaceutical preparations, and medical chemicals, contributing to Egypt's pharmaceutical market with quality local products.",
+  },
+  POUL: {
+    ar: "شركة القاهرة للدواجن إحدى كبرى شركات إنتاج الدواجن في مصر، وتعمل في تربية وإنتاج الدواجن البيضاء والبيض وتوزيعها على الأسواق المصرية لتلبية الطلب المتزايد على البروتين الحيواني الاقتصادي.",
+    en: "Cairo Poultry is one of Egypt's largest poultry producers, engaged in breeding, producing, and distributing broilers and eggs across Egyptian markets to meet growing demand for affordable animal protein.",
+  },
+  CSAG: {
+    ar: "شركة وكالات قناة السويس للملاحة تعمل في مجال الوكالات الملاحية وخدمات السفن في قناة السويس والموانئ المصرية، وتستفيد من الموقع الجغرافي الاستراتيجي لمصر لتقديم خدمات لوجستية بحرية متكاملة.",
+    en: "Canal Shipping Agencies operates in ship agencies and maritime services at the Suez Canal and Egyptian ports, leveraging Egypt's strategic geographic location to provide integrated maritime logistics.",
+  },
+  PRCL: {
+    ar: "شركة السيراميك والبورسلين تعمل في تصنيع بلاطات السيراميك والبورسلين المستخدمة في التشطيبات المعمارية للمباني السكنية والتجارية، وتنافس في السوق المصري من خلال التنوع في التصميمات والمواصفات.",
+    en: "Ceramic and Porcelain manufactures ceramic and porcelain tiles used in architectural finishing for residential and commercial buildings, competing in the Egyptian market with diverse designs and specifications.",
+  },
+  CCAPP: {
+    ar: "قلعة القابضة (الأسهم الممتازة) إحدى كبرى شركات الاستثمار الأفريقي، تأسست عام 2004 وتمتلك استثمارات متنوعة في قطاعات الطاقة والنقل والبنية التحتية في مصر وعدة دول أفريقية وآسيوية.",
+    en: "Qalaa Holdings (Preferred Shares) is one of Africa's largest investment companies, founded in 2004, with diversified holdings in energy, transportation, and infrastructure in Egypt and multiple African and Asian countries.",
+  },
+  DCRC: {
+    ar: "شركة دلتا للإنشاء وإعادة الإعمار تعمل في مجال المقاولات العامة وتنفيذ مشروعات البناء والإنشاء والتشييد، وتستهدف مشروعات البنية التحتية ومشروعات الإسكان الاجتماعي في منطقة الدلتا وسائر أنحاء مصر.",
+    en: "Delta Construction and Rebuilding operates in general contracting and construction project execution, targeting infrastructure and social housing projects in the Delta region and across Egypt.",
+  },
+  DTPP: {
+    ar: "شركة دلتا للطباعة والتغليف متخصصة في صناعة الطباعة التجارية وإنتاج مواد التغليف المتنوعة للقطاعين الغذائي والصناعي، وتوفر حلول تغليف متكاملة تلبي متطلبات عملائها من شركات كبرى.",
+    en: "Delta Co. for Printing and Packaging specializes in commercial printing and producing diverse packaging materials for the food and industrial sectors, offering integrated packaging solutions for major clients.",
+  },
+  DEIN: {
+    ar: "شركة دلتا للتأمين إحدى شركات التأمين المرخصة في مصر، وتقدم مجموعة متنوعة من منتجات التأمين على الممتلكات والحوادث والتأمين الهندسي للأفراد والشركات، وتسعى لتوسيع حصتها في سوق التأمين المصري.",
+    en: "Delta Insurance is a licensed Egyptian insurance company offering diverse property, casualty, and engineering insurance products to individuals and corporates, expanding its share in the Egyptian insurance market.",
+  },
+  SUGR: {
+    ar: "شركة دلتا للسكر إحدى الشركات الرئيسية في صناعة السكر في مصر، تعمل في استخراج السكر من قصب السكر والشمندر السكري وتكريره، وتسهم بشكل كبير في سد احتياجات السوق المصري من السكر المحلي.",
+    en: "Delta Sugar is one of Egypt's major sugar producers, extracting and refining sugar from sugarcane and sugar beets, contributing significantly to meeting the Egyptian market's domestic sugar needs.",
+  },
+  DAPH: {
+    ar: "شركة الدلتا للاستشارات الهندسية والتنمية تقدم خدمات الاستشارات الهندسية والفنية لمشروعات البناء والتشييد والبنية التحتية، وتضم كوادر هندسية متخصصة تعمل على دعم قرارات التصميم والتنفيذ الهندسي.",
+    en: "Development and Engineering Consultants provides engineering and technical consulting for construction and infrastructure projects, with specialized engineering teams supporting design and execution decisions.",
+  },
+  DSCW: {
+    ar: "شركة دايس للملابس الرياضية والكاجوال تعمل في تصنيع وتسويق الملابس الرياضية والعصرية في مصر، وتستهدف شرائح الشباب بتصميمات عصرية تجمع بين الأناقة والراحة وبأسعار تنافسية.",
+    en: "Dice Sport and Casual Wear manufactures and markets sports and casual clothing in Egypt, targeting youth segments with modern designs combining style and comfort at competitive prices.",
+  },
+  EGX30ETF: {
+    ar: "صندوق مؤشر EGX 30 هو أول صندوق للمؤشرات المتداولة في البورصة المصرية، يتتبع أداء مؤشر EGX 30 الذي يضم أكبر 30 شركة من حيث السيولة والرسملة السوقية، ويتيح للمستثمرين التعرض لأداء سوق الأسهم المصري بشكل متنوع.",
+    en: "EGX 30 Index ETF is Egypt's first exchange-traded fund tracking the EGX 30 Index, comprising the 30 most liquid and largest-cap companies, giving investors diversified exposure to the Egyptian stock market.",
+  },
+  EPCO: {
+    ar: "شركة مصر للدواجن إحدى الشركات المتخصصة في إنتاج وتربية الدواجن البيضاء والبيض البلدي في مصر، وتعمل على توسيع طاقتها الإنتاجية لتلبية الطلب المتنامي محلياً على منتجات الدواجن كمصدر رئيسي للبروتين الاقتصادي.",
+    en: "Egypt for Poultry specializes in broiler and local egg production in Egypt, expanding its capacity to meet growing local demand for poultry products as a key affordable protein source.",
+  },
+  MISR: {
+    ar: "شركة مصر القارية للجرانيت والرخام متخصصة في استخراج وتصنيع وتصدير الجرانيت والرخام المصري الفاخر المشهور عالمياً بتنوعه وجودته، وتصدر منتجاتها إلى الأسواق الأوروبية والخليجية والأسيوية.",
+    en: "Egypt Intercontinental for Granite and Marble specializes in extracting, processing, and exporting premium Egyptian granite and marble, renowned globally for variety and quality, with exports to European, Gulf, and Asian markets.",
+  },
+  ESAC: {
+    ar: "شركة مصر جنوب أفريقيا للاتصالات تعمل في قطاع الاتصالات وتقنية المعلومات وتسعى إلى تطوير البنية التحتية للاتصالات وتقديم حلول تقنية متكاملة في إطار الشراكة المصرية الأفريقية.",
+    en: "Egypt-South Africa for Communication operates in telecommunications and IT, developing telecom infrastructure and integrated technical solutions within the framework of Egyptian-African partnership.",
+  },
+  EASB: {
+    ar: "شركة المصرية العربية ثمار للسمسرة في الأوراق المالية تقدم خدمات الوساطة المالية وتداول الأسهم والسندات في البورصة المصرية، وتخدم المستثمرين الأفراد والمؤسسيين بخدمات مالية متخصصة.",
+    en: "Egyptian Arabian Company Themar for Securities Brokerage provides financial brokerage and trading services for stocks and bonds in the Egyptian Exchange, serving individual and institutional investors.",
+  },
+  EFIC: {
+    ar: "الشركة المصرية المالية والصناعية شركة قابضة متنوعة النشاط تعمل في المجالين المالي والصناعي وتمتلك محفظة من الاستثمارات في شركات صناعية ومالية متعددة، وتسعى لتحقيق عوائد متوازنة من محفظة متنوعة.",
+    en: "Egyptian Financial and Industrial is a diversified holding company operating in both financial and industrial domains, owning a portfolio of investments in multiple industrial and financial companies.",
+  },
+  EDBM: {
+    ar: "الشركة المصرية لتطوير مواد البناء تعمل في إنتاج وتطوير مواد البناء الحديثة المستخدمة في مشروعات التشييد والإنشاء، وتساهم في توفير مواد بناء ذات جودة عالية تدعم قطاع الإسكان والمشروعات الكبرى في مصر.",
+    en: "Egyptian for Developing Building Materials produces and develops modern building materials for construction projects, supplying high-quality materials that support Egypt's housing and major infrastructure sectors.",
+  },
+  EGTS: {
+    ar: "الشركة المصرية للمنتجعات السياحية تعمل في تطوير وإدارة المنتجعات والقرى السياحية على ساحل البحر الأحمر وسيناء والساحل الشمالي، مستفيدةً من الثروات الطبيعية الاستثنائية لمصر لاستقطاب السياحة الدولية.",
+    en: "Egyptian for Tourism Resorts develops and manages resorts and tourist villages on the Red Sea coast, Sinai, and the North Coast, leveraging Egypt's exceptional natural wealth to attract international tourism.",
+  },
+  EITP: {
+    ar: "الشركة المصرية للمشروعات السياحية الدولية تعمل في تطوير وتشغيل مشروعات سياحية فندقية متنوعة بالتعاون مع شركاء دوليين، وتستهدف استقطاب السياحة الأجنبية وتطوير تجربة الضيافة في مصر.",
+    en: "Egyptian Company for International Touristic Projects develops and operates diverse hotel and tourism projects in partnership with international partners, targeting foreign tourism and developing Egypt's hospitality experience.",
+  },
+  IRON: {
+    ar: "الشركة المصرية للحديد والصلب إحدى أعرق وأكبر شركات صناعة الحديد والصلب في مصر، تأسست عام 1954 في حلوان وأسهمت في بناء البنية الصناعية لمصر، وتنتج الحديد الخام والمنتجات الفولاذية المتنوعة.",
+    en: "Egyptian Iron and Steel is one of Egypt's oldest and largest steel companies, founded in 1954 in Helwan, playing a foundational role in Egypt's industrial base and producing iron and diverse steel products.",
+  },
+  AREH: {
+    ar: "شركة التجمع المصري العقاري تعمل في مجال الاستثمار والتطوير العقاري في مصر، وتمتلك محفظة متنوعة من الأصول العقارية السكنية والتجارية، وتستهدف الاستفادة من النمو المستمر في الطلب على العقارات المصرية.",
+    en: "Real Estate Egyptian Consortium operates in real estate investment and development in Egypt, holding a diversified portfolio of residential and commercial real estate assets.",
+  },
+  AREHA: {
+    ar: "شركة التجمع المصري العقاري (أسهم لحاملها) هي الفئة الثانية من أسهم شركة التجمع المصري العقاري، وتمثل أسهماً لحاملها في نفس الشركة العاملة في التطوير العقاري ومحافظ الأصول العقارية المتنوعة في مصر.",
+    en: "Real Estate Egyptian Consortium (Bearer Shares) represents bearer shares of the same company engaged in real estate development and diversified property asset management in Egypt.",
+  },
+  ESGI: {
+    ar: "الشركة المصرية للنشا والجلوكوز إحدى أعرق الشركات الغذائية في مصر، تأسست في ثلاثينيات القرن الماضي وتنتج النشا والجلوكوز والسكروز وسائر مشتقات الذرة المستخدمة في الصناعات الغذائية والصيدلانية.",
+    en: "Egyptian Starch and Glucose is one of Egypt's most established food companies, founded in the 1930s, producing starch, glucose, sucrose, and corn derivatives for food and pharmaceutical industries.",
+  },
+  ETRS: {
+    ar: "الشركة المصرية للنقل والخدمات التجارية تعمل في مجال النقل البري والبحري وتقديم الخدمات اللوجستية والتجارية للشركات والمؤسسات، وتمثل حلقة وصل حيوية في منظومة الخدمات اللوجستية المصرية.",
+    en: "Egyptian Transport and Commercial Services operates in land and sea transport and logistics services for companies and institutions, forming a vital link in Egypt's logistics services ecosystem.",
+  },
+  ABRD: {
+    ar: "شركة المصريين بالخارج للاستثمار والتنمية تعمل على استقطاب مدخرات المصريين العاملين في الخارج وتوجيهها نحو مشروعات استثمارية مثمرة في مصر، مسهمةً في الربط بين جاليات المصريين وفرص الاستثمار الواعدة.",
+    en: "Egyptians Abroad for Investment and Development attracts savings from Egyptians working abroad and channels them into productive investment projects in Egypt, connecting the diaspora with promising investment opportunities.",
+  },
+  EIUD: {
+    ar: "شركة المصريين للاستثمار والتنمية العمرانية تعمل في مجال الاستثمار العقاري والتطوير الحضري وتشييد المجمعات السكنية والتجارية، مستهدفةً تلبية الطلب المتنامي على الإسكان في مصر بحلول عمرانية متكاملة.",
+    en: "Egyptians for Investment and Urban Development operates in real estate investment and urban development, building residential and commercial complexes to address Egypt's growing housing demand.",
+  },
+  EHDR: {
+    ar: "شركة المصريين للإسكان والتعمير متخصصة في تطوير وإنشاء المشروعات السكنية لمختلف الشرائح الاجتماعية، وتسعى إلى توفير وحدات سكنية ميسورة التكلفة وتطوير المجتمعات العمرانية الجديدة في مصر.",
+    en: "Egyptians for Housing Development specializes in developing and constructing residential projects for diverse social segments, providing affordable housing units and developing new urban communities in Egypt.",
+  },
+  AFDI: {
+    ar: "شركة الأهلي للتنمية والاستثمار تعمل بالتعاون مع البنك الأهلي المصري في مجال إدارة الاستثمارات وتطوير المشروعات الاقتصادية المتنوعة، مستفيدةً من الشبكة الواسعة للبنك الأهلي في خدمة عملائها.",
+    en: "Al Ahly for Development and Investment operates in cooperation with the National Bank of Egypt, managing investments and developing diverse economic projects, leveraging the bank's extensive network.",
+  },
+  EPPK: {
+    ar: "شركة الأهرام للطباعة والتغليف متخصصة في خدمات الطباعة التجارية وإنتاج مواد التغليف لمختلف القطاعات الصناعية والغذائية والتجارية، وتقدم حلول طباعة متكاملة تلبي احتياجات العملاء من الشركات الكبرى والمتوسطة.",
+    en: "El Ahram Co. for Printing and Packing specializes in commercial printing and packaging materials for industrial, food, and commercial sectors, providing complete printing solutions for large and medium enterprises.",
+  },
+  EEII: {
+    ar: "شركة الصناعات الهندسية العربية تعمل في تصنيع المعدات والتجهيزات الهندسية والميكانيكية المستخدمة في القطاعات الصناعية المختلفة، وتمثل ركيزة مهمة في منظومة الصناعات الهندسية والميكانيكية في مصر.",
+    en: "Arab Engineering Industries manufactures engineering and mechanical equipment and fittings used across industrial sectors, forming an important pillar in Egypt's engineering and mechanical industries ecosystem.",
+  },
+  EALR: {
+    ar: "شركة العربية لاستصلاح الأراضي تعمل في مجال استصلاح الأراضي الصحراوية وتحويلها إلى أراضٍ زراعية خصبة منتجة، مساهمةً في توسيع الرقعة الزراعية المصرية وتعزيز الأمن الغذائي الوطني.",
+    en: "El Arabia for Land Reclamation works on reclaiming desert land and converting it into productive agricultural land, contributing to expanding Egypt's cultivated area and enhancing national food security.",
+  },
+  EBDP: {
+    ar: "شركة البدر للبلاستيك متخصصة في تصنيع المنتجات والمستلزمات البلاستيكية المتنوعة للاستخدامات المنزلية والصناعية والتجارية، وتعمل على تطوير خطوط إنتاجها لمواكبة الطلب المتزايد على منتجات البلاستيك في السوق المصري.",
+    en: "El Badr Plastic specializes in manufacturing diverse plastic products and supplies for household, industrial, and commercial uses, developing its production lines to meet growing demand in the Egyptian market.",
+  },
+  ICFC: {
+    ar: "شركة الدولية للأسمدة والكيماويات تعمل في إنتاج وتسويق الأسمدة الكيماوية ومشتقات النيتروجين والفوسفات لدعم القطاع الزراعي المصري، وتسهم في رفع إنتاجية المحاصيل الزراعية وتحقيق الأمن الغذائي الوطني.",
+    en: "El Dawlia Fertilizers and Chemicals produces and markets chemical fertilizers and nitrogen and phosphate derivatives to support Egypt's agricultural sector and raise crop productivity.",
+  },
+  ECAP: {
+    ar: "شركة العز للسيراميك والبورسلين (جيما) من الشركات الرائدة في صناعة بلاط السيراميك والبورسلين عالي الجودة في مصر، وتوفر تشكيلات واسعة من الديكورات والتصميمات الحديثة المستخدمة في تشطيبات المباني.",
+    en: "El Ezz Ceramics and Porcelain (Gemma) is a leading manufacturer of high-quality ceramic and porcelain tiles in Egypt, offering a wide range of modern designs for building finishing.",
+  },
+  KWIN: {
+    ar: "شركة القاهرة الوطنية للاستثمار تعمل في مجال إدارة الاستثمارات المتنوعة بالسوق المصري وتمتلك محفظة من المشروعات الاقتصادية في قطاعات متعددة، مستهدفةً تحقيق نمو مستدام وعوائد جيدة لمساهميها.",
+    en: "El Kahera El Watania Investment manages diversified investments in the Egyptian market, holding a portfolio of economic projects across multiple sectors for sustainable growth and returns.",
+  },
+  ELKA: {
+    ar: "شركة القاهرة للإسكان من الشركات المتخصصة في تطوير وبناء المشروعات السكنية بمختلف مناطق العاصمة القاهرة ومحيطها، وتقدم وحدات سكنية تلبي احتياجات شرائح متنوعة من المواطنين.",
+    en: "El Kahera Housing specializes in developing and constructing residential projects across Cairo and its surrounding areas, offering housing units to meet diverse residents' needs.",
+  },
+  KABO: {
+    ar: "شركة النصر للملابس والمنسوجات (كابو) من الشركات الرائدة في صناعة الملابس الجاهزة والمنسوجات في مصر، وتمتلك تاريخاً عريقاً في تصنيع الملابس الرجالية والنسائية للسوق المحلي والتصدير.",
+    en: "El Nasr Clothes and Textiles (KABO) is a leading Egyptian ready-made garments and textiles manufacturer with a long heritage of producing men's and women's clothing for local and export markets.",
+  },
+  ELNA: {
+    ar: "شركة النصر لصناعة المحاصيل الزراعية تعمل في مجال تصنيع ومعالجة المحاصيل الزراعية الاستراتيجية وتطوير صناعة تحويل المنتجات الزراعية بمصر، مسهمةً في تعزيز القيمة المضافة للإنتاج الزراعي المحلي.",
+    en: "El Nasr for Manufacturing Agricultural Crops processes and manufactures strategic agricultural crops, developing Egypt's agricultural product transformation industry and adding value to local output.",
+  },
+  NASR: {
+    ar: "شركة النصر للمحولات (الماكو) تعمل في تصنيع المحولات الكهربائية والمعدات الكهربائية الثقيلة المستخدمة في شبكات الكهرباء والمنشآت الصناعية، وهي أحد موردي المحولات الكهربائية الرئيسيين في مصر.",
+    en: "El Nasr Transformers (El Maco) manufactures electrical transformers and heavy electrical equipment for power grids and industrial facilities, and is one of Egypt's main electrical transformer suppliers.",
+  },
+  OBRI: {
+    ar: "شركة العبور للاستثمار العقاري تعمل في مجال تطوير المشروعات السكنية والتجارية في مدينة العبور وسائر مناطق القاهرة الكبرى، وتستهدف توفير بيئة سكنية متكاملة الخدمات للمجتمعات العمرانية الجديدة.",
+    en: "El Ebour Real Estate Investment develops residential and commercial projects in Obour City and Greater Cairo, providing fully serviced residential environments for new urban communities.",
+  },
+  EOSB: {
+    ar: "شركة العروبة للسمسرة في الأوراق المالية تقدم خدمات الوساطة في تداول الأسهم والأوراق المالية في البورصة المصرية للمستثمرين الأفراد والمؤسسيين، وتعمل على توفير تجربة تداول احترافية ومتطورة.",
+    en: "Al Orouba Securities Brokerage provides stock and securities brokerage services in the Egyptian Exchange to individual and institutional investors, delivering a professional and advanced trading experience.",
+  },
+  ELSH: {
+    ar: "شركة الشمس للإسكان والتعمير تعمل في تطوير وإنشاء المشروعات السكنية والمجمعات العمرانية في مصر، وتقدم وحدات سكنية بمواصفات عالية تلبي احتياجات المواطنين في إطار التوسع العمراني المتسارع.",
+    en: "El Shams Housing and Urbanization develops and constructs residential projects and urban complexes in Egypt, offering high-specification housing units amid rapid urban expansion.",
+  },
+  SPHT: {
+    ar: "شركة الشمس للأهرامات للفنادق والمشروعات السياحية تعمل في مجال إدارة وتطوير الفنادق والمنتجعات السياحية في المناطق الأثرية والسياحية بمصر، مستثمرةً التراث الحضاري الفريد لمصر في استقطاب السائحين.",
+    en: "El Shams Pyramids for Hotels and Touristic Projects manages and develops hotels and resorts in Egypt's archaeological and tourist areas, leveraging Egypt's unique cultural heritage to attract tourists.",
+  },
+  ELWA: {
+    ar: "شركة الوادي للتنمية السياحية تعمل في تطوير المشروعات السياحية في مناطق الوادي الطبيعية، وتستثمر في تطوير البنية التحتية السياحية وإنشاء الفنادق والمنتجعات التي تجذب السياحة البيئية والطبيعية.",
+    en: "El Wadi Touristic Development develops tourism projects in natural valley areas, investing in tourism infrastructure and building hotels and resorts that attract eco and nature tourism.",
+  },
+  NIPH: {
+    ar: "شركة النيل للأدوية والصناعات الكيماوية تعمل في تصنيع الأدوية الجنيسة والمستحضرات الصيدلانية بجودة عالية، وتسهم في تأمين احتياجات القطاع الصحي المصري من الدواء المحلي بأسعار في متناول جميع الشرائح.",
+    en: "El-Nile Co. for Pharmaceuticals and Chemical Industries manufactures generic pharmaceuticals and preparations to high quality, contributing to Egypt's healthcare sector supply at accessible prices.",
+  },
+  ELEC: {
+    ar: "شركة الكابلات الكهربائية المصرية من أكبر منتجي الكابلات الكهربائية في مصر، تعمل في تصنيع الكابلات الكهربائية المنزلية والصناعية والكابلات عالية الجهد المستخدمة في شبكات الطاقة والبنية التحتية.",
+    en: "Electro Cable Egypt Company is one of Egypt's largest electrical cable manufacturers, producing domestic, industrial, and high-voltage cables used in power grids and infrastructure networks.",
+  },
+  UEGC: {
+    ar: "شركة السعيد للمقاولات والاستثمار العقاري تعمل في مجال المقاولات العامة وتنفيذ المشروعات الإنشائية الكبرى والاستثمار في العقارات التجارية والسكنية، وتمتلك خبرة واسعة في تنفيذ مشروعات البنية التحتية.",
+    en: "El Saeed Contracting and Real Estate Investment operates in general contracting and major construction projects alongside commercial and residential real estate investment, with extensive infrastructure project experience.",
+  },
+  ENGC: {
+    ar: "شركة الصناعات الهندسية (أيكون) تعمل في تصنيع منتجات هندسية متنوعة للقطاعات الصناعية والإنشائية، وتقدم حلولاً هندسية متكاملة تشمل تصنيع المكونات الميكانيكية والمعدات الصناعية الدقيقة.",
+    en: "Engineering Industries (Icon) manufactures diverse engineering products for industrial and construction sectors, providing integrated engineering solutions including mechanical components and precision industrial equipment.",
+  },
+  ZEOT: {
+    ar: "شركة الزيوت والمستخلصات متخصصة في استخراج وتكرير الزيوت النباتية والمستخلصات الطبيعية المستخدمة في الصناعات الغذائية والتجميلية والدوائية، وتعمل على توسيع قاعدة منتجاتها لتلبية احتياجات أسواق متنوعة.",
+    en: "Extracted Oils and Derivatives specializes in extracting and refining vegetable oils and natural extracts for food, cosmetic, and pharmaceutical industries, expanding its product range to serve diverse markets.",
+  },
+  FERC: {
+    ar: "شركة فيركيم مصر للأسمدة والكيماويات تعمل في إنتاج الأسمدة الكيماوية والمركبات الزراعية لدعم الإنتاج الزراعي، وتوفر حلول أسمدة متكاملة تساعد المزارعين في تحسين جودة وكمية محاصيلهم الزراعية.",
+    en: "Ferchem Misr for Fertilizers and Chemicals produces chemical fertilizers and agricultural compounds to support crop production, providing integrated fertilizer solutions that help farmers improve yield quality and quantity.",
+  },
+  FIRED: {
+    ar: "شركة الأولى للاستثمار والتنمية العقارية تعمل في مجال تطوير المشروعات العقارية السكنية والتجارية والإدارية في مصر، وتستهدف تقديم منتجات عقارية متميزة تجمع بين الجودة والقيمة التنافسية.",
+    en: "First Investment and Real Estate Development develops residential, commercial, and administrative real estate projects in Egypt, targeting distinctive properties combining quality and competitive value.",
+  },
+  AALR: {
+    ar: "الشركة العامة لاستصلاح الأراضي والتنمية وإعادة الإعمار من الشركات الحكومية المتخصصة في استصلاح الأراضي الصحراوية وتحويلها إلى أراضٍ زراعية خصبة، وتسهم في المشروع القومي لتوسيع الرقعة الزراعية.",
+    en: "General Co. for Land Reclamation Development and Reconstruction is a state-owned company specializing in reclaiming desert land for agricultural use, contributing to Egypt's national project to expand its cultivated area.",
+  },
+  GSSC: {
+    ar: "الشركة العامة للصوامع والتخزين من الشركات القومية المتخصصة في تشغيل وإدارة صوامع تخزين الحبوب الاستراتيجية ومرافق التخزين، ودورها محوري في الحفاظ على احتياطيات القمح والحبوب الغذائية الاستراتيجية في مصر.",
+    en: "General Company for Silos and Storage is a national company operating and managing strategic grain storage silos and warehousing facilities, playing a central role in maintaining Egypt's strategic wheat and grain reserves.",
+  },
+  GETO: {
+    ar: "شركة جينيل تورز تعمل في مجال السياحة وتنظيم الرحلات وتقديم الخدمات السياحية المتكاملة للسائحين الوافدين والمحليين، وتمتلك شبكة علاقات واسعة مع وكالات السفر الدولية لاستقطاب السياحة إلى مصر.",
+    en: "Genial Tours operates in tourism and travel organization, providing integrated tourism services for inbound and domestic tourists, with an extensive network of international travel agencies to attract tourism to Egypt.",
+  },
+  GIHD: {
+    ar: "شركة غربية الإسلامية للإسكان والتنمية تعمل وفق مبادئ التمويل الإسلامي في تطوير وإنشاء مشروعات الإسكان وتوفير الوحدات السكنية الميسورة في محافظة الغربية وسائر أنحاء الدلتا المصرية.",
+    en: "Gharbia Islamic Housing Development operates according to Islamic finance principles, developing and constructing housing projects and affordable residential units in Gharbia governorate and across the Nile Delta.",
+  },
+  GGCC: {
+    ar: "شركة الجيزة العامة للمقاولات تعمل في مجال المقاولات العامة وتنفيذ مشروعات البناء والتشييد والأعمال الإنشائية في منطقة الجيزة ومحيط القاهرة الكبرى، وتمتلك خبرة واسعة في المشروعات الضخمة والمتوسطة.",
+    en: "Giza General Contracting operates in general contracting and construction project execution in the Giza area and Greater Cairo, with extensive experience in large and medium-scale projects.",
+  },
+  BIOC: {
+    ar: "شركة جلاكسو سميث كلاين مصر من كبرى شركات الأدوية العالمية العاملة في مصر، وهي الذراع المحلي لمجموعة GSK البريطانية متعددة الجنسيات، وتوفر أدوية وتطعيمات عالمية المستوى للسوق المصري منذ عقود طويلة.",
+    en: "GlaxoSmithKline Egypt is one of the world's largest pharmaceutical companies operating in Egypt, the local arm of the British multinational GSK, providing world-class medicines and vaccines to the Egyptian market for decades.",
+  },
+  GMCI: {
+    ar: "مجموعة GMC للاستثمارات الصناعية والتجارية والمالية شركة قابضة متنوعة تعمل في قطاعات الصناعة والتجارة والاستثمار المالي، وتمتلك محفظة متنوعة من المشروعات الصناعية والتجارية في السوق المصري.",
+    en: "GMC Group for Industrial, Commercial, and Financial Investments is a diversified holding company operating in industry, trade, and financial investment, with a varied portfolio of industrial and commercial projects.",
+  },
+  GOCO: {
+    ar: "شركة الساحل الذهبي تعمل في مجال التطوير السياحي والعقاري على الساحل المصري، وتستهدف تطوير مشروعات سياحية وترفيهية متكاملة تستقطب المصطافين والسياح على الساحل الشمالي والبحر الأحمر.",
+    en: "Golden Coast Company operates in tourism and real estate development on Egypt's coasts, targeting integrated resort and entertainment projects to attract vacationers and tourists on the North Coast and Red Sea.",
+  },
+  GPPL: {
+    ar: "شركة الميادين الذهبية تعمل في مجال تطوير المراكز التجارية والمجمعات متعددة الاستخدامات، وتسعى إلى تقديم بيئات تجارية وترفيهية متكاملة تلبي احتياجات المستهلكين والشركات في السوق المصري.",
+    en: "Golden Pyramids Plaza develops commercial centers and mixed-use complexes, providing integrated commercial and entertainment environments meeting consumer and business needs in the Egyptian market.",
+  },
+  GTWL: {
+    ar: "شركة الذهبية للمنسوجات والملابس الصوفية تعمل في تصنيع المنسوجات والملابس الصوفية عالية الجودة، وتستهدف إنتاج ملابس شتوية متنوعة للسوق المحلي وتصدير جزء من إنتاجها للأسواق الخارجية.",
+    en: "Golden Textiles and Clothes Wool manufactures high-quality wool textiles and clothing, producing diverse winter garments for the local market and exporting part of its output to external markets.",
+  },
+  GRCA: {
+    ar: "شركة جراند كابيتال للاستثمار تعمل في مجال الاستثمار المالي وإدارة رأس المال وتقديم الخدمات المالية والاستشارية، وتسعى إلى توظيف رأس المال في فرص استثمارية واعدة في مختلف القطاعات الاقتصادية.",
+    en: "Grand Investment Capital operates in financial investment, capital management, and financial and advisory services, deploying capital into promising investment opportunities across economic sectors.",
+  },
+  AGIN: {
+    ar: "شركة الاستثمار الخليجي العربي تجمع بين رؤوس الأموال الخليجية والمصرية للاستثمار في مشروعات اقتصادية مشتركة، وتعمل كجسر استثماري بين دول الخليج ومصر في مجالات العقارات والصناعة والتجارة.",
+    en: "Gulf Arab Investment combines Gulf and Egyptian capital for joint economic projects, serving as an investment bridge between Gulf countries and Egypt in real estate, industry, and trade.",
+  },
+  CCRS: {
+    ar: "شركة الخليج الكندي للاستثمار العقاري تجمع استثمارات خليجية وكندية في مشروعات الاستثمار العقاري بمصر، وتعمل على تطوير مشروعات سكنية وتجارية متكاملة بمعايير دولية رفيعة في أسواق العقارات المصرية.",
+    en: "Gulf Canadian Real Estate Investment Co. combines Gulf and Canadian investments in Egyptian real estate, developing integrated residential and commercial projects to international standards in Egypt's property market.",
+  },
+  INEE: {
+    ar: "شركة إندس والهندسة تعمل في تقديم الخدمات الهندسية والاستشارات التقنية لمشروعات البنية التحتية والمرافق العامة، وتوظف كوادر هندسية متخصصة لتقديم حلول هندسية مبتكرة تلبي احتياجات عملائها.",
+    en: "Indus and Engineer provides engineering services and technical consultancy for infrastructure and public utility projects, employing specialized engineering teams to deliver innovative solutions for clients.",
+  },
+  INEG: {
+    ar: "شركة المتكاملة للهندسة تعمل في مجال الخدمات الهندسية المتكاملة وتنفيذ المشروعات الصناعية والإنشائية والبنية التحتية، وتسعى إلى تقديم حلول هندسية شاملة تجمع التصميم والتنفيذ والإشراف في منظومة واحدة.",
+    en: "Integrated Engineering Group SAE provides integrated engineering services and executes industrial, construction, and infrastructure projects, offering comprehensive solutions combining design, execution, and supervision.",
+  },
+  ICAL: {
+    ar: "شركة إنتر-القاهرة للألومنيوم متخصصة في تصنيع منتجات الألومنيوم المعالجة والمعدنية للقطاعات الإنشائية والصناعية والاستهلاكية، وتوفر طائفة واسعة من منتجات الألومنيوم بمواصفات هندسية دقيقة.",
+    en: "Inter-Cairo for Aluminum Industry specializes in manufacturing processed and fabricated aluminum products for construction, industrial, and consumer sectors, offering a wide range of aluminum products to precise specifications.",
+  },
+  IFAP: {
+    ar: "شركة المنتجات الزراعية الدولية تعمل في مجال تصنيع وتسويق المنتجات الزراعية المتخصصة والمدخلات الزراعية، وتوفر حلولاً زراعية متكاملة للمزارعين والشركات الزراعية لرفع كفاءة الإنتاج الزراعي.",
+    en: "International Agricultural Products manufactures and markets specialty agricultural products and inputs, providing integrated agricultural solutions for farmers and agribusinesses to improve production efficiency.",
+  },
+  IBCT: {
+    ar: "شركة المؤسسة الدولية للتجارة والامتياز التجاري تعمل في مجال التجارة الدولية وإدارة الامتيازات التجارية الدولية في السوق المصري، وتسعى إلى استقطاب علامات تجارية دولية مرموقة للعمل في مصر.",
+    en: "International Business Corporation for Trade and Franchise operates in international trade and managing international commercial franchises in Egypt, attracting prestigious global brands to operate locally.",
+  },
+  ICID: {
+    ar: "شركة الدولية للاستثمار والتنمية تعمل في مجال الاستثمار المتنوع وتطوير المشروعات الاقتصادية في السوق المصري، وتمتلك محفظة من الأصول الاستثمارية في قطاعات العقارات والصناعة والخدمات.",
+    en: "International Co. for Investment and Development operates in diversified investment and economic project development in Egypt, with a portfolio of investment assets in real estate, industry, and services.",
+  },
+  ICLE: {
+    ar: "شركة الدولية للتأجير التمويلي (إنكوليز) من الشركات الرائدة في قطاع التأجير التمويلي في مصر، تقدم حلول تمويل الأصول والمعدات للشركات الصغيرة والمتوسطة والكبيرة بمرونة وكفاءة مالية عالية.",
+    en: "International Company for Leasing (Incolease) is a leading financial leasing company in Egypt, providing flexible asset and equipment financing solutions for small, medium, and large enterprises.",
+  },
+  ICMI: {
+    ar: "شركة الدولية للصناعات الطبية تعمل في تصنيع المستلزمات والتجهيزات الطبية والجراحية وفق أعلى معايير الجودة الدولية، مسهمةً في تطوير صناعة المعدات الطبية المحلية وتقليل الاعتماد على الاستيراد.",
+    en: "International Company for Medical Industries manufactures medical and surgical supplies and equipment to international quality standards, contributing to developing Egypt's local medical device industry.",
+  },
+  DIFC: {
+    ar: "شركة ثاني أكسيد الكربون الجاف الدولي متخصصة في إنتاج وتوزيع الجليد الجاف وثاني أكسيد الكربون الصناعي المستخدم في الصناعات الغذائية والطبية والكيماوية، وتخدم عملاء في مصر وعدة دول مجاورة.",
+    en: "International Dry Ice specializes in producing and distributing dry ice and industrial CO2 for food, medical, and chemical industries, serving clients in Egypt and several neighboring countries.",
+  },
+  IPPM: {
+    ar: "شركة الدولية لمواد الطباعة والتغليف تعمل في توريد وتصنيع مواد الطباعة والتغليف المتطورة للصناعات الغذائية والدوائية والاستهلاكية، وتوفر حلول تغليف مبتكرة تواكب أحدث التطورات التقنية في هذا المجال.",
+    en: "International Printing and Packaging Materials Co. supplies and manufactures advanced printing and packaging materials for food, pharmaceutical, and consumer industries, providing innovative packaging solutions.",
+  },
+  IDRE: {
+    ar: "شركة الإسماعيلية للتنمية والعقارات تعمل في مجال تطوير المشروعات العقارية والبنية التحتية في منطقة الإسماعيلية وقناة السويس، مستثمرةً الموقع الاستراتيجي للإسماعيلية في تطوير مشروعات عمرانية متكاملة.",
+    en: "Ismailia Development and Real Estate develops real estate and infrastructure projects in the Ismailia and Suez Canal region, leveraging Ismailia's strategic location for integrated urban projects.",
+  },
+  ISMA: {
+    ar: "شركة الإسماعيلية مصر للدواجن إحدى شركات إنتاج الدواجن الرائدة في منطقة الإسماعيلية، وتعمل في تربية وإنتاج الكتاكيت والدواجن البيضاء لتلبية احتياجات السوق المحلي من البروتين الحيواني الاقتصادي.",
+    en: "Ismailia Misr Poultry is a leading poultry producer in the Ismailia region, breeding and producing day-old chicks and broilers to meet local market demand for affordable animal protein.",
+  },
+  INFI: {
+    ar: "شركة الإسماعيلية الوطنية للصناعات الغذائية تعمل في تصنيع ومعالجة المنتجات الغذائية المتنوعة في منطقة قناة السويس، وتوفر منتجات غذائية عالية الجودة للسوق المحلي ضمن استراتيجية تعزيز الصناعات الغذائية الوطنية.",
+    en: "Ismailia National Food Industries manufactures and processes diverse food products in the Suez Canal zone, supplying high-quality food products to the local market as part of a strategy to develop national food industries.",
+  },
+  ITSY: {
+    ar: "شركة آي تي سينرجي متخصصة في تقديم حلول تقنية المعلومات والاتصالات المتكاملة للشركات والمؤسسات، وتعمل على دعم التحول الرقمي من خلال تطوير البرمجيات وتكامل الأنظمة وخدمات البنية التحتية التقنية.",
+    en: "IT Synergy specializes in integrated ICT solutions for corporations and institutions, supporting digital transformation through software development, system integration, and technical infrastructure services.",
+  },
+  KZPC: {
+    ar: "شركة كفر الزيات للمبيدات والكيماويات من أعرق الشركات الكيماوية في مصر، تأسست في خمسينيات القرن الماضي وتنتج مبيدات الحشرات والأعشاب والفطريات والمواد الكيماوية الزراعية لدعم القطاع الزراعي المصري.",
+    en: "Kafr El Zayat Pesticides and Chemicals is one of Egypt's most established chemical companies, founded in the 1950s, producing insecticides, herbicides, fungicides, and agrochemicals to support Egyptian agriculture.",
+  },
+  LKGP: {
+    ar: "مجموعة لاقا من المجموعات الاستثمارية المصرية التي تعمل في قطاعات متعددة تشمل الرعاية الصحية والعقارات والصناعة، وتمتلك تاريخاً في الاستثمار طويل الأمد ضمن السوق المصري والأسواق الإقليمية.",
+    en: "Lakah Group is an Egyptian investment group operating across multiple sectors including healthcare, real estate, and industry, with a history of long-term investment in the Egyptian and regional markets.",
+  },
+  LCSW: {
+    ar: "شركة ليسيكو مصر من أكبر منتجي أدوات السباكة والصرف الصحي الخزفية في مصر، تأسست بشراكة مع مجموعة Lecico اللبنانية وتصدر منتجاتها إلى أكثر من 50 دولة حول العالم مما يجعلها علامة تصديرية بارزة.",
+    en: "Lecico Egypt is one of Egypt's largest ceramic sanitary ware manufacturers, established in partnership with the Lebanese Lecico Group, exporting its products to more than 50 countries worldwide.",
+  },
+  MPCO: {
+    ar: "شركة المنصورة للدواجن إحدى الشركات المتخصصة في إنتاج وتربية الدواجن في محافظة الدقهلية وإقليم الدلتا، وتعمل على رفع طاقتها الإنتاجية لتلبية الطلب المتنامي على الدواجن في السوق المصري.",
+    en: "Mansoura Poultry specializes in poultry production and breeding in Dakahlia governorate and the Delta region, expanding its production capacity to meet growing poultry demand in the Egyptian market.",
+  },
+  MMAT: {
+    ar: "شركة مرسى مرسى علم للتنمية السياحية تعمل في تطوير مشروعات سياحية وفندقية فاخرة في مدينة مرسى علم على ساحل البحر الأحمر، مستثمرةً الشواطئ الرملية البكر والثروة المرجانية الاستثنائية لجذب السياحة الدولية.",
+    en: "Marsa Marsa Alam for Tourism Development develops luxury tourism and hotel projects in Marsa Alam on the Red Sea coast, leveraging pristine sandy beaches and exceptional coral reefs to attract international tourism.",
+  },
+  MAAL: {
+    ar: "شركة مرسيليا المصرية الخليجية القابضة شركة استثمارية تجمع رؤوس أموال مصرية وخليجية في محفظة متنوعة من المشروعات العقارية والسياحية والاستثمارية، وتستهدف الاستفادة من الشراكة الثنائية في الأسواق المصرية.",
+    en: "Marseille Almasreia Alkhalegeya for Holding Investment is an investment company combining Egyptian and Gulf capital in a diversified portfolio of real estate, tourism, and investment projects.",
+  },
+  MBEN: {
+    ar: "شركة إم بي للهندسة تقدم خدمات هندسية وتقنية متخصصة في مجالات تصميم وتنفيذ المشروعات الصناعية والإنشائية، وتعتمد على كوادر هندسية مؤهلة لتقديم حلول متكاملة تلبي متطلبات عملائها من القطاعين العام والخاص.",
+    en: "MB Engineering provides specialized engineering and technical services in designing and executing industrial and construction projects, relying on qualified engineers to deliver integrated solutions for public and private sector clients.",
+  },
+  MEPA: {
+    ar: "شركة التعبئة الطبية متخصصة في تصنيع وتوفير مواد التعبئة والتغليف للصناعات الدوائية والطبية بمعايير جودة دولية صارمة، وتسهم في دعم سلسلة إمداد الصناعة الدوائية المصرية بمستلزمات التغليف المتطورة.",
+    en: "Medical Packaging Company specializes in manufacturing and supplying packaging materials for pharmaceutical and medical industries to strict international quality standards, supporting Egypt's pharma supply chain.",
+  },
+  MPCI: {
+    ar: "شركة ممفيس للأدوية من شركات الأدوية الجنيسة الرائدة في مصر، تعمل في تصنيع وتسويق طائفة واسعة من الأدوية الجنيسة والمستحضرات الصيدلانية عالية الجودة التي تلبي احتياجات السوق المصري بأسعار في متناول الجميع.",
+    en: "Memphis Pharmaceuticals is a leading generic drug company in Egypt, manufacturing and marketing a wide range of high-quality generic medicines and pharmaceutical preparations at accessible prices.",
+  },
+  MENA: {
+    ar: "شركة مينا للاستثمار السياحي والعقاري تعمل في تطوير المشروعات السياحية والعقارية في المواقع الاستراتيجية على ساحل البحر الأحمر ومناطق سياحية أخرى، مستثمرةً الموروث الحضاري والطبيعي لمصر.",
+    en: "Mena Touristic and Real Estate Investment develops tourism and real estate projects at strategic locations on the Red Sea coast and other tourist areas, leveraging Egypt's cultural and natural heritage.",
+  },
+  MEGM: {
+    ar: "شركة الشرق الأوسط لصناعة الزجاج إحدى أكبر شركات تصنيع الزجاج في منطقة الشرق الأوسط، تأسست في مصر وتنتج طيفاً واسعاً من منتجات الزجاج المسطح والمقوى والمزخرف وزجاج السلامة، وتصدر لأسواق عديدة.",
+    en: "Middle East Glass Manufacturing is one of the largest glass manufacturers in the Middle East, producing flat, tempered, decorative, and safety glass and exporting to numerous markets.",
+  },
+  CEFM: {
+    ar: "شركة مطاحن مصر الوسطى من الشركات الرائدة في طحن القمح وإنتاج الدقيق في منطقة مصر الوسطى، وتمتلك طاقة طحن كبيرة تسهم في تأمين احتياجات السوق المحلي من الدقيق ومشتقاته.",
+    en: "Middle Egypt Flour Mills is a leading wheat milling and flour production company in the Middle Egypt region, with significant milling capacity contributing to local market supply of flour and derivatives.",
+  },
+  MBSC: {
+    ar: "شركة مصر بني سويف للإسمنت من الشركات الرائدة في إنتاج الإسمنت البورتلاندي في منطقة مصر الوسطى، تمتلك مصانع حديثة عالية الطاقة وتلبي احتياجات قطاع البناء والإنشاء المتنامي في مصر.",
+    en: "Misr Beni Suef Cement is a leading Portland cement producer in Middle Egypt, with modern high-capacity plants meeting the growing needs of Egypt's construction and building sector.",
+  },
+  MCQE: {
+    ar: "شركة مصر للإسمنت قنا تعمل في إنتاج الإسمنت وتسويقه لقطاع البناء والإنشاء في صعيد مصر ومختلف أنحاء الجمهورية، وتمتلك مصانع متطورة تنتج الإسمنت وفق المواصفات القياسية الدولية.",
+    en: "Misr Cement (Qena) produces and markets cement for the construction sector in Upper Egypt and nationwide, operating modern plants that produce cement to international quality standards.",
+  },
+  MICH: {
+    ar: "شركة مصر للصناعات الكيماوية من الشركات المتخصصة في إنتاج المواد الكيماوية الصناعية والاستهلاكية في مصر، وتوفر طائفة واسعة من المنتجات الكيماوية الأساسية التي تدعم القطاعات الصناعية المختلفة.",
+    en: "Misr Chemical Industries specializes in producing industrial and consumer chemicals in Egypt, supplying a wide range of basic chemical products that support various industrial sectors.",
+  },
+  MRCO: {
+    ar: "شركة مصر للتبريد وتكييف الهواء متخصصة في تصنيع وتركيب وصيانة أنظمة التبريد والتكييف الصناعي والتجاري والمنزلي، وتمتلك خبرة طويلة في تقديم الحلول التقنية لأنظمة التبريد في مختلف القطاعات.",
+    en: "Misr Refrigeration and Air Conditioning specializes in manufacturing, installing, and servicing industrial, commercial, and residential cooling and HVAC systems, with extensive technical expertise.",
+  },
+  MFSC: {
+    ar: "شركة مصر فري شوب تعمل في إدارة المحلات الحرة في المطارات المصرية الدولية، وتوفر منتجات فاخرة ومعفاة من الضرائب للمسافرين، كما تمثل نافذة تجارية راقية تعزز تجربة المسافرين في المطارات المصرية.",
+    en: "Egypt Free Shops operates duty-free retail in Egyptian international airports, offering luxury tax-free products to travelers and representing a premium commercial window that enhances the traveler experience.",
+  },
+  MEDA: {
+    ar: "شركة مصر السلام للتنمية والتكنولوجيا المتقدمة تعمل في مجال التطوير التكنولوجي وتقديم الحلول التقنية المتقدمة للمؤسسات والشركات، وتسهم في دعم التحول الرقمي وتطوير البنية التحتية التكنولوجية في مصر.",
+    en: "Misr Elsalam for Development and Advanced Technology provides advanced technological development and solutions for institutions and companies, supporting digital transformation and tech infrastructure in Egypt.",
+  },
+  MFINEG: {
+    ar: "شركة مصر للاستثمارات المالية تعمل في مجال الاستثمار المالي وإدارة المحافظ والخدمات المالية المتكاملة، وتستهدف تحقيق عوائد مجزية لمساهميها من خلال استثمارات متنوعة في سوق المال والقطاعات الاقتصادية المختلفة.",
+    en: "Misr Financial Investments operates in financial investment, portfolio management, and integrated financial services, seeking strong shareholder returns through diversified capital market and sector investments.",
+  },
+  MHOT: {
+    ar: "شركة مصر للفنادق إحدى أعرق شركات الضيافة في مصر وتمتلك سلسلة فنادق تاريخية في القاهرة والإسكندرية وسائر المدن السياحية المصرية، وتمتد تجربتها لعقود في استضافة الضيوف من شتى أنحاء العالم.",
+    en: "Misr Hotels is one of Egypt's most established hospitality companies, owning a chain of historic hotels in Cairo, Alexandria, and other tourist cities, with decades of experience hosting guests from around the world.",
+  },
+  MKIT: {
+    ar: "شركة مصر الكويت للاستثمار والتجارة (ميتيلو) تجمع استثمارات مصرية وكويتية في مشروعات متنوعة تشمل الاستثمار التجاري وتطوير الأعمال، وتعمل كجسر تعاون اقتصادي بين البلدين الشقيقين.",
+    en: "Misr Kuwait Investment and Trading (Meatello) combines Egyptian and Kuwaiti investments in diverse projects covering commercial investment and business development, serving as an economic bridge between the two countries.",
+  },
+  ATQA: {
+    ar: "شركة مصر الوطنية للصلب - العتاقة تعمل في إنتاج مواد الصلب والحديد المستخدمة في قطاعات البناء والإنشاء والصناعة الثقيلة، وتمتلك مصانع حديثة في منطقة العتاقة تلبي احتياجات مشروعات البنية التحتية الكبرى.",
+    en: "Misr National Steel - Ataqa produces steel and iron materials for construction and heavy industry sectors, with modern plants in the Ataqa area meeting major infrastructure project needs.",
+  },
+  MOSC: {
+    ar: "شركة مصر للزيوت والصابون تعمل في تصنيع زيوت الطعام ومنتجات الصابون والمواد الاستهلاكية المنزلية، وتوفر مجموعة متنوعة من المنتجات الاستهلاكية اليومية للسوق المصري بجودة عالية وأسعار منافسة.",
+    en: "Misr Oils and Soap manufactures cooking oils, soap products, and household consumer goods, supplying a diverse range of everyday consumer products to the Egyptian market at competitive prices.",
+  },
+  WATP: {
+    ar: "الشركة الحديثة للموانع المائية متخصصة في تصنيع وتطبيق مواد العزل المائي والحراري المستخدمة في مشروعات البناء والإنشاء، وتوفر حلولاً متكاملة لمنع تسرب المياه وحماية المنشآت الإنشائية.",
+    en: "Modern Waterproofing Company specializes in manufacturing and applying waterproofing and thermal insulation materials for construction projects, providing integrated leak prevention and structural protection solutions.",
+  },
+  SMPP: {
+    ar: "شركة الشروق للطباعة الحديثة والتغليف متخصصة في خدمات الطباعة الحديثة وإنتاج مواد التغليف لمختلف القطاعات الصناعية والتجارية، وتعتمد على أحدث التقنيات في الطباعة لتقديم حلول بصرية متميزة.",
+    en: "Shorouk for Modern Printing and Packaging specializes in modern printing services and packaging materials for various industrial and commercial sectors, using the latest printing technologies for distinctive visual solutions.",
+  },
+  MOIN: {
+    ar: "شركة المهندس للتأمين إحدى شركات التأمين المتخصصة في مصر، تقدم تغطيات تأمينية متخصصة للمنشآت الهندسية والصناعية والتجارية وتأمين المسؤوليات المهنية للمهندسين والمقاولين والشركات.",
+    en: "Mohandes Insurance is a specialized insurance company in Egypt providing coverage for engineering, industrial, and commercial facilities as well as professional liability insurance for engineers, contractors, and companies.",
+  },
+  NAHO: {
+    ar: "شركة نعيم القابضة تعمل في مجال الاستثمار متعدد القطاعات وتمتلك محفظة متنوعة من الأصول الاستثمارية في قطاعات المال والصناعة والعقارات والخدمات، وتسعى لتحقيق عوائد متوازنة من خلال التنويع الاستثماري.",
+    en: "NAEEM Holding operates in multi-sector investment with a diversified portfolio of assets in financial, industrial, real estate, and service sectors, seeking balanced returns through investment diversification.",
+  },
+  NCCW: {
+    ar: "شركة النصر للأعمال المدنية تعمل في مجال المقاولات المدنية وتنفيذ الأعمال الهندسية والإنشائية الكبرى، وتمتلك خبرة واسعة في تنفيذ مشروعات البنية التحتية والطرق والجسور والمرافق العامة في مصر.",
+    en: "Nasr Company for Civil Works operates in civil contracting and major engineering and construction works, with extensive experience in infrastructure, roads, bridges, and public utility projects in Egypt.",
+  },
+  NCEM: {
+    ar: "شركة الإسمنت الوطنية إحدى أكبر شركات إنتاج الإسمنت في مصر، تمتلك مصانع عملاقة وطاقة إنتاجية ضخمة تلبي الطلب المتنامي على الإسمنت في السوق المصري وتدعم مشروعات البنية التحتية والإسكان الكبرى.",
+    en: "National Cement is one of Egypt's largest cement producers, with massive plants and production capacity meeting growing cement demand and supporting major infrastructure and housing projects.",
+  },
+  NCMP: {
+    ar: "الشركة الوطنية لمنتجات الذرة متخصصة في تصنيع مشتقات الذرة من نشا وجلوكوز وسكر ذرة وزيت ذرة وعلف حيواني، وتخدم الصناعات الغذائية والدوائية والعلفية بمنتجات متنوعة ومتطورة.",
+    en: "National Company for Maize Products specializes in manufacturing corn derivatives including starch, glucose, corn syrup, corn oil, and animal feed, serving food, pharmaceutical, and feed industries.",
+  },
+  NDRL: {
+    ar: "شركة الوطنية للحفر تعمل في مجال أعمال الحفر الهندسي والجيوتقني للمشروعات الإنشائية والصناعية والبنية التحتية، وتمتلك أسطولاً متطوراً من معدات الحفر ومؤهلة لتنفيذ أعمال الحفر المعقدة.",
+    en: "National Drilling Company operates in engineering and geotechnical drilling for construction, industrial, and infrastructure projects, with an advanced fleet of drilling equipment capable of complex drilling operations.",
+  },
+  NHPS: {
+    ar: "شركة الإسكان الوطني للنقابات المهنية تعمل في تطوير وإنشاء وحدات سكنية ميسورة التكلفة لأعضاء النقابات المهنية في مصر، وتسهم في توفير مسكن لائق لكوادر المهن الحرة من أطباء ومهندسين ومحامين وغيرهم.",
+    en: "National Housing for Professional Syndicates develops and builds affordable residential units for professional syndicate members in Egypt, providing decent housing for liberal professionals including doctors, engineers, and lawyers.",
+  },
+  COPR: {
+    ar: "شركة النحاس للاستثمار التجاري والتطوير العقاري تعمل في مجالي الاستثمار التجاري وتطوير العقارات، وتمتلك محفظة متنوعة من الأصول التجارية والعقارية في السوق المصري مع التركيز على تحقيق قيمة متزايدة.",
+    en: "Copper for Commercial Investment and Real Estate Development operates in commercial investment and real estate development, with a diversified portfolio of commercial and real estate assets in Egypt.",
+  },
+  NCIS: {
+    ar: "شركة نيوكاسل للاستثمار الرياضي تعمل في مجال الاستثمار في المشروعات الرياضية والترفيهية، وتسعى إلى تطوير منشآت رياضية متكاملة وبنية تحتية رياضية تسهم في تنشيط الحركة الرياضية في مصر.",
+    en: "New Castle for Investment Sports invests in sports and entertainment projects, developing integrated sports facilities and infrastructure to invigorate the sports movement in Egypt.",
+  },
+  NCIN: {
+    ar: "شركة استثمارات نيل سيتي تعمل في إدارة وتطوير مشروع نيل سيتي، أحد أبرز المشروعات التجارية والسياحية على ضفاف نهر النيل في القاهرة، ويضم فنادق ومراكز تجارية ومكاتب فاخرة في موقع استراتيجي متميز.",
+    en: "Nile City Investment manages and develops the Nile City project, one of Cairo's most prominent commercial and tourism projects on the Nile, comprising hotels, commercial centers, and luxury offices in a prime location.",
+  },
+  NCGC: {
+    ar: "شركة النيل لحليج الأقطان تعمل في مجال حليج القطن المصري الفاخر وتجهيزه للتصدير والصناعة، وتساهم في الحفاظ على مكانة القطن المصري الراقية عالمياً من خلال عمليات الحليج والفرز والتجهيز الدقيق.",
+    en: "Nile Cotton Ginning gins and prepares premium Egyptian cotton for export and manufacturing, contributing to maintaining Egypt's prestigious global cotton standing through precise ginning, sorting, and preparation.",
+  },
+  NOAF: {
+    ar: "شركة شمال أفريقيا للاستثمار العقاري تعمل في مجال تطوير المشروعات العقارية السكنية والتجارية في مصر وعدد من دول شمال أفريقيا، وتستهدف الاستفادة من النمو المتسارع في الطلب على العقارات بمنطقة الشرق الأوسط وأفريقيا.",
+    en: "North Africa Company for Real Estate Investment develops residential and commercial real estate in Egypt and North African countries, capitalizing on rapidly growing property demand across the Middle East and Africa.",
+  },
+  NEDA: {
+    ar: "شركة شمال الصعيد للتنمية والإنتاج الزراعي تعمل في مجال استصلاح الأراضي وتطوير الإنتاج الزراعي في شمال صعيد مصر، وتسهم في تنمية مجتمعات زراعية مستدامة وتوفير فرص عمل في المناطق الريفية.",
+    en: "North Upper Egypt Development and Agricultural Production works on land reclamation and developing agricultural output in northern Upper Egypt, contributing to sustainable farming communities and rural employment.",
+  },
+  OCPH: {
+    ar: "شركة أكتوبر فارما تعمل في تصنيع وتسويق الأدوية الجنيسة والمستحضرات الصيدلانية المتنوعة في مدينة السادس من أكتوبر الصناعية، وتوفر طائفة واسعة من الأدوية العلاجية بأسعار في متناول شرائح المجتمع المختلفة.",
+    en: "October Pharma manufactures and markets generic pharmaceuticals and diverse preparations in the 6th of October industrial city, supplying a wide range of therapeutic medicines at accessible prices.",
+  },
+  EBSC: {
+    ar: "شركة أسوول إي إس بي للسمسرة في الأوراق المالية تقدم خدمات الوساطة المالية وتداول الأسهم والأدوات المالية في البورصة المصرية، وتعمل على توفير خدمات مالية متكاملة واحترافية للمستثمرين.",
+    en: "Osool ESB Securities Brokerage provides financial brokerage and trading services for stocks and financial instruments in the Egyptian Exchange, delivering comprehensive and professional financial services to investors.",
+  },
+  PACH: {
+    ar: "شركة الدهانات والصناعات الكيماوية متخصصة في تصنيع الدهانات والطلاءات الصناعية والمعمارية ومواد الحماية والصيانة، وتوفر طائفة واسعة من منتجات الطلاء ذات الجودة العالية للمستخدمين في القطاعين الإنشائي والصناعي.",
+    en: "Paint and Chemical Industries specializes in manufacturing industrial and architectural paints, coatings, and protection products, offering a wide range of high-quality coatings for construction and industrial users.",
+  },
+  SIMO: {
+    ar: "شركة ورق الشرق الأوسط (سيمو) تعمل في تصنيع الورق والمنتجات الورقية المتنوعة المستخدمة في قطاعات الطباعة والتغليف والصناعة، وتسهم في تلبية احتياجات السوق المصري من مواد الورق المصنعة محلياً.",
+    en: "Paper Middle East (Simo) manufactures paper and diverse paper products for printing, packaging, and industrial sectors, contributing to meeting Egyptian market demand with locally produced paper materials.",
+  },
+  PTCC: {
+    ar: "شركة فرعون تك لأنظمة التحكم والاتصالات متخصصة في تطوير وتركيب أنظمة التحكم الأوتوماتيكي وأنظمة الاتصالات والشبكات للمنشآت الصناعية والتجارية، وتقدم حلولاً تقنية متكاملة لتحسين كفاءة العمليات.",
+    en: "Pharaoh Tech for Control and Communication Systems specializes in developing and installing automation control systems and communication networks for industrial and commercial facilities, improving operational efficiency.",
+  },
+  ASPI: {
+    ar: "شركة أسبر كابيتال القابضة للاستثمارات المالية تعمل في إدارة الاستثمارات المالية وتقديم الخدمات الاستشارية المالية للشركات والمستثمرين، مستهدفةً تحقيق عوائد مجزية عبر محفظة استثمارية متنوعة ومتوازنة.",
+    en: "Aspire Capital Holding for Financial Investments manages financial investments and provides financial advisory services to companies and investors, targeting strong returns through a diversified and balanced portfolio.",
+  },
+  PSAD: {
+    ar: "شركة بورسعيد للتنمية الزراعية والإنشاء تعمل في مجال التنمية الزراعية وإنشاء المشروعات في محافظة بورسعيد ومنطقة قناة السويس، مستفيدةً من الموقع الجغرافي الاستراتيجي للمنطقة في تطوير مشروعات متنوعة.",
+    en: "Port Said Agricultural Development and Construction works on agricultural development and construction projects in Port Said and the Suez Canal zone, leveraging the region's strategic geographic location.",
+  },
+  PRMH: {
+    ar: "شركة بريمير القابضة إحدى شركات الاستثمار المالي الرائدة في مصر، تقدم خدمات إدارة الاستثمارات والوساطة المالية والاستشارات المالية للمستثمرين المؤسسيين والأفراد، مع حضور قوي في السوق المصري.",
+    en: "Prime Holding is one of Egypt's leading financial investment companies, providing investment management, brokerage, and financial advisory services to institutional and individual investors with a strong market presence.",
+  },
+  PHTV: {
+    ar: "شركة فنادق ومنتجعات الأهرامات تمتلك وتدير سلسلة من الفنادق والمنتجعات الفاخرة في القاهرة ومنطقة الأهرامات والمحافظات السياحية، وتوفر تجارب إقامة راقية للزوار والسياح في أبرز المواقع السياحية بمصر.",
+    en: "Pyramisa Hotels and Resorts owns and operates a chain of luxury hotels and resorts in Cairo, the Pyramids area, and tourist governorates, providing premium hospitality experiences in Egypt's top tourist destinations.",
+  },
+  RAKT: {
+    ar: "شركة راكتا العامة لصناعة الورق من أعرق شركات صناعة الورق في مصر، تأسست في منتصف القرن العشرين وتنتج طيفاً واسعاً من منتجات الورق للاستخدامات الطباعية والصناعية والتغليف، وتخدم السوق المصري والتصدير.",
+    en: "General Company for Paper Industry Rakta is one of Egypt's most established paper manufacturers, founded in the mid-twentieth century, producing a wide range of paper products for printing, industrial, and packaging uses.",
+  },
+  REAC: {
+    ar: "شركة ريكاب للاستثمارات المالية تعمل في مجال الاستثمار المالي وإدارة المحافظ والخدمات المالية المتكاملة، وتسعى إلى تحقيق عوائد متميزة لمساهميها من خلال استثمارات مدروسة في السوق المصري.",
+    en: "Reacap Financial Investments operates in financial investment, portfolio management, and integrated financial services, targeting superior shareholder returns through studied investments in the Egyptian market.",
+  },
+  RTVC: {
+    ar: "شركة ريمكو لإنشاء القرى السياحية متخصصة في إنشاء وتطوير القرى السياحية والمجمعات الترفيهية على الساحل المصري، وتمتلك خبرة في تنفيذ مشروعات سياحية ضخمة تدمج الإقامة والترفيه والخدمات المتكاملة.",
+    en: "Remco for Touristic Villages Construction specializes in building and developing tourist villages and entertainment complexes on Egypt's coasts, with experience in major tourism projects combining accommodation, leisure, and services.",
+  },
+  RIVA: {
+    ar: "شركة ريفا فارما تعمل في تصنيع وتسويق مجموعة متنوعة من الأدوية الجنيسة والمستحضرات الصيدلانية عالية الجودة، وتسهم في تعزيز صناعة الأدوية المحلية وتوفير الدواء الفعال بأسعار ملائمة للمريض المصري.",
+    en: "Riva Pharma manufactures and markets a diverse range of high-quality generic pharmaceuticals, contributing to Egypt's local drug industry and providing effective medicines at affordable prices.",
+  },
+  RMTV: {
+    ar: "شركة رواد مصر للاستثمار السياحي تعمل في مجال تطوير وإدارة المشروعات السياحية والفندقية، وتسعى إلى تقديم تجارب ضيافة مميزة تجمع بين الأصالة المصرية والمعايير السياحية الدولية لاستقطاب السياح.",
+    en: "Rowad Misr Tourism Investment develops and manages tourism and hotel projects, offering distinctive hospitality experiences that blend Egyptian authenticity with international tourism standards to attract visitors.",
+  },
+  ROTO: {
+    ar: "شركة رواد السياحة (الرواد) تعمل في مجال تنظيم الرحلات السياحية وتقديم الخدمات السياحية الشاملة، وتمتلك شبكة علاقات واسعة مع وكلاء السفر الدوليين لتنشيط السياحة الوافدة إلى مصر.",
+    en: "Rowad Tourism (Al Rowad) organizes tours and provides comprehensive tourism services, with an extensive network of international travel agents to stimulate inbound tourism to Egypt.",
+  },
+  RUBX: {
+    ar: "شركة روبكس الدولية لصناعة البلاستيك والأكريليك متخصصة في تصنيع المنتجات البلاستيكية والأكريليكية المتنوعة للاستخدامات الصناعية والتزيينية والإعلانية، وتصدر جزءاً من إنتاجها للأسواق الإقليمية.",
+    en: "Rubex International for Plastic and Acrylic Manufacturing specializes in diverse plastic and acrylic products for industrial, decorative, and advertising uses, exporting part of its output to regional markets.",
+  },
+  SIPC: {
+    ar: "شركة صابا الدولية للأدوية والكيماويات تعمل في تصنيع وتسويق الأدوية الجنيسة والمستحضرات الصيدلانية والمواد الكيماوية بمعايير دولية عالية، وتسهم في تأمين احتياجات السوق الصيدلاني المصري بمنتجات متنوعة.",
+    en: "Sabaa International Company for Pharmaceutical and Chemical manufactures and markets generic pharmaceuticals, preparations, and chemicals to high international standards, contributing to Egypt's pharmaceutical market supply.",
+  },
+  SMCS: {
+    ar: "شركة سامكريت مصر من الشركات الرائدة في تقديم الخدمات الهندسية المتخصصة للصناعة وقطاع البناء والإنشاء، وتمتلك خبرة واسعة في تنفيذ مشروعات الخرسانة الجاهزة والحلول الإنشائية المعقدة في السوق المصري.",
+    en: "Samcrete Misr is a leading company providing specialized engineering services for industry and the construction sector, with extensive experience in ready-mix concrete projects and complex construction solutions.",
+  },
+  SMCSA: {
+    ar: "شركة سامكريت مصر (أسهم ممتازة) هي الفئة الممتازة من أسهم شركة سامكريت مصر الرائدة في الخدمات الهندسية وإنتاج الخرسانة الجاهزة، وتمنح حاملها حقوقاً تفضيلية في توزيع الأرباح.",
+    en: "Samcrete Misr (Preferred Shares) represents preferred shares of Samcrete Misr, the leading engineering services and ready-mix concrete company, granting holders preferential dividend rights.",
+  },
+  SEIG: {
+    ar: "شركة الاستثمار والتمويل السعودي المصري تجمع رؤوس الأموال السعودية والمصرية في مشروعات استثمارية متنوعة، وتعمل كجسر استثماري استراتيجي بين المملكة العربية السعودية ومصر في مجالات التمويل والتنمية.",
+    en: "Saudi Egyptian Investment and Finance combines Saudi and Egyptian capital in diversified investment projects, serving as a strategic investment bridge between Saudi Arabia and Egypt in finance and development.",
+  },
+  SEIGA: {
+    ar: "شركة الاستثمار والتمويل السعودي المصري (بالدولار) هي الفئة الدولارية من أسهم شركة الاستثمار والتمويل السعودي المصري، وتمثل حصصاً بالعملة الأجنبية في نفس المحفظة الاستثمارية المشتركة بين البلدين.",
+    en: "Saudi Egyptian Investment and Finance (USD) represents dollar-denominated shares of the Saudi-Egyptian investment company, holding foreign currency stakes in the same joint investment portfolio between the two countries.",
+  },
+  SNFC: {
+    ar: "شركة الشرقية الوطنية للأمن الغذائي تعمل في مجال إنتاج وتصنيع المنتجات الغذائية الاستراتيجية في محافظة الشرقية، وتسهم في تعزيز منظومة الأمن الغذائي الوطني من خلال الاستثمار في الصناعات الغذائية.",
+    en: "Sharkia National Company for Food Security produces and manufactures strategic food products in Sharkia governorate, contributing to national food security through investment in food industries.",
+  },
+  SDTI: {
+    ar: "شركة شرم دريمز للاستثمار السياحي تعمل في تطوير وتشغيل مشروعات سياحية وفندقية في منطقة شرم الشيخ، إحدى أبرز مناطق السياحة الدولية في مصر والعالم، مستثمرةً الشاطئ والطبيعة الخلابة للمنطقة.",
+    en: "Sharm Dreams Co. for Tourism Investment develops and operates tourism and hotel projects in Sharm El Sheikh, one of Egypt's and the world's premier international tourism destinations.",
+  },
+  SLTD: {
+    ar: "شركة سكاي لايت للتنمية السياحية تعمل في تطوير مشروعات سياحية وإدارة المنتجعات والفنادق في المناطق الساحلية والسياحية، وتسعى إلى تقديم تجارب سياحية استثنائية تجمع بين الفخامة والخدمة المتميزة.",
+    en: "Sky Light for Tourist Development Company develops tourism projects and manages resorts and hotels in coastal and tourist areas, offering exceptional tourism experiences combining luxury and distinguished service.",
+  },
+  SNFI: {
+    ar: "شركة سوهاج الوطنية للصناعات الغذائية تعمل في تصنيع ومعالجة المنتجات الغذائية في محافظة سوهاج بصعيد مصر، وتساهم في التنمية الاقتصادية والصناعية لمحافظات الصعيد وتوفير فرص عمل للمنطقة.",
+    en: "Sohag National Company for Food Industries manufactures and processes food products in Sohag governorate, Upper Egypt, contributing to economic and industrial development and job creation in the region.",
+  },
+  SCFM: {
+    ar: "شركة مطاحن ومخابز جنوب القاهرة والجيزة من الشركات الكبرى في قطاع الطحن والمخابز، تمتلك مصانع طحن وإنتاج خبز وتوزع الدقيق ومنتجاته على المخابز الحكومية والخاصة في محيط القاهرة الكبرى والجيزة.",
+    en: "South Cairo and Giza Mills and Bakeries is a major milling and bakery company with mills and bread production plants, distributing flour and derivatives to government and private bakeries across Greater Cairo and Giza.",
+  },
+  SCTS: {
+    ar: "شركة قناة السويس للتكنولوجيا والتسوية تعمل في مجال التكنولوجيا المالية وخدمات المدفوعات الإلكترونية والتسوية المالية، مستفيدةً من موقعها الاستراتيجي في منطقة قناة السويس لتقديم خدمات مالية متطورة.",
+    en: "Suez Canal Company for Technology Settling operates in financial technology, electronic payment services, and financial settlement, leveraging its strategic position in the Suez Canal zone for advanced financial services.",
+  },
+  SBAG: {
+    ar: "شركة أكياس السويس متخصصة في تصنيع الأكياس والعبوات الصناعية المستخدمة في تغليف الإسمنت والأسمدة والمنتجات الصناعية الثقيلة، وتخدم كبرى شركات الإسمنت والصناعة في مصر بمنتجات تغليف متينة وعالية الجودة.",
+    en: "Suez Bags specializes in manufacturing industrial bags and containers for packaging cement, fertilizers, and heavy industrial products, serving Egypt's major cement and industrial companies with durable, high-quality packaging.",
+  },
+  TECH: {
+    ar: "شركة تغليف الصناعات مصر من الشركات الرائدة في تصنيع أفلام التغليف المطاطية المتعددة الطبقات، وهي جزء من مجموعة Taghleef Industries العالمية الإماراتية، وتصدر منتجاتها لأسواق عديدة في أفريقيا والشرق الأوسط.",
+    en: "Taghleef Industries Egypt is a leading manufacturer of biaxially oriented polypropylene (BOPP) and other packaging films, part of the UAE-headquartered global Taghleef Industries Group, exporting to Africa and the Middle East.",
+  },
+  TOUR: {
+    ar: "شركة السياحة والتعمير تعمل في مجالي التطوير السياحي وإنشاء المرافق العمرانية، وتمتلك مشروعات فندقية وسياحية في المواقع الاستراتيجية بمصر وتسهم في تطوير البنية التحتية السياحية لاستقطاب الاستثمارات.",
+    en: "Tourism Urbanization operates in tourism development and urban infrastructure construction, with hotel and tourism projects at strategic Egyptian locations, contributing to developing tourist infrastructure.",
+  },
+  TRTO: {
+    ar: "شركة ترانس أوشن تورز تعمل في مجال التنظيم السياحي وتقديم الخدمات السياحية المتكاملة للسائحين الأجانب والمحليين، وتمتلك شبكة من العلاقات مع وكالات السفر الدولية لاستقطاب الرحلات السياحية إلى مصر.",
+    en: "Trans Oceans Tours organizes tours and provides integrated tourism services for foreign and domestic tourists, with a network of international travel agency relationships to attract tourism to Egypt.",
+  },
+  UASG: {
+    ar: "شركة الشحن العربي المتحدة متخصصة في تقديم خدمات الشحن والتحميل في الموانئ المصرية وعمليات المناولة الميناوية، وتستفيد من موقع مصر الاستراتيجي على البحر المتوسط والبحر الأحمر لتقديم خدمات لوجستية بحرية شاملة.",
+    en: "United Arab Stevedoring specializes in shipping, loading, and port handling services at Egyptian ports, leveraging Egypt's strategic position on the Mediterranean and Red Sea for comprehensive maritime logistics.",
+  },
+  UNIT: {
+    ar: "شركة المتحدة للإسكان والتعمير تعمل في مجال التطوير العقاري وإنشاء المجمعات السكنية والتجارية المتكاملة، وتستهدف تلبية الطلب المتنامي على الإسكان في مصر بمشروعات سكنية تتميز بجودة البناء والخدمات.",
+    en: "United Housing and Development develops and builds integrated residential and commercial complexes, meeting Egypt's growing housing demand with quality construction and services.",
+  },
+  UNIP: {
+    ar: "شركة العالمية لمواد التعبئة والورق متخصصة في تصنيع وتوزيع مواد التعبئة والتغليف الورقية والكرتونية للصناعات الغذائية والتجارية، وتوفر حلول تعبئة متكاملة تلبي متطلبات العملاء في مختلف القطاعات.",
+    en: "Universal Company for Packaging Materials and Paper specializes in manufacturing and distributing paper and cardboard packaging materials for food and commercial industries, offering integrated packaging solutions.",
+  },
+  UNFO: {
+    ar: "شركة يونيفرت للصناعات الغذائية تعمل في تصنيع المنتجات الغذائية المتنوعة من محاصيل زراعية وتوزيعها على السوق المحلي، وتسعى إلى تقديم منتجات غذائية ذات جودة عالية بأسعار تنافسية للمستهلك المصري.",
+    en: "Univert Food Industries manufactures diverse food products from agricultural crops and distributes them locally, offering high-quality food products at competitive prices for Egyptian consumers.",
+  },
+  UEFM: {
+    ar: "شركة مطاحن مصر العليا إحدى الشركات الكبرى في مجال طحن القمح وإنتاج الدقيق في صعيد مصر، وتمتلك طاقة طحن ضخمة تسهم في تأمين احتياجات القطر من الدقيق ودعم المخابز الحكومية والخاصة.",
+    en: "Upper Egypt Flour Mills is a major wheat milling and flour production company in Upper Egypt, with substantial milling capacity contributing to national flour supply and supporting public and private bakeries.",
+  },
+  UTOP: {
+    ar: "شركة يوتوبيا للاستثمار العقاري والسياحي تعمل في تطوير مشروعات سكنية وسياحية فاخرة في مواقع متميزة بمصر، وتستهدف تقديم منتجات عقارية راقية تجمع بين التصميم المعماري المبتكر وأعلى معايير الجودة والخدمة.",
+    en: "Utopia Real Estate Investment and Tourism develops luxury residential and tourism projects at prime Egyptian locations, offering upscale properties combining innovative architecture with the highest quality and service standards.",
+  },
+  VERT: {
+    ar: "شركة فيرتيكا تعمل في مجال تطوير وتسويق المشروعات العقارية الحديثة، وتستهدف شريحة المشترين الباحثين عن وحدات سكنية عصرية بتصاميم معمارية مميزة وخدمات مجتمعية متكاملة في أحياء مميزة.",
+    en: "Vertika operates in developing and marketing modern real estate projects, targeting buyers seeking contemporary residential units with distinctive architectural designs and integrated community services in premium neighborhoods.",
+  },
+  WKOL: {
+    ar: "شركة وادي كوم أومبو لاستصلاح الأراضي تعمل في استصلاح وزراعة الأراضي الصحراوية في منطقة كوم أومبو بصعيد مصر، وتسهم في تحويل مساحات شاسعة من الأراضي البور إلى أراضٍ زراعية خصبة منتجة.",
+    en: "Wadi Kom Ombo for Land Reclamation reclaims and farms desert land in the Kom Ombo area of Upper Egypt, transforming vast tracts of barren land into productive agricultural land.",
+  },
+  XPIN: {
+    ar: "شركة اكسبريس للتكامل تعمل في مجال تكامل الأنظمة التقنية وحلول تقنية المعلومات والاتصالات للشركات والمؤسسات، وتوفر خدمات تقنية شاملة تشمل تصميم وتنفيذ وصيانة البنية التحتية التقنية.",
+    en: "Xpress Integration operates in IT system integration and ICT solutions for companies and institutions, providing comprehensive technical services including design, implementation, and maintenance of tech infrastructure.",
+  },
+  ZMID: {
+    ar: "شركة زهراء المعادي للاستثمار والتنمية تعمل في مجال تطوير وإدارة المشروعات العقارية في حي المعادي الراقي وضواحي القاهرة، وتستهدف تقديم وحدات سكنية وتجارية مميزة في أحد أرقى أحياء العاصمة.",
+    en: "Zahraa Maadi Investment and Development develops and manages real estate projects in the upscale Maadi district and Cairo suburbs, offering distinctive residential and commercial units in one of the capital's most prestigious neighborhoods.",
+  },
+  MTIE: {
+    ar: "مجموعة إم إم للصناعة والتجارة الدولية تعمل في مجالات الصناعة والتجارة الدولية وتمتلك محفظة متنوعة من الأصول الصناعية والتجارية، وتستفيد من شبكة علاقاتها الدولية الواسعة لتعزيز التبادل التجاري.",
+    en: "MM Group for Industry and International Trade operates in industry and international trade with a diversified portfolio of industrial and commercial assets, leveraging its extensive international network.",
+  },
+  ODIN: {
+    ar: "شركة أودين للاستثمار تعمل في مجال الاستثمار المتنوع وإدارة الأصول في السوق المصري، وتسعى إلى تحقيق عوائد متميزة لمساهميها من خلال محفظة استثمارية مدروسة في قطاعات النمو الواعدة.",
+    en: "ODIN Investment operates in diversified investment and asset management in the Egyptian market, seeking superior shareholder returns through a studied investment portfolio in promising growth sectors.",
+  },
+  AIVCB: {
+    ar: "شركة الأعراف للاستثمار والاستشارات بالجنيه المصري تعمل في مجال الاستثمار والاستشارات المالية والاقتصادية للشركات والمؤسسات، وتوفر خدمات استشارية متخصصة لمساعدة العملاء في اتخاذ قرارات استثمارية مدروسة.",
+    en: "Al Arafa Investment and Consulting (EGP) provides investment and financial and economic consulting to companies and institutions, offering specialized advisory services to help clients make informed investment decisions.",
+  },
+  ACAMD: {
+    ar: "الشركة العربية لإدارة الأصول والتنمية تعمل في مجال الاستثمار وإدارة الأصول وتطوير المحافظ الاستثمارية في السوق المصري والأسواق العربية، وتسعى إلى تقديم خدمات مالية وإدارية احترافية للمستثمرين.",
+    en: "Arab Company for Asset Management and Development operates in investment, asset management, and portfolio development in the Egyptian and Arab markets, offering professional financial and management services to investors.",
+  },
+  ISMQ: {
+    ar: "شركة الحديد والصلب للمناجم والمحاجر تعمل في مجال التعدين واستخراج الخامات المعدنية والمواد الخام المستخدمة في صناعة الحديد والصلب، وتمتلك امتيازات تعدينية في مناطق متعددة من مصر لاستخراج خامات الحديد.",
+    en: "Iron and Steel for Mines and Quarries operates in mining and extracting metallic ores and raw materials used in iron and steel production, holding mining concessions across multiple Egyptian regions for iron ore extraction.",
+  },
+  TANM: {
+    ar: "شركة تنمية للاستثمار العقاري تعمل في مجال تطوير المشروعات العقارية السكنية والتجارية في مصر، وتستهدف تقديم مشروعات عمرانية متكاملة تلبي احتياجات شرائح متنوعة من المشترين في مختلف مناطق الجمهورية.",
+    en: "Tanmiya for Real Estate Investment develops residential and commercial real estate projects in Egypt, targeting integrated urban projects meeting the needs of diverse buyers across different regions.",
+  },
+  GDWA: {
+    ar: "شركة جدوى للتنمية الصناعية تعمل في مجال الاستثمار والتنمية الصناعية وتطوير المشروعات الصناعية المتنوعة في مصر، وتسعى إلى دعم قطاع الصناعة الوطني من خلال تمويل وتطوير مشروعات صناعية واعدة.",
+    en: "Gadwa for Industrial Development operates in industrial investment and development, developing diverse industrial projects in Egypt and supporting the national industrial sector through funding and developing promising ventures.",
+  },
+  PRDC: {
+    ar: "شركة رواد الخصائص للتنمية العمرانية تعمل في مجال تطوير المشروعات العمرانية والعقارية في مصر، وتستهدف تقديم مشروعات سكنية وتجارية متميزة تجمع بين حسن التخطيط والتصميم المعماري الراقي.",
+    en: "Pioneers Properties for Urban Development develops urban and real estate projects in Egypt, offering distinctive residential and commercial projects combining sound planning with upscale architectural design.",
+  },
+  KRDI: {
+    ar: "شركة نهر الخير للتنمية والاستثمار الزراعي تعمل في مجال استصلاح وتنمية الأراضي الزراعية والاستثمار في المشروعات الزراعية، مسهمةً في تحقيق التنمية الزراعية المستدامة وتوفير فرص عمل في المناطق الريفية.",
+    en: "Al Khair River for Development Agricultural Investment reclaims and develops agricultural land and invests in agricultural projects, contributing to sustainable agricultural development and rural employment.",
+  },
+  ODID: {
+    ar: "شركة أودين للاستثمار والتنمية تعمل في مجالي الاستثمار والتنمية الاقتصادية في السوق المصري، وتمتلك محفظة متنوعة من الأصول الاستثمارية في قطاعات متعددة تستهدف تحقيق عوائد مستدامة لمساهميها.",
+    en: "Odin for Investment and Development operates in investment and economic development in the Egyptian market, with a diversified asset portfolio across multiple sectors targeting sustainable returns for shareholders.",
+  },
+
+};
+
+// ── Index membership ─────────────────────────────────────────────────────────
+// Sources: Egyptian Exchange (egx.com.eg) + Mubasher (mubasher.info), March 2026
+// EGX30  = 31 instruments (26 in this list) — most liquid 30 companies
+// EGX70  = 69 instruments (61 in this list) — next 70 most liquid (EGX70 EWI)
+// EGX100 = EGX30 + EGX70
+export const EGX_INDEX_MAP: Record<string, string[]> = {
+  // ── EGX30 (26 stocks from this list) ──────────────────────────────────────
+  ABUK: ['EGX30', 'EGX100'],
+  ADIB: ['EGX30', 'EGX100'],
+  AMOC: ['EGX30', 'EGX100'],
+  ARCC: ['EGX30', 'EGX100'],
+  BTFH: ['EGX30', 'EGX100'],
+  CCAP: ['EGX30', 'EGX100'],
+  COMI: ['EGX30', 'EGX100'],
+  EAST: ['EGX30', 'EGX100'],
+  EFID: ['EGX30', 'EGX100'],
+  EFIH: ['EGX30', 'EGX100'],
+  EGAL: ['EGX30', 'EGX100'],
+  EGCH: ['EGX30', 'EGX100'],
+  EMFD: ['EGX30', 'EGX100'],
+  ETEL: ['EGX30', 'EGX100'],
+  FWRY: ['EGX30', 'EGX100'],
+  HELI: ['EGX30', 'EGX100'],
+  HRHO: ['EGX30', 'EGX100'],
+  ISPH: ['EGX30', 'EGX100'],
+  JUFO: ['EGX30', 'EGX100'],
+  MCQE: ['EGX30', 'EGX100'],
+  ORHD: ['EGX30', 'EGX100'],
+  ORWE: ['EGX30', 'EGX100'],
+  PHDC: ['EGX30', 'EGX100'],
+  RAYA: ['EGX30', 'EGX100'],
+  RMDA: ['EGX30', 'EGX100'],
+  TMGH: ['EGX30', 'EGX100'],
+  // ── EGX70 (61 stocks from this list) ──────────────────────────────────────
+  AFDI: ['EGX70', 'EGX100'],
+  ALCN: ['EGX70', 'EGX100'],
+  AMER: ['EGX70', 'EGX100'],
+  AMIA: ['EGX70', 'EGX100'],
+  ARAB: ['EGX70', 'EGX100'],
+  ASCM: ['EGX70', 'EGX100'],
+  ASPI: ['EGX70', 'EGX100'],
+  ATLC: ['EGX70', 'EGX100'],
+  ATQA: ['EGX70', 'EGX100'],
+  BIOC: ['EGX70', 'EGX100'],
+  CIEB: ['EGX70', 'EGX100'],
+  CNFN: ['EGX70', 'EGX100'],
+  COSG: ['EGX70', 'EGX100'],
+  CSAG: ['EGX70', 'EGX100'],
+  DAPH: ['EGX70', 'EGX100'],
+  DSCW: ['EGX70', 'EGX100'],
+  ECAP: ['EGX70', 'EGX100'],
+  EGTS: ['EGX70', 'EGX100'],
+  EHDR: ['EGX70', 'EGX100'],
+  ELSH: ['EGX70', 'EGX100'],
+  ENGC: ['EGX70', 'EGX100'],
+  ETRS: ['EGX70', 'EGX100'],
+  EXPA: ['EGX70', 'EGX100'],
+  HDBK: ['EGX70', 'EGX100'],
+  ICFC: ['EGX70', 'EGX100'],
+  IDRE: ['EGX70', 'EGX100'],
+  IFAP: ['EGX70', 'EGX100'],
+  ISMA: ['EGX70', 'EGX100'],
+  ISMQ: ['EGX70', 'EGX100'],
+  KABO: ['EGX70', 'EGX100'],
+  KRDI: ['EGX70', 'EGX100'],
+  LCSW: ['EGX70', 'EGX100'],
+  MCRO: ['EGX70', 'EGX100'],
+  MEPA: ['EGX70', 'EGX100'],
+  MFPC: ['EGX70', 'EGX100'],
+  MOED: ['EGX70', 'EGX100'],
+  MPCI: ['EGX70', 'EGX100'],
+  MPCO: ['EGX70', 'EGX100'],
+  MPRC: ['EGX70', 'EGX100'],
+  MTIE: ['EGX70', 'EGX100'],
+  NCCW: ['EGX70', 'EGX100'],
+  NIPH: ['EGX70', 'EGX100'],
+  OBRI: ['EGX70', 'EGX100'],
+  OCDI: ['EGX70', 'EGX100'],
+  OFH: ['EGX70', 'EGX100'],
+  PHAR: ['EGX70', 'EGX100'],
+  POUL: ['EGX70', 'EGX100'],
+  PRCL: ['EGX70', 'EGX100'],
+  RACC: ['EGX70', 'EGX100'],
+  SCEM: ['EGX70', 'EGX100'],
+  SDTI: ['EGX70', 'EGX100'],
+  SIPC: ['EGX70', 'EGX100'],
+  SKPC: ['EGX70', 'EGX100'],
+  SVCE: ['EGX70', 'EGX100'],
+  SWDY: ['EGX70', 'EGX100'],
+  TALM: ['EGX70', 'EGX100'],
+  TANM: ['EGX70', 'EGX100'],
+  UEGC: ['EGX70', 'EGX100'],
+  UNIP: ['EGX70', 'EGX100'],
+  ZEOT: ['EGX70', 'EGX100'],
+  ZMID: ['EGX70', 'EGX100'],
+  // ── EGX30 ETF ─────────────────────────────────────────────────────────────
+  EGX30ETF: ['EGX30-ETF'],
 };
 
 export function getStockName(ticker: string, lang: "ar" | "en" = "ar"): string {
@@ -686,9 +1583,14 @@ export function getStockName(ticker: string, lang: "ar" | "en" = "ar"): string {
 export function getStockInfo(ticker: string): EGXStock | undefined {
   const stock = EGX_STOCKS.find((s) => s.ticker.toUpperCase() === ticker.toUpperCase());
   if (!stock) return undefined;
-  const desc = EGX_DESCRIPTIONS[ticker.toUpperCase()];
-  if (!desc) return stock;
-  return { ...stock, descriptionAr: desc.ar, descriptionEn: desc.en };
+  const t = ticker.toUpperCase();
+  const desc = EGX_DESCRIPTIONS[t];
+  const indices = EGX_INDEX_MAP[t] ?? [];
+  return {
+    ...stock,
+    ...(desc ? { descriptionAr: desc.ar, descriptionEn: desc.en } : {}),
+    indices,
+  };
 }
 
 export function searchStocks(query: string, lang: "ar" | "en" = "ar"): EGXStock[] {

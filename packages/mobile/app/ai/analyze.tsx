@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   ArrowLeft, ArrowRight, Brain, Search,
@@ -148,6 +149,22 @@ function inferOutlook(text: string): string {
   return 'محايد';
 }
 
+// Maps Arabic API outlook values to translated labels
+function localizeOutlook(outlook: string, t: (k: string) => string): string {
+  if (outlook === 'إيجابي') return t('aiAnalyze.positive');
+  if (outlook === 'سلبي') return t('aiAnalyze.negative');
+  if (outlook === 'محايد') return t('aiAnalyze.neutral');
+  return outlook;
+}
+
+// Maps Arabic API severity values to translated labels
+function localizeSeverity(severity: string, t: (k: string) => string): string {
+  if (severity === 'عالي') return t('aiAnalyze.high');
+  if (severity === 'متوسط') return t('aiAnalyze.medium');
+  if (severity === 'منخفض') return t('aiAnalyze.low');
+  return severity;
+}
+
 function makeOutlook(term: OutlookData | undefined, oldText: string | undefined): OutlookData | null {
   if (term) return term;
   if (!oldText) return null;
@@ -204,6 +221,7 @@ function OutlookCard({ data, icon: Icon, label, iconColor, iconBg }: {
   iconBg: string;
 }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const outlookColor = data.outlook === 'إيجابي' ? '#4ade80' : data.outlook === 'سلبي' ? '#f87171' : '#fbbf24';
   const outlookBg = data.outlook === 'إيجابي' ? '#4ade8015' : data.outlook === 'سلبي' ? '#f8717115' : '#fbbf2415';
@@ -226,7 +244,7 @@ function OutlookCard({ data, icon: Icon, label, iconColor, iconBg }: {
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <View style={{ backgroundColor: outlookBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-            <Text style={{ color: outlookColor, fontSize: 11, fontWeight: '600' }}>{data.outlook}</Text>
+            <Text style={{ color: outlookColor, fontSize: 11, fontWeight: '600' }}>{localizeOutlook(data.outlook, t)}</Text>
           </View>
           {open ? <ChevronUp size={14} color={colors.textMuted} /> : <ChevronDown size={14} color={colors.textMuted} />}
         </View>
@@ -248,7 +266,7 @@ function OutlookCard({ data, icon: Icon, label, iconColor, iconBg }: {
           )}
           {!!data.action && (
             <View style={{ backgroundColor: '#8b5cf615', borderRadius: 10, padding: 10, gap: 2 }}>
-              <Text style={{ color: '#8b5cf6', fontSize: 11, fontWeight: '600' }}>💡 النصيحة</Text>
+              <Text style={{ color: '#8b5cf6', fontSize: 11, fontWeight: '600' }}>{t('aiAnalyze.tip')}</Text>
               <Text style={{ color: colors.text, fontSize: 13, lineHeight: 19 }}>{data.action}</Text>
             </View>
           )}
@@ -264,6 +282,7 @@ function AnalysisCard({ title, data, colors }: {
   data: { score: number; trend?: string; highlights?: string[]; support?: number; resistance?: number; keyRatios?: Record<string, { value: string; explain: string }> };
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
+  const { t } = useTranslation();
   return (
     <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 14, padding: 14, flex: 1, gap: 10 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -286,8 +305,8 @@ function AnalysisCard({ title, data, colors }: {
       ))}
       {(data.support != null && data.resistance != null) && (
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ color: '#4ade80', fontSize: 11 }}>دعم: {data.support}</Text>
-          <Text style={{ color: '#f87171', fontSize: 11 }}>مقاومة: {data.resistance}</Text>
+          <Text style={{ color: '#4ade80', fontSize: 11 }}>{t('aiAnalyze.support')}: {data.support}</Text>
+          <Text style={{ color: '#f87171', fontSize: 11 }}>{t('aiAnalyze.resistance')}: {data.resistance}</Text>
         </View>
       )}
     </View>
@@ -299,23 +318,24 @@ function PriceSection({ pt, colors }: {
   pt: NonNullable<AnalysisResult['priceTarget']>;
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
+  const { t } = useTranslation();
   const base = pt.targetBase ?? pt.target ?? 0;
   const high = pt.targetHigh ?? 0;
   const stop = pt.stopLoss ?? 0;
   const current = pt.current ?? 0;
 
   const items = [
-    stop > 0 && { label: 'وقف الخسارة', value: stop, color: '#f87171' },
-    current > 0 && { label: 'السعر الحالي', value: current, color: colors.text },
-    base > 0 && { label: 'الهدف الأساسي', value: base, color: '#4ade80' },
-    high > 0 && { label: 'الهدف الأقصى', value: high, color: '#86efac' },
+    stop > 0 && { label: t('aiAnalyze.stopLoss'), value: stop, color: '#f87171' },
+    current > 0 && { label: t('aiAnalyze.currentPriceLabel'), value: current, color: colors.text },
+    base > 0 && { label: t('aiAnalyze.targetBase'), value: base, color: '#4ade80' },
+    high > 0 && { label: t('aiAnalyze.targetHigh'), value: high, color: '#86efac' },
   ].filter(Boolean) as { label: string; value: number; color: string }[];
 
   return (
     <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 14, padding: 14, gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <Target size={14} color="#8b5cf6" />
-        <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>الأسعار المستهدفة</Text>
+        <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{t('aiAnalyze.priceTargets')}</Text>
       </View>
       <View style={{ gap: 8 }}>
         {items.map((item) => (
@@ -348,6 +368,8 @@ function TickerInput({ value, onChange, placeholder, disabled }: {
   value: string; onChange: (v: string) => void; placeholder: string; disabled?: boolean;
 }) {
   const { colors } = useTheme();
+  const { i18n } = useTranslation();
+  const lang = i18n.language.startsWith('ar') ? 'ar' : 'en';
   const [open, setOpen] = useState(false);
   const suggestions = useMemo(() => {
     const q = value.trim().toUpperCase();
@@ -396,7 +418,7 @@ function TickerInput({ value, onChange, placeholder, disabled }: {
               ])}
             >
               <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>{s.ticker}</Text>
-              <Text style={[{ color: colors.textSub }, tw('text-xs')]}>{s.nameAr}</Text>
+              <Text style={[{ color: colors.textSub }, tw('text-xs')]}>{lang === 'ar' ? s.nameAr : s.nameEn}</Text>
             </Pressable>
           ))}
         </View>
@@ -409,6 +431,7 @@ function TickerInput({ value, onChange, placeholder, disabled }: {
 export default function AnalyzePage() {
   const router = useRouter();
   const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
   const { ticker: prefill } = useLocalSearchParams<{ ticker?: string }>();
   const user = useAuthStore((s) => s.user);
   const hasPaidPlan = user?.plan === 'pro' || user?.plan === 'yearly' || user?.plan === 'ultra' || user?.plan === 'ultra_yearly';
@@ -424,26 +447,26 @@ export default function AnalyzePage() {
   }, [hasPaidPlan]);
 
   const run = async () => {
-    const t = ticker.trim().toUpperCase();
-    if (!t) { setError('أدخل رمز السهم أولاً'); return; }
-    if (!getStockInfo(t)) { setError('رمز السهم غير موجود — اختر من القائمة'); return; }
+    const tick = ticker.trim().toUpperCase();
+    if (!tick) { setError(t('aiAnalyze.enterTicker')); return; }
+    if (!getStockInfo(tick)) { setError(t('aiAnalyze.tickerNotFound')); return; }
     setError(null); setResult(null); setLoading(true);
     try {
-      const res = await apiClient.post(`/api/analysis/${t}`, { mode }, { timeout: 120_000 });
+      const res = await apiClient.post(`/api/analysis/${tick}`, { mode }, { timeout: 120_000 });
       const data = (res.data as { analysis?: AnalysisResult })?.analysis ?? res.data;
       if (data) setResult(data as AnalysisResult);
-      else setError('لم يتم استلام نتيجة التحليل');
+      else setError(t('aiAnalyze.noResult'));
     } catch (err: unknown) {
       const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       const status = (err as { response?: { status?: number } })?.response?.status;
       const net = (err as { error?: string })?.error;
-      if (code === 'ANALYSIS_LIMIT_REACHED') setError('وصلت للحد الشهري من التحليلات. جرب الشهر القادم أو ترقّ للباقة Pro.');
-      else if (code === 'UNAUTHORIZED' || status === 401) setError('انتهت الجلسة — سجّل دخولك مرة أخرى');
-      else if (status === 429) setError('الخدمة مشغولة، حاول بعد دقيقة');
-      else if (code === 'ANALYSIS_TIMEOUT' || status === 504 || net === 'REQUEST_TIMEOUT') setError('استغرق التحليل وقتاً طويلاً — حاول مرة أخرى');
-      else if (status === 502 || status === 503) setError('خدمة الذكاء الاصطناعي غير متاحة مؤقتاً، حاول بعد قليل');
-      else if (net === 'NETWORK_ERROR') setError('لا يوجد اتصال بالإنترنت');
-      else setError('حدث خطأ أثناء التحليل، حاول مرة أخرى');
+      if (code === 'ANALYSIS_LIMIT_REACHED') setError(t('aiAnalyze.limitReached'));
+      else if (code === 'UNAUTHORIZED' || status === 401) setError(t('aiAnalyze.sessionExpired'));
+      else if (status === 429) setError(t('aiAnalyze.busy'));
+      else if (code === 'ANALYSIS_TIMEOUT' || status === 504 || net === 'REQUEST_TIMEOUT') setError(t('aiAnalyze.timeout'));
+      else if (status === 502 || status === 503) setError(t('aiAnalyze.unavailable'));
+      else if (net === 'NETWORK_ERROR') setError(t('aiAnalyze.noInternet'));
+      else setError(t('aiAnalyze.error'));
     } finally { setLoading(false); }
   };
 
@@ -483,7 +506,7 @@ export default function AnalyzePage() {
         <View style={tw('w-8 h-8 rounded-xl bg-violet-500/15 items-center justify-center')}>
           <Brain size={16} color="#8b5cf6" />
         </View>
-        <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>تحليل سهم</Text>
+        <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>{t('aiAnalyze.title')}</Text>
       </View>
 
       <ScrollView
@@ -493,7 +516,7 @@ export default function AnalyzePage() {
       >
 
         {/* Input */}
-        <TickerInput value={ticker} onChange={setTicker} placeholder="ابحث عن رمز السهم (مثال: COMI)" disabled={loading} />
+        <TickerInput value={ticker} onChange={setTicker} placeholder={t('aiAnalyze.searchPlaceholder')} disabled={loading} />
 
         {/* Mode Toggle — Pro/Ultra only */}
         {hasPaidPlan && (
@@ -505,7 +528,7 @@ export default function AnalyzePage() {
                 { backgroundColor: mode === 'beginner' ? '#8b5cf6' : colors.card, borderColor: mode === 'beginner' ? '#8b5cf6' : colors.border },
               ]}
             >
-              <Text style={[tw('text-xs font-semibold'), { color: mode === 'beginner' ? '#fff' : colors.textSub }]}>🎓 مبسّط</Text>
+              <Text style={[tw('text-xs font-semibold'), { color: mode === 'beginner' ? '#fff' : colors.textSub }]}>{t('aiAnalyze.beginner')}</Text>
             </Pressable>
             <Pressable
               onPress={() => setMode('professional')}
@@ -514,7 +537,7 @@ export default function AnalyzePage() {
                 { backgroundColor: mode === 'professional' ? '#8b5cf6' : colors.card, borderColor: mode === 'professional' ? '#8b5cf6' : colors.border },
               ]}
             >
-              <Text style={[tw('text-xs font-semibold'), { color: mode === 'professional' ? '#fff' : colors.textSub }]}>📊 احترافي</Text>
+              <Text style={[tw('text-xs font-semibold'), { color: mode === 'professional' ? '#fff' : colors.textSub }]}>{t('aiAnalyze.professional')}</Text>
             </Pressable>
           </View>
         )}
@@ -531,7 +554,7 @@ export default function AnalyzePage() {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={tw('text-sm font-bold text-white')}>تحليل بالذكاء الاصطناعي</Text>
+            <Text style={tw('text-sm font-bold text-white')}>{t('aiAnalyze.analyzeBtn')}</Text>
           )}
         </Pressable>
 
@@ -557,7 +580,7 @@ export default function AnalyzePage() {
                   <Text style={{ color: colors.text, fontSize: 14, lineHeight: 22 }}>{result.summary}</Text>
                 ) : null}
                 {result.confidenceReason ? (
-                  <Text style={{ color: colors.textMuted, fontSize: 12, lineHeight: 18 }}>درجة الثقة: {result.confidenceReason}</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, lineHeight: 18 }}>{t('aiAnalyze.confidence')}{result.confidenceReason}</Text>
                 ) : null}
                 {verdict ? <VerdictBadge verdict={verdict} /> : null}
               </View>
@@ -569,18 +592,18 @@ export default function AnalyzePage() {
             {/* ③ Fundamental + Technical (side by side) */}
             {(fundamental || technical) && (
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                {fundamental && <AnalysisCard title="📊 الأساسي" data={fundamental} colors={colors} />}
-                {technical && <AnalysisCard title="📈 الفني" data={technical} colors={colors} />}
+                {fundamental && <AnalysisCard title={t('aiAnalyze.fundamental')} data={fundamental} colors={colors} />}
+                {technical && <AnalysisCard title={t('aiAnalyze.technical')} data={technical} colors={colors} />}
               </View>
             )}
 
             {/* ④ Outlook cards */}
             {hasOutlook && (
               <View style={{ gap: 8 }}>
-                <Text style={{ color: colors.textSub, fontSize: 12, fontWeight: '600', letterSpacing: 0.5 }}>التوقعات</Text>
-                {shortTerm && <OutlookCard data={shortTerm} icon={Clock} label="قصير المدى (أيام–أسابيع)" iconColor="#38bdf8" iconBg="#38bdf815" />}
-                {mediumTerm && <OutlookCard data={mediumTerm} icon={Calendar} label="متوسط المدى (أشهر)" iconColor="#a78bfa" iconBg="#a78bfa15" />}
-                {longTerm && <OutlookCard data={longTerm} icon={CalendarDays} label="طويل المدى (سنين)" iconColor="#4ade80" iconBg="#4ade8015" />}
+                <Text style={{ color: colors.textSub, fontSize: 12, fontWeight: '600', letterSpacing: 0.5 }}>{t('aiAnalyze.outlooks')}</Text>
+                {shortTerm && <OutlookCard data={shortTerm} icon={Clock} label={t('aiAnalyze.shortTerm')} iconColor="#38bdf8" iconBg="#38bdf815" />}
+                {mediumTerm && <OutlookCard data={mediumTerm} icon={Calendar} label={t('aiAnalyze.mediumTerm')} iconColor="#a78bfa" iconBg="#a78bfa15" />}
+                {longTerm && <OutlookCard data={longTerm} icon={CalendarDays} label={t('aiAnalyze.longTerm')} iconColor="#4ade80" iconBg="#4ade8015" />}
               </View>
             )}
 
@@ -589,7 +612,7 @@ export default function AnalyzePage() {
               <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 14, padding: 14, gap: 10 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <AlertTriangle size={14} color="#fbbf24" />
-                  <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>المخاطر</Text>
+                  <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{t('aiAnalyze.risks')}</Text>
                 </View>
                 {result.risks.map((r, i) => {
                   const sevColor = r.severity === 'عالي' ? '#f87171' : r.severity === 'متوسط' ? '#fbbf24' : '#4ade80';
@@ -597,7 +620,7 @@ export default function AnalyzePage() {
                   return (
                     <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
                       <View style={{ backgroundColor: sevBg, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, marginTop: 1 }}>
-                        <Text style={{ color: sevColor, fontSize: 10, fontWeight: '700' }}>{r.severity}</Text>
+                        <Text style={{ color: sevColor, fontSize: 10, fontWeight: '700' }}>{localizeSeverity(r.severity, t)}</Text>
                       </View>
                       <Text style={{ color: colors.textSub, fontSize: 13, lineHeight: 19, flex: 1 }}>
                         {r.risk}{r.explain ? ` — ${r.explain}` : ''}
@@ -630,7 +653,7 @@ export default function AnalyzePage() {
             {sentiment?.explain && (
               <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 14, padding: 14 }}>
                 <Text style={{ color: colors.text, fontSize: 13, lineHeight: 20 }}>
-                  <Text style={{ fontWeight: '700' }}>مزاج السوق: </Text>
+                  <Text style={{ fontWeight: '700' }}>{t('aiAnalyze.marketSentiment')}</Text>
                   {sentiment.explain}
                 </Text>
               </View>
@@ -639,7 +662,7 @@ export default function AnalyzePage() {
             {/* ⑦ Recommendation / Suitability */}
             {(result.recommendation || result.suitability) && (
               <View style={{ backgroundColor: '#8b5cf610', borderColor: '#8b5cf630', borderWidth: 1, borderRadius: 14, padding: 14, gap: 6 }}>
-                <Text style={{ color: '#8b5cf6', fontSize: 11, fontWeight: '700' }}>💡 التوصية</Text>
+                <Text style={{ color: '#8b5cf6', fontSize: 11, fontWeight: '700' }}>{t('aiAnalyze.recommendation')}</Text>
                 {result.recommendation && <Text style={{ color: colors.text, fontSize: 13, lineHeight: 20 }}>{result.recommendation}</Text>}
                 {result.suitability && <Text style={{ color: colors.textSub, fontSize: 12, lineHeight: 18 }}>{result.suitability}</Text>}
               </View>
@@ -648,7 +671,7 @@ export default function AnalyzePage() {
             {/* ⑧ Pro Analysis */}
             {result.proAnalysis && Object.values(result.proAnalysis).some(Boolean) && (
               <View style={{ backgroundColor: '#0ea5e910', borderColor: '#0ea5e930', borderWidth: 1, borderRadius: 14, padding: 14, gap: 8 }}>
-                <Text style={{ color: '#0ea5e9', fontSize: 11, fontWeight: '700' }}>📐 تحليل احترافي متقدم</Text>
+                <Text style={{ color: '#0ea5e9', fontSize: 11, fontWeight: '700' }}>{t('aiAnalyze.proAnalysis')}</Text>
                 {result.proAnalysis.wavePosition && (
                   <Text style={{ color: colors.text, fontSize: 12, lineHeight: 18 }}>
                     <Text style={{ fontWeight: '700' }}>🌊 Elliott: </Text>{result.proAnalysis.wavePosition}
@@ -661,17 +684,17 @@ export default function AnalyzePage() {
                 )}
                 {result.proAnalysis.volumeProfile && (
                   <Text style={{ color: colors.text, fontSize: 12, lineHeight: 18 }}>
-                    <Text style={{ fontWeight: '700' }}>📦 حجم: </Text>{result.proAnalysis.volumeProfile}
+                    <Text style={{ fontWeight: '700' }}>{t('aiAnalyze.volume')}</Text>{result.proAnalysis.volumeProfile}
                   </Text>
                 )}
                 {result.proAnalysis.stopLossMethod && (
                   <Text style={{ color: colors.text, fontSize: 12, lineHeight: 18 }}>
-                    <Text style={{ fontWeight: '700' }}>🛡 وقف الخسارة: </Text>{result.proAnalysis.stopLossMethod}
+                    <Text style={{ fontWeight: '700' }}>{t('aiAnalyze.stopLossLabel')}</Text>{result.proAnalysis.stopLossMethod}
                   </Text>
                 )}
                 {result.proAnalysis.sectorRelativeStrength && (
                   <Text style={{ color: colors.text, fontSize: 12, lineHeight: 18 }}>
-                    <Text style={{ fontWeight: '700' }}>🏭 قطاع: </Text>{result.proAnalysis.sectorRelativeStrength}
+                    <Text style={{ fontWeight: '700' }}>{t('aiAnalyze.sector')}</Text>{result.proAnalysis.sectorRelativeStrength}
                   </Text>
                 )}
               </View>
@@ -682,7 +705,7 @@ export default function AnalyzePage() {
               <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 14, padding: 14, gap: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                   <Shield size={12} color={colors.textMuted} />
-                  <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>إخلاء مسؤولية</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>{t('aiAnalyze.disclaimer')}</Text>
                 </View>
                 <Text style={{ color: colors.textMuted, fontSize: 12, lineHeight: 18 }}>{result.disclaimer}</Text>
               </View>

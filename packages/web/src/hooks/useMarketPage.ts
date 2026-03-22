@@ -12,7 +12,7 @@ export function useMarketPage() {
   const [overview, setOverview] = useState<MarketOverview | null>(null);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [news, setNews] = useState<MarketNewsItem[]>([]);
-  const [newsFilter, setNewsFilter] = useState<'all' | 'interests'>('interests');
+  const [newsFilter, setNewsFilter] = useState<'all' | 'interests'>('all');
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [loadingStocks, setLoadingStocks] = useState(true);
   const [loadingNews, setLoadingNews] = useState(true);
@@ -56,7 +56,15 @@ export function useMarketPage() {
       const endpoint = filter === 'interests' ? '/news/interests' : '/news/market';
       const res = await api.get<MarketNewsItem[] | { data: MarketNewsItem[] }>(endpoint, { signal });
       const raw = (res.data as { data?: MarketNewsItem[] })?.data ?? res.data;
-      if (!signal?.aborted) setNews(Array.isArray(raw) ? raw : []);
+      const items = Array.isArray(raw) ? raw : [];
+      const seen = new Set<string>();
+      const deduped = items.filter((item) => {
+        const key = item.title.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      if (!signal?.aborted) setNews(deduped);
     } catch {
       if (!signal?.aborted) setNews([]);
     } finally {

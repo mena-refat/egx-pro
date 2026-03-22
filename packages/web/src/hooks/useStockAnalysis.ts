@@ -10,10 +10,10 @@ import { pivotPoints, fibonacciLevels } from '../components/features/analysis/an
 export interface NewsItem {
   title: string;
   summary?: string;
-  source: string;
   publishedAt: string;
   sentiment?: 'positive' | 'negative' | 'neutral';
-  url: string;
+  source?: string;
+  url?: string;
 }
 
 export type TabId = 'details' | 'stats' | 'ai' | 'news';
@@ -137,8 +137,16 @@ export function useStockAnalysis(stock: Stock) {
         setInvestorCategoriesAvailable(invData?.available ?? false);
         const statsData = (statsRes.data as { data?: { available?: boolean } })?.data ?? statsRes.data;
         setTradingStatsAvailable(statsData?.available ?? false);
-        const newsData = (newsRes.data as { data?: unknown[] })?.data ?? newsRes.data;
-        setNews(Array.isArray(newsData) ? newsData : []);
+        const newsRaw = (newsRes.data as { data?: unknown[] })?.data ?? newsRes.data;
+        const newsAll = Array.isArray(newsRaw) ? (newsRaw as NewsItem[]) : [];
+        const newsSeen = new Set<string>();
+        const newsDeduped = newsAll.filter((item) => {
+          const key = item.title.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
+          if (!key || newsSeen.has(key)) return false;
+          newsSeen.add(key);
+          return true;
+        });
+        setNews(newsDeduped);
         const rawList = (watchRes.data as { items?: { ticker: string; targetPrice?: number | null; targetDirection?: string | null }[] })?.items;
         setWatchlist(Array.isArray(rawList) ? rawList.map((w) => w.ticker) : []);
         const thisItem = Array.isArray(rawList) ? rawList.find((w) => w.ticker === stock.ticker) : null;

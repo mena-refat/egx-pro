@@ -1,7 +1,5 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
 import { GoalCard } from './GoalCard';
-import { Button } from '../../ui/Button';
 import type { GoalRecord } from '../../../hooks/useGoals';
 import type { TFunction } from 'i18next';
 
@@ -16,19 +14,12 @@ type Props = {
   onDelete: (id: string) => void;
   onMarkComplete: (id: string) => void;
   onAdd: () => void;
+  isAr?: boolean;
 };
 
 export function GoalsActiveList({
-  goals,
-  locale,
-  t,
-  menuOpenId,
-  onMenuToggle,
-  onUpdateAmount,
-  onEdit,
-  onDelete,
-  onMarkComplete,
-  onAdd,
+  goals, locale, t, menuOpenId, onMenuToggle,
+  onUpdateAmount, onEdit, onDelete, onMarkComplete, onAdd, isAr = false,
 }: Props) {
   if (goals.length === 0) return null;
 
@@ -47,14 +38,9 @@ export function GoalsActiveList({
             onEdit={() => onEdit(goal.id)}
             onDelete={() => onDelete(goal.id)}
             onMarkComplete={() => onMarkComplete(goal.id)}
+            isAr={isAr}
           />
         ))}
-      </div>
-      <div className="flex justify-center lg:hidden">
-        <Button type="button" onClick={onAdd} variant="primary" className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          {t('goals.addNew')}
-        </Button>
       </div>
     </>
   );

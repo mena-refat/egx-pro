@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, Pressable, ScrollView, RefreshControl,
+  View, Text, Pressable, ScrollView, RefreshControl, FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -373,11 +373,123 @@ function NewsSection({ news }: { news: NewsItem[] }) {
   );
 }
 
+// ─── MoverChip ───────────────────────────────────────────────────
+function MoverChip({ ticker, changePercent, onPress }: { ticker: string; changePercent: number; onPress: () => void }) {
+  const { colors, isRTL } = useTheme();
+  const isUp = changePercent >= 0;
+  const clr  = isUp ? GREEN : RED;
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        backgroundColor: isUp ? '#4ade8010' : '#f8717110',
+        borderWidth: 1, borderColor: isUp ? '#4ade8030' : '#f8717130',
+        borderRadius: RADIUS.lg, paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm,
+        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm, opacity: pressed ? 0.8 : 1,
+      })}
+    >
+      {isUp ? <TrendingUp size={13} color={clr} /> : <TrendingDown size={13} color={clr} />}
+      <View>
+        <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{ticker}</Text>
+        <Text style={{ color: clr, fontSize: 11, fontWeight: WEIGHT.semibold, fontVariant: ['tabular-nums'] }}>
+          {isUp ? '+' : ''}{changePercent.toFixed(2)}%
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+// ─── TopMoversSection ─────────────────────────────────────────────
+function TopMoversSection({ stocks, loading }: { stocks: { ticker: string; changePercent: number }[]; loading: boolean }) {
+  const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
+  const router = useRouter();
+
+  const topGainers = useMemo(
+    () => [...stocks].filter((s) => s.changePercent > 0).sort((a, b) => b.changePercent - a.changePercent).slice(0, 8),
+    [stocks],
+  );
+  const topLosers = useMemo(
+    () => [...stocks].filter((s) => s.changePercent < 0).sort((a, b) => a.changePercent - b.changePercent).slice(0, 8),
+    [stocks],
+  );
+
+  if (loading) {
+    return (
+      <View style={{ marginHorizontal: SPACE.lg, marginBottom: SPACE.lg, gap: SPACE.sm }}>
+        <Skeleton.Box height={22} radius={RADIUS.sm} />
+        <Skeleton.Box height={60} radius={RADIUS.lg} />
+        <Skeleton.Box height={60} radius={RADIUS.lg} />
+      </View>
+    );
+  }
+
+  if (topGainers.length === 0 && topLosers.length === 0) return null;
+
+  return (
+    <View style={{ marginBottom: SPACE.lg }}>
+      {/* Header */}
+      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm, paddingHorizontal: SPACE.lg, marginBottom: SPACE.sm }}>
+        <View style={{ width: 26, height: 26, borderRadius: RADIUS.sm, backgroundColor: BRAND_BG_STRONG, alignItems: 'center', justifyContent: 'center' }}>
+          <BarChart2 size={13} color={BRAND} />
+        </View>
+        <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('dashboard.topMovers')}</Text>
+      </View>
+
+      {/* Gainers row */}
+      {topGainers.length > 0 && (
+        <View style={{ marginBottom: SPACE.sm }}>
+          <Text style={{ color: GREEN, fontSize: FONT.xs, fontWeight: WEIGHT.semibold, paddingHorizontal: SPACE.lg, marginBottom: SPACE.xs }}>
+            {t('market.gainers')}
+          </Text>
+          <FlatList
+            data={topGainers}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(s) => s.ticker}
+            contentContainerStyle={{ paddingHorizontal: SPACE.lg, gap: SPACE.sm, flexDirection: isRTL ? 'row-reverse' : 'row' }}
+            renderItem={({ item: s }) => (
+              <MoverChip
+                ticker={s.ticker}
+                changePercent={s.changePercent}
+                onPress={() => router.push(`/stocks/${s.ticker}`)}
+              />
+            )}
+          />
+        </View>
+      )}
+
+      {/* Losers row */}
+      {topLosers.length > 0 && (
+        <View>
+          <Text style={{ color: RED, fontSize: FONT.xs, fontWeight: WEIGHT.semibold, paddingHorizontal: SPACE.lg, marginBottom: SPACE.xs }}>
+            {t('market.losers')}
+          </Text>
+          <FlatList
+            data={topLosers}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(s) => s.ticker}
+            contentContainerStyle={{ paddingHorizontal: SPACE.lg, gap: SPACE.sm, flexDirection: isRTL ? 'row-reverse' : 'row' }}
+            renderItem={({ item: s }) => (
+              <MoverChip
+                ticker={s.ticker}
+                changePercent={s.changePercent}
+                onPress={() => router.push(`/stocks/${s.ticker}`)}
+              />
+            )}
+          />
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ─── MarketPage ──────────────────────────────────────────────────
 export default function MarketPage() {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const { overview, stocks, news, loadingOverview, refreshing, refresh } = useMarketData();
+  const { overview, stocks, news, loadingOverview, loadingStocks, refreshing, refresh } = useMarketData();
 
   const gainers = useMemo(() => stocks.filter((s) => s.changePercent > 0).length, [stocks]);
   const losers  = useMemo(() => stocks.filter((s) => s.changePercent < 0).length, [stocks]);
@@ -415,6 +527,9 @@ export default function MarketPage() {
 
         {/* Stocks hero card */}
         <StocksHeroCard stockCount={stocks.length} gainers={gainers} losers={losers} />
+
+        {/* Top Movers */}
+        <TopMoversSection stocks={stocks} loading={loadingStocks} />
 
         {/* News */}
         <NewsSection news={news as NewsItem[]} />

@@ -24,6 +24,10 @@ export const GoalsRepository = {
     return prisma.goal.count({ where: { userId } });
   },
 
+  countActiveByUser(userId: number) {
+    return prisma.goal.count({ where: { userId, status: 'active' } });
+  },
+
   countAchievedByUser(userId: number) {
     return prisma.goal.count({ where: { userId, achievedAt: { not: null } } });
   },

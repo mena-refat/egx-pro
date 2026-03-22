@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Newspaper, BookmarkPlus, TrendingUp, TrendingDown, X, Clock } from 'lucide-react';
+import {
+  Newspaper, BookmarkPlus, TrendingUp, TrendingDown,
+  X, Clock, ExternalLink, Radio,
+} from 'lucide-react';
 import type { MarketNewsItem } from './types';
 
 type Filter = 'all' | 'interests';
@@ -24,34 +27,47 @@ function relativeTime(dateStr: string, t: ReturnType<typeof useTranslation<'comm
   return t('market.newsDaysAgo', { d });
 }
 
-// Uses border-s-* (logical property) so the bar is always on the outer edge regardless of RTL/LTR
-function sentimentBorder(sentiment?: string | null) {
-  if (!sentiment) return 'border-s-[var(--border)]';
-  const s = sentiment.toLowerCase();
-  if (s === 'positive' || s === 'bullish') return 'border-s-green-500';
-  if (s === 'negative' || s === 'bearish') return 'border-s-red-500';
-  return 'border-s-[var(--border)]';
+function sentimentColor(sentiment?: string | null) {
+  const s = sentiment?.toLowerCase();
+  if (s === 'positive' || s === 'bullish') return { bar: 'bg-emerald-500', badge: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20', dot: 'bg-emerald-500' };
+  if (s === 'negative' || s === 'bearish') return { bar: 'bg-red-500', badge: 'text-red-500 bg-red-500/10 border-red-500/20', dot: 'bg-red-500' };
+  return { bar: 'bg-[var(--border)]', badge: 'text-[var(--text-muted)] bg-[var(--bg-secondary)] border-[var(--border)]', dot: 'bg-[var(--text-muted)]' };
+}
+
+function SentimentBadge({ sentiment, t }: { sentiment?: string | null; t: ReturnType<typeof useTranslation<'common'>>['t'] }) {
+  const s = sentiment?.toLowerCase();
+  const colors = sentimentColor(sentiment);
+  const isBullish = s === 'positive' || s === 'bullish';
+  const isBearish = s === 'negative' || s === 'bearish';
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${colors.badge}`}>
+      {isBullish && <TrendingUp className="w-3 h-3" />}
+      {isBearish && <TrendingDown className="w-3 h-3" />}
+      {isBullish ? t('market.newsSentimentPositive') : isBearish ? t('market.newsSentimentNegative') : t('market.newsSentimentNeutral')}
+    </span>
+  );
 }
 
 function NewsCardSkeleton() {
   return (
-    <div className="flex gap-4 p-4 border-b border-[var(--border)] animate-pulse last:border-b-0">
-      <div className="w-1 rounded-full bg-[var(--bg-card-hover)] shrink-0" />
-      <div className="flex-1 space-y-2.5 min-w-0">
+    <div className="flex gap-0 animate-pulse">
+      <div className="w-1 shrink-0 bg-[var(--border)] rounded-s-2xl" />
+      <div className="flex-1 px-4 py-4 space-y-3">
         <div className="flex items-center gap-2">
-          <div className="h-2.5 w-16 rounded-full bg-[var(--bg-card-hover)]" />
-          <div className="h-2.5 w-12 rounded-full bg-[var(--bg-card-hover)]" />
+          <div className="h-4 w-14 rounded-full bg-[var(--bg-card-hover)]" />
+          <div className="h-4 w-20 rounded-full bg-[var(--bg-card-hover)]" />
         </div>
         <div className="space-y-1.5">
           <div className="h-3.5 w-full rounded-full bg-[var(--bg-card-hover)]" />
-          <div className="h-3.5 w-4/5 rounded-full bg-[var(--bg-card-hover)]" />
+          <div className="h-3.5 w-3/4 rounded-full bg-[var(--bg-card-hover)]" />
         </div>
-        <div className="h-2.5 w-1/2 rounded-full bg-[var(--bg-card-hover)]" />
+        <div className="h-3 w-1/3 rounded-full bg-[var(--bg-card-hover)]" />
       </div>
     </div>
   );
 }
 
+// ── News Modal ────────────────────────────────────────────────────────────────
 type ModalProps = {
   item: MarketNewsItem;
   isRtl: boolean;
@@ -70,52 +86,38 @@ function NewsModal({ item, isRtl, onClose, t }: ModalProps) {
     };
   }, [onClose]);
 
-  const s = item.sentiment?.toLowerCase();
-  const isBullish = s === 'positive' || s === 'bullish';
-  const isBearish = s === 'negative' || s === 'bearish';
+  const colors = sentimentColor(item.sentiment);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-      onClick={onClose}
-    >
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-
-      {/* Sheet */}
       <div
         dir={isRtl ? 'rtl' : 'ltr'}
         className="relative w-full sm:max-w-lg bg-[var(--bg-card)] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[88vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        {/* Drag handle on mobile */}
+        {/* Mobile drag handle */}
         <div className="flex justify-center pt-3 sm:hidden">
           <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
         </div>
 
-        <div className="px-5 pt-4 pb-8 sm:pt-6">
-          {/* Top row: sentiment + time + close */}
-          <div className="flex items-center justify-between gap-3 mb-4">
+        {/* Sentiment accent bar */}
+        <div className={`h-1 w-full ${colors.bar} rounded-t-none sm:rounded-t-3xl`} />
+
+        <div className="px-5 pt-5 pb-8">
+          {/* Top row */}
+          <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-2 flex-wrap">
-              {isBullish && (
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-green-600 bg-green-100 dark:bg-green-950/40 px-2.5 py-1 rounded-full">
-                  <TrendingUp className="w-3.5 h-3.5" /> {t('market.newsSentimentPositive')}
-                </span>
-              )}
-              {isBearish && (
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-100 dark:bg-red-950/40 px-2.5 py-1 rounded-full">
-                  <TrendingDown className="w-3.5 h-3.5" /> {t('market.newsSentimentNegative')}
-                </span>
-              )}
-              {!isBullish && !isBearish && (
-                <span className="text-[11px] font-semibold text-[var(--text-muted)] bg-[var(--bg-secondary)] px-2.5 py-1 rounded-full">
-                  {t('market.newsSentimentNeutral')}
-                </span>
-              )}
+              <SentimentBadge sentiment={item.sentiment} t={t} />
               {item.publishedAt && (
                 <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
                   <Clock className="w-3 h-3" />
                   {relativeTime(item.publishedAt, t)}
+                </span>
+              )}
+              {item.source && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border)]">
+                  {item.source}
                 </span>
               )}
             </div>
@@ -128,20 +130,49 @@ function NewsModal({ item, isRtl, onClose, t }: ModalProps) {
           </div>
 
           {/* Title */}
-          <h2 className="text-base font-bold text-[var(--text-primary)] leading-snug mb-4">
+          <h2 className="text-base font-bold text-[var(--text-primary)] leading-snug mb-3">
             {item.title}
           </h2>
 
           {/* Summary */}
-          <p className="text-sm text-[var(--text-secondary)] leading-7">
+          <p className="text-sm text-[var(--text-secondary)] leading-7 mb-5">
             {item.summary || t('market.newsNoSummary')}
           </p>
+
+          {/* Ticker chips */}
+          {item.tickers && item.tickers.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {item.tickers.map((ticker) => (
+                <span
+                  key={ticker}
+                  className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-[var(--brand)]/10 text-[var(--brand)] border border-[var(--brand)]/20"
+                >
+                  {ticker}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* External link */}
+          {item.url && (
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--brand)] hover:underline"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              {isRtl ? 'اقرأ الخبر كاملاً' : 'Read full article'}
+            </a>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
+// ── Main Component ────────────────────────────────────────────────────────────
 export function MarketNewsSection({ news, loading, locale, filter, onFilterChange }: Props) {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
@@ -149,14 +180,14 @@ export function MarketNewsSection({ news, loading, locale, filter, onFilterChang
   const [selected, setSelected] = useState<MarketNewsItem | null>(null);
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       {/* Header + filter */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <Newspaper className="w-5 h-5 text-[var(--brand)]" />
-          <h2 className="text-lg font-bold text-[var(--text-primary)]">{t('market.newsTitle')}</h2>
+          <Radio className="w-4 h-4 text-[var(--brand)]" />
+          <h2 className="text-base font-bold text-[var(--text-primary)]">{t('market.newsTitle')}</h2>
           {!loading && news.length > 0 && (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--brand-subtle)] text-[var(--brand-text)]">
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--brand)]/10 text-[var(--brand)] border border-[var(--brand)]/20">
               {news.length}
             </span>
           )}
@@ -169,9 +200,9 @@ export function MarketNewsSection({ news, loading, locale, filter, onFilterChang
               key={f}
               type="button"
               onClick={() => onFilterChange(f)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200
                 ${filter === f
-                  ? 'bg-[var(--bg-card)] text-[var(--brand-text)] shadow-sm ring-1 ring-[var(--border-strong)]'
+                  ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm ring-1 ring-[var(--border)]'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 }`}
             >
@@ -181,20 +212,20 @@ export function MarketNewsSection({ news, loading, locale, filter, onFilterChang
         </div>
       </div>
 
-      {/* Card container */}
+      {/* Card list */}
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden divide-y divide-[var(--border)]">
 
-        {/* Loading skeletons */}
+        {/* Skeletons */}
         {loading && (
-          <>
+          <div className="divide-y divide-[var(--border)]">
             {[...Array(5)].map((_, i) => <NewsCardSkeleton key={i} />)}
-          </>
+          </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty */}
         {!loading && news.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-4 py-16 text-center px-6">
-            <div className="w-14 h-14 rounded-2xl bg-[var(--brand-subtle)] flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-[var(--brand)]/10 flex items-center justify-center">
               <Newspaper className="w-7 h-7 text-[var(--brand)]" />
             </div>
             <div>
@@ -209,7 +240,7 @@ export function MarketNewsSection({ news, loading, locale, filter, onFilterChang
               <button
                 type="button"
                 onClick={() => navigate('/stocks')}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand)] text-[var(--text-inverse)] text-sm font-semibold hover:opacity-90 transition-opacity"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand)] text-white text-sm font-semibold hover:opacity-90 transition-opacity"
               >
                 <BookmarkPlus className="w-4 h-4" />
                 {t('market.newsAddWatchlist')}
@@ -219,67 +250,76 @@ export function MarketNewsSection({ news, loading, locale, filter, onFilterChang
         )}
 
         {/* News list */}
-        {!loading && news.slice(0, 15).map((item, idx) => (
-          <button
-            key={item.url || idx}
-            type="button"
-            onClick={() => setSelected(item)}
-            className="group w-full text-start flex gap-0 hover:bg-[var(--bg-card-hover)] transition-colors duration-150"
-          >
-            {/* Sentiment accent bar — border-s-* follows reading direction */}
-            <div className={`w-[3px] shrink-0 ${sentimentBorder(item.sentiment)} border-s-[3px]`} />
+        {!loading && news.slice(0, 20).map((item, idx) => {
+          const colors = sentimentColor(item.sentiment);
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setSelected(item)}
+              className="group w-full text-start flex gap-0 hover:bg-[var(--bg-card-hover)] transition-colors duration-150"
+            >
+              {/* Sentiment accent bar */}
+              <div className={`w-1 shrink-0 ${colors.bar} transition-opacity group-hover:opacity-100 opacity-70`} />
 
-            {/* Content */}
-            <div className="flex-1 min-w-0 px-4 py-4">
-              {/* Top row: sentiment badge + time */}
-              <div className="flex items-center justify-between gap-2 mb-2">
-                {(() => {
-                  const sv = item.sentiment?.toLowerCase();
-                  if (sv === 'positive' || sv === 'bullish') return (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-600 bg-green-100 dark:bg-green-950/40 px-2 py-0.5 rounded-full shrink-0">
-                      <TrendingUp className="w-3 h-3" /> {t('market.newsSentimentPositive')}
+              {/* Content */}
+              <div className="flex-1 min-w-0 px-4 py-3.5">
+                {/* Top row: sentiment + time + source */}
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <SentimentBadge sentiment={item.sentiment} t={t} />
+                  <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                    <Clock className="w-3 h-3 shrink-0" />
+                    {item.publishedAt ? relativeTime(item.publishedAt, t) : ''}
+                  </span>
+                  {item.source && (
+                    <span className="ms-auto text-[10px] font-medium text-[var(--text-muted)] shrink-0">
+                      {item.source}
                     </span>
-                  );
-                  if (sv === 'negative' || sv === 'bearish') return (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-100 dark:bg-red-950/40 px-2 py-0.5 rounded-full shrink-0">
-                      <TrendingDown className="w-3 h-3" /> {t('market.newsSentimentNegative')}
-                    </span>
-                  );
-                  return (
-                    <span className="text-[11px] font-semibold text-[var(--text-muted)] bg-[var(--bg-secondary)] px-2 py-0.5 rounded-full shrink-0">
-                      {t('market.newsSentimentNeutral')}
-                    </span>
-                  );
-                })()}
-                <span className="text-[11px] text-[var(--text-muted)] shrink-0">
-                  {item.publishedAt ? relativeTime(item.publishedAt, t) : ''}
-                </span>
+                  )}
+                </div>
+
+                {/* Title */}
+                <h3 className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-2 group-hover:text-[var(--brand)] transition-colors mb-1.5">
+                  {item.title}
+                </h3>
+
+                {/* Summary */}
+                {item.summary && (
+                  <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed mb-2">
+                    {item.summary}
+                  </p>
+                )}
+
+                {/* Ticker chips (max 3) */}
+                {item.tickers && item.tickers.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {item.tickers.slice(0, 3).map((ticker) => (
+                      <span
+                        key={ticker}
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--brand)]/8 text-[var(--brand)] border border-[var(--brand)]/15"
+                      >
+                        {ticker}
+                      </span>
+                    ))}
+                    {item.tickers.length > 3 && (
+                      <span className="text-[10px] text-[var(--text-muted)]">+{item.tickers.length - 3}</span>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Title */}
-              <h3 className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-2 group-hover:text-[var(--brand)] transition-colors mb-1.5">
-                {item.title}
-              </h3>
-
-              {/* Summary preview */}
-              {item.summary && (
-                <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed">
-                  {item.summary}
-                </p>
-              )}
-            </div>
-          </button>
-        ))}
+              {/* Arrow hint */}
+              <div className="flex items-center pe-3 ps-1 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity">
+                <ExternalLink className="w-3.5 h-3.5" />
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* News detail modal */}
+      {/* Modal */}
       {selected && (
-        <NewsModal
-          item={selected}
-          isRtl={isRtl}
-          onClose={() => setSelected(null)}
-          t={t}
-        />
+        <NewsModal item={selected} isRtl={isRtl} onClose={() => setSelected(null)} t={t} />
       )}
     </section>
   );

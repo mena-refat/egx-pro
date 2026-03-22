@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Alert, Linking, TextInput, Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
   ChevronLeft, ChevronRight, Star, StarOff, TrendingUp, TrendingDown,
   Brain, BarChart2, Briefcase, ExternalLink, Info, Bell, BellOff, Lock,
@@ -68,6 +69,7 @@ function PriceAlertModal({
   visible, onClose, ticker, currentPrice, currentTargetPrice, isPro, onSave,
 }: PriceAlertModalProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -117,7 +119,7 @@ function PriceAlertModal({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
             <Bell size={18} color={BRAND} />
             <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }}>
-              تنبيه السعر — {ticker}
+              {t('stockDetail.priceAlert')} — {ticker}
             </Text>
           </View>
           <Pressable onPress={onClose}>
@@ -130,17 +132,17 @@ function PriceAlertModal({
           <View style={{ alignItems: 'center', gap: SPACE.md, paddingVertical: SPACE.lg }}>
             <Lock size={32} color={BRAND} />
             <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.semibold, textAlign: 'center' }}>
-              تنبيهات الأسعار متاحة لمشتركي Pro و Ultra فقط
+              {t('stockDetail.priceAlertProOnly')}
             </Text>
             <Text style={{ color: colors.textSub, fontSize: FONT.xs, textAlign: 'center' }}>
-              قم بترقية اشتراكك للحصول على إشعارات فورية عند وصول السهم للسعر المستهدف
+              {t('stockDetail.priceAlertProHint')}
             </Text>
           </View>
         ) : (
           <>
             {/* Current price reference */}
             <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>
-              السعر الحالي:{' '}
+              {t('stockDetail.currentPrice')}:{' '}
               <Text style={{ color: colors.text, fontWeight: WEIGHT.semibold }}>
                 {n(currentPrice)} EGP
               </Text>
@@ -148,7 +150,7 @@ function PriceAlertModal({
 
             {/* Price input */}
             <View style={{ gap: SPACE.xs }}>
-              <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>السعر المستهدف (EGP)</Text>
+              <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>{t('stockDetail.targetPrice')}</Text>
               <TextInput
                 value={input}
                 onChangeText={setInput}
@@ -175,14 +177,14 @@ function PriceAlertModal({
                   ? <TrendingUp size={14} color={GREEN} />
                   : <TrendingDown size={14} color={RED} />}
                 <Text style={{ color: direction === 'UP' ? GREEN : RED, fontSize: FONT.xs, fontWeight: WEIGHT.medium }}>
-                  {direction === 'UP' ? 'نبهني عندما يرتفع إلى' : 'نبهني عندما ينخفض إلى'} {n(targetPrice)} EGP
+                  {direction === 'UP' ? t('stockDetail.alertWhenRises') : t('stockDetail.alertWhenFalls')} {n(targetPrice)} EGP
                 </Text>
               </View>
             )}
 
             {isSameAsCurrent && (
               <Text style={{ color: '#f59e0b', fontSize: FONT.xs }}>
-                السعر المستهدف مساوٍ للسعر الحالي
+                {t('stockDetail.targetSameAsCurrent')}
               </Text>
             )}
 
@@ -199,7 +201,7 @@ function PriceAlertModal({
               >
                 <Bell size={16} color="#fff" />
                 <Text style={{ color: '#fff', fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>
-                  {saving ? 'جاري الحفظ...' : 'حفظ التنبيه'}
+                  {saving ? t('stockDetail.saving') : t('stockDetail.saveAlert')}
                 </Text>
               </Pressable>
 
@@ -232,6 +234,8 @@ export default function StockDetailPage() {
   const router     = useRouter();
   const insets     = useSafeAreaInsets();
   const { colors, isRTL } = useTheme();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language.startsWith('ar') ? 'ar' : 'en';
   const user       = useAuthStore((s) => s.user);
 
   const BackIcon = isRTL ? ChevronRight : ChevronLeft;
@@ -350,7 +354,7 @@ export default function StockDetailPage() {
         setInWatchlist(true);
       }
     } catch {
-      Alert.alert('خطأ', 'حدث خطأ، حاول مرة أخرى');
+      Alert.alert(t('stockDetail.errorTitle'), t('stockDetail.errorWatchlist'));
     } finally {
       setWatchlistLoading(false);
     }
@@ -371,7 +375,7 @@ export default function StockDetailPage() {
       });
       setTargetPrice(newTargetPrice);
     } catch {
-      Alert.alert('خطأ', 'تعذر حفظ التنبيه، حاول مرة أخرى');
+      Alert.alert(t('stockDetail.errorTitle'), t('stockDetail.errorSaveAlert'));
       throw new Error('save failed');
     }
   }, [ticker, inWatchlist]);
@@ -391,9 +395,9 @@ export default function StockDetailPage() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACE.md }}>
-          <Text style={{ color: colors.textMuted, fontSize: FONT.base }}>السهم غير موجود</Text>
+          <Text style={{ color: colors.textMuted, fontSize: FONT.base }}>{t('stockDetail.notFound')}</Text>
           <Pressable onPress={() => router.back()} style={{ paddingVertical: SPACE.sm, paddingHorizontal: SPACE.lg }}>
-            <Text style={{ color: BRAND, fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>رجوع</Text>
+            <Text style={{ color: BRAND, fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>{t('stockDetail.back')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -421,7 +425,7 @@ export default function StockDetailPage() {
 
         <View style={{ alignItems: 'center' }}>
           <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }}>{ticker}</Text>
-          <Text style={{ color: colors.textMuted, fontSize: FONT.xs }} numberOfLines={1}>{nameAr}</Text>
+          <Text style={{ color: colors.textMuted, fontSize: FONT.xs }} numberOfLines={1}>{getStockName(ticker ?? '', lang)}</Text>
         </View>
 
         <View style={{ flexDirection: 'row', gap: SPACE.sm }}>
@@ -489,7 +493,7 @@ export default function StockDetailPage() {
               </Text>
             </View>
             {stock?.isDelayed && (
-              <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>متأخر 15د</Text>
+              <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>{t('stockDetail.delayed')}</Text>
             )}
           </View>
 
@@ -508,9 +512,9 @@ export default function StockDetailPage() {
             >
               <Bell size={13} color="#f59e0b" />
               <Text style={{ color: '#f59e0b', fontSize: FONT.xs, fontWeight: WEIGHT.medium }}>
-                تنبيه نشط عند {n(targetPrice)} EGP
+                {t('stockDetail.activeAlert')} {n(targetPrice)} EGP
               </Text>
-              <Text style={{ color: '#f59e0b80', fontSize: FONT.xs, marginStart: 'auto' }}>تعديل</Text>
+              <Text style={{ color: '#f59e0b80', fontSize: FONT.xs, marginStart: 'auto' }}>{t('stockDetail.edit')}</Text>
             </Pressable>
           )}
         </View>
@@ -540,14 +544,14 @@ export default function StockDetailPage() {
                 <View style={{ width: 28, height: 28, borderRadius: RADIUS.sm, backgroundColor: BRAND_BG_STRONG, alignItems: 'center', justifyContent: 'center' }}>
                   <Briefcase size={13} color={BRAND} />
                 </View>
-                <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>مركزي</Text>
+                <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('stockDetail.myPosition')}</Text>
               </View>
 
               <View style={{ flexDirection: 'row' }}>
                 {[
-                  { label: 'الأسهم',    value: String(totalShares) },
-                  { label: 'متوسط الشراء', value: `${n(avgPrice)} EGP` },
-                  { label: 'القيمة الحالية', value: `${n(positionValue)} EGP` },
+                  { label: t('stockDetail.shares'),       value: String(totalShares) },
+                  { label: t('stockDetail.avgBuy'),        value: `${n(avgPrice)} EGP` },
+                  { label: t('stockDetail.currentValue'),  value: `${n(positionValue)} EGP` },
                 ].map((s, i, arr) => (
                   <View
                     key={s.label}
@@ -570,7 +574,7 @@ export default function StockDetailPage() {
                 paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
                 flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
               }}>
-                <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>الربح / الخسارة</Text>
+                <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>{t('stockDetail.gainLoss')}</Text>
                 <Text style={{
                   fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'],
                   color: positionGain >= 0 ? GREEN : RED,
@@ -596,10 +600,10 @@ export default function StockDetailPage() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>
-                  تحليل ذكاء اصطناعي
+                  {t('stockDetail.aiAnalysis')}
                 </Text>
                 <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs, marginTop: 2 }}>
-                  احصل على تحليل شامل لـ {ticker}
+                  {t('stockDetail.aiAnalysisHint')} {ticker}
                 </Text>
               </View>
               <ChevronLeft size={16} color={BRAND} style={{ transform: [{ scaleX: isRTL ? 1 : -1 }] }} />
@@ -619,20 +623,20 @@ export default function StockDetailPage() {
               <View style={{ width: 28, height: 28, borderRadius: RADIUS.sm, backgroundColor: '#3b82f618', alignItems: 'center', justifyContent: 'center' }}>
                 <BarChart2 size={13} color="#3b82f6" />
               </View>
-              <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>بيانات السهم</Text>
+              <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('stockDetail.stockData')}</Text>
             </View>
             <View style={{ paddingHorizontal: SPACE.lg, paddingVertical: SPACE.sm }}>
-              {stock?.open        !== undefined && <StatRow label="الافتتاح"        value={`${n(stock.open)} EGP`} />}
-              {stock?.previousClose !== undefined && <StatRow label="إغلاق أمس"      value={`${n(stock.previousClose)} EGP`} />}
-              {stock?.high        !== undefined && <StatRow label="أعلى سعر"        value={`${n(stock.high)} EGP`} />}
-              {stock?.low         !== undefined && <StatRow label="أدنى سعر"        value={`${n(stock.low)} EGP`} />}
-              {stock?.volume      !== undefined && stock.volume > 0 && (
-                <StatRow label="الحجم"          value={n(stock.volume, 0)} />
+              {stock?.open          !== undefined && <StatRow label={t('stockDetail.open')}      value={`${n(stock.open)} EGP`} />}
+              {stock?.previousClose !== undefined && <StatRow label={t('stockDetail.prevClose')}  value={`${n(stock.previousClose)} EGP`} />}
+              {stock?.high          !== undefined && <StatRow label={t('stockDetail.high')}       value={`${n(stock.high)} EGP`} />}
+              {stock?.low           !== undefined && <StatRow label={t('stockDetail.low')}        value={`${n(stock.low)} EGP`} />}
+              {stock?.volume        !== undefined && stock.volume > 0 && (
+                <StatRow label={t('stockDetail.volume')} value={n(stock.volume, 0)} />
               )}
-              {stock?.marketCap   !== undefined && stock.marketCap > 0 && (
+              {stock?.marketCap     !== undefined && stock.marketCap > 0 && (
                 <StatRow
-                  label="القيمة السوقية"
-                  value={`${(stock.marketCap / 1_000_000_000).toFixed(2)} مليار EGP`}
+                  label={t('stockDetail.marketCap')}
+                  value={`${(stock.marketCap / 1_000_000_000).toFixed(2)} ${t('stockDetail.billion')} EGP`}
                 />
               )}
               {/* Remove last border */}
@@ -654,12 +658,12 @@ export default function StockDetailPage() {
                 <View style={{ width: 28, height: 28, borderRadius: RADIUS.sm, backgroundColor: '#f59e0b18', alignItems: 'center', justifyContent: 'center' }}>
                   <Info size={13} color="#f59e0b" />
                 </View>
-                <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>عن الشركة</Text>
+                <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('stockDetail.aboutCompany')}</Text>
               </View>
               <View style={{ paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md, gap: SPACE.sm }}>
                 {stock?.sector && (
                   <View style={{ flexDirection: 'row', gap: SPACE.sm, alignItems: 'center' }}>
-                    <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>القطاع:</Text>
+                    <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>{t('stockDetail.sector')}:</Text>
                     <View style={{ backgroundColor: BRAND_BG_STRONG, paddingHorizontal: SPACE.sm, paddingVertical: 2, borderRadius: RADIUS.sm }}>
                       <Text style={{ color: BRAND, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>{stock.sector}</Text>
                     </View>
@@ -667,7 +671,9 @@ export default function StockDetailPage() {
                 )}
                 {(info?.descriptionAr ?? info?.descriptionEn ?? stock?.description) ? (
                   <Text style={{ color: colors.textSub, fontSize: FONT.sm, lineHeight: 22 }}>
-                    {info?.descriptionAr ?? info?.descriptionEn ?? stock?.description}
+                    {lang === 'ar'
+                    ? (info?.descriptionAr ?? info?.descriptionEn ?? stock?.description)
+                    : (info?.descriptionEn ?? info?.descriptionAr ?? stock?.description)}
                   </Text>
                 ) : null}
               </View>
@@ -685,7 +691,7 @@ export default function StockDetailPage() {
                 paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
                 borderBottomWidth: 1, borderBottomColor: colors.border,
               }}>
-                <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>أخبار ذات صلة</Text>
+                <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('stockDetail.relatedNews')}</Text>
               </View>
               {news.map((item, i) => (
                 <Pressable
@@ -700,7 +706,7 @@ export default function StockDetailPage() {
                     } catch {
                       // fall through to alert
                     }
-                    Alert.alert('تعذر فتح الرابط', 'لا يمكن فتح رابط الخبر حالياً.');
+                    Alert.alert(t('stockDetail.cannotOpenLink'), t('stockDetail.cannotOpenLinkMsg'));
                   }}
                   style={({ pressed }) => ({
                     backgroundColor: pressed ? colors.hover : 'transparent',
@@ -715,7 +721,7 @@ export default function StockDetailPage() {
                       {item.title}
                     </Text>
                     <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 4 }}>
-                      {item.source} · {new Date(item.publishedAt).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' })}
+                      {item.source} · {new Date(item.publishedAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
                     </Text>
                   </View>
                   <ExternalLink size={14} color={colors.textMuted} style={{ marginTop: 3 }} />

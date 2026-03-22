@@ -36,9 +36,10 @@ export function useGoals() {
         });
         if (signal?.aborted) return;
         if (!res.ok) throw new Error('Failed to fetch');
-        const data = await res.json();
+        const json = await res.json();
+        const payload = json?.data ?? json;
         if (!signal?.aborted)
-          setGoals(Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []);
+          setGoals(Array.isArray(payload?.items) ? payload.items : Array.isArray(payload) ? payload : []);
       } catch (err) {
         if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('abort')))
           return;

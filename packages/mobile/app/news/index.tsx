@@ -14,9 +14,6 @@ import { BRAND, RADIUS, WEIGHT, FONT, SPACE } from '../../lib/theme';
 
 interface NewsItem {
   title: string;
-  url: string;
-  source: string;
-  sourceType?: string;
   publishedAt: string;
   summary?: string;
   sentiment?: string | null;
@@ -145,11 +142,6 @@ function NewsDetailModal({
               )}
             </View>
 
-            {/* Source */}
-            <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 12 }}>
-              المصدر: {item.source}
-            </Text>
-
             {/* Affected tickers */}
             {item.tickers && item.tickers.length > 0 && (
               <View>
@@ -248,11 +240,19 @@ export default function NewsPage() {
   ];
 
   const sortedNews = useMemo(() => {
-    return [...news].sort((a, b) => {
-      const ta = new Date(a.publishedAt).getTime();
-      const tb = new Date(b.publishedAt).getTime();
-      return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
-    });
+    const seen = new Set<string>();
+    return [...news]
+      .filter((item) => {
+        const key = item.title.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => {
+        const ta = new Date(a.publishedAt).getTime();
+        const tb = new Date(b.publishedAt).getTime();
+        return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
+      });
   }, [news]);
 
   const filteredNews = useMemo(() => {
@@ -452,7 +452,7 @@ export default function NewsPage() {
         ) : (
           filteredNews.map((item, i) => (
             <Pressable
-              key={item.url || i}
+              key={i}
               onPress={() => setSelected(item)}
               style={({ pressed }) => ({
                 backgroundColor: pressed ? colors.hover : colors.card,
@@ -489,24 +489,19 @@ export default function NewsPage() {
                   </Text>
                 )}
 
-                {/* Source + tickers row */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <Text style={{ color: colors.textMuted, fontSize: 10 }} numberOfLines={1}>
-                    {item.source}
-                  </Text>
-                  {item.tickers && item.tickers.length > 0 && (
-                    <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1 }}>
-                      {item.tickers.slice(0, 3).map(t => (
-                        <View key={t} style={{ backgroundColor: `${BRAND}12`, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                          <Text style={{ color: BRAND, fontSize: 10, fontWeight: WEIGHT.bold }}>{t}</Text>
-                        </View>
-                      ))}
-                      {item.tickers.length > 3 && (
-                        <Text style={{ color: colors.textMuted, fontSize: 10, alignSelf: 'center' }}>+{item.tickers.length - 3}</Text>
-                      )}
-                    </View>
-                  )}
-                </View>
+                {/* Tickers row */}
+                {item.tickers && item.tickers.length > 0 && (
+                  <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap' }}>
+                    {item.tickers.slice(0, 3).map(t => (
+                      <View key={t} style={{ backgroundColor: `${BRAND}12`, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                        <Text style={{ color: BRAND, fontSize: 10, fontWeight: WEIGHT.bold }}>{t}</Text>
+                      </View>
+                    ))}
+                    {item.tickers.length > 3 && (
+                      <Text style={{ color: colors.textMuted, fontSize: 10, alignSelf: 'center' }}>+{item.tickers.length - 3}</Text>
+                    )}
+                  </View>
+                )}
               </View>
             </Pressable>
           ))

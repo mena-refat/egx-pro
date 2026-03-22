@@ -31,13 +31,12 @@ function cairoStartOfDay(): Date {
 export type NewsArticle = {
   title: string;
   summary: string;
-  source: string;
-  sourceType: NewsSourceType;
   publishedAt: string;
   sentiment: 'positive' | 'negative' | 'neutral';
-  url: string;
   tickers: string[];
   isMarketWide: boolean;
+  source: string;
+  url: string;
 };
 
 type IngestedNews = {
@@ -82,18 +81,87 @@ function pickTag(block: string, tag: string): string {
   return match ? decodeHtml(match[1]) : '';
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Deduplication helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Strips punctuation, collapses whitespace, lowercases.
+ * Used as the canonical key for title-based deduplication.
+ */
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Level 1 — removes duplicates from an in-memory ingestion batch.
+ * When two items share the same normalized title, keeps the one
+ * with the longer (more informative) summary.
+ */
+function deduplicateIngested(items: IngestedNews[]): IngestedNews[] {
+  const seen = new Map<string, IngestedNews>();
+  for (const item of items) {
+    const key = normalizeTitle(item.title);
+    if (!key) continue;
+    const existing = seen.get(key);
+    if (!existing) {
+      seen.set(key, item);
+    } else {
+      const existingLen = existing.summary?.trim().length ?? 0;
+      const itemLen = item.summary?.trim().length ?? 0;
+      if (itemLen > existingLen) seen.set(key, item);
+    }
+  }
+  return Array.from(seen.values());
+}
+
+/**
+ * Level 2 — removes duplicates from a DB result set before returning
+ * to the API. Guards against articles that were stored before the
+ * ingestion-level dedup was in place.
+ */
+function deduplicateArticles(articles: NewsArticle[]): NewsArticle[] {
+  const seen = new Map<string, NewsArticle>();
+  for (const article of articles) {
+    const key = normalizeTitle(article.title);
+    if (!key) continue;
+    const existing = seen.get(key);
+    if (!existing) {
+      seen.set(key, article);
+    } else {
+      if ((article.summary?.length ?? 0) > (existing.summary?.length ?? 0)) {
+        seen.set(key, article);
+      }
+    }
+  }
+  return Array.from(seen.values());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function computeSentiment(title: string, summary: string): 'positive' | 'negative' | 'neutral' {
-  const text = `${title} ${summary}`.toLowerCase();
-  const positiveWords = ['أرباح', 'نمو', 'صعود', 'ارتفاع', 'إيجابي', 'توسع', 'profit', 'growth', 'rise'];
-  const negativeWords = ['خسائر', 'هبوط', 'تراجع', 'سلبي', 'انخفاض', 'loss', 'fall', 'decline'];
-  if (positiveWords.some((word) => text.includes(word))) return 'positive';
-  if (negativeWords.some((word) => text.includes(word))) return 'negative';
+  const raw = `${title} ${summary}`.toLowerCase();
+  // Strip negation context (e.g. "لا خسائر" / "no loss" → doesn't count as negative)
+  const text = raw.replace(/\b(لا|لم|لن|مش|غير|ليس|بدون|no|not|without|avoid|avoids|prevent)\s+\S+/g, ' ');
+  const positiveWords = ['أرباح', 'نمو', 'صعود', 'ارتفاع', 'إيجابي', 'توسع', 'تحسن', 'مكاسب', 'profit', 'growth', 'rise', 'gain', 'surge', 'improve', 'record'];
+  const negativeWords = ['خسائر', 'هبوط', 'تراجع', 'سلبي', 'انخفاض', 'أزمة', 'ضعف', 'تعثر', 'loss', 'fall', 'decline', 'drop', 'crisis', 'weak', 'default'];
+  // Count-based: winner by score, not first match
+  const posScore = positiveWords.filter((w) => text.includes(w)).length;
+  const negScore = negativeWords.filter((w) => text.includes(w)).length;
+  if (posScore > negScore) return 'positive';
+  if (negScore > posScore) return 'negative';
   return 'neutral';
 }
 
-function buildExternalId(sourceType: NewsSourceType, url: string, title: string): string {
+// Fix 3: key on normalized title only so the same story from different
+// sources gets the same externalId and the upsert deduplicates across cycles.
+function buildExternalId(title: string): string {
   return createHash('sha256')
-    .update(`${sourceType}|${url}|${title}`)
+    .update(normalizeTitle(title))
     .digest('hex');
 }
 
@@ -116,24 +184,22 @@ function resolveTickers(text: string, explicitTicker?: string): string[] {
 function toNewsArticle(item: {
   title: string;
   summary: string | null;
-  source: string;
-  sourceType: NewsSourceType;
   publishedAt: Date;
   sentiment: string | null;
-  url: string;
   isMarketWide: boolean;
+  source: string;
+  url: string;
   tickers?: Array<{ ticker: string }>;
 }): NewsArticle {
   return {
     title: item.title,
     summary: item.summary ?? '',
-    source: item.source,
-    sourceType: item.sourceType,
     publishedAt: item.publishedAt.toISOString(),
     sentiment: (item.sentiment as NewsArticle['sentiment']) ?? 'neutral',
-    url: item.url,
     tickers: item.tickers?.map((row) => row.ticker) ?? [],
     isMarketWide: item.isMarketWide,
+    source: item.source,
+    url: item.url,
   };
 }
 
@@ -172,12 +238,13 @@ async function fetchNewsApi(query: string, explicitTicker?: string, isMarketWide
   const fetchedAt = new Date();
   return (data.articles ?? [])
     .filter((article) => article.title && article.url && article.publishedAt)
-    .map((article) => {
-      const title = stripHtml(article.title ?? '');
+    .flatMap((article) => {
+      const title = stripHtml(article.title ?? '').trim();
+      if (!title) return [];   // Fix 6: skip whitespace-only titles
       const summary = stripHtml(article.description || article.content || '');
       const tickers = resolveTickers(`${title} ${summary}`, explicitTicker);
-      return {
-        externalId: buildExternalId('NEWS_API', article.url ?? '', title),
+      return [{
+        externalId: buildExternalId(title),
         title,
         summary,
         source: article.source?.name?.trim() || 'NewsAPI',
@@ -189,7 +256,7 @@ async function fetchNewsApi(query: string, explicitTicker?: string, isMarketWide
         sentiment: computeSentiment(title, summary),
         tickers,
         isMarketWide,
-      };
+      }];
     });
 }
 
@@ -198,14 +265,16 @@ async function fetchGoogleRss(query: string, explicitTicker?: string, isMarketWi
   const xml = await fetchText(`https://news.google.com/rss/search?q=${encoded}&hl=ar&gl=EG&ceid=EG:ar`);
   const fetchedAt = new Date();
   const items = xml.match(/<item>[\s\S]*?<\/item>/gi) ?? [];
-  return items.map((item) => {
-    const title = stripHtml(pickTag(item, 'title'));
-    const summary = stripHtml(pickTag(item, 'description'));
+  return items.flatMap((item) => {
+    const title = stripHtml(pickTag(item, 'title')).trim();
+    if (!title) return [];   // Fix 6: skip whitespace-only titles
     const url = pickTag(item, 'link');
+    if (!url) return [];
+    const summary = stripHtml(pickTag(item, 'description'));
     const publishedAt = pickTag(item, 'pubDate');
     const tickers = resolveTickers(`${title} ${summary}`, explicitTicker);
-    return {
-      externalId: buildExternalId('GOOGLE_RSS', url, title),
+    return [{
+      externalId: buildExternalId(title),
       title,
       summary,
       source: stripHtml(pickTag(item, 'source')) || 'Google News',
@@ -217,8 +286,8 @@ async function fetchGoogleRss(query: string, explicitTicker?: string, isMarketWi
       sentiment: computeSentiment(title, summary),
       tickers,
       isMarketWide,
-    };
-  }).filter((item) => item.title && item.url);
+    }];
+  });
 }
 
 async function fetchEgxDisclosures(): Promise<IngestedNews[]> {
@@ -238,7 +307,7 @@ async function fetchEgxDisclosures(): Promise<IngestedNews[]> {
         : fetchedAt;
       const tickers = resolveTickers(title);
       return {
-        externalId: buildExternalId('EGX_DISCLOSURE', url || title, title),
+        externalId: buildExternalId(title),
         title,
         summary: 'EGX disclosure report',
         source: 'EGX',
@@ -273,8 +342,10 @@ const INGEST_BATCH = 5;
 /** Redis TTL for ingest cache — 7 days (same article won't be re-summarized) */
 const INGEST_CACHE_TTL_S = 7 * 24 * 60 * 60;
 
-function ingestCacheKey(title: string, description: string): string {
-  return 'ai:ingest:' + createHash('sha256').update(`${title}|${description}`).digest('hex');
+// Fix 4: key on normalized title only — matches buildExternalId so two sources
+// publishing the same story share one cache entry and one AI call.
+function ingestCacheKey(title: string): string {
+  return 'ai:ingest:' + buildExternalId(title);
 }
 
 function parseIngestJson(text: string): { title: string; summary: string } | null {
@@ -303,11 +374,14 @@ async function summarizeOne(item: IngestedNews): Promise<IngestedNews> {
   // Skip stubs — EGX disclosures have very short descriptions, not worth summarizing
   if (description.length < MIN_DESC_FOR_SUMMARY) return item;
 
-  const key = ingestCacheKey(item.title, description);
-
-  // Redis cache hit → return immediately (free)
-  const cached = await getCache<{ title: string; summary: string }>(key);
-  if (cached) return { ...item, title: cached.title, summary: cached.summary };
+  // Fix 4 + Fix 8: key uses normalized title; Redis errors are non-fatal
+  const key = ingestCacheKey(item.title);
+  try {
+    const cached = await getCache<{ title: string; summary: string }>(key);
+    if (cached) return { ...item, title: cached.title, summary: cached.summary };
+  } catch {
+    // Redis unavailable — proceed without cache
+  }
 
   // AI call — Gemini Flash via the router
   const userMsg =
@@ -325,7 +399,11 @@ async function summarizeOne(item: IngestedNews): Promise<IngestedNews> {
   const parsed = parseIngestJson(result.text);
   if (!parsed) return item; // fallback to original
 
-  await setCache(key, parsed, INGEST_CACHE_TTL_S);
+  try {
+    await setCache(key, parsed, INGEST_CACHE_TTL_S);
+  } catch {
+    // Redis unavailable — article is still summarized, just not cached
+  }
   return { ...item, title: parsed.title, summary: parsed.summary };
 }
 
@@ -365,8 +443,15 @@ async function persist(items: IngestedNews[]): Promise<number> {
   return NewsRepository.upsertMany(items);
 }
 
+// ── In-flight sync locks — Node.js is single-threaded so the check+set is
+// atomic; any concurrent callers (cron + HTTP) get the same Promise ──────────
+let _marketSyncInFlight: Promise<number> | null = null;
+const _tickerSyncInFlight = new Map<string, Promise<number>>();
+
 export const NewsService = {
   async syncMarketSources(): Promise<number> {
+    if (_marketSyncInFlight) return _marketSyncInFlight;
+    _marketSyncInFlight = (async () => {
     const [googleItems, newsApiItems, egxItems] = await Promise.allSettled([
       fetchGoogleRss(GOOGLE_MARKET_QUERY, undefined, true),
       fetchNewsApi(GOOGLE_MARKET_QUERY, undefined, true),
@@ -419,13 +504,18 @@ export const NewsService = {
       });
     }
 
-    const toIngest = [...companyArticles, ...topMarketArticles];
+    const toIngest = deduplicateIngested([...companyArticles, ...topMarketArticles]);
     const summarized = await summarizeForIngest(toIngest);
     return persist(summarized);
+    })().finally(() => { _marketSyncInFlight = null; });
+    return _marketSyncInFlight;
   },
 
   async syncTickerSources(ticker: string, companyName?: string): Promise<number> {
     const normalizedTicker = ticker.trim().toUpperCase();
+    const existing = _tickerSyncInFlight.get(normalizedTicker);
+    if (existing) return existing;
+    const p = (async () => {
     const stock = EGX_STOCKS.find((item) => item.ticker.toUpperCase() === normalizedTicker);
     const query = [normalizedTicker, stock?.nameAr, stock?.nameEn, companyName]
       .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
@@ -454,8 +544,11 @@ export const NewsService = {
       });
     }
 
-    const summarized = await summarizeForIngest(merged);
+    const summarized = await summarizeForIngest(deduplicateIngested(merged));
     return persist(summarized);
+    })().finally(() => { _tickerSyncInFlight.delete(normalizedTicker); });
+    _tickerSyncInFlight.set(normalizedTicker, p);
+    return p;
   },
 
   async getMarket(limit = DEFAULT_LIMIT): Promise<NewsArticle[]> {
@@ -467,7 +560,7 @@ export const NewsService = {
       });
     }
     const items = await NewsRepository.findLatestMarket(limit);
-    return items.map(toNewsArticle);
+    return deduplicateArticles(items.map(toNewsArticle));
   },
 
   async getForWatchlist(userId: number, limit = DEFAULT_LIMIT): Promise<NewsArticle[]> {
@@ -476,8 +569,13 @@ export const NewsService = {
     }
     const watchlist = await prisma.watchlist.findMany({ where: { userId }, select: { ticker: true } });
     const tickers = watchlist.map(w => w.ticker);
+    // Empty watchlist → fall back to general market news so the page is never blank
+    if (!tickers.length) {
+      const items = await NewsRepository.findLatestMarket(limit);
+      return deduplicateArticles(items.map(toNewsArticle));
+    }
     const items = await NewsRepository.findLatestByWatchlist(tickers, limit);
-    return items.map(toNewsArticle);
+    return deduplicateArticles(items.map(toNewsArticle));
   },
 
   async getByTicker(ticker: string, limit = DEFAULT_LIMIT): Promise<NewsArticle[]> {
@@ -492,7 +590,7 @@ export const NewsService = {
       });
     }
     const items = await NewsRepository.findLatestByTicker(normalizedTicker, limit);
-    return items.map(toNewsArticle);
+    return deduplicateArticles(items.map(toNewsArticle));
   },
 
   async getForAnalysis(
@@ -508,11 +606,8 @@ export const NewsService = {
       await this.syncTickerSources(normalizedTicker, companyName).catch(() => {});
     }
     const refreshed = await NewsRepository.findLatestForAi(normalizedTicker, limit, publishedBefore);
-    return refreshed.map((item) =>
-      toNewsArticle({
-        ...item,
-        tickers: [],
-      })
+    return deduplicateArticles(
+      refreshed.map((item) => toNewsArticle({ ...item, tickers: [] }))
     );
   },
 

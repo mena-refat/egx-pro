@@ -5,12 +5,29 @@ import { clearCache } from '../lib/queryCache';
 import { useGoals } from './useGoals';
 import type { GoalRecord } from './useGoals';
 
+function getGoalsLimit(
+  plan: string | null | undefined,
+  planExpiresAt: string | null | undefined,
+  referralProExpiresAt: string | null | undefined,
+): number {
+  const now = new Date();
+  const hasReferralPro = referralProExpiresAt != null && new Date(referralProExpiresAt) > now;
+  const p = plan || 'free';
+  const exp = planExpiresAt ? new Date(planExpiresAt) : null;
+  const isActive = exp == null || exp > now;
+  if (!isActive && !hasReferralPro) return 1;
+  if (hasReferralPro || p === 'pro' || p === 'yearly') return 3;
+  if (p === 'ultra' || p === 'ultra_yearly') return 999;
+  return 1;
+}
+
 export function useGoalsPage() {
   const { t } = useTranslation('common');
-  const { accessToken } = useAuthStore();
+  const { accessToken, user } = useAuthStore();
   const goalsData = useGoals();
 
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [goalsLimitOpen, setGoalsLimitOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editGoalId, setEditGoalId] = useState<string | null>(null);
   const [amountModalOpen, setAmountModalOpen] = useState(false);
@@ -18,7 +35,14 @@ export function useGoalsPage() {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
 
-  const openAddModal = useCallback(() => setAddModalOpen(true), []);
+  const openAddModal = useCallback(() => {
+    const limit = getGoalsLimit(user?.plan, user?.planExpiresAt, user?.referralProExpiresAt);
+    if (goalsData.activeGoals.length >= limit) {
+      setGoalsLimitOpen(true);
+    } else {
+      setAddModalOpen(true);
+    }
+  }, [user, goalsData.activeGoals]);
   const closeAddModal = useCallback(() => setAddModalOpen(false), []);
   const onSavedAdd = useCallback((goal?: GoalRecord) => {
     setAddModalOpen(false);
@@ -88,9 +112,13 @@ export function useGoalsPage() {
     [accessToken, goalsData, t]
   );
 
+  const closeGoalsLimitModal = useCallback(() => setGoalsLimitOpen(false), []);
+
   return {
     goalsData,
     addModalOpen,
+    goalsLimitOpen,
+    closeGoalsLimitModal,
     editModalOpen,
     editGoalId,
     amountModalOpen,

@@ -1,11 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, FlatList, RefreshControl,
-  Pressable, useWindowDimensions,
+  Pressable, useWindowDimensions, StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Bell, Briefcase, Star, BarChart2, TrendingUp, TrendingDown, Eye, EyeOff } from 'lucide-react-native';
+import { Bell, Briefcase, Star, BarChart2, TrendingUp, TrendingDown, Eye, EyeOff, Minus } from 'lucide-react-native';
 import { ProfileCompletionBanner } from '../../components/shared/ProfileCompletionBanner';
 import { BlurNum } from '../../components/ui/BlurNum';
 import { usePrivacyStore } from '../../store/privacyStore';
@@ -44,7 +44,7 @@ function WatchlistCard({ stock, live, onPress }: { stock: Stock; live?: { price:
       onPress={onPress}
       style={({ pressed }) => ({
         backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
-        borderRadius: RADIUS.xl, padding: SPACE.md, minWidth: 120,
+        borderRadius: RADIUS.xl, padding: SPACE.md, width: 130,
         opacity: pressed ? 0.85 : 1,
       })}
     >
@@ -69,31 +69,6 @@ function WatchlistCard({ stock, live, onPress }: { stock: Stock; live?: { price:
   );
 }
 
-// ─── MoverChip ──────────────────────────────────────────────────
-function MoverChip({ s, onPress }: { s: Stock; onPress: () => void }) {
-  const { colors, isRTL } = useTheme();
-  const isUp = s.changePercent >= 0;
-  const clr  = isUp ? GREEN : RED;
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({
-        backgroundColor: isUp ? '#4ade8010' : '#f8717110',
-        borderWidth: 1, borderColor: isUp ? '#4ade8030' : '#f8717130',
-        borderRadius: RADIUS.lg, paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm,
-        flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm, opacity: pressed ? 0.8 : 1,
-      })}
-    >
-      {isUp ? <TrendingUp size={13} color={clr} /> : <TrendingDown size={13} color={clr} />}
-      <View>
-        <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{s.ticker}</Text>
-        <Text style={{ color: clr, fontSize: 11, fontWeight: WEIGHT.semibold, fontVariant: ['tabular-nums'] }}>
-          {isUp ? '+' : ''}{s.changePercent.toFixed(2)}%
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
 
 // ─── SectionHeader ──────────────────────────────────────────────
 function SectionHdr({
@@ -130,7 +105,7 @@ export default function HomePage() {
   const user        = useAuthStore((s) => s.user);
   const unreadCount = useUnreadCount();
 
-  const { stocks, loadingStocks, refreshing: mktRefreshing, refresh: refreshMarket } = useMarketData();
+  const { refreshing: mktRefreshing, refresh: refreshMarket } = useMarketData();
   const { holdings, summary, loading: portLoading, refreshing: portRefreshing, refresh: refreshPortfolio } = usePortfolioData();
   const { items: watchlist, loading: watchlistLoading, refetch: refetchWatchlist } = useWatchlist();
 
@@ -167,14 +142,17 @@ export default function HomePage() {
     return { totalValue, totalCost, totalGainLoss, totalGainLossPercent };
   }, [enrichedHoldings, summary]);
 
-  const topGainers = useMemo(
-    () => [...stocks].filter((s) => s.changePercent > 0).sort((a, b) => b.changePercent - a.changePercent).slice(0, 6),
-    [stocks],
-  );
-  const topLosers = useMemo(
-    () => [...stocks].filter((s) => s.changePercent < 0).sort((a, b) => a.changePercent - b.changePercent).slice(0, 6),
-    [stocks],
-  );
+  const portfolioTopGainer = useMemo(() => {
+    const list = enrichedHoldings.filter((h) => h.sessionChange > 0);
+    if (list.length === 0) return null;
+    return list.reduce((best, h) => h.sessionChange > best.sessionChange ? h : best);
+  }, [enrichedHoldings]);
+
+  const portfolioTopLoser = useMemo(() => {
+    const list = enrichedHoldings.filter((h) => h.sessionChange < 0);
+    if (list.length === 0) return null;
+    return list.reduce((worst, h) => h.sessionChange < worst.sessionChange ? h : worst);
+  }, [enrichedHoldings]);
 
   const isPositive = liveSummary.totalGainLoss >= 0;
   const gainColor  = isPositive ? GREEN : RED;
@@ -384,7 +362,119 @@ export default function HomePage() {
             </View>
           </View>
 
-          {/* ─── 3. Watchlist (horizontal scroll) ──────── */}
+          {/* ─── 3. Session Performance ──────────────── */}
+          {!portLoading && enrichedHoldings.length > 0 && (portfolioTopGainer || portfolioTopLoser) && (
+            <View style={{ paddingHorizontal: SPACE.lg }}>
+              <SectionHdr title={t('dashboard.sessionPerformance')} icon={BarChart2} />
+              <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: SPACE.sm }}>
+
+                {/* Top Gainer */}
+                <Pressable
+                  onPress={() => portfolioTopGainer && router.push(`/stocks/${portfolioTopGainer.ticker}`)}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    backgroundColor: colors.card,
+                    borderRadius: RADIUS.xl,
+                    overflow: 'hidden',
+                    opacity: pressed ? 0.88 : 1,
+                    borderWidth: 1,
+                    borderColor: portfolioTopGainer ? '#4ade8030' : colors.border,
+                  })}
+                >
+                  {/* green tint */}
+                  {portfolioTopGainer && (
+                    <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: '#4ade8009' }} pointerEvents="none" />
+                  )}
+                  <View style={{ padding: SPACE.md, gap: SPACE.xs }}>
+                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: 4 }}>
+                      <View style={{
+                        width: 32, height: 32, borderRadius: RADIUS.md,
+                        backgroundColor: portfolioTopGainer ? '#4ade8022' : colors.hover,
+                        alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <TrendingUp size={15} color={portfolioTopGainer ? '#16a34a' : colors.textMuted} />
+                      </View>
+                      <Text style={{ color: colors.textMuted, fontSize: 10, fontWeight: WEIGHT.semibold }}>
+                        {t('dashboard.topGainer')}
+                      </Text>
+                    </View>
+                    {portfolioTopGainer ? (
+                      <>
+                        <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }}>
+                          <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }}>{portfolioTopGainer.ticker}</Text>
+                          <Text style={{ color: '#16a34a', fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>
+                            +{portfolioTopGainer.sessionChange.toFixed(2)}%
+                          </Text>
+                        </View>
+                        <Text style={{ color: colors.textMuted, fontSize: 11 }} numberOfLines={1}>
+                          {getStockName(portfolioTopGainer.ticker, isRTL ? 'ar' : 'en')}
+                        </Text>
+                      </>
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Minus size={13} color={colors.textMuted} />
+                        <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>{t('dashboard.noGainer')}</Text>
+                      </View>
+                    )}
+                  </View>
+                </Pressable>
+
+                {/* Top Loser */}
+                <Pressable
+                  onPress={() => portfolioTopLoser && router.push(`/stocks/${portfolioTopLoser.ticker}`)}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    backgroundColor: colors.card,
+                    borderRadius: RADIUS.xl,
+                    overflow: 'hidden',
+                    opacity: pressed ? 0.88 : 1,
+                    borderWidth: 1,
+                    borderColor: portfolioTopLoser ? '#f8717130' : colors.border,
+                  })}
+                >
+                  {/* red tint */}
+                  {portfolioTopLoser && (
+                    <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: '#f8717109' }} pointerEvents="none" />
+                  )}
+                  <View style={{ padding: SPACE.md, gap: SPACE.xs }}>
+                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: 4 }}>
+                      <View style={{
+                        width: 32, height: 32, borderRadius: RADIUS.md,
+                        backgroundColor: portfolioTopLoser ? '#f8717122' : colors.hover,
+                        alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <TrendingDown size={15} color={portfolioTopLoser ? '#dc2626' : colors.textMuted} />
+                      </View>
+                      <Text style={{ color: colors.textMuted, fontSize: 10, fontWeight: WEIGHT.semibold }}>
+                        {t('dashboard.topLoser')}
+                      </Text>
+                    </View>
+                    {portfolioTopLoser ? (
+                      <>
+                        <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 6 }}>
+                          <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }}>{portfolioTopLoser.ticker}</Text>
+                          <Text style={{ color: '#dc2626', fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>
+                            {portfolioTopLoser.sessionChange.toFixed(2)}%
+                          </Text>
+                        </View>
+                        <Text style={{ color: colors.textMuted, fontSize: 11 }} numberOfLines={1}>
+                          {getStockName(portfolioTopLoser.ticker, isRTL ? 'ar' : 'en')}
+                        </Text>
+                      </>
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Minus size={13} color={colors.textMuted} />
+                        <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>{t('dashboard.noLoser')}</Text>
+                      </View>
+                    )}
+                  </View>
+                </Pressable>
+
+              </View>
+            </View>
+          )}
+
+          {/* ─── 4. Watchlist (horizontal scroll) ──────── */}
           <View>
             <View style={{ paddingHorizontal: SPACE.lg }}>
               <SectionHdr
@@ -437,44 +527,6 @@ export default function HomePage() {
             )}
           </View>
 
-          {/* ─── 4. Top Movers ───────────────────────────── */}
-          {!loadingStocks && (topGainers.length > 0 || topLosers.length > 0) && (
-            <View style={{ paddingHorizontal: SPACE.lg }}>
-              <SectionHdr
-                title={t('dashboard.topMovers')}
-                icon={BarChart2}
-                action={{ label: t('tabs.market'), onPress: () => router.push('/market') }}
-              />
-              {topGainers.length > 0 && (
-                <View style={{ marginBottom: SPACE.md }}>
-                  <Text style={{ color: GREEN, fontSize: FONT.xs, fontWeight: WEIGHT.semibold, marginBottom: SPACE.sm }}>{t('market.gainers')}</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ gap: SPACE.sm, flexDirection: isRTL ? 'row-reverse' : 'row' }}
-                  >
-                    {topGainers.map((s) => (
-                      <MoverChip key={s.ticker} s={s} onPress={() => router.push(`/stocks/${s.ticker}`)} />
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-              {topLosers.length > 0 && (
-                <View>
-                  <Text style={{ color: RED, fontSize: FONT.xs, fontWeight: WEIGHT.semibold, marginBottom: SPACE.sm }}>{t('market.losers')}</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ gap: SPACE.sm, flexDirection: isRTL ? 'row-reverse' : 'row' }}
-                  >
-                    {topLosers.map((s) => (
-                      <MoverChip key={s.ticker} s={s} onPress={() => router.push(`/stocks/${s.ticker}`)} />
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-          )}
 
         </View>
       </ScrollView>

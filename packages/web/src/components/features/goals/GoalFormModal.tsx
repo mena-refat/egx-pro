@@ -66,6 +66,13 @@ export function GoalFormModal({
       setErr(t('goals.validationAmount'));
       return;
     }
+    if (deadline) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (deadline <= today) {
+        setErr(t('goals.validationDeadlinePast', { defaultValue: 'الموعد النهائي لازم يكون في المستقبل' }));
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       if (mode === 'add') {
@@ -235,6 +242,7 @@ export function GoalFormModal({
             type="date"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
+            min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
           />
           {err && <p className="text-body text-[var(--danger)] mt-2" role="alert" aria-live="polite">{err}</p>}
           <div className="flex gap-3 pt-2">

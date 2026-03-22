@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   BrainCircuit,
@@ -7,7 +8,6 @@ import {
   ChevronLeft,
   Star,
   Plus,
-  ExternalLink,
   Info,
   X,
   Lock,
@@ -16,6 +16,9 @@ import {
   Timer,
   Target,
   Bell,
+  Newspaper,
+  ExternalLink,
+  Clock,
 } from 'lucide-react';
 import { Skeleton } from '../../ui/Skeleton';
 const TradingViewChart = lazy(() => import('./TradingViewChart').then((m) => ({ default: m.TradingViewChart })));
@@ -26,7 +29,7 @@ import { useStockAnalysis } from '../../../hooks/useStockAnalysis';
 import { AnalysisForm } from '../analysis/AnalysisForm';
 import { AnalysisResult } from '../analysis/AnalysisResult';
 import { formatNum, formatBig } from '../analysis/analysisUtils';
-import type { TabId, ChartRange } from '../../../hooks/useStockAnalysis';
+import type { TabId, ChartRange, NewsItem } from '../../../hooks/useStockAnalysis';
 import styles from './StockAnalysis.module.scss';
 import { PriceAlertDialog } from './PriceAlertDialog';
 
@@ -50,6 +53,163 @@ const CHART_RANGES: { id: ChartRange; labelKey: string }[] = [
     { id: '1y', labelKey: 'stockDetail.chartRange1Y' },
     { id: '5y', labelKey: 'stockDetail.chartRange5Y' },
 ];
+
+// ── Stock News Tab ────────────────────────────────────────────────────────────
+function newsAccent(sentiment?: string) {
+  const s = sentiment?.toLowerCase();
+  if (s === 'positive') return { bar: 'bg-emerald-500', badge: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' };
+  if (s === 'negative') return { bar: 'bg-red-500', badge: 'text-red-500 bg-red-500/10 border-red-500/20' };
+  return { bar: 'bg-[var(--border)]', badge: 'text-[var(--text-muted)] bg-[var(--bg-secondary)] border-[var(--border)]' };
+}
+
+function relTime(dateStr: string, locale: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60_000);
+  const h = Math.floor(diff / 3_600_000);
+  const d = Math.floor(diff / 86_400_000);
+  if (m < 60) return locale.startsWith('ar') ? `منذ ${Math.max(1, m)} د` : `${Math.max(1, m)}m ago`;
+  if (h < 24) return locale.startsWith('ar') ? `منذ ${h} س` : `${h}h ago`;
+  return locale.startsWith('ar') ? `منذ ${d} ي` : `${d}d ago`;
+}
+
+function StockNewsModal({ item, isRtl, onClose }: { item: NewsItem; isRtl: boolean; onClose: () => void }) {
+  const accent = newsAccent(item.sentiment);
+  const s = item.sentiment?.toLowerCase();
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div
+        dir={isRtl ? 'rtl' : 'ltr'}
+        className="relative w-full sm:max-w-lg bg-[var(--bg-card)] rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[85vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex justify-center pt-3 sm:hidden">
+          <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
+        </div>
+        <div className={`h-1 w-full ${accent.bar}`} />
+        <div className="px-5 pt-5 pb-8">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${accent.badge}`}>
+                {s === 'positive' && <TrendingUp className="w-3 h-3" />}
+                {s === 'negative' && <TrendingDown className="w-3 h-3" />}
+                {s === 'positive' ? (isRtl ? 'إيجابي' : 'Positive') : s === 'negative' ? (isRtl ? 'سلبي' : 'Negative') : (isRtl ? 'محايد' : 'Neutral')}
+              </span>
+              {item.publishedAt && (
+                <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
+                  <Clock className="w-3 h-3" />
+                  {relTime(item.publishedAt, isRtl ? 'ar' : 'en')}
+                </span>
+              )}
+              {item.source && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border)]">
+                  {item.source}
+                </span>
+              )}
+            </div>
+            <button onClick={onClose} className="shrink-0 w-8 h-8 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center hover:bg-[var(--bg-card-hover)] transition-colors">
+              <X className="w-4 h-4 text-[var(--text-muted)]" />
+            </button>
+          </div>
+          <h2 className="text-base font-bold text-[var(--text-primary)] leading-snug mb-3">{item.title}</h2>
+          {item.summary && (
+            <p className="text-sm text-[var(--text-secondary)] leading-7 mb-5">{item.summary}</p>
+          )}
+          {item.url && (
+            <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--brand)] hover:underline">
+              <ExternalLink className="w-3.5 h-3.5" />
+              {isRtl ? 'اقرأ الخبر كاملاً' : 'Read full article'}
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StockNewsTab({ news, locale, t }: { news: NewsItem[]; locale: string; t: (k: string, o?: object) => string }) {
+  const [selected, setSelected] = useState<NewsItem | null>(null);
+  const isRtl = locale.startsWith('ar');
+
+  if (news.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-16 text-center rounded-2xl border border-[var(--border)] bg-[var(--bg-card)]">
+        <div className="w-14 h-14 rounded-2xl bg-[var(--brand)]/10 flex items-center justify-center">
+          <Newspaper className="w-7 h-7 text-[var(--brand)]" />
+        </div>
+        <p className="text-sm text-[var(--text-muted)]">{t('stockDetail.noNews')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden divide-y divide-[var(--border)]">
+        {news.map((item, idx) => {
+          const accent = newsAccent(item.sentiment);
+          const s = item.sentiment?.toLowerCase();
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setSelected(item)}
+              className="group w-full text-start flex gap-0 hover:bg-[var(--bg-card-hover)] transition-colors duration-150"
+            >
+              <div className={`w-1 shrink-0 ${accent.bar} opacity-70 group-hover:opacity-100 transition-opacity`} />
+              <div className="flex-1 min-w-0 px-4 py-3.5">
+                {/* Top row */}
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${accent.badge}`}>
+                    {s === 'positive' && <TrendingUp className="w-3 h-3" />}
+                    {s === 'negative' && <TrendingDown className="w-3 h-3" />}
+                    {s === 'positive' ? (isRtl ? 'إيجابي' : 'Positive') : s === 'negative' ? (isRtl ? 'سلبي' : 'Negative') : (isRtl ? 'محايد' : 'Neutral')}
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                    <Clock className="w-3 h-3 shrink-0" />
+                    {relTime(item.publishedAt, locale)}
+                  </span>
+                  {item.source && (
+                    <span className="ms-auto text-[10px] font-medium text-[var(--text-muted)] shrink-0">
+                      {item.source}
+                    </span>
+                  )}
+                </div>
+                {/* Title */}
+                <h4 className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-2 group-hover:text-[var(--brand)] transition-colors mb-1.5">
+                  {item.title}
+                </h4>
+                {/* Summary */}
+                {item.summary && (
+                  <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed">
+                    {item.summary}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center pe-3 ps-1 text-[var(--text-muted)] opacity-0 group-hover:opacity-60 transition-opacity shrink-0">
+                <ExternalLink className="w-3.5 h-3.5" />
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {selected && (
+        <StockNewsModal item={selected} isRtl={isRtl} onClose={() => setSelected(null)} />
+      )}
+    </>
+  );
+}
 
 export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
   const navigate = useNavigate();
@@ -115,35 +275,52 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
   const info = getStockInfo(stock.ticker);
   const sector = stock.sector || (info ? getSector(stock.ticker, info.nameAr ?? '', info.nameEn ?? '', lang as 'ar' | 'en') : '');
 
+  const isUp = (stock.changePercent ?? 0) >= 0;
+  const accentGrad = isUp ? 'from-emerald-500/20 via-emerald-400/5 to-transparent' : 'from-red-500/20 via-red-400/5 to-transparent';
+
+  const fadeUp = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
+  const stagger = { show: { transition: { staggerChildren: 0.06 } } };
+
   return (
-    <div className="space-y-0 pb-20" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Fixed Header */}
-      <div className="sticky top-0 z-10 bg-[var(--bg-secondary)] border-b border-[var(--border)] px-4 py-4 -mx-4 mb-6">
-        <div className="flex items-center justify-between gap-2 mb-2">
-        <button 
+    <div className="pb-20" dir={isRTL ? 'rtl' : 'ltr'}>
+
+      {/* ── Hero Header ────────────────────────────────────────────── */}
+      <div className={`relative -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 pt-5 pb-4 bg-gradient-to-b ${accentGrad} border-b border-[var(--border)]`}>
+        {/* Back + actions row */}
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <button
             type="button"
-          onClick={onBack}
-            className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-        >
-          <ChevronLeft className={`w-5 h-5 ${isRTL ? 'rotate-180' : ''}`} />
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <ChevronLeft className={`w-4 h-4 ${isRTL ? 'rotate-180' : ''}`} />
             {t('stockDetail.back')}
           </button>
           <div className="flex items-center gap-2">
-            <span className="font-bold text-[var(--text-primary)]">{stock.ticker}</span>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)] tracking-widest">
+              {stock.ticker}
+            </span>
             <button
               type="button"
               onClick={toggleWatchlist}
-              className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg ${watchlist.includes(stock.ticker) ? 'bg-[var(--warning-bg)] text-[var(--warning)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'}`}
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border transition-all ${
+                watchlist.includes(stock.ticker)
+                  ? 'bg-amber-400/10 border-amber-400/30 text-amber-400'
+                  : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--brand)]/40 hover:text-[var(--brand)]'
+              }`}
             >
-              {watchlist.includes(stock.ticker) ? <Star className="w-3.5 h-3.5 fill-[var(--warning)]" /> : <Plus className="w-3.5 h-3.5" />}
+              <Star className={`w-3.5 h-3.5 ${watchlist.includes(stock.ticker) ? 'fill-amber-400' : ''}`} />
               {watchlist.includes(stock.ticker) ? t('stockDetail.watchlistRemove') : t('stockDetail.watchlistAdd')}
             </button>
             {watchlist.includes(stock.ticker) && (
               <button
                 type="button"
                 onClick={() => setAlertDialogOpen(true)}
-                title={t('stockDetail.priceAlertTitle')}
-                className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg ${watchlistAlert?.targetPrice != null ? 'bg-[var(--brand-bg,#eff6ff)] text-[var(--brand)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'}`}
+                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border transition-all ${
+                  watchlistAlert?.targetPrice != null
+                    ? 'bg-[var(--brand)]/10 border-[var(--brand)]/30 text-[var(--brand)]'
+                    : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--brand)]/40'
+                }`}
               >
                 <Bell className={`w-3.5 h-3.5 ${watchlistAlert?.targetPrice != null ? 'fill-[var(--brand)]' : ''}`} />
                 {watchlistAlert?.targetPrice != null
@@ -153,95 +330,129 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <h1 className="text-xl font-bold text-[var(--text-primary)]">{getStockName(stock.ticker, lang as 'ar' | 'en')}</h1>
+
+        {/* Stock name + badges */}
+        <div className="flex items-start gap-2 flex-wrap mb-3">
+          <h1 className="text-xl font-bold text-[var(--text-primary)] leading-tight">
+            {getStockName(stock.ticker, lang as 'ar' | 'en')}
+          </h1>
           {isSharia && (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--success-bg)] text-[var(--success)]">
+            <span className="mt-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/30 text-emerald-400">
               {t('stockDetail.shariaBadge')}
             </span>
-                )}
-              </div>
-        <div className="flex items-center gap-3 mt-2">
-          <span className="text-2xl font-bold text-[var(--text-primary)]">{formatNum(price)} {t('common.egp')}</span>
-          <span className={`text-sm font-semibold flex items-center gap-0.5 ${(stock.changePercent ?? 0) >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
-            {(stock.changePercent ?? 0) >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-            {(stock.changePercent ?? 0) >= 0 ? '+' : ''}{(stock.changePercent ?? 0).toFixed(2)}% {(stock.change ?? 0) >= 0 ? '+' : ''}{formatNum(stock.change)} ج
+          )}
+        </div>
+
+        {/* Price row */}
+        <div className="flex items-end gap-3 flex-wrap">
+          <span className="text-3xl font-bold tabular-nums text-[var(--text-primary)] tracking-tight">
+            {formatNum(price)}
+            <span className="text-base font-medium text-[var(--text-muted)] ms-1">{t('common.egp')}</span>
           </span>
-                </div>
-        {/* Price status: Live / delayed 10 min / market closed / pre-market */}
-        <div className="flex items-center gap-2 mt-1 text-xs text-[var(--text-muted)]  flex-wrap">
+          <span className={`flex items-center gap-1 text-sm font-bold px-2.5 py-1 rounded-xl tabular-nums ${isUp ? 'bg-emerald-400/12 text-emerald-400' : 'bg-red-400/12 text-red-400'}`}>
+            {isUp ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+            {isUp ? '+' : ''}{(stock.changePercent ?? 0).toFixed(2)}%
+            <span className="opacity-70 text-xs">&nbsp;({isUp ? '+' : ''}{formatNum(stock.change)})</span>
+          </span>
+        </div>
+
+        {/* Price status */}
+        <div className="flex items-center gap-2 mt-2 text-xs text-[var(--text-muted)] flex-wrap">
           {egxStatus?.status === 'closed' && (
             <>
               <span className="inline-flex items-center gap-1">
-                <Circle className="w-3 h-3 text-[var(--text-muted)] fill-[var(--text-muted)]" aria-hidden />
+                <Circle className="w-2.5 h-2.5 fill-[var(--text-muted)] text-[var(--text-muted)]" aria-hidden />
                 {t('delay.marketClosed')}
               </span>
+              <span className="opacity-60">·</span>
               <span>{t('delay.lastCloseAt', { time: '14:30' })}</span>
             </>
           )}
           {egxStatus?.status === 'pre' && (
-            <span className="inline-flex items-center gap-1">
-              <Circle className="w-3 h-3 text-[var(--warning)] fill-[var(--warning)]" aria-hidden />
+            <span className="inline-flex items-center gap-1 text-amber-400">
+              <Circle className="w-2.5 h-2.5 fill-amber-400" aria-hidden />
               {t('delay.preSession')}
             </span>
           )}
           {egxStatus && egxStatus.status !== 'closed' && egxStatus.status !== 'pre' && (
-            <>
-              {priceDetail?.isDelayed ? (
-                <>
-                  <span className="inline-flex items-center gap-1 text-[var(--text-muted)] ">
-                    <Timer className="w-3 h-3" aria-hidden />
-                    {t('delay.delayedBadge')}
+            priceDetail?.isDelayed ? (
+              <>
+                <span className="inline-flex items-center gap-1">
+                  <Timer className="w-3 h-3" aria-hidden />
+                  {t('delay.delayedBadge')}
+                </span>
+                {priceDetail?.priceTime && <span className="opacity-60">· {t('delay.priceAsAt', { time: String(priceDetail.priceTime) })}</span>}
+              </>
+            ) : (
+              <>
+                <span className="inline-flex items-center gap-1 text-emerald-400">
+                  <span className="relative flex w-2 h-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                    <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-400" />
                   </span>
-                  {priceDetail?.priceTime && (
-                    <span>{t('delay.priceAsAt', { time: String(priceDetail.priceTime) })}</span>
-                  )}
-                </>
-              ) : (
-                <>
-                  <span className="inline-flex items-center gap-1 text-[var(--success)]">
-                    <Circle className="w-3 h-3 fill-[var(--success)]" aria-hidden />
-                    {t('delay.liveBadge')}
-                  </span>
-                  <span>{t('delay.lastUpdateAt', { time: (priceDetail?.priceTime as string) || new Date().toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) })}</span>
-                </>
-              )}
-            </>
+                  {t('delay.liveBadge')}
+                </span>
+                <span className="opacity-60">· {t('delay.lastUpdateAt', { time: (priceDetail?.priceTime as string) || new Date().toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' }) })}</span>
+              </>
+            )
           )}
           {!egxStatus && (
             <span>{t('stockDetail.lastUpdate')}: {new Date().toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}</span>
           )}
-            </div>
-            
+        </div>
+
         {showShariaBanner && (
-          <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-[var(--warning)]/30 bg-[var(--warning-bg)] px-3 py-2 text-[var(--warning)] text-sm">
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-amber-400/30 bg-amber-400/8 px-3 py-2.5 text-amber-400 text-sm">
             <span>{t('stockDetail.shariaWarning')}</span>
-            <button type="button" onClick={() => setShariaDismissed(true)} className="font-medium underline">
+            <button type="button" onClick={() => setShariaDismissed(true)} className="text-xs font-semibold underline opacity-80 hover:opacity-100 shrink-0">
               {t('stockDetail.shariaIgnore')}
-                </button>
-              </div>
-            )}
-        {/* Tabs — inside sticky header so they stay visible while scrolling */}
-        <div className="flex gap-1 border-b border-[var(--border)] mt-3 -mx-4 px-4 overflow-x-auto">
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Tabs ───────────────────────────────────────────────────── */}
+      <div className="-mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 pt-1 border-b border-[var(--border)] bg-[var(--bg-secondary)]">
+        <div className="flex gap-0 overflow-x-auto scrollbar-hide">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? 'border-[var(--brand)] text-[var(--brand)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}
+              className={`relative shrink-0 px-5 py-3 text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? 'text-[var(--brand)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+              }`}
             >
               {t(tab.labelKey)}
+              {activeTab === tab.id && (
+                <motion.div
+                  layoutId="tab-indicator"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--brand)] rounded-full"
+                  transition={{ duration: 0.2 }}
+                />
+              )}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="mt-6">
+      {/* ── Tab Content ────────────────────────────────────────────── */}
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.18 }}
+        className="mt-6"
+      >
+
       {/* Tab: Details */}
       {activeTab === 'details' && (
-        <div className="space-y-6">
-          {/* Chart - TradingView */}
-          <section className={styles.chartSection}>
+        <motion.div className="space-y-6" variants={stagger} initial="hidden" animate="show">
+
+          {/* Chart */}
+          <motion.section variants={fadeUp} className={styles.chartSection}>
             <div className={styles.chartSectionHeader}>
               <span className={styles.chartSectionTitle}>{t('stockDetail.chartTitle', { defaultValue: 'الرسم البياني' })}</span>
               <div className={styles.chartSectionRanges}>
@@ -264,199 +475,279 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                   height={440}
                   theme={isDark ? 'dark' : 'light'}
                   locale={lang}
-                  interval={chartRange === '1d' ? '60' : chartRange === '1w' ? 'W' : chartRange === '1mo' ? 'D' : chartRange === '6mo' || chartRange === '1y' || chartRange === '5y' ? 'D' : 'D'}
+                  interval={chartRange === '1d' ? '60' : chartRange === '1w' ? 'W' : 'D'}
                 />
               </Suspense>
             </div>
-          </section>
+          </motion.section>
 
-          {/* Today stats 2x3 */}
-          <section>
-            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.todayStats')}</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                [t('stockDetail.open'), formatNum(open)],
-                [t('stockDetail.previousClose'), formatNum(previousClose)],
-                [t('stockDetail.dayHigh'), formatNum(high)],
-                [t('stockDetail.dayLow'), formatNum(low)],
-                [t('stockDetail.volume'), formatBig(volume)],
-                [t('stockDetail.turnover'), volume && price ? formatBig(volume * price) + ' EGP' : '-'],
-              ].map(([label, val], i) => (
-                <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
-                  <p className="text-xs text-[var(--text-muted)] ">{label}</p>
-                  <p className="font-semibold text-[var(--text-primary)]">{val}</p>
+          {/* Today stats 2×3 */}
+          <motion.section variants={fadeUp}>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3">{t('stockDetail.todayStats')}</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {([
+                [t('stockDetail.open'),          formatNum(open),                                           ''],
+                [t('stockDetail.previousClose'), formatNum(previousClose),                                  ''],
+                [t('stockDetail.dayHigh'),        formatNum(high),                                          'text-emerald-400'],
+                [t('stockDetail.dayLow'),         formatNum(low),                                           'text-red-400'],
+                [t('stockDetail.volume'),         formatBig(volume),                                        ''],
+                [t('stockDetail.turnover'),       volume && price ? formatBig(volume * price) + ' EGP' : '-', ''],
+              ] as [string, string, string][]).map(([label, val, valColor], i) => (
+                <motion.div
+                  key={i}
+                  variants={fadeUp}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-3.5 hover:border-[var(--brand)]/30 transition-colors"
+                >
+                  <p className="text-[11px] text-[var(--text-muted)] mb-1 uppercase tracking-wide">{label}</p>
+                  <p className={`text-sm font-bold tabular-nums text-[var(--text-primary)] ${valColor}`}>{val}</p>
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
+
+          {/* Extended stats */}
+          <motion.section variants={fadeUp}>
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{t('stockDetail.extendedStats')}</h3>
+              <button type="button" onClick={() => setStatsInfoOpen(true)} className="p-1 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)] transition-colors" aria-label="Info">
+                <Info className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
+              {([
+                [t('stockDetail.high52w'),       `${formatNum(high52w)} ج`,   'text-emerald-400'],
+                [t('stockDetail.low52w'),        `${formatNum(low52w)} ج`,    'text-red-400'],
+                [t('stockDetail.marketCap'),     formatBig(stock.marketCap),   ''],
+                [t('stockDetail.dividendYield'), (financials as { dividendYield?: number })?.dividendYield != null ? `${((financials as { dividendYield?: number }).dividendYield * 100).toFixed(2)}%` : '-', ''],
+                [t('stockDetail.eps'),           formatNum((financials as { eps?: number })?.eps),  ''],
+                [t('stockDetail.pe'),            (financials as { pe?: number })?.pe != null ? `${Number((financials as { pe?: number }).pe).toFixed(1)}x` : '-', ''],
+                [t('stockDetail.avgDailyVolume'), formatBig(volume), ''],
+              ] as [string, string, string][]).map(([label, val, valColor], i, arr) => (
+                <div key={i} className={`flex items-center justify-between px-4 py-3 text-sm ${i < arr.length - 1 ? 'border-b border-[var(--border)]' : ''} ${i % 2 === 0 ? '' : 'bg-[var(--bg-secondary)]/40'}`}>
+                  <span className="text-[var(--text-muted)]">{label}</span>
+                  <span className={`font-semibold tabular-nums ${valColor || 'text-[var(--text-primary)]'}`}>{val}</span>
                 </div>
               ))}
-                    </div>
-          </section>
-
-          {/* Extended stats + info modal */}
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('stockDetail.extendedStats')}</h3>
-              <button type="button" onClick={() => setStatsInfoOpen(true)} className="p-1 rounded text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]" aria-label="Info">
-                <Info className="w-4 h-4" />
-              </button>
-                    </div>
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.high52w')}</span><span>{formatNum(high52w)} ج</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.low52w')}</span><span>{formatNum(low52w)} ج</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.marketCap')}</span><span>{formatBig(stock.marketCap)}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.dividendYield')}</span><span>{(financials as { dividendYield?: number })?.dividendYield != null ? `${((financials as { dividendYield?: number }).dividendYield * 100).toFixed(2)}%` : '-'}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.eps')}</span><span>{formatNum((financials as { eps?: number })?.eps)}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.pe')}</span><span>{(financials as { pe?: number })?.pe != null ? `${Number((financials as { pe?: number }).pe).toFixed(1)}x` : '-'}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--text-muted)] ">{t('stockDetail.avgDailyVolume')}</span><span>{formatBig(volume)} ج</span></div>
-                  </div>
-          </section>
+            </div>
+          </motion.section>
 
           {/* Analyst predictions */}
-          <section>
-            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">
-              <Target className="w-4 h-4 text-[var(--brand)]" aria-hidden />
+          <motion.section variants={fadeUp}>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3 flex items-center gap-2">
+              <Target className="w-3.5 h-3.5 text-[var(--brand)]" />
               {t('predictions.analystPredictions')}
             </h3>
-            <button
+            <motion.button
               type="button"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
               onClick={() => navigate(`/predictions?ticker=${encodeURIComponent(stock.ticker)}`)}
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-start hover:bg-[var(--bg-card-hover)] transition-colors flex items-center justify-between gap-2"
+              className="w-full rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--brand)]/40 hover:bg-[var(--bg-card-hover)] transition-all p-4 text-start flex items-center justify-between gap-2"
             >
               <span className="text-sm font-medium text-[var(--text-secondary)]">{t('predictions.viewAllPredictions')}</span>
-              <ChevronLeft className={`w-5 h-5 text-[var(--text-muted)] ${isRTL ? 'rotate-180' : ''}`} aria-hidden />
-            </button>
-          </section>
+              <ChevronLeft className={`w-4 h-4 text-[var(--text-muted)] ${isRTL ? 'rotate-180' : ''}`} />
+            </motion.button>
+          </motion.section>
 
-          {/* Order depth - Pro for full data */}
-          <section className="relative">
-            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">{t('stockDetail.orderDepth')} {!isPro && <Lock className="w-4 h-4 text-[var(--text-muted)]" />}</h3>
-            {orderDepthAvailable ? (
-              <div className="rounded-xl border border-[var(--border)] p-4 text-[var(--text-muted)]  text-sm">-</div>
-            ) : (
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4 text-[var(--text-muted)]  text-sm">{t('stockDetail.orderDepthUnavailable')}</div>
-            )}
-            {!isPro && (
-              <div className="absolute inset-0 top-8 rounded-xl bg-[var(--bg-card)]/70 dark:bg-[var(--bg-primary)]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
-                <Crown className="w-8 h-8 text-[var(--brand)]" />
-                <p className="text-sm font-medium text-[var(--text-primary)]">{t('plan.availableInPro')}</p>
-                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-[var(--brand)] hover:text-[var(--brand-hover)] font-medium">{t('plan.subscribeToAccess')}</button>
+          {/* Order depth */}
+          <motion.section variants={fadeUp}>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3 flex items-center gap-2">
+              {t('stockDetail.orderDepth')}
+              {!isPro && <Lock className="w-3.5 h-3.5" />}
+            </h3>
+            <div className="relative rounded-2xl border border-[var(--border)] overflow-hidden min-h-[120px]">
+              <div className={`p-4 text-sm text-[var(--text-muted)] ${!isPro ? 'blur-sm select-none' : ''}`}>
+                {orderDepthAvailable ? '-' : t('stockDetail.orderDepthUnavailable')}
+              </div>
+              {!isPro && (
+                <div className="absolute inset-0 bg-[var(--bg-card)]/80 backdrop-blur-md flex flex-col items-center justify-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-[var(--brand)]/12 border border-[var(--brand)]/20 flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-[var(--brand)]" />
+                  </div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{t('plan.availableInPro')}</p>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))}
+                    className="text-xs text-[var(--brand)] font-semibold px-4 py-1.5 rounded-xl bg-[var(--brand)]/10 hover:bg-[var(--brand)]/20 border border-[var(--brand)]/20 transition-colors"
+                  >
+                    {t('plan.subscribeToAccess')}
+                  </button>
                 </div>
-            )}
-          </section>
+              )}
+            </div>
+          </motion.section>
 
           {/* Support & Resistance */}
           {pivots && (
-            <section>
-              <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.supportResistance')}</h3>
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-2 text-sm">
-                <p className="text-[var(--text-muted)] ">{t('stockDetail.resistance')}: R3: {formatNum(pivots.r3)} &nbsp; R2: {formatNum(pivots.r2)} &nbsp; R1: {formatNum(pivots.r1)}</p>
-                <p className="font-medium text-[var(--text-primary)] border-t border-b border-[var(--border)] py-2 my-2">{t('stockDetail.currentPrice')}: {formatNum(price)}</p>
-                <p className="text-[var(--text-muted)] ">{t('stockDetail.support')}: S1: {formatNum(pivots.s1)} &nbsp; S2: {formatNum(pivots.s2)} &nbsp; S3: {formatNum(pivots.s3)}</p>
+            <motion.section variants={fadeUp}>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3">{t('stockDetail.supportResistance')}</h3>
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
+                {/* Resistance levels */}
+                {[{ label: 'R3', val: pivots.r3 }, { label: 'R2', val: pivots.r2 }, { label: 'R1', val: pivots.r1 }].map((r) => (
+                  <div key={r.label} className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border)] text-sm">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-red-400/10 text-red-400">{r.label}</span>
+                    <span className="tabular-nums font-medium text-red-400">{formatNum(r.val)}</span>
+                  </div>
+                ))}
+                {/* Current price */}
+                <div className="flex items-center justify-between px-4 py-3 bg-[var(--brand)]/6 border-b border-[var(--border)]">
+                  <span className="text-xs font-bold text-[var(--brand)]">{t('stockDetail.currentPrice')}</span>
+                  <span className="tabular-nums font-bold text-[var(--brand)]">{formatNum(price)}</span>
+                </div>
+                {/* Support levels */}
+                {[{ label: 'S1', val: pivots.s1 }, { label: 'S2', val: pivots.s2 }, { label: 'S3', val: pivots.s3 }].map((s, i, arr) => (
+                  <div key={s.label} className={`flex items-center justify-between px-4 py-2.5 text-sm ${i < arr.length - 1 ? 'border-b border-[var(--border)]' : ''}`}>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-400/10 text-emerald-400">{s.label}</span>
+                    <span className="tabular-nums font-medium text-emerald-400">{formatNum(s.val)}</span>
+                  </div>
+                ))}
               </div>
-            </section>
+            </motion.section>
           )}
 
           {/* Fibonacci */}
           {fibLevels && (
-            <section>
-              <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.fibonacci')}</h3>
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-1 text-sm font-mono">
-                <p>100%: {formatNum(fibLevels.p100)}</p>
-                <p>78.6%: {formatNum(fibLevels.p786)}</p>
-                <p>61.8%: {formatNum(fibLevels.p618)}</p>
-                <p>50%: {formatNum(fibLevels.p50)}</p>
-                <p>38.2%: {formatNum(fibLevels.p382)}</p>
-                <p>23.6%: {formatNum(fibLevels.p236)}</p>
-                <p>0%: {formatNum(fibLevels.p0)}</p>
+            <motion.section variants={fadeUp}>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3">{t('stockDetail.fibonacci')}</h3>
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
+                {([
+                  ['100%', fibLevels.p100,  'bg-red-400/15 text-red-400'],
+                  ['78.6%', fibLevels.p786, 'bg-orange-400/15 text-orange-400'],
+                  ['61.8%', fibLevels.p618, 'bg-amber-400/15 text-amber-400'],
+                  ['50%',   fibLevels.p50,  'bg-[var(--brand)]/15 text-[var(--brand)]'],
+                  ['38.2%', fibLevels.p382, 'bg-sky-400/15 text-sky-400'],
+                  ['23.6%', fibLevels.p236, 'bg-emerald-400/15 text-emerald-400'],
+                  ['0%',    fibLevels.p0,   'bg-emerald-500/15 text-emerald-500'],
+                ] as [string, number, string][]).map(([pct, val, cls], i, arr) => (
+                  <div key={pct} className={`flex items-center justify-between px-4 py-2.5 text-sm ${i < arr.length - 1 ? 'border-b border-[var(--border)]' : ''}`}>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-md font-mono ${cls}`}>{pct}</span>
+                    <span className="tabular-nums font-medium text-[var(--text-primary)] font-mono">{formatNum(val)}</span>
+                  </div>
+                ))}
               </div>
-            </section>
+            </motion.section>
           )}
 
           {/* About company */}
-          <section>
-            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.aboutCompany')}</h3>
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-2">
+          <motion.section variants={fadeUp}>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3">{t('stockDetail.aboutCompany')}</h3>
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-3">
               <div>
-                <p className="font-medium text-[var(--text-primary)]">{getStockName(stock.ticker, lang as 'ar' | 'en')}</p>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">{info?.nameEn}</p>
+                <p className="font-bold text-[var(--text-primary)]">{getStockName(stock.ticker, lang as 'ar' | 'en')}</p>
+                {info?.nameEn && <p className="text-xs text-[var(--text-muted)] mt-0.5">{info.nameEn}</p>}
               </div>
               <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 {((lang === 'ar' ? info?.descriptionAr : info?.descriptionEn)
-                  ?? info?.descriptionAr
-                  ?? info?.descriptionEn
-                  ?? stock.description)
+                  ?? info?.descriptionAr ?? info?.descriptionEn ?? stock.description)
                   || t('stockDetail.defaultDescription')}
               </p>
-              <p className="text-xs text-[var(--text-muted)] pt-1 border-t border-[var(--border)]">{t('stockDetail.listedIn')}: EGX | {sector}</p>
+              <div className="pt-2 border-t border-[var(--border)] flex items-center gap-2 flex-wrap">
+                <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--bg-secondary)] text-[var(--text-muted)] font-medium">EGX</span>
+                {sector && <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--brand)]/8 text-[var(--brand)] font-medium">{sector}</span>}
+              </div>
             </div>
-          </section>
+          </motion.section>
 
-          {/* أسهم من نفس القطاع - حتى 5 أسهم */}
-          <section>
-            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.similarSector')}</h3>
-            <p className="text-xs text-[var(--text-muted)] mb-3">{effectiveSectorLabel ? t('stockDetail.sameSectorDesc', { sector: effectiveSectorLabel, defaultValue: `أسهم أخرى من قطاع: ${effectiveSectorLabel}` }) : '-'}</p>
+          {/* Similar sector */}
+          <motion.section variants={fadeUp}>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1">{t('stockDetail.similarSector')}</h3>
+            {effectiveSectorLabel && (
+              <p className="text-xs text-[var(--text-muted)] mb-3">{t('stockDetail.sameSectorDesc', { sector: effectiveSectorLabel, defaultValue: effectiveSectorLabel })}</p>
+            )}
             {sameSectorStocks.length > 0 ? (
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'thin' }}>
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {sameSectorStocks.map((s) => {
                   const ch = s.changePercent ?? 0;
-                  const isUp = ch >= 0;
+                  const isStockUp = ch >= 0;
                   return (
-                    <button
+                    <motion.button
                       key={s.ticker}
                       type="button"
+                      whileHover={{ scale: 1.03, y: -2 }}
+                      whileTap={{ scale: 0.97 }}
                       onClick={() => navigate(`/stocks/${s.ticker}`)}
-                      className="flex-shrink-0 w-[140px] rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-3 text-start hover:border-[var(--brand)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                      className="flex-shrink-0 w-[148px] rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-3.5 text-start hover:border-[var(--brand)]/40 transition-colors"
                     >
-                      <p className="text-label font-semibold text-[var(--text-primary)] truncate">{s.ticker}</p>
+                      <div className={`w-8 h-8 rounded-xl mb-2.5 flex items-center justify-center text-xs font-bold text-white ${isStockUp ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                        {s.ticker.slice(0, 2)}
+                      </div>
+                      <p className="text-sm font-bold text-[var(--text-primary)] truncate">{s.ticker}</p>
                       <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">{getStockName(s.ticker, lang as 'ar' | 'en')}</p>
-                      <p className="text-sm font-bold tabular-nums text-[var(--text-primary)] mt-2">{(s.price ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {t('common.egp')}</p>
-                      <span className={`inline-block text-xs font-semibold tabular-nums mt-1 ${isUp ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
-                        {isUp ? '+' : ''}{(ch).toFixed(2)}%
+                      <p className="text-sm font-bold tabular-nums text-[var(--text-primary)] mt-2">{(s.price ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                      <span className={`inline-block text-xs font-bold tabular-nums mt-0.5 px-1.5 py-0.5 rounded-md ${isStockUp ? 'bg-emerald-400/10 text-emerald-400' : 'bg-red-400/10 text-red-400'}`}>
+                        {isStockUp ? '+' : ''}{ch.toFixed(2)}%
                       </span>
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
             ) : (
-              <p className="text-sm text-[var(--text-muted)] rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">{t('stockDetail.noSameSector', { defaultValue: 'لا توجد أسهم أخرى من نفس القطاع في القائمة الحالية.' })}</p>
+              <p className="text-sm text-[var(--text-muted)] rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-4">{t('stockDetail.noSameSector', { defaultValue: 'لا توجد أسهم أخرى من نفس القطاع.' })}</p>
             )}
-          </section>
-        </div>
+          </motion.section>
+        </motion.div>
       )}
 
-      {/* Tab: Statistics - advanced stats Pro */}
+      {/* Tab: Statistics */}
       {activeTab === 'stats' && (
-        <div className="space-y-6">
-          <section className="relative">
-            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-1 flex items-center gap-2">{t('stockDetail.investorCategories')} {!isPro && <Lock className="w-4 h-4 text-[var(--text-muted)]" />}</h3>
-            <p className="text-xs text-[var(--text-muted)]  mb-3">{t('stockDetail.investorCategoriesDesc')}</p>
-            {investorCategoriesAvailable ? (
-              <div className="rounded-xl border border-[var(--border)] p-4 text-sm">-</div>
-            ) : (
-              <p className="text-sm text-[var(--text-muted)]  rounded-xl border border-[var(--border)] p-4">{t('stockDetail.investorCategoriesUnavailable')}</p>
-            )}
-            {!isPro && (
-              <div className="absolute inset-0 top-14 rounded-xl bg-[var(--bg-card)]/70 dark:bg-[var(--bg-primary)]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
-                <Crown className="w-8 h-8 text-[var(--brand)]" />
-                <p className="text-sm font-medium text-[var(--text-primary)]">{t('plan.availableInPro')}</p>
-                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-[var(--brand)] hover:text-[var(--brand-hover)] font-medium">{t('plan.subscribeToAccess')}</button>
-                  </div>
-            )}
-          </section>
-          <section className="relative">
-            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">{t('stockDetail.tradingStats')} {!isPro && <Lock className="w-4 h-4 text-[var(--text-muted)]" />}</h3>
-            {tradingStatsAvailable ? (
-              <div className="rounded-xl border border-[var(--border)] p-4 text-sm">-</div>
-            ) : (
-              <p className="text-sm text-[var(--text-muted)]  rounded-xl border border-[var(--border)] p-4">{t('stockDetail.tradingStatsUnavailable')}</p>
-            )}
-            {!isPro && (
-              <div className="absolute inset-0 top-12 rounded-xl bg-[var(--bg-card)]/70 dark:bg-[var(--bg-primary)]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-4">
-                <Crown className="w-8 h-8 text-[var(--brand)]" />
-                <p className="text-sm font-medium text-[var(--text-primary)]">{t('plan.availableInPro')}</p>
-                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))} className="text-xs text-[var(--brand)] hover:text-[var(--brand-hover)] font-medium">{t('plan.subscribeToAccess')}</button>
+        <motion.div className="space-y-6" variants={stagger} initial="hidden" animate="show">
+          {/* Investor Categories */}
+          <motion.section variants={fadeUp}>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1 flex items-center gap-2">
+              {t('stockDetail.investorCategories')}
+              {!isPro && <Lock className="w-3.5 h-3.5" />}
+            </h3>
+            <p className="text-xs text-[var(--text-muted)] mb-3">{t('stockDetail.investorCategoriesDesc')}</p>
+            <div className="relative rounded-2xl border border-[var(--border)] overflow-hidden min-h-[120px]">
+              <div className="p-4 text-sm text-[var(--text-muted)] blur-sm select-none">
+                {investorCategoriesAvailable ? '-' : t('stockDetail.investorCategoriesUnavailable')}
               </div>
-            )}
-          </section>
-        </div>
+              {!isPro && (
+                <div className="absolute inset-0 bg-[var(--bg-card)]/80 backdrop-blur-md flex flex-col items-center justify-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-[var(--brand)]/12 border border-[var(--brand)]/20 flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-[var(--brand)]" />
+                  </div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{t('plan.availableInPro')}</p>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))}
+                    className="text-xs text-[var(--brand)] font-semibold px-4 py-1.5 rounded-xl bg-[var(--brand)]/10 hover:bg-[var(--brand)]/20 border border-[var(--brand)]/20 transition-colors"
+                  >
+                    {t('plan.subscribeToAccess')}
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.section>
+
+          {/* Trading Stats */}
+          <motion.section variants={fadeUp}>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3 flex items-center gap-2">
+              {t('stockDetail.tradingStats')}
+              {!isPro && <Lock className="w-3.5 h-3.5" />}
+            </h3>
+            <div className="relative rounded-2xl border border-[var(--border)] overflow-hidden min-h-[120px]">
+              <div className="p-4 text-sm text-[var(--text-muted)] blur-sm select-none">
+                {tradingStatsAvailable ? '-' : t('stockDetail.tradingStatsUnavailable')}
+              </div>
+              {!isPro && (
+                <div className="absolute inset-0 bg-[var(--bg-card)]/80 backdrop-blur-md flex flex-col items-center justify-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-[var(--brand)]/12 border border-[var(--brand)]/20 flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-[var(--brand)]" />
+                  </div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{t('plan.availableInPro')}</p>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))}
+                    className="text-xs text-[var(--brand)] font-semibold px-4 py-1.5 rounded-xl bg-[var(--brand)]/10 hover:bg-[var(--brand)]/20 border border-[var(--brand)]/20 transition-colors"
+                  >
+                    {t('plan.subscribeToAccess')}
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.section>
+        </motion.div>
       )}
 
       {/* Tab: AI */}
@@ -479,56 +770,52 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
 
       {/* Tab: News */}
       {activeTab === 'news' && (
-        <div className="space-y-4">
-          {news.length === 0 ? (
-            <p className="text-center py-12 text-[var(--text-muted)] ">{t('stockDetail.noNews')}</p>
-          ) : (
-            news.map((item, idx) => (
-              <a key={idx} href={item.url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 hover:border-[var(--brand)] transition-colors">
-                <div className="flex items-center justify-between text-xs text-[var(--text-muted)]  mb-2">
-                  <span>{item.source}</span>
-                  <span>{new Date(item.publishedAt).toLocaleString(i18n.language)}</span>
-            </div>
-                <h4 className="font-medium text-[var(--text-primary)] mb-2">{item.title}</h4>
-                <span className="text-sm text-[var(--brand)] font-medium inline-flex items-center gap-1">{t('stockDetail.readMore')} <ExternalLink className="w-4 h-4" /></span>
-              </a>
-            ))
-          )}
-        </div>
+        <StockNewsTab news={news} locale={i18n.language} t={t as (k: string, o?: object) => string} />
       )}
 
-      {/* Analysis limit reached - Pro upsell modal */}
+      </motion.div>{/* end tab content */}
+
+      {/* Analysis limit modal */}
       {showAnalysisLimitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowAnalysisLimitModal(false)}>
-          <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
-            <BrainCircuit className="w-12 h-12 text-[var(--brand)] mx-auto mb-4" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowAnalysisLimitModal(false)}>
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="bg-[var(--bg-card)] rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border border-[var(--border)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-[var(--brand)]/10 flex items-center justify-center mx-auto mb-4">
+              <BrainCircuit className="w-7 h-7 text-[var(--brand)]" />
+            </div>
             <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">{t('plan.analysisLimitTitle')}</h3>
             <p className="text-sm text-[var(--text-secondary)] mb-6">{t('plan.analysisLimitBody')}</p>
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              <button type="button" onClick={() => { setShowAnalysisLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-[var(--text-inverse)] rounded-xl font-bold text-sm">
+            <div className="flex flex-col gap-2">
+              <button type="button" onClick={() => { setShowAnalysisLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-xl font-bold text-sm transition-colors">
                 {t('plan.subscribeNow')}
               </button>
-              <button type="button" onClick={() => setShowAnalysisLimitModal(false)} className="px-4 py-2.5 border border-[var(--border)] text-[var(--text-secondary)] rounded-xl font-medium text-sm hover:bg-[var(--bg-card-hover)]">
+              <button type="button" onClick={() => setShowAnalysisLimitModal(false)} className="px-4 py-2.5 border border-[var(--border)] text-[var(--text-secondary)] rounded-xl font-medium text-sm hover:bg-[var(--bg-card-hover)] transition-colors">
                 {t('plan.waitNextMonth')}
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
 
       {showWatchlistLimitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowWatchlistLimitModal(false)}>
-          <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowWatchlistLimitModal(false)}>
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="bg-[var(--bg-card)] rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border border-[var(--border)]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <p className="text-sm text-[var(--text-secondary)] mb-6">{t('plan.watchlistLimitMessage')}</p>
             <div className="flex gap-2 justify-center">
-              <button type="button" onClick={() => { setShowWatchlistLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-[var(--text-inverse)] rounded-xl font-bold text-sm">{t('plan.subscribeNow')}</button>
-              <button type="button" onClick={() => setShowWatchlistLimitModal(false)} className="px-4 py-2.5 border border-[var(--border)] rounded-xl font-medium text-sm">{t('plan.cancel')}</button>
+              <button type="button" onClick={() => { setShowWatchlistLimitModal(false); window.dispatchEvent(new CustomEvent('navigate-to-subscription')); }} className="px-4 py-2.5 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-xl font-bold text-sm transition-colors">{t('plan.subscribeNow')}</button>
+              <button type="button" onClick={() => setShowWatchlistLimitModal(false)} className="px-4 py-2.5 border border-[var(--border)] rounded-xl font-medium text-sm hover:bg-[var(--bg-card-hover)] transition-colors">{t('plan.cancel')}</button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
 
-      {/* Price Alert Dialog */}
       <PriceAlertDialog
         isOpen={alertDialogOpen}
         onClose={() => setAlertDialogOpen(false)}
@@ -540,23 +827,27 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
         isRTL={isRTL}
       />
 
-      {/* Stats glossary modal */}
       {statsInfoOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setStatsInfoOpen(false)}>
-          <div className="bg-[var(--bg-card)] rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setStatsInfoOpen(false)}>
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="bg-[var(--bg-card)] rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6 border border-[var(--border)]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[var(--text-primary)]">{t('stockDetail.statsInfo')}</h3>
-              <button type="button" onClick={() => setStatsInfoOpen(false)} className="p-1 rounded hover:bg-[var(--bg-card-hover)]" aria-label={t('common.close')}><X className="w-5 h-5" aria-hidden="true" /></button>
+              <h3 className="text-base font-bold text-[var(--text-primary)]">{t('stockDetail.statsInfo')}</h3>
+              <button type="button" onClick={() => setStatsInfoOpen(false)} className="p-1.5 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors" aria-label={t('common.close')}>
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <ul className="text-sm text-[var(--text-secondary)] space-y-2">
-              <li><strong>{t('stockDetail.open')}:</strong> {t('stockDetail.openDesc')}</li>
-              <li><strong>P/E:</strong> {t('stockDetail.peDesc')}</li>
-              <li><strong>EPS:</strong> {t('stockDetail.epsDesc')}</li>
+            <ul className="text-sm text-[var(--text-secondary)] space-y-3">
+              <li><strong className="text-[var(--text-primary)]">{t('stockDetail.open')}:</strong> {t('stockDetail.openDesc')}</li>
+              <li><strong className="text-[var(--text-primary)]">P/E:</strong> {t('stockDetail.peDesc')}</li>
+              <li><strong className="text-[var(--text-primary)]">EPS:</strong> {t('stockDetail.epsDesc')}</li>
             </ul>
+          </motion.div>
         </div>
-      </div>
       )}
-      </div>{/* end mt-6 tab content wrapper */}
     </div>
   );
 }

@@ -10,7 +10,7 @@ export type StockHistoryPoint = {
   volume: number;
 };
 
-export type HistoryRange = '1w' | '1mo' | '3mo' | '6mo' | '1y';
+export type HistoryRange = '1w' | '1mo' | '3mo' | '6mo' | '1y' | '5y';
 
 export function useStockHistory(ticker?: string) {
   const [range, setRange] = useState<HistoryRange>('1mo');

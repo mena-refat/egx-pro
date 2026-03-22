@@ -240,7 +240,7 @@ export function SubscriptionTab() {
       </motion.div>
 
       {/* ── Billing period toggle ── */}
-      <motion.div variants={fadeUp} className="flex items-center w-fit">
+      <motion.div variants={fadeUp} className="flex items-center justify-center w-full">
         <div className="relative flex items-center gap-0 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border)]">
           {(['monthly', 'yearly'] as BillingPeriod[]).map((p) => (
             <button

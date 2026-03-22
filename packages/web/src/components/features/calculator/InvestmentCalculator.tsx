@@ -15,12 +15,12 @@ type Mode = 'growth' | 'target' | 'trade';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MONTHLY_MIN  = 500;
-const MONTHLY_MAX  = 100_000;
-const MONTHLY_STEP = 500;
+const MONTHLY_MIN  = 0;
+const MONTHLY_MAX  = 500_000;
+const MONTHLY_STEP = 1_000;
 const INITIAL_MIN  = 0;
-const INITIAL_MAX  = 500_000;
-const INITIAL_STEP = 5_000;
+const INITIAL_MAX  = 5_000_000;
+const INITIAL_STEP = 50_000;
 const YEARS_MIN    = 1;
 const YEARS_MAX    = 30;
 
@@ -91,10 +91,22 @@ function calcTrade(buyPrice: number, shares: number, sellPrice: number, brokerPc
 
 function fmt(n: number, digits = 1): string {
   if (!Number.isFinite(n)) return '0';
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(digits)}B`;
+  if (n >= 1_000_000)     return `${(n / 1_000_000).toFixed(digits)}M`;
+  if (n >= 1_000)         return `${(n / 1_000).toFixed(digits)}K`;
+  return Math.round(n).toLocaleString('en-US');
+}
+
+function fmtAr(n: number, digits = 1): string {
+  if (!Number.isFinite(n)) return '0';
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(digits)} مليار`;
   if (n >= 1_000_000)     return `${(n / 1_000_000).toFixed(digits)} مليون`;
   if (n >= 1_000)         return `${(n / 1_000).toFixed(digits)} ألف`;
   return Math.round(n).toLocaleString('en-US');
+}
+
+function fmtSmart(n: number, isAr: boolean, digits = 1): string {
+  return isAr ? fmtAr(n, digits) : fmt(n, digits);
 }
 
 function fmtFull(n: number): string {
@@ -142,6 +154,15 @@ function getMotivationalMessage(total: number, t: (k: string) => string): string
   return t('calculator.msgTop');
 }
 
+function getMilestone(total: number, t: (k: string) => string): string {
+  if (total < 100_000)    return t('calculator.milestoneBegin');
+  if (total < 500_000)    return t('calculator.milestoneSteady');
+  if (total < 1_000_000)  return t('calculator.milestoneMillion');
+  if (total < 5_000_000)  return t('calculator.milestoneMillionaire');
+  if (total < 10_000_000) return t('calculator.milestoneWealth');
+  return t('calculator.milestoneElite');
+}
+
 // ─── AnimatedNumber ───────────────────────────────────────────────────────────
 
 function AnimatedNumber({ value, duration = 600, className = '', prefix = '', suffix = '' }: {
@@ -172,22 +193,35 @@ function AnimatedNumber({ value, duration = 600, className = '', prefix = '', su
 
 // ─── Shared form components ───────────────────────────────────────────────────
 
-/** Number input that matches the site's Input component styling */
-function CalcInput({ label, value, onChange, suffix = 'ج.م', placeholder = '0', hint }: {
+/** Formats a raw numeric string with thousands commas when not focused */
+function formatNumStr(raw: string, focused: boolean): string {
+  if (focused || !raw) return raw;
+  const [intPart, decPart] = raw.split('.');
+  const int = parseInt(intPart || '0', 10);
+  if (isNaN(int)) return raw;
+  const formatted = int.toLocaleString('en-US');
+  return decPart !== undefined ? `${formatted}.${decPart}` : formatted;
+}
+
+function CalcInput({ label, value, onChange, suffix, placeholder = '0', hint }: {
   label: string; value: string; onChange: (v: string) => void;
-  suffix?: string; placeholder?: string; hint?: string;
+  suffix: string; placeholder?: string; hint?: string;
 }) {
+  const [focused, setFocused] = useState(false);
   return (
     <div className="space-y-1.5">
       <label className="block text-sm font-medium text-[var(--text-secondary)]">{label}</label>
       <div className="relative flex items-center">
         <input
-          type="number"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          type="text"
+          inputMode="decimal"
+          value={formatNumStr(value, focused)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onChange={(e) => onChange(e.target.value.replace(/,/g, ''))}
           placeholder={placeholder}
           dir="ltr"
-          className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-body pe-14 ps-3 py-2.5 font-number tabular-nums text-right placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-body pe-14 ps-3 py-2.5 font-number tabular-nums text-right placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)] focus:border-transparent"
         />
         <span className="pointer-events-none absolute end-3 text-xs font-medium text-[var(--text-muted)]">{suffix}</span>
       </div>
@@ -196,10 +230,32 @@ function CalcInput({ label, value, onChange, suffix = 'ج.م', placeholder = '0'
   );
 }
 
+/** Number input for slider rows — plain number while editing, commas when blurred */
+function NumericBox({ value, onChange, className }: {
+  value: number; onChange: (v: number) => void; className?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={focused ? String(value) : value.toLocaleString('en-US')}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      onChange={(e) => {
+        const v = Number(e.target.value.replace(/[^0-9]/g, ''));
+        if (!isNaN(v)) onChange(v);
+      }}
+      className={className}
+    />
+  );
+}
+
 function YearPills({ value, onChange }: { value: number; onChange: (y: number) => void }) {
+  const { t } = useTranslation('common');
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-[var(--text-secondary)]">مدة الاستثمار</label>
+      <label className="block text-sm font-medium text-[var(--text-secondary)]">{t('calculator.durationLabel')}</label>
       <div className="flex flex-wrap gap-1.5">
         {YEAR_PRESETS.map((y) => (
           <button
@@ -210,7 +266,7 @@ function YearPills({ value, onChange }: { value: number; onChange: (y: number) =
                 : 'bg-[var(--bg-secondary)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--brand)]/50 hover:text-[var(--text-primary)]'
             }`}
           >
-            {y}س
+            {y}{t('calculator.yearSuffix')}
           </button>
         ))}
       </div>
@@ -219,15 +275,16 @@ function YearPills({ value, onChange }: { value: number; onChange: (y: number) =
 }
 
 function RatePills({ value, onChange }: { value: number; onChange: (r: number) => void }) {
+  const { t } = useTranslation('common');
   const [custom, setCustom] = useState('');
   const OPTIONS = [
-    { label: 'محافظ',  sublabel: 'Conservative', rate: 12 },
-    { label: 'متوازن', sublabel: 'Moderate',     rate: 22 },
-    { label: 'متفائل', sublabel: 'Optimistic',   rate: 38 },
+    { labelKey: 'calculator.rateConservative', rate: 12 },
+    { labelKey: 'calculator.rateModerate',     rate: 22 },
+    { labelKey: 'calculator.rateOptimistic',   rate: 38 },
   ];
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-[var(--text-secondary)]">العائد السنوي المتوقع</label>
+      <label className="block text-sm font-medium text-[var(--text-secondary)]">{t('calculator.rateLabel')}</label>
       <div className="grid grid-cols-4 gap-2">
         {OPTIONS.map((o) => (
           <button
@@ -239,15 +296,14 @@ function RatePills({ value, onChange }: { value: number; onChange: (r: number) =
                 : 'bg-[var(--bg-secondary)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--brand)]/50 hover:bg-[var(--bg-card-hover)]'
             }`}
           >
-            <span className="text-[10px] font-medium leading-none mb-1">{o.label}</span>
+            <span className="text-[10px] font-medium leading-none mb-1">{t(o.labelKey)}</span>
             <span className="text-base font-bold font-number">{o.rate}%</span>
           </button>
         ))}
-        {/* Custom */}
         <div className={`flex flex-col items-center py-2.5 rounded-xl border transition-all ${
           custom ? 'bg-[var(--brand)]/8 border-[var(--brand)] shadow-sm' : 'bg-[var(--bg-secondary)] border-[var(--border)]'
         }`}>
-          <span className="text-[10px] font-medium leading-none mb-1 text-[var(--text-muted)]">مخصص</span>
+          <span className="text-[10px] font-medium leading-none mb-1 text-[var(--text-muted)]">{t('calculator.rateCustom')}</span>
           <div className="flex items-baseline gap-0.5">
             <input
               type="number" value={custom}
@@ -259,7 +315,7 @@ function RatePills({ value, onChange }: { value: number; onChange: (r: number) =
           </div>
         </div>
       </div>
-      <p className="text-[11px] text-[var(--text-muted)]">متوسطات تاريخية تقريبية للبورصة المصرية — ليست ضماناً</p>
+      <p className="text-[11px] text-[var(--text-muted)]">{t('calculator.rateNote')}</p>
     </div>
   );
 }
@@ -268,7 +324,7 @@ function RatePills({ value, onChange }: { value: number; onChange: (r: number) =
 
 function StatCard({ label, value, color, icon: Icon }: {
   label: string; value: string; color: string;
-  icon?: React.ComponentType<{ size: number; className?: string }>;
+  icon?: React.ComponentType<{ size: number }>;
 }) {
   return (
     <div className="card-base p-4 flex items-center gap-3">
@@ -294,6 +350,7 @@ function GrowthMode() {
   const { t, i18n } = useTranslation('common');
   const locale  = i18n.language.startsWith('ar') ? 'ar-EG' : 'en';
   const isRTL   = i18n.language.startsWith('ar');
+  const isAr    = isRTL;
 
   const [monthly,  setMonthly ] = useState(5000);
   const [initial,  setInitial ] = useState(0);
@@ -301,42 +358,35 @@ function GrowthMode() {
   const [returnId, setReturnId] = useState<'conservative' | 'moderate' | 'optimistic'>('moderate');
   const [showBreakdown, setShowBreakdown] = useState(false);
 
-  const annualRate    = RETURN_OPTIONS.find((o) => o.id === returnId)?.rate ?? 25;
-  const result        = useMemo(() => calcGrowth(monthly, initial, years, annualRate), [monthly, initial, years, annualRate]);
-  const data          = useMemo(() => chartData(monthly, initial, years, annualRate),  [monthly, initial, years, annualRate]);
-  const breakdown     = useMemo(() => yearByYear(monthly, initial, years, annualRate), [monthly, initial, years, annualRate]);
-  const compareBank   = useMemo(() => calcGrowth(monthly, initial, years, 8),          [monthly, initial, years]);
-  const compareGold   = useMemo(() => calcGrowth(monthly, initial, years, 12),         [monthly, initial, years]);
-  const message       = getMotivationalMessage(result.total, t);
+  const annualRate   = RETURN_OPTIONS.find((o) => o.id === returnId)?.rate ?? 25;
+  const result       = useMemo(() => calcGrowth(monthly, initial, years, annualRate), [monthly, initial, years, annualRate]);
+  const data         = useMemo(() => chartData(monthly, initial, years, annualRate),  [monthly, initial, years, annualRate]);
+  const breakdown    = useMemo(() => yearByYear(monthly, initial, years, annualRate), [monthly, initial, years, annualRate]);
+  const compareBank  = useMemo(() => calcGrowth(monthly, initial, years, 8),          [monthly, initial, years]);
+  const compareGold  = useMemo(() => calcGrowth(monthly, initial, years, 12),         [monthly, initial, years]);
+  const message      = getMotivationalMessage(result.total, t);
+  const milestone    = getMilestone(result.total, t);
   const currencyShort = t('calculator.currencyShort');
-
-  const multiplier = result.invested > 0 ? result.total / result.invested : 1;
-  const milestone =
-    result.total < 100_000   ? '🌱 ابدأ الرحلة'
-    : result.total < 500_000   ? '📈 نمو واعد'
-    : result.total < 1_000_000 ? '🚀 على أعتاب المليون'
-    : result.total < 5_000_000 ? '💰 مليونير'
-    : result.total < 10_000_000 ? '👑 ثروة حقيقية'
-    : '🏆 حكيم مالي';
+  const multiplier   = result.invested > 0 ? result.total / result.invested : 1;
 
   return (
     <div
       className={`grid gap-8 lg:gap-10 lg:grid-cols-[1fr_1fr] ${isRTL ? 'lg:grid-flow-dense' : ''}`}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
-      {/* ── LEFT: Results ───────────────────────────────────────── */}
+      {/* ── LEFT: Results ─────────────────────────────────────────── */}
       <div className={`space-y-5 ${isRTL ? 'lg:col-start-2' : 'lg:col-start-1'}`}>
 
-        {/* Badges row */}
+        {/* Badges */}
         <div className="flex items-center flex-wrap gap-2">
           <span className="inline-flex items-center px-3 py-1 rounded-full bg-[var(--brand-subtle)] border border-[var(--brand)]/20 text-[var(--brand-text)] text-sm font-semibold">
             {milestone}
           </span>
           <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[var(--brand-subtle)] border border-[var(--brand)]/20 text-[var(--brand-text)] text-xs font-bold font-number">
-            ×{multiplier.toFixed(1)} أضعاف
+            {t('calculator.badgeMultiplier', { n: multiplier.toFixed(1) })}
           </span>
           <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[var(--success-bg)] border border-[var(--success)]/20 text-[var(--success-text)] text-xs font-bold font-number">
-            +{result.profitPct.toFixed(0)}%
+            {t('calculator.badgeReturn', { n: result.profitPct.toFixed(0) })}
           </span>
         </div>
 
@@ -404,13 +454,9 @@ function GrowthMode() {
                 dataKey="year"
                 tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
                 tickLine={false} axisLine={false}
-                tickFormatter={(v) => (locale.startsWith('ar') ? `${v}س` : `${v}y`)}
+                tickFormatter={(v) => isAr ? `${v}${t('calculator.yearSuffix')}` : `${v}${t('calculator.yearSuffix')}`}
               />
-              <YAxis
-                tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                tickLine={false} axisLine={false}
-                tickFormatter={formatAxis}
-              />
+              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={formatAxis} />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length || label == null) return null;
@@ -470,7 +516,7 @@ function GrowthMode() {
             className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] transition-colors"
           >
             <BarChart2 size={14} className="text-[var(--brand)] shrink-0" />
-            <span className="flex-1 text-start">جدول النمو السنوي</span>
+            <span className="flex-1 text-start">{t('calculator.breakdownToggle')}</span>
             {showBreakdown ? <ChevronUp size={14} className="text-[var(--text-muted)]" /> : <ChevronDown size={14} className="text-[var(--text-muted)]" />}
           </button>
           {showBreakdown && (
@@ -478,19 +524,19 @@ function GrowthMode() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)] bg-[var(--bg-secondary)]">
-                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] text-center w-14">سنة</th>
-                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] text-end">استثمرته</th>
-                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--success-text)] text-end">إجمالي</th>
-                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--brand-text)] text-end">ربح</th>
+                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] text-center w-14">{t('calculator.breakdownYear')}</th>
+                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] text-end">{t('calculator.breakdownInvested')}</th>
+                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--success-text)] text-end">{t('calculator.breakdownTotal')}</th>
+                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--brand-text)] text-end">{t('calculator.breakdownProfit')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {breakdown.map((row, idx) => (
                     <tr key={idx} className={`border-b border-[var(--border-subtle)] last:border-0 ${idx % 2 === 1 ? 'bg-[var(--bg-secondary)]/40' : ''}`}>
                       <td className="px-4 py-2 text-[var(--text-muted)] text-center font-number">{idx + 1}</td>
-                      <td className="px-4 py-2 text-[var(--text-secondary)] text-end font-number tabular-nums">{fmt(row.invested, 0)}</td>
-                      <td className="px-4 py-2 text-[var(--success-text)] font-semibold text-end font-number tabular-nums">{fmt(row.total, 0)}</td>
-                      <td className="px-4 py-2 text-[var(--brand-text)] font-semibold text-end font-number tabular-nums">+{fmt(row.profit, 0)}</td>
+                      <td className="px-4 py-2 text-[var(--text-secondary)] text-end font-number tabular-nums">{fmtSmart(row.invested, isAr, 0)}</td>
+                      <td className="px-4 py-2 text-[var(--success-text)] font-semibold text-end font-number tabular-nums">{fmtSmart(row.total, isAr, 0)}</td>
+                      <td className="px-4 py-2 text-[var(--brand-text)] font-semibold text-end font-number tabular-nums">+{fmtSmart(row.profit, isAr, 0)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -502,7 +548,7 @@ function GrowthMode() {
         <p className="text-xs text-[var(--text-muted)] leading-relaxed">{t('calculator.disclaimer')}</p>
       </div>
 
-      {/* ── RIGHT: Controls ──────────────────────────────────────── */}
+      {/* ── RIGHT: Controls ───────────────────────────────────────── */}
       <div className={`space-y-7 ${isRTL ? 'lg:col-start-1' : 'lg:col-start-2'}`}>
         <div>
           <h2 className="text-2xl font-bold text-[var(--text-primary)]">{t('calculator.title')}</h2>
@@ -519,12 +565,11 @@ function GrowthMode() {
               onChange={(e) => setMonthly(Number(e.target.value))}
               className="flex-1 h-2 rounded-full cursor-pointer accent-[var(--brand)] bg-[var(--bg-secondary)]"
             />
-            <input
-              type="number" min={0} step={500} value={monthly}
-              onChange={(e) => { const v = Number(e.target.value); if (!isNaN(v) && v >= 0) setMonthly(v); }}
-              className="w-24 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-sm font-bold font-number tabular-nums text-center px-2 py-2 shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--brand)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            <NumericBox
+              value={monthly} onChange={(v) => setMonthly(v)}
+              className="w-28 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-sm font-bold font-number tabular-nums text-center px-2 py-2 shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
             />
-            <span className="text-xs text-[var(--text-muted)] shrink-0 w-6">{currencyShort}</span>
+            <span className="text-xs text-[var(--text-muted)] shrink-0 w-8">{currencyShort}</span>
           </div>
           <div className="flex justify-between text-[11px] text-[var(--text-muted)] font-number" dir="ltr">
             <span>{MONTHLY_MIN.toLocaleString()}</span>
@@ -534,9 +579,7 @@ function GrowthMode() {
 
         {/* Initial capital */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-[var(--text-secondary)]">
-            {t('calculator.initialLabel')}
-          </label>
+          <label className="block text-sm font-medium text-[var(--text-secondary)]">{t('calculator.initialLabel')}</label>
           <div className="flex items-center gap-2" dir="ltr">
             <input
               type="range" min={INITIAL_MIN} max={INITIAL_MAX} step={INITIAL_STEP}
@@ -544,14 +587,13 @@ function GrowthMode() {
               onChange={(e) => setInitial(Number(e.target.value))}
               className="flex-1 h-2 rounded-full cursor-pointer accent-[var(--brand)] bg-[var(--bg-secondary)]"
             />
-            <input
-              type="number" min={0} step={5000} value={initial}
-              onChange={(e) => { const v = Number(e.target.value); if (!isNaN(v) && v >= 0) setInitial(v); }}
-              className="w-24 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-sm font-bold font-number tabular-nums text-center px-2 py-2 shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--brand)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            <NumericBox
+              value={initial} onChange={(v) => setInitial(v)}
+              className="w-28 rounded-xl border border-[var(--border)] bg-[var(--bg-input)] text-[var(--text-primary)] text-sm font-bold font-number tabular-nums text-center px-2 py-2 shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
             />
-            <span className="text-xs text-[var(--text-muted)] shrink-0 w-6">{currencyShort}</span>
+            <span className="text-xs text-[var(--text-muted)] shrink-0 w-8">{currencyShort}</span>
           </div>
-          <div className="flex justify-between text-[11px] text-[var(--text-muted)] font-number">
+          <div className="flex justify-between text-[11px] text-[var(--text-muted)] font-number" dir="ltr">
             <span>{INITIAL_MIN.toLocaleString()}</span>
             <span>{INITIAL_MAX.toLocaleString()}</span>
           </div>
@@ -616,6 +658,11 @@ function GrowthMode() {
 // ─── Mode: Target ─────────────────────────────────────────────────────────────
 
 function TargetMode() {
+  const { t, i18n } = useTranslation('common');
+  const isRTL = i18n.language.startsWith('ar');
+  const isAr  = isRTL;
+  const cu    = t('calculator.currencyUnit');
+
   const [targetStr,  setTargetStr ] = useState('1000000');
   const [initialStr, setInitialStr] = useState('0');
   const [years,      setYears     ] = useState(10);
@@ -639,17 +686,26 @@ function TargetMode() {
   const alreadyReached = initialAmt >= targetAmt && targetAmt > 0;
 
   return (
-    <div className="grid gap-8 lg:gap-10 lg:grid-cols-[1fr_1fr]" dir="rtl">
+    <div className="grid gap-8 lg:gap-10 lg:grid-cols-[1fr_1fr]" dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* ── Left: Inputs ────────────────────────────────────────── */}
       <div className="space-y-5">
         <div>
-          <h2 className="text-xl font-bold text-[var(--text-primary)]">احسب هدفك المالي</h2>
-          <p className="text-sm text-[var(--text-muted)] mt-1">كم تحتاج تدخر شهرياً للوصول لرقم معين؟</p>
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">{t('calculator.targetTitle')}</h2>
+          <p className="text-sm text-[var(--text-muted)] mt-1">{t('calculator.targetSubtitle')}</p>
         </div>
         <div className="card-base card-elevated p-5 space-y-5">
-          <CalcInput label="الهدف المالي" value={targetStr}  onChange={setTargetStr}  hint="كم تريد أن تمتلك في النهاية؟" placeholder="1,000,000" />
-          <CalcInput label="رأس المال الابتدائي" value={initialStr} onChange={setInitialStr} hint="ما تملكه الآن — اتركه صفراً إن لم يكن لديك" />
+          <CalcInput
+            label={t('calculator.targetAmount')}
+            value={targetStr} onChange={setTargetStr}
+            suffix={cu} hint={t('calculator.targetAmountHint')}
+            placeholder="1,000,000"
+          />
+          <CalcInput
+            label={t('calculator.initialCapital')}
+            value={initialStr} onChange={setInitialStr}
+            suffix={cu} hint={t('calculator.targetInitialHint')}
+          />
           <YearPills value={years} onChange={setYears} />
           <RatePills value={rate}  onChange={setRate} />
         </div>
@@ -662,8 +718,8 @@ function TargetMode() {
           <div className="card-base p-6 border-[var(--success)]/30 bg-[var(--success-bg)] flex items-center gap-4">
             <Trophy size={28} className="text-[var(--success)] shrink-0" />
             <div>
-              <p className="font-bold text-[var(--success-text)]">وصلت هدفك بالفعل! 🎉</p>
-              <p className="text-sm text-[var(--text-muted)] mt-0.5">رأس مالك الحالي يتجاوز الهدف المطلوب.</p>
+              <p className="font-bold text-[var(--success-text)]">{t('calculator.targetReached')}</p>
+              <p className="text-sm text-[var(--text-muted)] mt-0.5">{t('calculator.targetReachedSub')}</p>
             </div>
           </div>
         ) : (
@@ -671,21 +727,23 @@ function TargetMode() {
             <div className="absolute w-56 h-56 -top-12 -right-12 bg-emerald-500 opacity-[0.06] blur-3xl rounded-full pointer-events-none" />
             <div className="relative">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-500/70 mb-1">
-                لتصل إلى {fmt(targetAmt)} ج.م خلال {years} سنة
+                {t('calculator.targetHeroLabel', { amount: `${fmtSmart(targetAmt, isAr)} ${cu}`, years })}
               </p>
               <p className="text-4xl font-bold font-number tabular-nums text-emerald-400 leading-none">
-                {fmt(monthly)}
+                {fmtSmart(monthly, isAr)}
               </p>
-              <p className="text-lg text-emerald-400/80 font-medium mt-1">ج.م / شهر</p>
-              <p className="text-sm text-emerald-500/55 mt-1 font-number">({fmtFull(monthly)} جنيه شهرياً)</p>
+              <p className="text-lg text-emerald-400/80 font-medium mt-1">{cu} {t('calculator.targetPerMonth')}</p>
+              <p className="text-sm text-emerald-500/55 mt-1 font-number">
+                {t('calculator.targetMonthlyFull', { amount: fmtFull(monthly) })}
+              </p>
             </div>
           </div>
         )}
 
         {!alreadyReached && (
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="إجمالي الإيداعات" value={`${fmt(check.invested)} ج.م`} color="var(--text-secondary)" icon={Wallet} />
-            <StatCard label="الأرباح المتوقعة" value={`${fmt(check.profit)} ج.م`}  color="var(--success)"        icon={TrendingUp} />
+            <StatCard label={t('calculator.targetDeposits')}      value={`${fmtSmart(check.invested, isAr)} ${cu}`} color="var(--text-secondary)" icon={Wallet} />
+            <StatCard label={t('calculator.targetExpectedProfit')} value={`${fmtSmart(check.profit, isAr)} ${cu}`}  color="var(--success)"        icon={TrendingUp} />
           </div>
         )}
 
@@ -695,20 +753,14 @@ function TargetMode() {
             <div className="w-7 h-7 rounded-lg bg-[var(--brand-subtle)] flex items-center justify-center shrink-0">
               <Repeat2 size={13} className="text-[var(--brand)]" />
             </div>
-            <h4 className="text-sm font-semibold text-[var(--text-primary)]">قاعدة الـ 72</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-primary)]">{t('calculator.rule72Title')}</h4>
           </div>
           <p className="text-sm text-[var(--text-muted)] leading-relaxed">
-            بمعدل{' '}
-            <span className="text-[var(--brand)] font-bold font-number">{rate}%</span>
-            {' '}سنوياً — استثمارك يتضاعف كل{' '}
-            <span className="text-emerald-500 font-bold font-number">{yearsToDouble} سنة</span>
-            {' '}تقريباً.
+            {t('calculator.rule72Text', { rate, years: yearsToDouble ?? '—' })}
           </p>
         </div>
 
-        <p className="text-[11px] text-[var(--text-muted)] text-center">
-          ⚖️ للأغراض التعليمية فقط. العوائد الفعلية تختلف.
-        </p>
+        <p className="text-[11px] text-[var(--text-muted)] text-center">{t('calculator.educationalNote')}</p>
       </div>
     </div>
   );
@@ -716,14 +768,11 @@ function TargetMode() {
 
 // ─── Mode: Trade ──────────────────────────────────────────────────────────────
 
-const EGX_FEES = [
-  { label: 'عمولة السمسارة',    key: 'broker' as const },
-  { label: 'رسوم الهيئة (FRA)', key: 'fra'    as const },
-  { label: 'رسوم MCSD',          key: 'mcsd'   as const },
-  { label: 'رسوم الدمغة',        key: 'stamp'  as const },
-];
-
 function TradeMode() {
+  const { t, i18n } = useTranslation('common');
+  const isRTL = i18n.language.startsWith('ar');
+  const cu    = t('calculator.currencyUnit');
+
   const [buyPrice,  setBuyPrice ] = useState('10.00');
   const [shares,    setShares   ] = useState('1000');
   const [sellPrice, setSellPrice] = useState('12.50');
@@ -738,24 +787,33 @@ function TradeMode() {
   const result   = useMemo(() => (bp > 0 && sh > 0 ? calcTrade(bp, sh, sp, bk) : null), [bp, sh, sp, bk]);
   const isProfit = (result?.netProfit ?? 0) >= 0;
 
+  const EGX_FEES = [
+    { label: t('calculator.tradeFeesBroker'), key: 'broker' as const },
+    { label: t('calculator.tradeFeesFRA'),    key: 'fra'    as const },
+    { label: t('calculator.tradeFeesMCSD'),   key: 'mcsd'   as const },
+    { label: t('calculator.tradeFeesStamp'),  key: 'stamp'  as const },
+  ];
+
   return (
-    <div className="grid gap-8 lg:gap-10 lg:grid-cols-[1fr_1fr]" dir="rtl">
+    <div className="grid gap-8 lg:gap-10 lg:grid-cols-[1fr_1fr]" dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* ── Left: Inputs ────────────────────────────────────────── */}
       <div className="space-y-5">
         <div>
-          <h2 className="text-xl font-bold text-[var(--text-primary)]">حاسبة رسوم التداول</h2>
-          <p className="text-sm text-[var(--text-muted)] mt-1">احسب صافي ربحك وسعر التعادل بعد رسوم البورصة المصرية</p>
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">{t('calculator.tradeTitle')}</h2>
+          <p className="text-sm text-[var(--text-muted)] mt-1">{t('calculator.tradeSubtitle')}</p>
         </div>
         <div className="card-base card-elevated p-5 space-y-5">
           <div className="grid grid-cols-2 gap-4">
-            <CalcInput label="سعر الشراء"  value={buyPrice}  onChange={setBuyPrice}  placeholder="0.00" />
-            <CalcInput label="سعر البيع"   value={sellPrice} onChange={setSellPrice} placeholder="0.00" />
+            <CalcInput label={t('calculator.tradeBuyPrice')}  value={buyPrice}  onChange={setBuyPrice}  suffix={cu} placeholder="0.00" />
+            <CalcInput label={t('calculator.tradeSellPrice')} value={sellPrice} onChange={setSellPrice} suffix={cu} placeholder="0.00" />
           </div>
-          <CalcInput label="عدد الأسهم" value={shares} onChange={setShares} suffix="سهم" hint="عدد الأسهم المشتراة" />
-
+          <CalcInput
+            label={t('calculator.tradeShares')} value={shares} onChange={setShares}
+            suffix={isRTL ? 'سهم' : 'shares'} hint={t('calculator.tradeSharesHint')}
+          />
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-[var(--text-secondary)]">نسبة عمولة السمسار</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)]">{t('calculator.tradeBrokerLabel')}</label>
             <div className="flex flex-wrap gap-2">
               {['0.175', '0.25', '0.35', '0.5'].map((v) => (
                 <button key={v} type="button" onClick={() => setBrokerPct(v)}
@@ -783,49 +841,39 @@ function TradeMode() {
               <div className="card-base p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Wallet size={13} className="text-[var(--text-muted)]" />
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">قيمة الشراء</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">{t('calculator.tradeBuyValue')}</p>
                 </div>
                 <p className="text-lg font-bold font-number tabular-nums text-[var(--text-primary)]">{fmtFull(result.buyVal)}</p>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">ج.م</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{cu}</p>
               </div>
               <div className="card-base p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp size={13} className="text-[var(--text-muted)]" />
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">قيمة البيع</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">{t('calculator.tradeSellValue')}</p>
                 </div>
                 <p className="text-lg font-bold font-number tabular-nums text-[var(--text-primary)]">{fmtFull(result.sellVal)}</p>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">ج.م</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{cu}</p>
               </div>
             </div>
 
             {/* Net profit */}
-            <div className={`card-base card-elevated p-5 relative overflow-hidden ${
-              isProfit ? 'border-[var(--success)]/25' : 'border-[var(--danger)]/25'
-            }`}>
-              <div className={`absolute inset-0 pointer-events-none ${
-                isProfit ? 'bg-emerald-500/4' : 'bg-red-500/4'
-              }`} />
+            <div className={`card-base card-elevated p-5 relative overflow-hidden ${isProfit ? 'border-[var(--success)]/25' : 'border-[var(--danger)]/25'}`}>
+              <div className={`absolute inset-0 pointer-events-none ${isProfit ? 'bg-emerald-500/4' : 'bg-red-500/4'}`} />
               <div className="relative flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-                  isProfit ? 'bg-[var(--success-bg)]' : 'bg-[var(--danger-bg)]'
-                }`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isProfit ? 'bg-[var(--success-bg)]' : 'bg-[var(--danger-bg)]'}`}>
                   {isProfit
                     ? <TrendingUp  size={20} className="text-[var(--success)]" />
                     : <TrendingDown size={20} className="text-[var(--danger)]" />}
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                    {isProfit ? 'صافي الربح بعد الرسوم' : 'صافي الخسارة بعد الرسوم'}
+                    {isProfit ? t('calculator.tradeNetProfit') : t('calculator.tradeNetLoss')}
                   </p>
-                  <p className={`text-2xl font-bold font-number tabular-nums mt-0.5 ${
-                    isProfit ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'
-                  }`}>
-                    {isProfit ? '+' : ''}{fmtFull(result.netProfit)} ج.م
+                  <p className={`text-2xl font-bold font-number tabular-nums mt-0.5 ${isProfit ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'}`}>
+                    {isProfit ? '+' : ''}{fmtFull(result.netProfit)} {cu}
                   </p>
-                  <p className={`text-sm font-number mt-0.5 ${
-                    isProfit ? 'text-[var(--success)]/70' : 'text-[var(--danger)]/70'
-                  }`}>
-                    عائد: {result.roi.toFixed(2)}%
+                  <p className={`text-sm font-number mt-0.5 ${isProfit ? 'text-[var(--success)]/70' : 'text-[var(--danger)]/70'}`}>
+                    {t('calculator.tradeROI', { n: result.roi.toFixed(2) })}
                   </p>
                 </div>
               </div>
@@ -837,13 +885,13 @@ function TradeMode() {
                 <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
                   <Target size={13} className="text-amber-500" />
                 </div>
-                <h4 className="text-sm font-semibold text-[var(--text-primary)]">سعر التعادل</h4>
+                <h4 className="text-sm font-semibold text-[var(--text-primary)]">{t('calculator.tradeBreakEven')}</h4>
               </div>
-              <p className="text-2xl font-bold font-number tabular-nums text-amber-500">{fmtPrice(result.breakEven)} <span className="text-base font-medium">ج.م</span></p>
+              <p className="text-2xl font-bold font-number tabular-nums text-amber-500">
+                {fmtPrice(result.breakEven)} <span className="text-base font-medium">{cu}</span>
+              </p>
               <p className="text-sm text-[var(--text-muted)] mt-1.5 leading-relaxed">
-                لو باعت بـ{' '}
-                <span className="text-amber-500 font-semibold font-number">{fmtPrice(result.breakEven)}</span>
-                {' '}أو أقل — لن تحقق أي ربح بعد الرسوم.
+                {t('calculator.tradeBreakEvenHint', { price: fmtPrice(result.breakEven) })}
               </p>
             </div>
 
@@ -855,9 +903,9 @@ function TradeMode() {
                 className="w-full flex items-center gap-2.5 px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] transition-colors"
               >
                 <AlertCircle size={14} className="text-amber-500 shrink-0" />
-                <span className="flex-1 text-start">تفاصيل رسوم التداول</span>
+                <span className="flex-1 text-start">{t('calculator.tradeFeesToggle')}</span>
                 <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold font-number">
-                  {fmtFull(result.totalFees)} ج.م
+                  {fmtFull(result.totalFees)} {cu}
                 </span>
                 {showFees ? <ChevronUp size={14} className="text-[var(--text-muted)]" /> : <ChevronDown size={14} className="text-[var(--text-muted)]" />}
               </button>
@@ -868,19 +916,16 @@ function TradeMode() {
                     const fees = side === 'buy' ? result.buyFees : result.sellFees;
                     return (
                       <div key={side} className={sideIdx === 0 ? 'border-b border-[var(--border)]' : ''}>
-                        <div className={`px-4 py-2.5 bg-[var(--bg-secondary)]/60 flex items-center justify-between`}>
+                        <div className="px-4 py-2.5 bg-[var(--bg-secondary)]/60 flex items-center justify-between">
                           <p className={`text-xs font-bold uppercase tracking-wider ${side === 'buy' ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'}`}>
-                            رسوم {side === 'buy' ? 'الشراء' : 'البيع'}
-                          </p>
-                          <p className={`text-xs font-bold font-number ${side === 'buy' ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'}`}>
-                            {fmtFull(fees.total)} ج.م
+                            {t(side === 'buy' ? 'calculator.tradeFeesBuySide' : 'calculator.tradeFeesSellSide', { amount: `${fmtFull(fees.total)} ${cu}` })}
                           </p>
                         </div>
                         <div className="px-4 py-2 space-y-2">
                           {EGX_FEES.map(({ label, key }) => (
                             <div key={key} className="flex items-center justify-between text-sm">
                               <span className="text-[var(--text-muted)]">{label}</span>
-                              <span className="text-[var(--text-secondary)] font-number tabular-nums">{fmtFull(fees[key])} ج.م</span>
+                              <span className="text-[var(--text-secondary)] font-number tabular-nums">{fmtFull(fees[key])} {cu}</span>
                             </div>
                           ))}
                         </div>
@@ -888,8 +933,8 @@ function TradeMode() {
                     );
                   })}
                   <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-secondary)]/40 border-t border-[var(--border)]">
-                    <span className="text-sm font-bold text-[var(--text-primary)]">إجمالي الرسوم</span>
-                    <span className="text-sm font-bold font-number tabular-nums text-amber-500">{fmtFull(result.totalFees)} ج.م</span>
+                    <span className="text-sm font-bold text-[var(--text-primary)]">{t('calculator.tradeFeesTotal')}</span>
+                    <span className="text-sm font-bold font-number tabular-nums text-amber-500">{fmtFull(result.totalFees)} {cu}</span>
                   </div>
                 </div>
               )}
@@ -898,38 +943,28 @@ function TradeMode() {
         ) : (
           <div className="card-base p-8 flex flex-col items-center justify-center text-center gap-3 min-h-[200px]">
             <BarChart2 size={28} className="text-[var(--text-muted)]" />
-            <p className="text-sm text-[var(--text-muted)]">أدخل بيانات الصفقة لحساب النتائج</p>
+            <p className="text-sm text-[var(--text-muted)]">{t('calculator.tradeEmptyState')}</p>
           </div>
         )}
 
-        <p className="text-[11px] text-[var(--text-muted)] text-center">
-          ⚖️ للأغراض التعليمية فقط. العوائد الفعلية تختلف. تحقق دائماً من مصادر متعددة.
-        </p>
+        <p className="text-[11px] text-[var(--text-muted)] text-center">{t('calculator.educationalNote')}</p>
       </div>
     </div>
   );
 }
 
-// ─── Mode tabs config ─────────────────────────────────────────────────────────
-
-const MODES: {
-  id: Mode;
-  label: string;
-  sublabel: string;
-  Icon: React.ComponentType<{ size: number; className?: string }>;
-  color: string;
-}[] = [
-  { id: 'growth', label: 'نمو',   sublabel: 'Growth',  Icon: TrendingUp, color: 'var(--brand)' },
-  { id: 'target', label: 'هدف',   sublabel: 'Target',  Icon: Target,     color: '#10b981'     },
-  { id: 'trade',  label: 'تداول', sublabel: 'Trading', Icon: BarChart2,  color: '#f59e0b'     },
-];
-
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export default function InvestmentCalculator() {
   const [mode, setMode] = useState<Mode>('growth');
-  const { i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const isRTL = i18n.language.startsWith('ar');
+
+  const MODES = [
+    { id: 'growth' as Mode, labelKey: 'calculator.modeGrowth', sublabel: 'Growth',  Icon: TrendingUp, color: 'var(--brand)' },
+    { id: 'target' as Mode, labelKey: 'calculator.modeTarget', sublabel: 'Target',  Icon: Target,     color: '#10b981'     },
+    { id: 'trade'  as Mode, labelKey: 'calculator.modeTrade',  sublabel: 'Trading', Icon: BarChart2,  color: '#f59e0b'     },
+  ];
 
   const active = MODES.find((m) => m.id === mode)!;
 
@@ -938,31 +973,28 @@ export default function InvestmentCalculator() {
 
       {/* ── Mode tab bar ─────────────────────────────────────────── */}
       <div className="card-base card-elevated p-1.5 flex gap-1">
-        {MODES.map(({ id, label, sublabel, Icon, color }) => {
+        {MODES.map(({ id, labelKey, Icon, color }) => {
           const isActive = mode === id;
           return (
             <button
               key={id}
               type="button"
               onClick={() => setMode(id)}
-              className={`flex-1 flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-sm font-semibold transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all ${
                 isActive
                   ? 'bg-[var(--bg-primary)] shadow-md'
                   : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-secondary)]'
               }`}
               style={isActive ? { color } : undefined}
             >
-              <Icon size={16} className={isActive ? '' : 'opacity-70'} />
-              <span>{label}</span>
-              <span className={`hidden sm:inline text-[11px] font-normal opacity-60`}>
-                {sublabel}
-              </span>
+              <Icon size={16} />
+              {t(labelKey)}
             </button>
           );
         })}
       </div>
 
-      {/* ── Thin color bar indicator ─────────────────────────────── */}
+      {/* ── Thin color bar ───────────────────────────────────────── */}
       <div className="h-px w-full rounded-full opacity-30 -mt-4" style={{ background: active.color }} />
 
       {/* ── Mode content ─────────────────────────────────────────── */}

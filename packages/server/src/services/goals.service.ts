@@ -26,7 +26,7 @@ export const GoalsService = {
     const planUser = await UserRepository.getPlanUser(user.id);
     if (!planUser) throw new AppError('UNAUTHORIZED', 401);
     const goalsLimit = getLimit(planUser, 'goals');
-    const count = await GoalsRepository.countByUser(user.id);
+    const count = await GoalsRepository.countActiveByUser(user.id);
     if (count >= (typeof goalsLimit === 'number' ? goalsLimit : 0))
       throw new AppError('GOAL_LIMIT_REACHED', 403);
 
