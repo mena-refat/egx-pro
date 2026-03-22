@@ -14,3 +14,4 @@ export { login, changePassword } from './auth.login.service.ts';
 export { twoFaAuthenticate, twoFaSetup, twoFaVerify, twoFaDisable } from './auth.twofa.service.ts';
 export { refresh, logout, logoutAll, getSessions, revokeSession, getMe } from './auth.tokens.service.ts';
 export { getGoogleUrl, googleCallback } from './auth.google.service.ts';
+export { setupPin, removePin, loginWithPin } from './auth.pin.service.ts';

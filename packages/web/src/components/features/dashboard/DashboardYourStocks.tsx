@@ -6,6 +6,7 @@ import { Skeleton } from '../../ui/Skeleton';
 import EmptyState from '../../shared/EmptyState';
 import type { PortfolioHolding } from '../../../types/portfolio';
 import { getStockName } from '../../../lib/egxStocks';
+import { BlurNum } from '../../ui/BlurNum';
 
 type Props = {
   holdings: PortfolioHolding[];
@@ -206,20 +207,20 @@ export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings,
                   <span className="text-body font-semibold text-[var(--text-primary)] truncate">{getStockName(holding.ticker, lang) || holding.ticker}</span>
                 </div>
                 <span className="text-center font-number tabular-nums text-[var(--text-primary)]">
-                  {holding.shares.toLocaleString()}
+                  <BlurNum>{holding.shares.toLocaleString()}</BlurNum>
                 </span>
                 <span className="text-center font-number tabular-nums text-[var(--text-primary)]">
-                  {formatPrice(holding.avgPrice)} <span className="text-label text-[var(--text-muted)]">EGP</span>
+                  <BlurNum>{formatPrice(holding.avgPrice)}</BlurNum> <span className="text-label text-[var(--text-muted)]">EGP</span>
                 </span>
                 <span className="text-center font-number tabular-nums text-[var(--text-primary)]">
-                  {formatPrice(currentPrice)} <span className="text-label text-[var(--text-muted)]">EGP</span>
+                  <BlurNum>{formatPrice(currentPrice)}</BlurNum> <span className="text-label text-[var(--text-muted)]">EGP</span>
                 </span>
                 <span className="text-center font-number tabular-nums text-[var(--text-primary)]">
-                  {formatEgp(totalValue)} <span className="text-label text-[var(--text-muted)]">EGP</span>
+                  <BlurNum>{formatEgp(totalValue)}</BlurNum> <span className="text-label text-[var(--text-muted)]">EGP</span>
                 </span>
                 <span className={`text-center inline-flex items-center justify-center gap-1 font-semibold tabular-nums ${returnColor}`}>
                   {isProfit ? <TrendingUp className="w-4 h-4 shrink-0" /> : isLoss ? <TrendingDown className="w-4 h-4 shrink-0" /> : null}
-                  ({isProfit ? '+' : ''}{gainPercent.toFixed(2)}%) {isProfit ? '+' : ''}{formatEgp(gainEgp)} EGP
+                  ({isProfit ? '+' : ''}{gainPercent.toFixed(2)}%) <BlurNum>{isProfit ? '+' : ''}{formatEgp(gainEgp)} EGP</BlurNum>
                 </span>
               </div>
             );

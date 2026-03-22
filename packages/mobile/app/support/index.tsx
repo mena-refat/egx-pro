@@ -4,11 +4,11 @@ import { ArrowLeft, ArrowRight, LifeBuoy, Plus, Lock, AlertCircle } from 'lucide
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
 import { BRAND } from '../../lib/theme';
-import { useSupportPage } from './useSupportPage';
-import { CreateTicketForm } from './components/CreateTicketForm';
-import { TicketDetail } from './components/TicketDetail';
-import { SupportTicketList } from './components/SupportTicketList';
-import { SupportLockedBanner } from './components/SupportLockedBanner';
+import { useSupportPage } from '../../hooks/useSupportPage';
+import { CreateTicketForm } from '../../components/features/support/CreateTicketForm';
+import { TicketDetail } from '../../components/features/support/TicketDetail';
+import { SupportTicketList } from '../../components/features/support/SupportTicketList';
+import { SupportLockedBanner } from '../../components/features/support/SupportLockedBanner';
 
 export default function SupportPage() {
   const router = useRouter();

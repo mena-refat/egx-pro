@@ -1,29 +1,22 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  View, Text, FlatList, Pressable, RefreshControl,
-  TextInput, useWindowDimensions,
+  View, Text, Pressable, ScrollView, RefreshControl,
 } from 'react-native';
-import type { ListRenderItem } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
-  Search, ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp,
   BarChart2, Eye, EyeOff, DollarSign,
   Newspaper, TrendingUp, TrendingDown, Clock,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
+import { StocksHeroCard } from '../../components/features/market/StocksHeroCard';
 import { MarketStatusBadge } from '../../components/shared/MarketStatusBadge';
-import StockRow from '../../components/shared/StockRow';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useTheme } from '../../hooks/useTheme';
 import { useMarketData } from '../../hooks/useMarketData';
-import { useLivePrices } from '../../hooks/useLivePrices';
-import { getStockName } from '../../lib/egxStocks';
 import { BRAND, BRAND_BG_STRONG, GREEN, RED, FONT, WEIGHT, RADIUS, SPACE } from '../../lib/theme';
-import type { Stock, MarketOverview, CommodityData } from '../../types/stock';
-import MarketTrendFilter, { type TrendTab, type MarketTrendCounts } from '../../components/features/stocks/MarketTrendFilter';
-
-const ITEM_HEIGHT = 65;
+import type { MarketOverview, CommodityData } from '../../types/stock';
 
 function n(v: number, d = 0) {
   return v.toLocaleString('en-US', { maximumFractionDigits: d });
@@ -48,11 +41,8 @@ function IndexCard({ label, value, changePercent }: { label: string; value: numb
   return (
     <View style={{
       backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1,
-      borderRadius: RADIUS.lg,
-      paddingHorizontal: SPACE.md,
-      paddingVertical: SPACE.md,
-      width: '100%',
-      minHeight: 76,
+      borderRadius: RADIUS.lg, paddingHorizontal: SPACE.md, paddingVertical: SPACE.md,
+      width: '100%', minHeight: 76,
     }}>
       <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 5 }}>{label}</Text>
       <Text style={{ color: colors.text, fontSize: FONT.md, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>
@@ -198,8 +188,6 @@ function CommoditiesSection({ overview }: { overview: MarketOverview }) {
   const silverBuy   = silver?.buyEgxPerGram  ?? 0;
   const silverSell  = silver?.sellEgxPerGram ?? 0;
   const silverPrice = (silverBuy > 0 || silverSell > 0) ? (silverBuy + silverSell) / 2 : 0;
-
-  // Approximation for display when API only provides mid USD/EGP.
   const usdBuy  = usdValue > 0 ? usdValue * 0.995 : 0;
   const usdSell = usdValue > 0 ? usdValue * 1.005 : 0;
 
@@ -216,12 +204,8 @@ function CommoditiesSection({ overview }: { overview: MarketOverview }) {
         <Text style={{ color: colors.textMuted, fontSize: 11 }}>{t('market.tapToExpand')}</Text>
       </View>
       <CommodityRow
-        emoji="💵"
-        label={t('market.usdEgp')}
-        subtitle="USD / EGP"
-        priceValue={usdValue}
-        changePercent={usdChange}
-        priceLabel="EGP"
+        emoji="💵" label={t('market.usdEgp')} subtitle="USD / EGP"
+        priceValue={usdValue} changePercent={usdChange} priceLabel="EGP"
         expandedContent={(usdBuy > 0 || usdSell > 0) ? <ForexBuySellPanel buy={usdBuy} sell={usdSell} /> : undefined}
       />
       <CommodityRow
@@ -292,7 +276,7 @@ function IndicesSection({ overview, loading }: { overview: MarketOverview | null
   );
 }
 
-// ─── NewsFooterSection ───────────────────────────────────────────
+// ─── NewsSection ─────────────────────────────────────────────────
 type NewsItem = {
   id?: string; title: string; url: string; source: string;
   publishedAt: string; summary?: string; sentiment?: string | null;
@@ -308,7 +292,7 @@ function relativeTime(dateStr: string): string {
   return `منذ ${d} ي`;
 }
 
-function NewsFooterSection({ news }: { news: NewsItem[] }) {
+function NewsSection({ news }: { news: NewsItem[] }) {
   const { colors, isRTL } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
@@ -324,17 +308,16 @@ function NewsFooterSection({ news }: { news: NewsItem[] }) {
     const twoDaysAgo = new Date(todayStart); twoDaysAgo.setDate(todayStart.getDate() - 1);
     const tomorrow   = new Date(todayStart); tomorrow.setDate(todayStart.getDate() + 1);
     const filtered = sorted.filter((item) => {
-      const t = new Date(item.publishedAt).getTime();
-      return Number.isFinite(t) && t >= twoDaysAgo.getTime() && t < tomorrow.getTime();
+      const ts = new Date(item.publishedAt).getTime();
+      return Number.isFinite(ts) && ts >= twoDaysAgo.getTime() && ts < tomorrow.getTime();
     });
     return filtered.length > 0 ? filtered : sorted.slice(0, 5);
   }, [news]);
 
-  if (recent.length === 0) return <View style={{ height: 32 }} />;
+  if (recent.length === 0) return null;
 
   return (
-    <View style={{ marginHorizontal: SPACE.lg, marginTop: SPACE.lg, marginBottom: SPACE.xl }}>
-      {/* Header */}
+    <View style={{ marginHorizontal: SPACE.lg, marginBottom: SPACE.xl }}>
       <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.sm }}>
         <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm }}>
           <View style={{ width: 26, height: 26, borderRadius: RADIUS.sm, backgroundColor: 'rgba(59,130,246,0.12)', alignItems: 'center', justifyContent: 'center' }}>
@@ -347,7 +330,6 @@ function NewsFooterSection({ news }: { news: NewsItem[] }) {
         </Pressable>
       </View>
 
-      {/* Cards */}
       <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
         {recent.slice(0, 5).map((item, i) => {
           const s = item.sentiment?.toLowerCase();
@@ -370,7 +352,6 @@ function NewsFooterSection({ news }: { news: NewsItem[] }) {
                 borderBottomColor: colors.border,
               })}
             >
-              {/* Sentiment strip */}
               <View style={{ width: 3, backgroundColor: accentCol }} />
               <View style={{ flex: 1, paddingHorizontal: SPACE.md, paddingVertical: SPACE.md, gap: 4 }}>
                 <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.semibold, lineHeight: 20 }} numberOfLines={2}>
@@ -378,14 +359,10 @@ function NewsFooterSection({ news }: { news: NewsItem[] }) {
                 </Text>
                 <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
                   {SentIcon && <SentIcon size={11} color={accentCol} />}
-                  <Text style={{ color: colors.textMuted, fontSize: 10 }} numberOfLines={1}>
-                    {item.source}
-                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 10 }} numberOfLines={1}>{item.source}</Text>
                   <Text style={{ color: colors.border, fontSize: 10 }}>·</Text>
                   <Clock size={10} color={colors.textMuted} />
-                  <Text style={{ color: colors.textMuted, fontSize: 10 }}>
-                    {relativeTime(item.publishedAt)}
-                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 10 }}>{relativeTime(item.publishedAt)}</Text>
                 </View>
               </View>
             </Pressable>
@@ -396,198 +373,52 @@ function NewsFooterSection({ news }: { news: NewsItem[] }) {
   );
 }
 
-// ─── MarketListHeader ────────────────────────────────────────────
-interface HeaderProps {
-  overview: MarketOverview | null;
-  loadingOverview: boolean;
-  loadingStocks: boolean;
-  isCompact: boolean;
-  tab: TrendTab;
-  setTab: (t: TrendTab) => void;
-  search: string;
-  setSearch: (s: string) => void;
-  trendCounts: MarketTrendCounts;
-}
-const MarketListHeader = React.memo(function MarketListHeader({ overview, loadingOverview, loadingStocks, isCompact, tab, setTab, search, setSearch, trendCounts }: HeaderProps) {
-  const { colors } = useTheme();
-  const { t } = useTranslation();
-  return (
-    <View>
-      <View style={{ paddingTop: SPACE.lg }}>
-        <IndicesSection overview={overview} loading={loadingOverview} />
-      </View>
-      {loadingOverview ? (
-        <View style={{ marginHorizontal: SPACE.lg, marginBottom: SPACE.lg }}>
-          <Skeleton.Box height={220} radius={RADIUS.xl} />
-        </View>
-      ) : overview ? (
-        <CommoditiesSection overview={overview} />
-      ) : null}
-      {/* Search */}
-      <View style={{
-        marginHorizontal: SPACE.lg, marginBottom: SPACE.sm, marginTop: 4,
-        backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1,
-        borderRadius: RADIUS.lg, flexDirection: 'row', alignItems: 'center',
-        paddingHorizontal: SPACE.md, gap: SPACE.sm,
-      }}>
-        <Search size={15} color={colors.textMuted} />
-        <TextInput
-          value={search}
-          onChangeText={setSearch}
-          placeholder={t('market.search')}
-          placeholderTextColor={colors.textMuted}
-          style={{ color: colors.text, flex: 1, paddingVertical: 11, fontSize: FONT.base }}
-        />
-      </View>
-      <MarketTrendFilter
-        tab={tab}
-        setTab={setTab}
-        counts={trendCounts}
-        compact={isCompact}
-      />
-      {loadingStocks && (
-        <View style={{ marginHorizontal: SPACE.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden', padding: SPACE.md, gap: 2 }}>
-          {Array.from({ length: 8 }).map((_, i) => <Skeleton.Box key={i} height={60} radius={RADIUS.md} />)}
-        </View>
-      )}
-    </View>
-  );
-});
-
 // ─── MarketPage ──────────────────────────────────────────────────
 export default function MarketPage() {
-  const router = useRouter();
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const { width } = useWindowDimensions();
-  const isCompact = width < 380;
-  const [tab, setTab] = useState<TrendTab>('gainers');
-  const [search, setSearch] = useState('');
-  const { overview, stocks, news, loadingStocks, loadingOverview, refreshing, refresh } = useMarketData();
+  const { overview, stocks, news, loadingOverview, refreshing, refresh } = useMarketData();
 
-  const [visibleTickers, setVisibleTickers] = useState<string[]>([]);
-  const { prices } = useLivePrices(visibleTickers);
-
-  const enriched = useMemo(
-    () => stocks.map((s) => ({
-      ...s,
-      ...(prices[s.ticker] && {
-        price: prices[s.ticker].price,
-        change: prices[s.ticker].change,
-        changePercent: prices[s.ticker].changePercent,
-      }),
-    })),
-    [stocks, prices],
-  );
-
-  const searchFiltered = useMemo(() => {
-    let list = [...enriched];
-    if (search.trim()) {
-      const q = search.trim().toUpperCase();
-      list = list.filter(
-        (s) =>
-          s.ticker.includes(q) ||
-          getStockName(s.ticker, 'ar').includes(search) ||
-          getStockName(s.ticker, 'en').toUpperCase().includes(q),
-      );
-    }
-    return list;
-  }, [enriched, search]);
-
-  const trendDerived = useMemo(() => {
-    const gainers = searchFiltered.filter((s) => s.changePercent > 0).sort((a, b) => (b.changePercent - a.changePercent) || (b.price - a.price));
-    const losers = searchFiltered.filter((s) => s.changePercent < 0).sort((a, b) => (a.changePercent - b.changePercent) || (b.price - a.price));
-    const all = [...searchFiltered].sort((a, b) => {
-      const absA = Math.abs(a.changePercent);
-      const absB = Math.abs(b.changePercent);
-      if (absB !== absA) return absB - absA; // biggest move first (up or down)
-      if (b.changePercent !== a.changePercent) return b.changePercent - a.changePercent; // prefer gainers in ties
-      return b.price - a.price;
-    });
-
-    const trendCounts: MarketTrendCounts = {
-      gainers: gainers.length,
-      losers: losers.length,
-      all: all.length,
-    };
-
-    return { gainers, losers, all, trendCounts };
-  }, [searchFiltered]);
-
-  const filtered = tab === 'gainers' ? trendDerived.gainers : tab === 'losers' ? trendDerived.losers : trendDerived.all;
-
-  useEffect(() => {
-    setVisibleTickers(filtered.slice(0, 30).map((s) => s.ticker));
-  }, [filtered]);
-
-  const keyExtractor = useCallback((item: Stock) => item.ticker, []);
-
-  const renderItem: ListRenderItem<Stock> = useCallback(({ item: s, index }) => (
-    <StockRow
-      stock={s}
-      livePrice={prices[s.ticker]}
-      onPress={() => router.push(`/stocks/${s.ticker}`)}
-      last={index === filtered.length - 1}
-    />
-  ), [router, prices, filtered.length]);
-
-  const getItemLayout = useCallback((_: ArrayLike<Stock> | null | undefined, index: number) => ({
-    length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index,
-  }), []);
-
-  const listHeader = useMemo(() => (
-    <MarketListHeader
-      overview={overview} loadingOverview={loadingOverview} loadingStocks={loadingStocks}
-      isCompact={isCompact} tab={tab} setTab={setTab} search={search} setSearch={setSearch}
-      trendCounts={trendDerived.trendCounts}
-    />
-  ), [overview, loadingOverview, loadingStocks, isCompact, tab, search, trendDerived.trendCounts]);
-
-  const listEmpty = useMemo(() => (
-    loadingStocks ? null : (
-      <View style={{ marginHorizontal: SPACE.lg, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, alignItems: 'center', paddingVertical: 48 }}>
-        <Text style={{ color: colors.textMuted, fontSize: FONT.base }}>
-          {tab === 'gainers'
-            ? t('market.noGainers')
-            : tab === 'losers'
-              ? t('market.noLosers')
-              : t('market.noAll')}
-        </Text>
-      </View>
-    )
-  ), [loadingStocks, colors, tab, t]);
+  const gainers = useMemo(() => stocks.filter((s) => s.changePercent > 0).length, [stocks]);
+  const losers  = useMemo(() => stocks.filter((s) => s.changePercent < 0).length, [stocks]);
 
   return (
     <ScreenWrapper padded={false} edges={['top']}>
-      <View style={{ flex: 1 }}>
-        <View style={{
-          borderBottomWidth: 1, borderBottomColor: colors.border,
-          paddingHorizontal: SPACE.lg, paddingTop: isCompact ? 12 : 18, paddingBottom: isCompact ? 10 : 14,
-          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <Text style={{ color: colors.text, fontSize: isCompact ? 19 : 22, fontWeight: WEIGHT.extrabold }}>{t('market.title')}</Text>
-          <MarketStatusBadge />
-        </View>
-
-        <FlatList
-          data={loadingStocks ? [] : filtered}
-          keyExtractor={keyExtractor}
-          renderItem={renderItem}
-          getItemLayout={getItemLayout}
-          ListHeaderComponent={listHeader}
-          ListEmptyComponent={listEmpty}
-          ListFooterComponent={<NewsFooterSection news={news as NewsItem[]} />}
-          initialNumToRender={15}
-          maxToRenderPerBatch={10}
-          windowSize={5}
-          removeClippedSubviews
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={BRAND} colors={[BRAND]} />
-          }
-        />
+      {/* Header */}
+      <View style={{
+        borderBottomWidth: 1, borderBottomColor: colors.border,
+        paddingHorizontal: SPACE.lg, paddingTop: 18, paddingBottom: 14,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <Text style={{ color: colors.text, fontSize: 22, fontWeight: WEIGHT.extrabold }}>{t('market.title')}</Text>
+        <MarketStatusBadge />
       </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: SPACE.lg, paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={BRAND} colors={[BRAND]} />
+        }
+      >
+        {/* Indices */}
+        <IndicesSection overview={overview} loading={loadingOverview} />
+
+        {/* Commodities */}
+        {loadingOverview ? (
+          <View style={{ marginHorizontal: SPACE.lg, marginBottom: SPACE.lg }}>
+            <Skeleton.Box height={220} radius={RADIUS.xl} />
+          </View>
+        ) : overview ? (
+          <CommoditiesSection overview={overview} />
+        ) : null}
+
+        {/* Stocks hero card */}
+        <StocksHeroCard stockCount={stocks.length} gainers={gainers} losers={losers} />
+
+        {/* News */}
+        <NewsSection news={news as NewsItem[]} />
+      </ScrollView>
     </ScreenWrapper>
   );
 }

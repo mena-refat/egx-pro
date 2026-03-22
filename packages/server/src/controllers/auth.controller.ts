@@ -179,6 +179,33 @@ export async function twoFaDisable(req: Request, res: Response): Promise<void> {
   }
 }
 
+export async function pinSetup(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) { sendError(res, 'UNAUTHORIZED', 401); return; }
+    const result = await AuthService.setupPin(userId, (req.body as { pin?: string }).pin ?? '');
+    sendSuccess(res, result);
+  } catch (e) { handleError(e, res, 'PIN setup failed'); }
+}
+
+export async function pinRemove(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = getAuthUserId(req);
+    if (!userId) { sendError(res, 'UNAUTHORIZED', 401); return; }
+    const result = await AuthService.removePin(userId, (req.body as { pin?: string }).pin ?? '');
+    sendSuccess(res, result);
+  } catch (e) { handleError(e, res, 'PIN removal failed'); }
+}
+
+export async function pinLogin(req: Request, res: Response): Promise<void> {
+  try {
+    const ctx = authContext(req);
+    const result = await AuthService.loginWithPin(req.body as { userId?: number; pin?: string }, ctx);
+    setRefreshCookie(res, result.refreshToken);
+    sendSuccess(res, { accessToken: result.accessToken, refreshToken: result.refreshToken, user: result.user });
+  } catch (e) { handleError(e, res, 'PIN login failed'); }
+}
+
 export async function refresh(req: Request, res: Response): Promise<void> {
   try {
     // Accept refresh token from cookie (web) or Authorization header (mobile)

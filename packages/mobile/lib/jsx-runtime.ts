@@ -1,5 +1,4 @@
-import { createElement } from 'react';
-import type { ComponentProps } from 'react';
+import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime';
 export { Fragment } from 'react';
 import { tw } from './tw';
 
@@ -40,9 +39,10 @@ function transformProps(props: AnyProps) {
 
 export function jsx(type: unknown, props: AnyProps, key: string | undefined) {
   const finalProps = transformProps(props ?? ({} as AnyProps));
-  if (key != null) finalProps.key = key;
-  return createElement(type as never, finalProps as never);
+  return _jsx(type as never, finalProps as never, key);
 }
 
-export const jsxs = jsx;
-
+export function jsxs(type: unknown, props: AnyProps, key: string | undefined) {
+  const finalProps = transformProps(props ?? ({} as AnyProps));
+  return _jsxs(type as never, finalProps as never, key);
+}

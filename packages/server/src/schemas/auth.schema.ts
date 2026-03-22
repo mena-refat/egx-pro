@@ -104,3 +104,17 @@ export const twoFaAuthenticateBodySchema = z.object({
   tempToken: z.string().min(1, 'Temp token is required'),
   code: z.string().min(1, 'Code is required').max(10),
 });
+
+const pinField = z.string().length(6).regex(/^\d{6}$/, 'PIN must be 6 digits');
+
+/** POST /api/auth/pin/setup — authenticated */
+export const pinSetupBodySchema = z.object({ pin: pinField });
+
+/** DELETE /api/auth/pin — authenticated */
+export const pinRemoveBodySchema = z.object({ pin: pinField });
+
+/** POST /api/auth/pin/login — public */
+export const pinLoginBodySchema = z.object({
+  userId: z.number().int().positive(),
+  pin: pinField,
+});

@@ -4,9 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
+import axios from 'axios';
 import apiClient from '../lib/api/client';
 import { ENDPOINTS } from '../lib/api/endpoints';
 import { useAuthStore, type MobileUser } from '../store/authStore';
+import { getRefreshToken, setAccessToken, setRefreshToken } from '../lib/auth/tokens';
 import {
   loginSchema,
   type LoginForm,
@@ -53,18 +55,23 @@ export function useLogin() {
     setLoading(true);
     setError(null);
     try {
-      // TODO: backend must support POST /api/auth/login with { loginMethod: 'pin', pin }
-      // PIN verification is done server-side — never compare client-side from SecureStore
-      const res = await apiClient.post(ENDPOINTS.auth.login, {
-        loginMethod: 'pin',
-        pin,
-      });
+      // PIN_KEY stores the userId (set during PIN setup) — not the PIN itself
+      const userIdStr = await SecureStore.getItemAsync(PIN_KEY).catch(() => null);
+      const userId = userIdStr ? parseInt(userIdStr, 10) : null;
+      if (!userId || isNaN(userId)) {
+        setError('يرجى تسجيل الدخول بكلمة المرور أولاً لإعادة تفعيل الـ PIN');
+        return;
+      }
+      const res = await apiClient.post(ENDPOINTS.auth.pin.login, { userId, pin });
       const body = res.data as { user: MobileUser; accessToken: string; refreshToken?: string };
       await setAuth(body.user, body.accessToken, body.refreshToken);
       router.replace('/');
     } catch (err: unknown) {
-      const code = (err as { error?: string })?.error;
+      const errData = (err as { response?: { data?: { error?: string } } })?.response?.data;
+      const code = errData?.error;
       if (code === 'INVALID_PIN') setError('رمز PIN غير صحيح');
+      else if (code === 'account_locked') setError('الحساب محجوب مؤقتاً — حاول بعد 30 دقيقة');
+      else if (code === 'ACCOUNT_SUSPENDED') setError('هذا الحساب موقوف — تواصل مع الدعم الفني');
       else setError('فشل تسجيل الدخول، حاول إدخال كلمة المرور');
     } finally {
       setLoading(false);
@@ -83,15 +90,40 @@ export function useLogin() {
     const credsRaw = await SecureStore.getItemAsync(BIOMETRIC_CREDS_KEY);
     if (!credsRaw) return;
 
-    const creds = JSON.parse(credsRaw) as { emailOrPhone: string; refreshToken?: string };
+    const creds = JSON.parse(credsRaw) as { emailOrPhone: string };
     form.setValue('emailOrPhone', creds.emailOrPhone);
-    // نعتمد على refreshToken لتجديد الجلسة عبر backend
+
     setLoading(true);
     setError(null);
     try {
-      const res = await apiClient.post(ENDPOINTS.auth.refresh, {});
-      const body = res.data as { user: MobileUser; accessToken: string; refreshToken?: string };
-      await setAuth(body.user, body.accessToken, body.refreshToken);
+      const storedRefreshToken = await getRefreshToken();
+      if (!storedRefreshToken) {
+        setError('فشل تسجيل الدخول بالبصمة، حاول إدخال كلمة المرور');
+        return;
+      }
+
+      // Use raw axios (not apiClient) to avoid the request interceptor
+      // overwriting the Authorization header with the access token.
+      // The refresh endpoint needs the refresh token as Bearer.
+      const base = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+      const refreshRes = await axios.post(
+        `${base}${ENDPOINTS.auth.refresh}`,
+        {},
+        { headers: { Authorization: `Bearer ${storedRefreshToken}` } },
+      );
+      const rd = (refreshRes.data?.data ?? refreshRes.data) as {
+        accessToken: string;
+        refreshToken?: string;
+      };
+      await setAccessToken(rd.accessToken);
+      if (rd.refreshToken) await setRefreshToken(rd.refreshToken);
+
+      // Fetch full user object with new access token (apiClient picks it up automatically)
+      const meRes = await apiClient.get(ENDPOINTS.auth.me);
+      const meBody = meRes.data as { user?: MobileUser } | MobileUser;
+      const user = (meBody as { user?: MobileUser }).user ?? (meBody as MobileUser);
+
+      await setAuth(user, rd.accessToken, rd.refreshToken);
       router.replace('/');
     } catch {
       setError('فشل تسجيل الدخول بالبصمة، حاول إدخال كلمة المرور');

@@ -1,4 +1,4 @@
-import { createElement } from 'react';
+import { jsxDEV as _jsxDEV } from 'react/jsx-dev-runtime';
 export { Fragment } from 'react';
 import { tw } from './tw';
 
@@ -34,9 +34,14 @@ function transformProps(props: AnyProps) {
   return next;
 }
 
-export function jsxDEV(type: unknown, props: AnyProps, key: string | undefined) {
+export function jsxDEV(
+  type: unknown,
+  props: AnyProps,
+  key: string | undefined,
+  isStaticChildren: boolean,
+  source?: unknown,
+  self?: unknown,
+) {
   const finalProps = transformProps(props ?? ({} as AnyProps));
-  if (key != null) finalProps.key = key;
-  return createElement(type as never, finalProps as never);
+  return _jsxDEV(type as never, finalProps as never, key, isStaticChildren, source as never, self);
 }
-

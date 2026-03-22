@@ -12,10 +12,24 @@ import {
   twoFaVerifyBodySchema,
   twoFaSetupBodySchema,
   twoFaAuthenticateBodySchema,
+  pinSetupBodySchema,
+  pinRemoveBodySchema,
+  pinLoginBodySchema,
 } from '../schemas/auth.schema.ts';
 import { tokenIdParamSchema } from '../schemas/params.ts';
 
 const router = Router();
+
+// 10 محاولات PIN كل 15 دقيقة لكل IP — يمنع brute-force على PIN (6 أرقام = مليون احتمال)
+const pinLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? 'unknown'),
+  handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
+  skipSuccessfulRequests: true,
+});
 
 // 5 محاولات كل 15 دقيقة لكل IP — يمنع brute-force على 2FA
 const twoFaAuthLimiter = rateLimit({
@@ -42,6 +56,9 @@ router.post('/logout', AuthController.logout);
 router.post('/logout-all', AuthController.logoutAll);
 router.delete('/sessions/:tokenId', authenticate, idempotencyMiddleware, validate(tokenIdParamSchema, 'params'), AuthController.revokeSession);
 router.post('/change-password', authenticate, idempotencyMiddleware, validate(changePasswordBodySchema, 'body'), AuthController.changePassword);
+router.post('/pin/login',  pinLoginLimiter, validate(pinLoginBodySchema,  'body'), AuthController.pinLogin);
+router.post('/pin/setup',  authenticate, idempotencyMiddleware, validate(pinSetupBodySchema,  'body'), AuthController.pinSetup);
+router.delete('/pin',      authenticate, idempotencyMiddleware, validate(pinRemoveBodySchema, 'body'), AuthController.pinRemove);
 router.get('/me', AuthController.getMe);
 router.get('/sessions', authenticate, AuthController.getSessions);
 router.get('/google/url', AuthController.getGoogleUrl);

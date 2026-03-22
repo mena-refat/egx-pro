@@ -11,6 +11,11 @@ export const ENDPOINTS = {
       disable: '/api/auth/2fa/disable',
       authenticate: '/api/auth/2fa/authenticate',
     },
+    pin: {
+      login:  '/api/auth/pin/login',
+      setup:  '/api/auth/pin/setup',
+      remove: '/api/auth/pin',
+    },
   },
   user: {
     profile: '/api/user/profile',

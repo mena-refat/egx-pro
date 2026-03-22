@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, Fragment, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, TrendingUp, TrendingDown, Briefcase, PieChart as PieChartIcon } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, Briefcase, PieChart as PieChartIcon, ClipboardList } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import api from '../../../lib/api';
 import { useLivePrices } from '../../../hooks/useLivePrices';
@@ -16,12 +17,13 @@ import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { Skeleton } from '../../ui/Skeleton';
 import EmptyState from '../../shared/EmptyState';
-import { toast } from '../../../store/toastStore';
+import { BlurNum } from '../../ui/BlurNum';
 
 export default function PortfolioTracker() {
   const { t, i18n } = useTranslation('common');
+  const navigate = useNavigate();
   const { prices: livePrices } = useLivePrices();
-  const { holdings, stats, isLoading, error, addHolding, removeHolding } = usePortfolio(livePrices);
+  const { holdings, stats, isLoading, error, addHolding } = usePortfolio(livePrices);
   
   const [allStocks, setAllStocks] = useState<Stock[]>([]);
   const [isAdding, setIsAdding] = useState(false);
@@ -118,14 +120,6 @@ export default function PortfolioTracker() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('portfolio.deleteConfirm'))) return;
-    try {
-      await removeHolding(id);
-    } catch {
-      toast.error(t('errors.internal', { defaultValue: 'An unknown error occurred' }));
-    }
-  };
 
   // Aggregate duplicate tickers by WACC for the Holdings view
   const aggregatedHoldings = useMemo(() => {
@@ -219,7 +213,7 @@ export default function PortfolioTracker() {
             <Briefcase className="w-4 h-4" />
             <span className="text-sm font-medium uppercase tracking-wider">{t('portfolio.totalValue')}</span>
           </div>
-          <p className="text-3xl font-bold">{stats.totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-sm font-normal text-[var(--text-muted)]">EGP</span></p>
+          <p className="text-3xl font-bold"><BlurNum>{stats.totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</BlurNum> <span className="text-sm font-normal text-[var(--text-muted)]">EGP</span></p>
         </div>
         <div className="card-base p-6">
           <div className="flex items-center gap-3 text-[var(--text-secondary)] mb-2">
@@ -228,7 +222,7 @@ export default function PortfolioTracker() {
           </div>
           <div className="flex items-baseline gap-2">
 <p className={`text-3xl font-bold ${stats.totalGain >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
-            {stats.totalGain >= 0 ? '+' : ''}{stats.totalGain.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            <BlurNum>{stats.totalGain >= 0 ? '+' : ''}{stats.totalGain.toLocaleString(undefined, { maximumFractionDigits: 2 })}</BlurNum>
             </p>
             <span className={`text-sm font-bold ${stats.totalGain >= 0 ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'}`}>
               ({stats.gainPercent.toFixed(2)}%)
@@ -288,12 +282,12 @@ export default function PortfolioTracker() {
                           <div className="font-bold">{getStockName(h.ticker, lang)}</div>
                           <div className="text-xs text-[var(--text-muted)]">{h.ticker}</div>
                         </td>
-                        <td className="px-6 py-4 font-mono">{h.shares.toLocaleString()}</td>
-                        <td className="px-6 py-4 font-mono">{h.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td className="px-6 py-4 font-mono">{currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="px-6 py-4 font-mono"><BlurNum>{h.shares.toLocaleString()}</BlurNum></td>
+                        <td className="px-6 py-4 font-mono"><BlurNum>{h.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</BlurNum></td>
+                        <td className="px-6 py-4 font-mono"><BlurNum>{currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</BlurNum></td>
                         <td className="px-6 py-4">
                           <div className={`font-bold ${profit >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
-                            {profit >= 0 ? '+' : ''}{profit.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            <BlurNum>{profit >= 0 ? '+' : ''}{profit.toLocaleString(undefined, { maximumFractionDigits: 2 })}</BlurNum>
                           </div>
                           <div className={`text-xs ${profit >= 0 ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'}`}>
                             {profitPercent.toFixed(2)}%
@@ -325,7 +319,7 @@ export default function PortfolioTracker() {
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {chartData.map((entry, index) => (
+                    {chartData.map((_entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -335,12 +329,32 @@ export default function PortfolioTracker() {
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-[var(--text-muted)]">
-                {isRTL ? 'لا توجد بيانات كافية' : 'Not enough data'}
+                {t('portfolio.notEnoughData')}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Your Orders — link to dedicated page */}
+      <button
+        type="button"
+        onClick={() => navigate('/portfolio/orders')}
+        className="w-full card-base px-6 py-5 flex items-center justify-between gap-4 hover:border-[var(--text-muted)]/30 hover:bg-[var(--bg-card-hover)] transition-colors cursor-pointer text-start"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[var(--brand)]/10 flex items-center justify-center shrink-0">
+            <ClipboardList className="w-5 h-5 text-[var(--brand)]" />
+          </div>
+          <div>
+            <p className="font-semibold text-[var(--text-primary)]">{t('portfolio.yourOrders')}</p>
+            <p className="text-sm text-[var(--text-muted)]">
+              {holdings.length > 0 ? `${holdings.length} ${isRTL ? 'أمر' : 'orders'}` : t('portfolio.noOrders')}
+            </p>
+          </div>
+        </div>
+        <svg className={`w-4 h-4 text-[var(--text-muted)] shrink-0 ${isRTL ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+      </button>
 
       {/* Portfolio Performance Chart */}
       <div className="card-base card-elevated p-8 rounded-2xl">
@@ -468,7 +482,7 @@ export default function PortfolioTracker() {
                     inputClassName="input-base"
                   />
                 </div>
-                <Input label={isRTL ? 'تاريخ الشراء' : 'Buy Date'} type="date" required value={newHolding.buyDate} max={new Date().toISOString().slice(0, 10)} onChange={e => setNewHolding({ ...newHolding, buyDate: e.target.value })} inputClassName="input-base" />
+                <Input label={t('portfolio.buyDate')} type="date" required value={newHolding.buyDate} max={new Date().toISOString().slice(0, 10)} onChange={e => setNewHolding({ ...newHolding, buyDate: e.target.value })} inputClassName="input-base" />
                 
                 {addError && (
                   <div className="p-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-xl text-[var(--danger)] text-sm">

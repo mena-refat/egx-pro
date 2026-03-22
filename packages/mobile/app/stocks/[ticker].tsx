@@ -15,8 +15,8 @@ import { useLivePrices } from '../../hooks/useLivePrices';
 import { usePortfolioData } from '../../hooks/useMarketData';
 import { getStockName, getStockInfo } from '../../lib/egxStocks';
 import apiClient from '../../lib/api/client';
-import { StockHistoryChart } from './StockHistoryChart';
-import { useStockHistory } from './useStockHistory';
+import { StockHistoryChart } from '../../components/features/stocks/StockHistoryChart';
+import { useStockHistory } from '../../hooks/useStockHistory';
 import {
   BRAND, BRAND_BG_STRONG, BRAND_LIGHT,
   FONT, WEIGHT, RADIUS, SPACE,

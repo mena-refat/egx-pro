@@ -10,9 +10,9 @@ import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
 import { BRAND_BG_STRONG, GREEN_BG, RED_BG, RED, BRAND } from '../../lib/theme';
-import { EditValueCard, type EditableField } from './EditValueCard';
-import { AccountHeader } from './AccountHeader';
-import { AvatarEditorCard } from './AvatarEditorCard';
+import { EditValueCard, type EditableField } from '../../components/features/settings/EditValueCard';
+import { AccountHeader } from '../../components/features/settings/AccountHeader';
+import { AvatarEditorCard } from '../../components/features/settings/AvatarEditorCard';
 
 interface FieldRowProps {
   label: string;

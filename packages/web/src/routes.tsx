@@ -26,6 +26,7 @@ import {
 import SettingsLayout from './components/layout/SettingsLayout';
 
 const PortfolioTracker       = lazy(() => import('./components/features/portfolio/PortfolioTracker'));
+const PortfolioOrdersPage    = lazy(() => import('./pages/PortfolioOrdersPage'));
 const StockScreener          = lazy(() => import('./components/features/stocks/StockScreener'));
 const MarketPage             = lazy(() => import('./pages/MarketPage'));
 const GoalsPage              = lazy(() => import('./pages/GoalsPage'));
@@ -53,6 +54,7 @@ export function AppRoutes({ currentWealth }: AppRoutesProps) {
       <Route path="/" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
       <Route path="/dashboard" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
       <Route path="/portfolio" element={<ErrorBoundary><Suspense fallback={<PortfolioSkeleton />}><PortfolioTracker /></Suspense></ErrorBoundary>} />
+      <Route path="/portfolio/orders" element={<ErrorBoundary><Suspense fallback={<PortfolioSkeleton />}><PortfolioOrdersPage /></Suspense></ErrorBoundary>} />
       <Route path="/stocks" element={<ErrorBoundary><Suspense fallback={<StocksSkeleton />}><StockScreener /></Suspense></ErrorBoundary>} />
       <Route path="/stocks/:ticker" element={<ErrorBoundary><Suspense fallback={<StockDetailSkeleton />}><StockDetailPage /></Suspense></ErrorBoundary>} />
       <Route path="/market" element={<ErrorBoundary><Suspense fallback={<MarketSkeleton />}><MarketPage /></Suspense></ErrorBoundary>} />

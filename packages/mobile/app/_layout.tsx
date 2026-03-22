@@ -110,6 +110,10 @@ export default function RootLayout() {
               options={{ animation: 'fade', gestureEnabled: false }}
             />
             <Stack.Screen
+              name="stocks/index"
+              options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
               name="stocks/[ticker]"
               options={{ animation: 'slide_from_right' }}
             />

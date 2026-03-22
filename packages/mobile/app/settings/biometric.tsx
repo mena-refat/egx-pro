@@ -11,6 +11,8 @@ import { OTPInput } from '../../components/ui/OTPInput';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import { tw } from '../../lib/tw';
+import apiClient from '../../lib/api/client';
+import { ENDPOINTS } from '../../lib/api/endpoints';
 
 const BIOMETRIC_CREDS_KEY = 'borsa_biometric_creds';
 const PIN_KEY = 'borsa_pin';
@@ -37,11 +39,12 @@ export default function BiometricPage() {
       const hw = await LocalAuthentication.hasHardwareAsync();
       const enr = await LocalAuthentication.isEnrolledAsync();
       const creds = await SecureStore.getItemAsync(BIOMETRIC_CREDS_KEY).catch(() => null);
-      const pin = await SecureStore.getItemAsync(PIN_KEY).catch(() => null);
+      // PIN_KEY stores the userId (string) — just a presence flag, never the PIN itself
+      const pinFlag = await SecureStore.getItemAsync(PIN_KEY).catch(() => null);
       setSupported(hw);
       setEnrolled(enr);
       setBiometricEnabled(Boolean(creds));
-      setPinEnabled(Boolean(pin));
+      setPinEnabled(Boolean(pinFlag));
     };
     void check();
   }, []);
@@ -113,27 +116,38 @@ export default function BiometricPage() {
         resetPinInput();
         return;
       }
-      await SecureStore.setItemAsync(PIN_KEY, pin, {
-        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-      });
-      setPinEnabled(true);
-      setPinStep('idle');
-      setPinError(null);
-      Alert.alert(t('security.pinEnabledTitle'), t('security.pinEnabledMsg'));
+      try {
+        // Send PIN to server — server hashes and stores it. Never store PIN locally.
+        await apiClient.post(ENDPOINTS.auth.pin.setup, { pin });
+        // Store userId as a presence flag (not the PIN) so loginWithPin can identify the user
+        await SecureStore.setItemAsync(PIN_KEY, String(user?.id ?? ''), {
+          keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        });
+        setPinEnabled(true);
+        setPinStep('idle');
+        setPinError(null);
+        Alert.alert(t('security.pinEnabledTitle'), t('security.pinEnabledMsg'));
+      } catch {
+        setPinError(t('common.error'));
+        resetPinInput();
+      }
       return;
     }
 
     if (pinStep === 'remove') {
-      const storedPin = await SecureStore.getItemAsync(PIN_KEY).catch(() => null);
-      if (!storedPin || storedPin !== pin) {
-        setPinError(t('security.pinWrong'));
+      try {
+        // Server verifies PIN against DB hash before removing
+        await apiClient.delete(ENDPOINTS.auth.pin.remove, { data: { pin } });
+        await SecureStore.deleteItemAsync(PIN_KEY).catch(() => null);
+        setPinEnabled(false);
+        setPinStep('idle');
+        setPinError(null);
+      } catch (err: unknown) {
+        const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+        if (code === 'INVALID_PIN') setPinError(t('security.pinWrong'));
+        else setPinError(t('common.error'));
         resetPinInput();
-        return;
       }
-      await SecureStore.deleteItemAsync(PIN_KEY).catch(() => null);
-      setPinEnabled(false);
-      setPinStep('idle');
-      setPinError(null);
     }
   };
 
