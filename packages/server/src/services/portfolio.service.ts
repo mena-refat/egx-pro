@@ -90,23 +90,30 @@ export const PortfolioService = {
     if (!planUser) throw new AppError('UNAUTHORIZED', 401);
     const portfolioLimit = getLimit(planUser, 'portfolioStocks');
 
-    const { ticker, shares, purchasePrice, purchaseDate } = parsed.data;
+    const { ticker, shares, purchasePrice, purchaseDate, type = 'BUY' } = parsed.data;
 
-    const alreadyOwns = await PortfolioRepository.existsByUserAndTicker(user.id, ticker);
-    if (!alreadyOwns) {
-      const uniqueCount = await PortfolioRepository.countUniqueTickersByUser(user.id);
-      if (uniqueCount >= (typeof portfolioLimit === 'number' ? portfolioLimit : 0))
-        throw new AppError('PORTFOLIO_LIMIT_REACHED', 403);
+    if (type === 'SELL') {
+      const netShares = await PortfolioRepository.getNetSharesByTicker(user.id, ticker);
+      if (netShares < shares) throw new AppError('INSUFFICIENT_SHARES', 400);
+    } else {
+      const alreadyOwns = await PortfolioRepository.existsByUserAndTicker(user.id, ticker);
+      if (!alreadyOwns) {
+        const uniqueCount = await PortfolioRepository.countUniqueTickersByUser(user.id);
+        if (uniqueCount >= (typeof portfolioLimit === 'number' ? portfolioLimit : 0))
+          throw new AppError('PORTFOLIO_LIMIT_REACHED', 403);
+      }
     }
-    const completedBefore = await getCompletedAchievementIds(user.id);
+
+    const completedBefore = type === 'BUY' ? await getCompletedAchievementIds(user.id) : [];
     const holding = await PortfolioRepository.create({
       userId: user.id,
       ticker,
       shares,
       avgPrice: purchasePrice,
       buyDate: new Date(purchaseDate),
+      type,
     });
-    const newUnseenAchievements = await addNewlyUnlockedAchievements(user.id, completedBefore);
+    const newUnseenAchievements = type === 'BUY' ? await addNewlyUnlockedAchievements(user.id, completedBefore) : [];
     return { holding, newUnseenAchievements };
   },
 

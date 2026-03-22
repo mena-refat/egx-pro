@@ -143,18 +143,18 @@ export default function PortfolioPage() {
               style={{ borderRadius: RADIUS['2xl'], padding: SPACE.xl, borderWidth: 1, borderColor: BRAND + '30' }}
             >
               {loading ? (
-                <View style={{ gap: SPACE.sm }}>
+                <View style={{ gap: SPACE.sm, alignItems: 'center' }}>
                   <Skeleton.Line width={120} height={14} />
                   <Skeleton.Line width={200} height={36} />
                   <Skeleton.Line width={160} height={18} />
                 </View>
               ) : (
-                <>
-                  <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs, marginBottom: SPACE.xs }}>{t('portfolio.totalValue')}</Text>
-                  <Text style={{ color: '#fff', fontSize: FONT['3xl'], fontWeight: WEIGHT.extrabold, fontVariant: ['tabular-nums'] }}>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs, marginBottom: SPACE.xs, textAlign: 'center' }}>{t('portfolio.totalValue')}</Text>
+                  <Text style={{ color: '#fff', fontSize: FONT['3xl'], fontWeight: WEIGHT.extrabold, fontVariant: ['tabular-nums'], textAlign: 'center' }}>
                     {n(liveSummary.totalValue)} EGP
                   </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: SPACE.sm }}>
+                  <View style={{ marginTop: SPACE.sm }}>
                     <View style={{
                       paddingHorizontal: SPACE.sm, paddingVertical: 3, borderRadius: RADIUS.full,
                       backgroundColor: isPositive ? '#4ade8025' : '#f8717125',
@@ -167,21 +167,22 @@ export default function PortfolioPage() {
                       </Text>
                     </View>
                   </View>
-                  <View style={{ flexDirection: 'row', gap: SPACE.xl, marginTop: SPACE.lg, borderTopWidth: 1, borderTopColor: BRAND + '25', paddingTop: SPACE.md }}>
-                    <View>
+                  <View style={{ width: '100%', height: 1, backgroundColor: BRAND + '25', marginTop: SPACE.lg }} />
+                  <View style={{ flexDirection: 'row', width: '100%', marginTop: SPACE.md }}>
+                    <View style={{ flex: 1, alignItems: 'center', borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.1)' }}>
                       <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>{t('portfolio.costBasis')}</Text>
                       <Text style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold, marginTop: 2, fontVariant: ['tabular-nums'] }}>
                         {n(liveSummary.totalCost)} EGP
                       </Text>
                     </View>
-                    <View>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
                       <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>{t('portfolio.stocksCount')}</Text>
                       <Text style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold, marginTop: 2 }}>
                         {enrichedHoldings.length}
                       </Text>
                     </View>
                   </View>
-                </>
+                </View>
               )}
             </LinearGradient>
           </View>

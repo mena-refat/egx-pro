@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, ArrowRight, Trash2, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Trash2, ShoppingBag, TrendingUp, TrendingDown } from 'lucide-react';
 import { useLivePrices } from '../hooks/useLivePrices';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { getStockName } from '../lib/egxStocks';
@@ -72,9 +72,10 @@ export default function PortfolioOrdersPage() {
               <thead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] text-label uppercase tracking-wider">
                 <tr>
                   <th className="px-6 py-4 font-medium text-start">{t('portfolio.stock')}</th>
+                  <th className="px-6 py-4 font-medium text-center">{isRTL ? 'النوع' : 'Type'}</th>
                   <th className="px-6 py-4 font-medium text-center">{t('portfolio.shares')}</th>
-                  <th className="px-6 py-4 font-medium text-center">{t('portfolio.buyPrice')}</th>
-                  <th className="px-6 py-4 font-medium text-center">{t('portfolio.buyDate')}</th>
+                  <th className="px-6 py-4 font-medium text-center">{isRTL ? 'السعر' : 'Price'}</th>
+                  <th className="px-6 py-4 font-medium text-center">{isRTL ? 'التاريخ' : 'Date'}</th>
                   <th className="px-6 py-4 font-medium"></th>
                 </tr>
               </thead>
@@ -92,6 +93,19 @@ export default function PortfolioOrdersPage() {
                       <td className="px-6 py-4 text-start">
                         <div className="font-bold text-[var(--text-primary)]">{getStockName(h.ticker, lang)}</div>
                         <div className="text-xs text-[var(--text-muted)]">{h.ticker}</div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {h.type === 'SELL' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 ring-1 ring-red-500/20">
+                            <TrendingDown className="w-3 h-3" />
+                            {isRTL ? 'بيع' : 'SELL'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                            <TrendingUp className="w-3 h-3" />
+                            {isRTL ? 'شراء' : 'BUY'}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 font-mono tabular-nums text-center">{h.shares.toLocaleString()}</td>
                       <td className="px-6 py-4 font-mono tabular-nums text-center">

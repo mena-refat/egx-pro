@@ -13,6 +13,7 @@ export const addHoldingBodySchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date YYYY-MM-DD')
     .refine((dateStr) => dateStr <= todayISO(), { message: 'Purchase date cannot be in the future' }),
+  type: z.enum(['BUY', 'SELL']).default('BUY'),
 });
 
 export const updateHoldingBodySchema = z.object({

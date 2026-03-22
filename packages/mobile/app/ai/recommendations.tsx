@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
@@ -119,6 +120,7 @@ function RecommendationCard({ stock, rank }: { stock: RecommendedStock; rank: nu
 
 export default function RecommendationsPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors, isRTL } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,14 +136,14 @@ export default function RecommendationsPage() {
         (res.data as { data?: RecommendationsResult })?.data ??
         (res.data as RecommendationsResult);
       if (data) setResult(data as RecommendationsResult);
-      else setError('لم يتم استلام التوصيات');
+      else setError(t('aiRec.errorNoResult'));
     } catch (err: unknown) {
       const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       const status = (err as { response?: { status?: number } })?.response?.status;
-      if (code === 'ANALYSIS_LIMIT_REACHED') setError('وصلت للحد الشهري من التحليلات');
-      else if (code === 'UNAUTHORIZED' || status === 401) setError('انتهت الجلسة — سجّل دخولك مرة أخرى');
-      else if ((err as { error?: string })?.error === 'NETWORK_ERROR') setError('لا يوجد اتصال');
-      else setError('حدث خطأ، حاول مرة أخرى');
+      if (code === 'ANALYSIS_LIMIT_REACHED') setError(t('aiAnalyze.limitReached'));
+      else if (code === 'UNAUTHORIZED' || status === 401) setError(t('aiAnalyze.sessionExpired'));
+      else if ((err as { error?: string })?.error === 'NETWORK_ERROR') setError(t('aiAnalyze.noInternet'));
+      else setError(t('aiAnalyze.error'));
     } finally {
       setLoading(false);
     }
@@ -169,7 +171,7 @@ export default function RecommendationsPage() {
         <View style={tw('w-8 h-8 rounded-xl bg-amber-500/15 items-center justify-center')}>
           <Sparkles size={16} color="#f59e0b" />
         </View>
-        <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>توصيات شخصية</Text>
+        <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>{t('aiRec.title')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={tw('px-4 pt-4 pb-10 gap-4')} showsVerticalScrollIndicator={false}>
@@ -181,10 +183,10 @@ export default function RecommendationsPage() {
         >
           <View style={tw('flex-row items-center gap-2')}>
             <TrendingUp size={16} color="#f59e0b" />
-            <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>توصيات مخصصة لك</Text>
+            <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>{t('aiRec.cardTitle')}</Text>
           </View>
           <Text style={[{ color: colors.textSub }, tw('text-xs leading-5')]}>
-            بناءً على محفظتك وقائمة المتابعة وأهدافك الاستثمارية، سيقترح الذكاء الاصطناعي أفضل الأسهم المناسبة لك الآن.
+            {t('aiRec.cardDesc')}
           </Text>
         </View>
 
@@ -198,7 +200,7 @@ export default function RecommendationsPage() {
         >
           {loading
             ? <ActivityIndicator color="#fff" />
-            : <Text style={tw('text-sm font-bold text-white')}>احصل على التوصيات</Text>}
+            : <Text style={tw('text-sm font-bold text-white')}>{t('aiRec.btnGet')}</Text>}
         </Pressable>
 
         {loading && <AnalysisLoader variant="recommendations" />}
@@ -236,7 +238,7 @@ export default function RecommendationsPage() {
                   tw('border rounded-2xl px-4 py-3 gap-3'),
                 ]}
               >
-                <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>🎯 أهدافك المالية</Text>
+                <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>{t('aiRec.financialGoals')}</Text>
                 {result.goalProgress.map((g, i) => {
                   const pct = g.targetAmount && g.targetAmount > 0
                     ? Math.min(100, Math.round(((g.currentAmount ?? 0) / g.targetAmount) * 100))
@@ -246,7 +248,7 @@ export default function RecommendationsPage() {
                       <View style={tw('flex-row justify-between')}>
                         <Text style={[{ color: colors.text }, tw('text-xs font-bold flex-1')]}>{g.goal}</Text>
                         {g.gap != null && (
-                          <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>متبقي: {g.gap.toLocaleString()} ج</Text>
+                          <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>{t('aiRec.remaining', { amount: g.gap.toLocaleString() })}</Text>
                         )}
                       </View>
                       <View style={[{ backgroundColor: colors.border }, tw('h-1.5 rounded-full overflow-hidden')]}>
@@ -268,7 +270,7 @@ export default function RecommendationsPage() {
                   tw('border rounded-2xl px-4 py-3 gap-2'),
                 ]}
               >
-                <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>👁 رأي AI في قائمة مراقبتك</Text>
+                <Text style={[{ color: colors.text }, tw('text-sm font-bold')]}>{t('aiRec.watchlistOpinion')}</Text>
                 {result.watchlistOpinion.map((w, i) => {
                   const isBuy = w.opinion?.includes('ادخل');
                   const isSell = w.opinion?.includes('تجنّب');
@@ -300,7 +302,7 @@ export default function RecommendationsPage() {
                 ]}
               >
                 <Text style={[{ color: colors.textSub }, tw('text-sm text-center')]}>
-                  لا توجد توصيات متاحة حالياً
+                  {t('aiRec.noRecs')}
                 </Text>
               </View>
             )}

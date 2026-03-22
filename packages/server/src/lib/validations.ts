@@ -133,6 +133,7 @@ export const addHoldingSchema = z.object({
     .refine((dateStr) => dateStr <= new Date().toISOString().slice(0, 10), {
       message: 'Purchase date cannot be in the future',
     }),
+  type: z.enum(['BUY', 'SELL']).default('BUY'),
 });
 
 export const watchlistTickerSchema = z.object({

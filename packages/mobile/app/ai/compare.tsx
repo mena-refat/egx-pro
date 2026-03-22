@@ -4,7 +4,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight, GitCompare, Search, Trophy, CheckCircle, XCircle, AlertTriangle } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
+import { ArrowLeft, ArrowRight, GitCompare, Search, Trophy, CheckCircle, XCircle, AlertTriangle, GraduationCap, BarChart2 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { AnalysisLoader } from '../../components/shared/AnalysisLoader';
 import { EGX_STOCKS, getStockInfo } from '../../lib/egxStocks';
@@ -128,6 +129,7 @@ function TickerInput({
 
 function StockCard({ side, label, isWinner }: { side: StockSide; label: string; isWinner: boolean }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const score = side.score ?? 0;
   const verdict = side.verdictBadge ?? side.verdict ?? '';
   const isBuy = verdict.includes('شراء');
@@ -148,7 +150,7 @@ function StockCard({ side, label, isWinner }: { side: StockSide; label: string; 
       {isWinner && (
         <View style={tw('bg-brand/15 rounded-lg px-2 py-1 self-start flex-row items-center gap-1')}>
           <Trophy size={11} color="#8b5cf6" />
-          <Text style={tw('text-xs font-bold text-brand')}>الأفضل</Text>
+          <Text style={tw('text-xs font-bold text-brand')}>{t('aiCompare.best')}</Text>
         </View>
       )}
       <View style={tw('items-center gap-2')}>
@@ -232,6 +234,7 @@ function StockCard({ side, label, isWinner }: { side: StockSide; label: string; 
 
 export default function ComparePage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors, isRTL } = useTheme();
   const user = useAuthStore((s) => s.user);
   const hasPaidPlan = user?.plan === 'pro' || user?.plan === 'yearly' || user?.plan === 'ultra' || user?.plan === 'ultra_yearly';
@@ -245,10 +248,10 @@ export default function ComparePage() {
   const run = async () => {
     const a = t1.trim().toUpperCase();
     const b = t2.trim().toUpperCase();
-    if (!a || !b) { setError('أدخل رمزَي السهمين أولاً'); return; }
-    if (!getStockInfo(a)) { setError(`رمز ${a} غير موجود`); return; }
-    if (!getStockInfo(b)) { setError(`رمز ${b} غير موجود`); return; }
-    if (a === b) { setError('اختر سهمين مختلفين'); return; }
+    if (!a || !b) { setError(t('aiCompare.errorEnterTickers')); return; }
+    if (!getStockInfo(a)) { setError(t('aiCompare.errorTickerNotFound', { ticker: a })); return; }
+    if (!getStockInfo(b)) { setError(t('aiCompare.errorTickerNotFound', { ticker: b })); return; }
+    if (a === b) { setError(t('aiCompare.errorSameStock')); return; }
 
     setError(null); setResult(null); setLoading(true);
     try {
@@ -258,15 +261,15 @@ export default function ComparePage() {
         (res.data as { comparison?: CompareResult })?.comparison ??
         res.data;
       if (data) setResult(data as CompareResult);
-      else setError('لم يتم استلام نتيجة المقارنة');
+      else setError(t('aiCompare.errorNoResult'));
     } catch (err: unknown) {
       const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       const status = (err as { response?: { status?: number } })?.response?.status;
-      if (code === 'ANALYSIS_LIMIT_REACHED') setError('وصلت للحد الشهري من التحليلات');
-      else if (code === 'SAME_STOCK_COMPARE') setError('اختر سهمين مختلفين');
-      else if (code === 'UNAUTHORIZED' || status === 401) setError('انتهت الجلسة — سجّل دخولك مرة أخرى');
-      else if ((err as { error?: string })?.error === 'NETWORK_ERROR') setError('لا يوجد اتصال');
-      else setError('حدث خطأ، حاول مرة أخرى');
+      if (code === 'ANALYSIS_LIMIT_REACHED') setError(t('aiAnalyze.limitReached'));
+      else if (code === 'SAME_STOCK_COMPARE') setError(t('aiCompare.errorSameStock'));
+      else if (code === 'UNAUTHORIZED' || status === 401) setError(t('aiAnalyze.sessionExpired'));
+      else if ((err as { error?: string })?.error === 'NETWORK_ERROR') setError(t('aiAnalyze.noInternet'));
+      else setError(t('aiAnalyze.error'));
     } finally {
       setLoading(false);
     }
@@ -298,7 +301,7 @@ export default function ComparePage() {
         <View style={tw('w-8 h-8 rounded-xl bg-blue-500/15 items-center justify-center')}>
           <GitCompare size={16} color="#3b82f6" />
         </View>
-        <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>{'مقارنة سهمين'}</Text>
+        <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>{t('aiCompare.title')}</Text>
       </View>
 
       <ScrollView
@@ -306,8 +309,8 @@ export default function ComparePage() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <TickerInput value={t1} onChange={setT1} placeholder="السهم الأول (مثال: COMI)" disabled={loading} />
-        <TickerInput value={t2} onChange={setT2} placeholder="السهم الثاني (مثال: ETEL)" disabled={loading} />
+        <TickerInput value={t1} onChange={setT1} placeholder={t('aiCompare.placeholder1')} disabled={loading} />
+        <TickerInput value={t2} onChange={setT2} placeholder={t('aiCompare.placeholder2')} disabled={loading} />
 
         {hasPaidPlan && (
           <View style={tw('flex-row gap-2')}>
@@ -322,9 +325,12 @@ export default function ComparePage() {
                 },
               ]}
             >
-              <Text style={[tw('text-xs font-bold'), { color: mode === 'beginner' ? '#fff' : colors.textSub }]}>
-                🎓 مبسّط
-              </Text>
+              <View style={tw('flex-row items-center gap-1.5')}>
+                <GraduationCap size={13} color={mode === 'beginner' ? '#fff' : colors.textSub} />
+                <Text style={[tw('text-xs font-bold'), { color: mode === 'beginner' ? '#fff' : colors.textSub }]}>
+                  {t('aiCompare.beginner')}
+                </Text>
+              </View>
             </Pressable>
             <Pressable
               onPress={() => setMode('professional')}
@@ -337,9 +343,12 @@ export default function ComparePage() {
                 },
               ]}
             >
-              <Text style={[tw('text-xs font-bold'), { color: mode === 'professional' ? '#fff' : colors.textSub }]}>
-                📊 احترافي
-              </Text>
+              <View style={tw('flex-row items-center gap-1.5')}>
+                <BarChart2 size={13} color={mode === 'professional' ? '#fff' : colors.textSub} />
+                <Text style={[tw('text-xs font-bold'), { color: mode === 'professional' ? '#fff' : colors.textSub }]}>
+                  {t('aiCompare.professional')}
+                </Text>
+              </View>
             </Pressable>
           </View>
         )}
@@ -355,7 +364,7 @@ export default function ComparePage() {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={tw('text-sm font-bold text-white')}>مقارنة بالذكاء الاصطناعي</Text>
+            <Text style={tw('text-sm font-bold text-white')}>{t('aiCompare.btnCompare')}</Text>
           )}
         </Pressable>
 
@@ -374,7 +383,7 @@ export default function ComparePage() {
               <View style={tw('bg-brand/10 border border-brand/25 rounded-2xl px-4 py-3 flex-row items-center gap-3')}>
                 <Trophy size={20} color="#8b5cf6" />
                 <View style={tw('flex-1')}>
-                  <Text style={tw('text-sm font-bold text-brand')}>الفائز: {result.winner}</Text>
+                  <Text style={tw('text-sm font-bold text-brand')}>{t('aiCompare.winner', { winner: result.winner })}</Text>
                   {(result.winnerReason ?? result.reason) ? (
                     <Text style={[{ color: colors.textSub }, tw('text-xs mt-0.5 leading-4')]}>
                       {result.winnerReason ?? result.reason}
@@ -394,19 +403,19 @@ export default function ComparePage() {
               >
                 {result.shortTermWinner && (
                   <View style={tw('flex-row justify-between items-center')}>
-                    <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>⚡ قصير المدى</Text>
+                    <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>{t('aiCompare.shortTerm')}</Text>
                     <Text style={[{ color: colors.text }, tw('text-xs font-bold')]}>{result.shortTermWinner}</Text>
                   </View>
                 )}
                 {result.mediumTermWinner && (
                   <View style={tw('flex-row justify-between items-center')}>
-                    <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>📅 متوسط المدى</Text>
+                    <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>{t('aiCompare.mediumTerm')}</Text>
                     <Text style={[{ color: colors.text }, tw('text-xs font-bold')]}>{result.mediumTermWinner}</Text>
                   </View>
                 )}
                 {result.longTermWinner && (
                   <View style={tw('flex-row justify-between items-center')}>
-                    <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>🌱 طويل المدى</Text>
+                    <Text style={[{ color: colors.textMuted }, tw('text-xs')]}>{t('aiCompare.longTerm')}</Text>
                     <Text style={[{ color: colors.text }, tw('text-xs font-bold')]}>{result.longTermWinner}</Text>
                   </View>
                 )}
@@ -433,7 +442,7 @@ export default function ComparePage() {
                   tw('border rounded-2xl px-4 py-3'),
                 ]}
               >
-                <Text style={[{ color: colors.textMuted }, tw('text-xs mb-1')]}>💡 التوصية</Text>
+                <Text style={[{ color: colors.textMuted }, tw('text-xs mb-1')]}>{t('aiCompare.recommendation')}</Text>
                 <Text style={[{ color: colors.text }, tw('text-sm leading-5')]}>{result.recommendation}</Text>
               </View>
             ) : null}

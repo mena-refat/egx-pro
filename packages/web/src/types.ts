@@ -56,6 +56,7 @@ export interface PortfolioHolding {
   shares: number;
   avgPrice: number;
   buyDate: string;
+  type: 'BUY' | 'SELL';
 }
 
 export interface WatchlistItem {

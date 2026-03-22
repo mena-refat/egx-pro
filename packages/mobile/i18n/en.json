@@ -559,8 +559,8 @@
   "aiAnalyze": {
     "title": "Stock Analysis",
     "searchPlaceholder": "Search ticker (e.g. COMI)",
-    "beginner": "🎓 Simple",
-    "professional": "📊 Professional",
+    "beginner": "Simple",
+    "professional": "Professional",
     "analyzeBtn": "AI Analysis",
     "enterTicker": "Please enter a ticker first",
     "tickerNotFound": "Ticker not found — pick from the list",
@@ -601,5 +601,34 @@
     "positive": "Positive",
     "negative": "Negative",
     "neutral": "Neutral"
+  },
+  "aiCompare": {
+    "title": "Compare Two Stocks",
+    "placeholder1": "Stock 1 (e.g. COMI)",
+    "placeholder2": "Stock 2 (e.g. ETEL)",
+    "beginner": "Simple",
+    "professional": "Professional",
+    "btnCompare": "AI Comparison",
+    "best": "Best",
+    "winner": "Winner: {{winner}}",
+    "shortTerm": "⚡ Short-term",
+    "mediumTerm": "📅 Medium-term",
+    "longTerm": "🌱 Long-term",
+    "recommendation": "💡 Recommendation",
+    "errorEnterTickers": "Enter both ticker symbols first",
+    "errorTickerNotFound": "Symbol {{ticker}} not found",
+    "errorSameStock": "Pick two different stocks",
+    "errorNoResult": "No comparison result received"
+  },
+  "aiRec": {
+    "title": "Personal Recommendations",
+    "cardTitle": "Personalized for You",
+    "cardDesc": "Based on your portfolio, watchlist, and investment goals, AI will suggest the best stocks for you right now.",
+    "btnGet": "Get Recommendations",
+    "financialGoals": "🎯 My Financial Goals",
+    "remaining": "Remaining: {{amount}} EGP",
+    "watchlistOpinion": "👁 AI on Your Watchlist",
+    "noRecs": "No recommendations available right now",
+    "errorNoResult": "No recommendations received"
   }
 }

@@ -30,18 +30,28 @@ export function usePredictionsApi() {
     setLimitsLoading,
     setLikeOnFeed,
     setLikeOnMy,
-    feedFilter,
   } = usePredictionsStore();
 
   const fetchFeed = useCallback(
     async (page = 1, ticker?: string) => {
       if (!accessToken) return;
-      setFeedLoading(true);
+      const state = usePredictionsStore.getState();
+      const currentFilter = state.feedFilter;
+
+      // Skip fetch if this filter's page-1 cache is very fresh (< 30s) — prevents rapid re-fetching
+      if (page === 1 && !ticker) {
+        const cached = state.feedCacheByFilter[currentFilter];
+        if (cached && Date.now() - cached.ts < 30_000) return;
+      }
+
+      // Show loading skeleton only when there is no data to display right now
+      if (state.feedPredictions.length === 0) setFeedLoading(true);
+
       try {
         const q = new URLSearchParams({
           page: String(page),
           limit: String(PAGINATION.defaultLimit),
-          filter: feedFilter,
+          filter: currentFilter,
         });
         if (ticker) q.set('ticker', ticker);
         const res = await fetch(`${API}/feed?${q}`, { headers: getAuthHeaders(accessToken) });
@@ -49,16 +59,21 @@ export function usePredictionsApi() {
         const json = await res.json();
         const items = (json.data?.items ?? []) as FeedPrediction[];
         const pag = json.data?.pagination ?? {};
-        usePredictionsStore.getState().setFeedPredictions(items, {
+        const pagination = {
           page: pag.page ?? page,
           total: pag.total ?? 0,
           totalPages: pag.totalPages ?? 1,
-        });
+        };
+        // Store in per-filter cache (page 1 only)
+        if (page === 1 && !ticker) {
+          usePredictionsStore.getState().setCachedFeed(currentFilter, items, pagination);
+        }
+        usePredictionsStore.getState().setFeedPredictions(items, pagination);
       } finally {
         setFeedLoading(false);
       }
     },
-    [accessToken, feedFilter, setFeedLoading]
+    [accessToken, setFeedLoading] // feedFilter removed — read from getState() inside
   );
 
   const fetchMy = useCallback(

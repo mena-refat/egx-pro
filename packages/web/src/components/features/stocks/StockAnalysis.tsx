@@ -17,7 +17,6 @@ import {
   Target,
   Bell,
   Newspaper,
-  ExternalLink,
   Clock,
 } from 'lucide-react';
 import { Skeleton } from '../../ui/Skeleton';
@@ -112,11 +111,6 @@ function StockNewsModal({ item, isRtl, onClose }: { item: NewsItem; isRtl: boole
                   {relTime(item.publishedAt, isRtl ? 'ar' : 'en')}
                 </span>
               )}
-              {item.source && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border)]">
-                  {item.source}
-                </span>
-              )}
             </div>
             <button onClick={onClose} className="shrink-0 w-8 h-8 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center hover:bg-[var(--bg-card-hover)] transition-colors">
               <X className="w-4 h-4 text-[var(--text-muted)]" />
@@ -125,13 +119,6 @@ function StockNewsModal({ item, isRtl, onClose }: { item: NewsItem; isRtl: boole
           <h2 className="text-base font-bold text-[var(--text-primary)] leading-snug mb-3">{item.title}</h2>
           {item.summary && (
             <p className="text-sm text-[var(--text-secondary)] leading-7 mb-5">{item.summary}</p>
-          )}
-          {item.url && (
-            <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--brand)] hover:underline">
-              <ExternalLink className="w-3.5 h-3.5" />
-              {isRtl ? 'اقرأ الخبر كاملاً' : 'Read full article'}
-            </a>
           )}
         </div>
       </div>
@@ -180,11 +167,6 @@ function StockNewsTab({ news, locale, t }: { news: NewsItem[]; locale: string; t
                     <Clock className="w-3 h-3 shrink-0" />
                     {relTime(item.publishedAt, locale)}
                   </span>
-                  {item.source && (
-                    <span className="ms-auto text-[10px] font-medium text-[var(--text-muted)] shrink-0">
-                      {item.source}
-                    </span>
-                  )}
                 </div>
                 {/* Title */}
                 <h4 className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-2 group-hover:text-[var(--brand)] transition-colors mb-1.5">
@@ -196,9 +178,6 @@ function StockNewsTab({ news, locale, t }: { news: NewsItem[]; locale: string; t
                     {item.summary}
                   </p>
                 )}
-              </div>
-              <div className="flex items-center pe-3 ps-1 text-[var(--text-muted)] opacity-0 group-hover:opacity-60 transition-opacity shrink-0">
-                <ExternalLink className="w-3.5 h-3.5" />
               </div>
             </button>
           );

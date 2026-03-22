@@ -34,8 +34,16 @@ export const PortfolioRepository = {
     return prisma.portfolio.count({ where: { userId, ticker } }).then((n) => n > 0);
   },
 
-  create(data: { userId: number; ticker: string; shares: number; avgPrice: number; buyDate: Date }) {
-    return prisma.portfolio.create({ data });
+  create(data: { userId: number; ticker: string; shares: number; avgPrice: number; buyDate: Date; type?: string }) {
+    return prisma.portfolio.create({ data: { ...data, type: data.type ?? 'BUY' } });
+  },
+
+  async getNetSharesByTicker(userId: number, ticker: string): Promise<number> {
+    const rows = await prisma.portfolio.findMany({
+      where: { userId, ticker },
+      select: { shares: true, type: true },
+    });
+    return rows.reduce((net, h) => net + (h.type === 'SELL' ? -h.shares : h.shares), 0);
   },
 
   updateMany(userId: number, id: string, data: { shares?: number; avgPrice?: number; buyDate?: Date }) {

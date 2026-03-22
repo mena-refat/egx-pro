@@ -86,9 +86,11 @@ export type NewPredictionDraft = {
   isPublic?: boolean;
 };
 
+type FeedPagination = { page: number; total: number; totalPages: number } | null;
+
 interface PredictionsState {
   feedPredictions: FeedPrediction[];
-  feedPagination: { page: number; total: number; totalPages: number } | null;
+  feedPagination: FeedPagination;
   myPredictions: FeedPrediction[];
   myPagination: { page: number; total: number; totalPages: number } | null;
   leaderboard: LeaderboardEntry[];
@@ -103,7 +105,8 @@ interface PredictionsState {
   myLoading: boolean;
   leaderboardLoading: boolean;
   limitsLoading: boolean;
-  setFeedPredictions: (items: FeedPrediction[], pagination: PredictionsState['feedPagination']) => void;
+  feedCacheByFilter: Record<string, { items: FeedPrediction[]; pagination: FeedPagination; ts: number }>;
+  setFeedPredictions: (items: FeedPrediction[], pagination: FeedPagination) => void;
   setMyPredictions: (items: FeedPrediction[], pagination: PredictionsState['myPagination']) => void;
   setLeaderboard: (items: LeaderboardEntry[]) => void;
   setMyStats: (stats: UserPredictionStats | null) => void;
@@ -114,6 +117,7 @@ interface PredictionsState {
   updateDraft: (draft: Partial<NewPredictionDraft>) => void;
   resetDraft: () => void;
   setFeedFilter: (filter: 'all' | 'following' | 'top') => void;
+  setCachedFeed: (filter: string, items: FeedPrediction[], pagination: FeedPagination) => void;
   setSelectedTicker: (ticker: string | null) => void;
   setFeedLoading: (v: boolean) => void;
   setMyLoading: (v: boolean) => void;
@@ -137,7 +141,7 @@ const initialDraft: NewPredictionDraft = {
   isPublic: true,
 };
 
-export const usePredictionsStore = create<PredictionsState>((set) => ({
+export const usePredictionsStore = create<PredictionsState>((set, get) => ({
   feedPredictions: [],
   feedPagination: null,
   myPredictions: [],
@@ -150,6 +154,7 @@ export const usePredictionsStore = create<PredictionsState>((set) => ({
   newPredictionDraft: initialDraft,
   feedFilter: 'all',
   selectedTicker: null,
+  feedCacheByFilter: {},
   feedLoading: false,
   myLoading: false,
   leaderboardLoading: false,
@@ -164,7 +169,19 @@ export const usePredictionsStore = create<PredictionsState>((set) => ({
   setNewPredictionStep: (step) => set({ newPredictionStep: step }),
   updateDraft: (draft) => set((s) => ({ newPredictionDraft: { ...s.newPredictionDraft, ...draft } })),
   resetDraft: () => set({ newPredictionDraft: initialDraft }),
-  setFeedFilter: (filter) => set({ feedFilter: filter }),
+  setFeedFilter: (filter) => {
+    const cached = get().feedCacheByFilter[filter];
+    const isFresh = cached != null && Date.now() - cached.ts < 120_000; // 2 min
+    set({
+      feedFilter: filter,
+      feedPredictions: isFresh ? cached.items : [],
+      feedPagination: isFresh ? cached.pagination : null,
+    });
+  },
+  setCachedFeed: (filter, items, pagination) =>
+    set((s) => ({
+      feedCacheByFilter: { ...s.feedCacheByFilter, [filter]: { items, pagination, ts: Date.now() } },
+    })),
   setSelectedTicker: (ticker) => set({ selectedTicker: ticker }),
   setFeedLoading: (v) => set({ feedLoading: v }),
   setMyLoading: (v) => set({ myLoading: v }),

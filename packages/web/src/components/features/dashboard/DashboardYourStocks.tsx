@@ -65,10 +65,11 @@ export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings,
 
   const lang = isRTL ? 'ar' : 'en';
 
-  // Aggregate duplicate tickers by WACC before display
+  // Aggregate duplicate tickers by WACC before display (net of sells)
   const aggregatedHoldings = useMemo<PortfolioHolding[]>(() => {
     const map = new Map<string, { ticker: string; shares: number; totalCost: number; buyDate: string }>();
     for (const h of holdings) {
+      if (h.type === 'SELL') continue;
       if (map.has(h.ticker)) {
         const e = map.get(h.ticker)!;
         e.totalCost += h.avgPrice * h.shares;
@@ -77,13 +78,24 @@ export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings,
         map.set(h.ticker, { ticker: h.ticker, shares: h.shares, totalCost: h.avgPrice * h.shares, buyDate: h.buyDate });
       }
     }
-    return Array.from(map.values()).map(({ ticker, shares, totalCost, buyDate }) => ({
-      id: ticker,
-      ticker,
-      shares,
-      avgPrice: shares > 0 ? totalCost / shares : 0,
-      buyDate,
-    }));
+    for (const h of holdings) {
+      if (h.type !== 'SELL') continue;
+      const e = map.get(h.ticker);
+      if (!e) continue;
+      const prev = e.shares;
+      e.shares -= h.shares;
+      if (prev > 0) e.totalCost = e.totalCost * (e.shares / prev);
+    }
+    return Array.from(map.values())
+      .filter(e => e.shares > 0)
+      .map(({ ticker, shares, totalCost, buyDate }) => ({
+        id: ticker,
+        ticker,
+        shares,
+        avgPrice: shares > 0 ? totalCost / shares : 0,
+        buyDate,
+        type: 'BUY' as const,
+      }));
   }, [holdings]);
 
   const sortedHoldings = useMemo(() => {

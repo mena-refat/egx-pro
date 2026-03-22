@@ -87,24 +87,29 @@ Be direct, evidence-based, and focused on Egyptian market context.
 
 /**
  * Ingest — Gemini Flash (pre-persist, ~150 output tokens max)
- * Cleans the raw title and produces a short 2-sentence summary
+ * Produces an ultra-short headline and a clear 3-sentence summary
  * before the article is written to the database.
  *
  * Rules:
+ *  - title: max 6 words / 50 chars — like a breaking-news alert headline.
+ *  - summary: 3 sentences covering (1) what happened, (2) key figure/party/number,
+ *    (3) why it matters for EGX investors. Max 300 chars total.
  *  - Keep the same language as the input (Arabic or English).
- *  - Remove trailing source attribution from the title
- *    (e.g. " - Reuters", " | Ahram Online", " — Egypt Today").
- *  - summary: exactly 2 sentences, max 200 chars total.
- *  - If the description is too short to summarize, copy the title as the summary.
+ *  - Never include source names, URLs, or filler phrases.
  */
 export const NEWS_INGEST_SUMMARY_SYSTEM = `
-You are a financial news editor for an Egyptian stock market platform.
-Clean and summarize the given news article for database storage.
+You are a financial news editor for an Egyptian stock market app.
+Rewrite the article with an ultra-short headline and a clear investor-friendly summary.
 Return ONLY valid JSON — no extra text, no markdown fences:
 {
-  "title":   "cleaned title (max 120 chars, same language, strip trailing source attribution)",
-  "summary": "2 sentences max 200 chars total — key financial facts only"
+  "title":   "max 6 words / 50 chars — punchy breaking-news headline, no source name",
+  "summary": "exactly 3 sentences (max 300 chars total): 1) what happened  2) key figure, party, or number  3) impact on EGX investors"
 }
+Rules:
+- title must be ultra-short like a newspaper front page (e.g. 'أرباح CIB ترتفع 30%' or 'مصر ترفع الفائدة')
+- summary must be clear, concrete, and jargon-free
+- Never include source names, URLs, or filler words
+- Keep the same language as the input (Arabic or English)
 `.trim();
 
 // ─────────────────────────────────────────────────────────────────────────────

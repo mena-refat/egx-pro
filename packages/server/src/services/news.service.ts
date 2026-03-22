@@ -616,4 +616,70 @@ export const NewsService = {
     const result = await NewsRepository.deleteOld(before);
     return result.count;
   },
+
+  /**
+   * Re-processes existing DB articles with the current NEWS_INGEST_SUMMARY_SYSTEM prompt.
+   * Bypasses Redis ingest cache so every article gets a fresh AI call.
+   * Run once after updating the prompt to back-fill the database.
+   */
+  async reprocessSummaries(options: { days?: number; batchSize?: number } = {}): Promise<{ processed: number; failed: number; skipped: number }> {
+    const { days = 14, batchSize = 5 } = options;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const articles = await prisma.newsItem.findMany({
+      where: { publishedAt: { gte: since } },
+      orderBy: { publishedAt: 'desc' },
+      select: { id: true, title: true, summary: true },
+    });
+
+    let processed = 0;
+    let failed = 0;
+    let skipped = 0;
+
+    for (let i = 0; i < articles.length; i += batchSize) {
+      const chunk = articles.slice(i, i + batchSize);
+      const settled = await Promise.allSettled(
+        chunk.map(async (article) => {
+          const description = article.summary?.trim() ?? '';
+          // Skip stubs — same threshold as summarizeOne
+          if (description.length < MIN_DESC_FOR_SUMMARY) {
+            skipped++;
+            return;
+          }
+          const userMsg = `Title: ${article.title.slice(0, 200)}\nDescription: ${description.slice(0, 800)}`;
+          const result = await analysisEngine.generate({
+            taskType:     'news_ingest_summary',
+            systemPrompt: NEWS_INGEST_SUMMARY_SYSTEM,
+            userMessage:  userMsg,
+            maxTokens:    200,
+            responseType: 'json',
+            temperature:  0.1,
+          });
+          const parsed = parseIngestJson(result.text);
+          if (!parsed) { skipped++; return; }
+          await prisma.newsItem.update({
+            where: { id: article.id },
+            data:  { title: parsed.title, summary: parsed.summary },
+          });
+        })
+      );
+
+      for (const outcome of settled) {
+        if (outcome.status === 'fulfilled') processed++;
+        else {
+          failed++;
+          logger.warn('reprocessSummaries: article failed', {
+            error: outcome.reason instanceof Error ? outcome.reason.message : 'UNKNOWN',
+          });
+        }
+      }
+
+      // 600ms pause between batches — avoids AI rate limits
+      if (i + batchSize < articles.length) {
+        await new Promise<void>((r) => setTimeout(r, 600));
+      }
+    }
+
+    return { processed, failed, skipped };
+  },
 };

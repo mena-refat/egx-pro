@@ -694,38 +694,21 @@ export default function StockDetailPage() {
                 <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('stockDetail.relatedNews')}</Text>
               </View>
               {news.map((item, i) => (
-                <Pressable
+                <View
                   key={item.id}
-                  onPress={async () => {
-                    try {
-                      const canOpen = await Linking.canOpenURL(item.url);
-                      if (canOpen) {
-                        await Linking.openURL(item.url);
-                        return;
-                      }
-                    } catch {
-                      // fall through to alert
-                    }
-                    Alert.alert(t('stockDetail.cannotOpenLink'), t('stockDetail.cannotOpenLinkMsg'));
-                  }}
-                  style={({ pressed }) => ({
-                    backgroundColor: pressed ? colors.hover : 'transparent',
+                  style={{
                     paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
                     borderBottomWidth: i < news.length - 1 ? 1 : 0,
                     borderBottomColor: colors.border,
-                    flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md,
-                  })}
+                  }}
                 >
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.text, fontSize: FONT.sm, lineHeight: 20 }} numberOfLines={2}>
-                      {item.title}
-                    </Text>
-                    <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 4 }}>
-                      {item.source} · {new Date(item.publishedAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
-                    </Text>
-                  </View>
-                  <ExternalLink size={14} color={colors.textMuted} style={{ marginTop: 3 }} />
-                </Pressable>
+                  <Text style={{ color: colors.text, fontSize: FONT.sm, lineHeight: 20 }} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 4 }}>
+                    {new Date(item.publishedAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+                  </Text>
+                </View>
               ))}
             </View>
           )}

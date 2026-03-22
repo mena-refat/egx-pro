@@ -6,6 +6,7 @@ export interface Portfolio {
   shares: number;
   avgPrice: number;
   buyDate: string;
+  type: 'BUY' | 'SELL';
   createdAt: string;
   updatedAt: string;
 }
@@ -17,4 +18,5 @@ export interface PortfolioHolding {
   shares: number;
   avgPrice: number;
   buyDate: string;
+  type: 'BUY' | 'SELL';
 }

@@ -359,8 +359,6 @@ function NewsSection({ news }: { news: NewsItem[] }) {
                 </Text>
                 <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
                   {SentIcon && <SentIcon size={11} color={accentCol} />}
-                  <Text style={{ color: colors.textMuted, fontSize: 10 }} numberOfLines={1}>{item.source}</Text>
-                  <Text style={{ color: colors.border, fontSize: 10 }}>·</Text>
                   <Clock size={10} color={colors.textMuted} />
                   <Text style={{ color: colors.textMuted, fontSize: 10 }}>{relativeTime(item.publishedAt)}</Text>
                 </View>

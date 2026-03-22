@@ -74,7 +74,7 @@ function App() {
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <BrowserRouter basename="/admin">
+    <BrowserRouter basename={import.meta.env.DEV ? '/' : '/admin'}>
       <App />
     </BrowserRouter>
   </React.StrictMode>

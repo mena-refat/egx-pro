@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, Fragment, lazy, Suspe
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, TrendingUp, TrendingDown, Briefcase, PieChart as PieChartIcon, ClipboardList } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, Briefcase, PieChart as PieChartIcon, ClipboardList, LogOut } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import api from '../../../lib/api';
 import { useLivePrices } from '../../../hooks/useLivePrices';
@@ -18,12 +18,13 @@ import { Input } from '../../ui/Input';
 import { Skeleton } from '../../ui/Skeleton';
 import EmptyState from '../../shared/EmptyState';
 import { BlurNum } from '../../ui/BlurNum';
+import { toast } from '../../../store/toastStore';
 
 export default function PortfolioTracker() {
   const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
   const { prices: livePrices } = useLivePrices();
-  const { holdings, stats, isLoading, error, addHolding } = usePortfolio(livePrices);
+  const { holdings, stats, isLoading, error, addHolding, sellHolding } = usePortfolio(livePrices);
   
   const [allStocks, setAllStocks] = useState<Stock[]>([]);
   const [isAdding, setIsAdding] = useState(false);
@@ -31,6 +32,10 @@ export default function PortfolioTracker() {
   const [newHolding, setNewHolding] = useState({ ticker: '', shares: '', avgPrice: '', buyDate: new Date().toISOString().split('T')[0] });
   const [addError, setAddError] = useState<string | null>(null);
   const [showPortfolioLimitModal, setShowPortfolioLimitModal] = useState(false);
+  const [sellForm, setSellForm] = useState<{ ticker: string; name: string; maxShares: number } | null>(null);
+  const [sellData, setSellData] = useState({ shares: '', price: '', date: new Date().toISOString().split('T')[0] });
+  const [sellError, setSellError] = useState<string | null>(null);
+  const [isSelling, setIsSelling] = useState(false);
 
   const isRTL = i18n.language.startsWith('ar');
 
@@ -96,6 +101,10 @@ export default function PortfolioTracker() {
       setAddError(t('portfolio.pricePositive'));
       return;
     }
+    if (newHolding.buyDate > new Date().toISOString().slice(0, 10)) {
+      setAddError(isRTL ? 'لا يمكن اختيار تاريخ مستقبلي' : 'Future dates are not allowed');
+      return;
+    }
 
     try {
       await addHolding({
@@ -121,28 +130,65 @@ export default function PortfolioTracker() {
   };
 
 
-  // Aggregate duplicate tickers by WACC for the Holdings view
+  const handleSell = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sellForm) return;
+    setSellError(null);
+    const sharesNum = parseInt(sellData.shares, 10);
+    const priceNum = parseFloat(sellData.price);
+    if (!sharesNum || sharesNum < 1) { setSellError(isRTL ? 'الكمية غير صحيحة' : 'Invalid quantity'); return; }
+    if (sharesNum > sellForm.maxShares) { setSellError(isRTL ? `لا تملك سوى ${sellForm.maxShares} سهم` : `You only have ${sellForm.maxShares} shares`); return; }
+    if (!priceNum || priceNum <= 0) { setSellError(isRTL ? 'السعر غير صحيح' : 'Invalid price'); return; }
+    if (sellData.date > new Date().toISOString().slice(0, 10)) { setSellError(isRTL ? 'لا يمكن اختيار تاريخ مستقبلي' : 'Future dates are not allowed'); return; }
+    setIsSelling(true);
+    try {
+      await sellHolding({ ticker: sellForm.ticker, shares: sharesNum, price: priceNum, date: sellData.date });
+      toast.success(isRTL ? `تم تسجيل بيع ${sharesNum} سهم من ${sellForm.name}` : `Sold ${sharesNum} shares of ${sellForm.name}`);
+      setSellForm(null);
+      setSellData({ shares: '', price: '', date: new Date().toISOString().split('T')[0] });
+    } catch (err: unknown) {
+      const code = (err as Error & { code?: string })?.code;
+      if (code === 'INSUFFICIENT_SHARES') {
+        setSellError(isRTL ? 'الكمية أكبر من رصيدك الحالي' : 'Quantity exceeds your current holdings');
+      } else {
+        setSellError(isRTL ? 'حدث خطأ، حاول مرة أخرى' : 'Something went wrong, try again');
+      }
+    } finally {
+      setIsSelling(false);
+    }
+  };
+
+  // Aggregate duplicate tickers — net position (BUY - SELL), WACC for avg price
   const aggregatedHoldings = useMemo(() => {
     const map = new Map<string, { ticker: string; shares: number; totalCost: number }>();
+    // First pass: sum all BUY orders
     for (const h of holdings) {
-      if (map.has(h.ticker)) {
-        const e = map.get(h.ticker)!;
-        e.totalCost += h.avgPrice * h.shares;
-        e.shares += h.shares;
-      } else {
-        map.set(h.ticker, { ticker: h.ticker, shares: h.shares, totalCost: h.avgPrice * h.shares });
-      }
+      if (h.type === 'SELL') continue;
+      const e = map.get(h.ticker);
+      if (e) { e.shares += h.shares; e.totalCost += h.avgPrice * h.shares; }
+      else map.set(h.ticker, { ticker: h.ticker, shares: h.shares, totalCost: h.avgPrice * h.shares });
     }
-    return Array.from(map.values()).map(({ ticker, shares, totalCost }) => ({
-      ticker,
-      shares,
-      avgPrice: shares > 0 ? totalCost / shares : 0,
-    }));
+    // Second pass: subtract SELL orders (keeps WACC intact for remaining shares)
+    for (const h of holdings) {
+      if (h.type !== 'SELL') continue;
+      const e = map.get(h.ticker);
+      if (!e) continue;
+      const prev = e.shares;
+      e.shares -= h.shares;
+      if (prev > 0) e.totalCost = e.totalCost * (e.shares / prev);
+    }
+    return Array.from(map.values())
+      .filter(e => e.shares > 0)
+      .map(({ ticker, shares, totalCost }) => ({
+        ticker,
+        shares,
+        avgPrice: shares > 0 ? totalCost / shares : 0,
+      }));
   }, [holdings]);
 
   const chartData = useMemo(() => {
     const sectorData: Record<string, number> = {};
-    holdings.forEach(h => {
+    aggregatedHoldings.forEach(h => {
       const currentPrice = livePrices[h.ticker]?.price || h.avgPrice;
       const fromApi = livePrices[h.ticker]?.sector ?? allStocks.find(s => s.ticker === h.ticker)?.sector;
       const info = getStockInfo(h.ticker);
@@ -157,7 +203,7 @@ export default function PortfolioTracker() {
         : (labels[key] ? (isRTL ? labels[key].ar : labels[key].en) : key);
       return { name: label, value };
     });
-  }, [holdings, livePrices, allStocks, isRTL]);
+  }, [aggregatedHoldings, livePrices, allStocks, isRTL]);
 
   const COLORS = ['#7c3aed', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
 
@@ -267,6 +313,7 @@ export default function PortfolioTracker() {
                     <th className="px-6 py-4 font-medium">{t('portfolio.avgPrice')}</th>
                     <th className="px-6 py-4 font-medium">{t('portfolio.currentPrice')}</th>
                     <th className="px-6 py-4 font-medium">{t('portfolio.pnl')}</th>
+                    <th className="px-6 py-4 font-medium"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border-subtle)]">
@@ -292,6 +339,22 @@ export default function PortfolioTracker() {
                           <div className={`text-xs ${profit >= 0 ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'}`}>
                             {profitPercent.toFixed(2)}%
                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSellForm({ ticker: h.ticker, name: getStockName(h.ticker, lang), maxShares: h.shares });
+                              setSellData({ shares: '', price: '', date: new Date().toISOString().split('T')[0] });
+                              setSellError(null);
+                            }}
+                            className="flex items-center gap-1.5 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10 border border-[var(--danger)]/20 hover:border-[var(--danger)]/40"
+                          >
+                            <LogOut className="w-3.5 h-3.5" />
+                            {isRTL ? 'بيع' : 'Sell'}
+                          </Button>
                         </td>
                       </tr>
                     );
@@ -496,6 +559,87 @@ export default function PortfolioTracker() {
                   </Button>
                   <Button type="submit" variant="primary" size="lg" fullWidth>
                     {t('common.save')}
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Sell Form Modal */}
+      <AnimatePresence>
+        {sellForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => !isSelling && setSellForm(null)}>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="card-base p-8 w-full max-w-md shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-[var(--danger)]/10 flex items-center justify-center shrink-0">
+                  <LogOut className="w-5 h-5 text-[var(--danger)]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[var(--text-primary)]">
+                    {isRTL ? 'تسجيل بيع' : 'Record Sell'}
+                  </h3>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    {sellForm.name} · {isRTL ? `${sellForm.maxShares.toLocaleString()} سهم متاح` : `${sellForm.maxShares.toLocaleString()} shares available`}
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSell} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    label={isRTL ? 'الكمية المباعة' : 'Shares Sold'}
+                    type="number"
+                    required
+                    min={1}
+                    max={sellForm.maxShares}
+                    step={1}
+                    inputMode="numeric"
+                    value={sellData.shares}
+                    onChange={e => setSellData(d => ({ ...d, shares: e.target.value }))}
+                    onKeyDown={e => { if (['.', '-', '+', 'e', 'E'].includes(e.key)) e.preventDefault(); }}
+                    inputClassName="input-base"
+                  />
+                  <Input
+                    label={isRTL ? 'سعر البيع' : 'Sell Price'}
+                    type="number"
+                    required
+                    step="0.01"
+                    min="0.01"
+                    value={sellData.price}
+                    onChange={e => setSellData(d => ({ ...d, price: e.target.value }))}
+                    inputClassName="input-base"
+                  />
+                </div>
+                <Input
+                  label={isRTL ? 'تاريخ البيع' : 'Sell Date'}
+                  type="date"
+                  required
+                  value={sellData.date}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={e => setSellData(d => ({ ...d, date: e.target.value }))}
+                  inputClassName="input-base"
+                />
+
+                {sellError && (
+                  <div className="p-3 bg-[var(--danger-bg)] border border-[var(--danger)]/20 rounded-xl text-[var(--danger)] text-sm">
+                    {sellError}
+                  </div>
+                )}
+
+                <div className="flex gap-4 mt-8">
+                  <Button type="button" variant="secondary" size="lg" fullWidth onClick={() => setSellForm(null)} disabled={isSelling}>
+                    {isRTL ? 'إلغاء' : 'Cancel'}
+                  </Button>
+                  <Button type="submit" variant="danger" size="lg" fullWidth loading={isSelling}>
+                    {isRTL ? 'تسجيل البيع' : 'Record Sell'}
                   </Button>
                 </div>
               </form>

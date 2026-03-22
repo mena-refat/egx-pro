@@ -11,6 +11,7 @@ import {
   TrendingUp, TrendingDown, Minus,
   Target, Clock, Calendar, CalendarDays,
   AlertTriangle, ChevronDown, ChevronUp, Shield,
+  GraduationCap, BarChart2,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { AnalysisLoader } from '../../components/shared/AnalysisLoader';
@@ -453,7 +454,9 @@ export default function AnalyzePage() {
     setError(null); setResult(null); setLoading(true);
     try {
       const res = await apiClient.post(`/api/analysis/${tick}`, { mode }, { timeout: 120_000 });
-      const data = (res.data as { analysis?: AnalysisResult })?.analysis ?? res.data;
+      const data =
+        (res.data as { data?: { analysis?: AnalysisResult } })?.data?.analysis ??
+        (res.data as { analysis?: AnalysisResult })?.analysis;
       if (data) setResult(data as AnalysisResult);
       else setError(t('aiAnalyze.noResult'));
     } catch (err: unknown) {
@@ -528,7 +531,10 @@ export default function AnalyzePage() {
                 { backgroundColor: mode === 'beginner' ? '#8b5cf6' : colors.card, borderColor: mode === 'beginner' ? '#8b5cf6' : colors.border },
               ]}
             >
-              <Text style={[tw('text-xs font-semibold'), { color: mode === 'beginner' ? '#fff' : colors.textSub }]}>{t('aiAnalyze.beginner')}</Text>
+              <View style={tw('flex-row items-center gap-1.5')}>
+                <GraduationCap size={13} color={mode === 'beginner' ? '#fff' : colors.textSub} />
+                <Text style={[tw('text-xs font-semibold'), { color: mode === 'beginner' ? '#fff' : colors.textSub }]}>{t('aiAnalyze.beginner')}</Text>
+              </View>
             </Pressable>
             <Pressable
               onPress={() => setMode('professional')}
@@ -537,7 +543,10 @@ export default function AnalyzePage() {
                 { backgroundColor: mode === 'professional' ? '#8b5cf6' : colors.card, borderColor: mode === 'professional' ? '#8b5cf6' : colors.border },
               ]}
             >
-              <Text style={[tw('text-xs font-semibold'), { color: mode === 'professional' ? '#fff' : colors.textSub }]}>{t('aiAnalyze.professional')}</Text>
+              <View style={tw('flex-row items-center gap-1.5')}>
+                <BarChart2 size={13} color={mode === 'professional' ? '#fff' : colors.textSub} />
+                <Text style={[tw('text-xs font-semibold'), { color: mode === 'professional' ? '#fff' : colors.textSub }]}>{t('aiAnalyze.professional')}</Text>
+              </View>
             </Pressable>
           </View>
         )}

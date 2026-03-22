@@ -19,6 +19,17 @@ interface NewsItem {
   sentiment?: string | null;
   tickers?: string[];
   isMarketWide?: boolean;
+  source?: string;
+}
+
+function cleanTitle(title: string, source?: string): string {
+  if (!source) return title;
+  const escaped = source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Strip from end:  "عنوان - فيتو"
+  let out = title.replace(new RegExp(`\\s*[-|–—]\\s*${escaped}\\s*$`, 'i'), '').trim();
+  // Strip from start: "فيتو: عنوان" or "فيتو - عنوان" or "فيتو | عنوان"
+  out = out.replace(new RegExp(`^${escaped}\\s*[-:|–—]\\s*`, 'i'), '').trim();
+  return out || title;
 }
 
 type NewsFilter = 'all' | 'interests';
@@ -126,7 +137,7 @@ function NewsDetailModal({
             <Text
               style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold, lineHeight: 24, marginBottom: 12 }}
             >
-              {item.title}
+              {cleanTitle(item.title, item.source)}
             </Text>
 
             {/* Summary block */}
@@ -479,7 +490,7 @@ export default function NewsPage() {
 
                 {/* Title */}
                 <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.semibold, lineHeight: 20 }} numberOfLines={2}>
-                  {item.title}
+                  {cleanTitle(item.title, item.source)}
                 </Text>
 
                 {/* Summary preview */}

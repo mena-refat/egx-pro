@@ -559,8 +559,8 @@
   "aiAnalyze": {
     "title": "تحليل سهم",
     "searchPlaceholder": "ابحث عن رمز السهم (مثال: COMI)",
-    "beginner": "🎓 مبسّط",
-    "professional": "📊 احترافي",
+    "beginner": "مبسّط",
+    "professional": "احترافي",
     "analyzeBtn": "تحليل بالذكاء الاصطناعي",
     "enterTicker": "أدخل رمز السهم أولاً",
     "tickerNotFound": "رمز السهم غير موجود — اختر من القائمة",
@@ -601,5 +601,34 @@
     "positive": "إيجابي",
     "negative": "سلبي",
     "neutral": "محايد"
+  },
+  "aiCompare": {
+    "title": "مقارنة سهمين",
+    "placeholder1": "السهم الأول (مثال: COMI)",
+    "placeholder2": "السهم الثاني (مثال: ETEL)",
+    "beginner": "مبسّط",
+    "professional": "احترافي",
+    "btnCompare": "مقارنة بالذكاء الاصطناعي",
+    "best": "الأفضل",
+    "winner": "الفائز: {{winner}}",
+    "shortTerm": "⚡ قصير المدى",
+    "mediumTerm": "📅 متوسط المدى",
+    "longTerm": "🌱 طويل المدى",
+    "recommendation": "💡 التوصية",
+    "errorEnterTickers": "أدخل رمزَي السهمين أولاً",
+    "errorTickerNotFound": "رمز {{ticker}} غير موجود",
+    "errorSameStock": "اختر سهمين مختلفين",
+    "errorNoResult": "لم يتم استلام نتيجة المقارنة"
+  },
+  "aiRec": {
+    "title": "توصيات شخصية",
+    "cardTitle": "توصيات مخصصة لك",
+    "cardDesc": "بناءً على محفظتك وقائمة المتابعة وأهدافك الاستثمارية، سيقترح الذكاء الاصطناعي أفضل الأسهم المناسبة لك الآن.",
+    "btnGet": "احصل على التوصيات",
+    "financialGoals": "🎯 أهدافك المالية",
+    "remaining": "متبقي: {{amount}} ج",
+    "watchlistOpinion": "👁 رأي AI في قائمة مراقبتك",
+    "noRecs": "لا توجد توصيات متاحة حالياً",
+    "errorNoResult": "لم يتم استلام التوصيات"
   }
 }

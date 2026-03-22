@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye, EyeOff, TrendingUp, TrendingDown } from 'lucide-react';
+import { Eye, EyeOff, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Skeleton } from '../../ui/Skeleton';
 import { BlurNum } from '../../ui/BlurNum';
 import { usePrivacyStore } from '../../../store/privacyStore';
@@ -24,22 +24,21 @@ export function DashboardPortfolioHero({ totalInvested, totalValue, totalGain, g
   const isProfit = totalGain > 0;
   const isLoss = totalGain < 0;
 
+  // Top bar: always brand — never red. Red banners cause psychological alarm.
   const accentGradient = isProfit
     ? 'from-emerald-500 via-teal-400 to-emerald-400'
-    : isLoss
-      ? 'from-red-500 via-rose-400 to-red-400'
-      : 'from-[var(--brand)] via-violet-400 to-indigo-400';
+    : 'from-[var(--brand)] via-violet-400 to-indigo-400';
 
   const profitLossColor = isProfit
     ? 'text-emerald-700 dark:text-emerald-400'
     : isLoss
-      ? 'text-red-700 dark:text-red-400'
-      : 'text-emerald-600 dark:text-emerald-500';
+      ? 'text-red-600 dark:text-red-400'
+      : 'text-[var(--text-secondary)]';
 
   const gainBadgeClass = isProfit
-    ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/20'
+    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
     : isLoss
-      ? 'bg-red-500/12 text-red-700 dark:text-red-400 ring-1 ring-red-500/20'
+      ? 'bg-red-500/10 text-red-600 dark:text-red-400'
       : 'bg-[var(--bg-secondary)] text-[var(--text-muted)]';
 
   if (loading) {
@@ -100,23 +99,21 @@ export function DashboardPortfolioHero({ totalInvested, totalValue, totalGain, g
           </span>
         </div>
 
-        {/* Profit / Loss — center cell gets tinted glow */}
+        {/* Profit / Loss */}
         <div className="relative p-6 sm:p-8 flex flex-col items-center gap-2 text-center">
-          <div className={`absolute inset-0 pointer-events-none ${
-            isProfit ? 'bg-emerald-500/4' : isLoss ? 'bg-red-500/4' : ''
-          }`} />
           <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
             {t('dashboard.profitLoss')}
           </p>
           <div className="flex items-center gap-2">
-            {isProfit && <TrendingUp className="w-5 h-5 text-emerald-500 shrink-0" />}
-            {isLoss && <TrendingDown className="w-5 h-5 text-red-500 shrink-0" />}
+            {isProfit && <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0" />}
+            {isLoss && <TrendingDown className="w-4 h-4 text-red-500 shrink-0" />}
+            {!isProfit && !isLoss && <Minus className="w-4 h-4 text-[var(--text-muted)] shrink-0" />}
             <p className={`text-2xl sm:text-3xl font-bold font-number tabular-nums ${profitLossColor}`}>
               <BlurNum>{isProfit ? '+' : ''}{formatEgp(totalGain)}</BlurNum>
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-sm font-bold tabular-nums px-2.5 py-0.5 rounded-full ${gainBadgeClass}`}>
+            <span className={`text-sm font-semibold tabular-nums px-2.5 py-0.5 rounded-full ${gainBadgeClass}`}>
               {isProfit ? '+' : ''}{gainPercent.toFixed(2)}%
             </span>
             <span className="text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-secondary)] px-2.5 py-0.5 rounded-full">
