@@ -201,7 +201,7 @@ export default function PredictionsPage() {
     setCreateError(null);
     try {
       const res = await apiClient.post('/api/predictions', {
-        ticker: tk, direction, timeframe,
+        ticker: tk, direction, timeframe, mode: 'EXACT',
         targetPrice: price, reason: reason.trim(), isPublic: true,
       });
       const newPred = res.data as Prediction;

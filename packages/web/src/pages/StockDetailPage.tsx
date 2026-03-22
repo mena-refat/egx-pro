@@ -35,13 +35,14 @@ export default function StockDetailPage() {
   // Render immediately — useStockAnalysis inside StockAnalysis will fetch live data
   const stock: Stock = {
     ticker: upper,
+    name: info?.nameAr ?? info?.nameEn ?? upper,
     price: 0,
     change: 0,
     changePercent: 0,
     volume: 0,
-    nameAr: info?.nameAr ?? upper,
-    nameEn: info?.nameEn ?? upper,
+    marketCap: 0,
     sector: '',
+    description: '',
   };
 
   return (

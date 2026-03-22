@@ -86,9 +86,27 @@ export function useLivePrices(subscribedTickers?: string[]) {
       };
     };
 
+    const handlePageHide = () => {
+      if (reconnectTimeoutRef.current) { clearTimeout(reconnectTimeoutRef.current); reconnectTimeoutRef.current = null; }
+      if (subscribeTimeoutRef.current) { clearTimeout(subscribeTimeoutRef.current); subscribeTimeoutRef.current = null; }
+      if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
+    };
+
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        reconnectDelayRef.current = 1000;
+        connect();
+      }
+    };
+
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('pageshow', handlePageShow);
+
     connect();
 
     return () => {
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('pageshow', handlePageShow);
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       if (subscribeTimeoutRef.current) clearTimeout(subscribeTimeoutRef.current);
       if (wsRef.current) wsRef.current.close();

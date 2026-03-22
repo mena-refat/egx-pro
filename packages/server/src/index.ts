@@ -108,8 +108,19 @@ async function startServer() {
         imgSrc: ["'self'", "data:", "blob:", ...(Array.isArray(frontendOrigin) ? frontendOrigin : [frontendOrigin])],
         connectSrc: ["'self'", "https://api.anthropic.com", "https://api.gemini.com", "https://*.run.app", "https://*.vercel.app", "wss://*.run.app"],
         frameAncestors: ["'none'"],
+        formAction: ["'self'"],
+        baseUri: ["'self'"],
+        objectSrc: ["'none'"],
       },
     },
+    // HSTS — force HTTPS for 2 years across all subdomains
+    strictTransportSecurity: {
+      maxAge: 63072000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    // COOP — prevent cross-origin window access
+    crossOriginOpenerPolicy: { policy: 'same-origin' },
     crossOriginEmbedderPolicy: false,
   }));
 
@@ -117,7 +128,8 @@ async function startServer() {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=()');
+    res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
     next();
   });
 
@@ -334,8 +346,41 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     app.use(express.static(path.join(__dirname, 'dist')));
-    app.use('/admin', express.static(path.join(__dirname, 'dist', 'admin')));
+
+    // Admin portal — stricter security policy applied before static file serving.
+    // The main app CSP allows external AI APIs; the admin portal only needs 'self'.
+    app.use('/admin', (_req, res, next) => {
+      // Stricter CSP — admin portal never calls external AI/CDN endpoints
+      res.setHeader(
+        'Content-Security-Policy',
+        [
+          "default-src 'self'",
+          "script-src 'self'",
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data: blob:",
+          "connect-src 'self'",
+          "font-src 'self'",
+          "frame-ancestors 'none'",
+          "form-action 'self'",
+          "base-uri 'self'",
+          "object-src 'none'",
+        ].join('; ')
+      );
+      // Prevent admin session data from appearing in browser history / shared caches
+      res.setHeader('Cache-Control', 'no-store');
+      next();
+    });
+
+    app.use('/admin', express.static(path.join(__dirname, 'dist', 'admin'), {
+      // Hashed asset files can be cached long-term; override Cache-Control for them
+      setHeaders(res, filePath) {
+        if (/\.(js|css|woff2?|png|svg|ico)$/.test(filePath)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      },
+    }));
     app.get('/admin/*', (_req, res) => {
+      res.setHeader('Cache-Control', 'no-store');
       res.sendFile(path.join(__dirname, 'dist', 'admin', 'index.html'));
     });
     app.get('*', (_req, res) => {

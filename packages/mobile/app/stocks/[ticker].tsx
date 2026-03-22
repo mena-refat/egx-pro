@@ -320,7 +320,7 @@ export default function StockDetailPage() {
   const loadNews = useCallback(async () => {
     if (!ticker) return;
     try {
-      const res = await apiClient.get<unknown[]>(`/api/news/stock/${ticker}`);
+      const res = await apiClient.get<unknown[]>(`/api/news/${ticker}`);
       const arr = Array.isArray(res.data) ? res.data : [];
       setNews(arr.slice(0, 3) as typeof news);
     } catch {
@@ -369,7 +369,7 @@ export default function StockDetailPage() {
         await apiClient.post('/api/watchlist', { ticker });
         setInWatchlist(true);
       }
-      await apiClient.put(`/api/watchlist/${ticker}`, {
+      await apiClient.patch(`/api/watchlist/${ticker}`, {
         targetPrice: newTargetPrice,
         targetDirection: newTargetPrice != null ? direction : null,
       });

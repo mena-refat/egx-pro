@@ -1,11 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'framer-motion';
 import { User as UserIcon, Settings as SettingsIcon, Sun, Moon, Monitor, Target, Bell, LogOut, Trophy, Briefcase, UserPlus as UserPlusIcon, ChevronRight } from 'lucide-react';
 import type { NotificationItem } from '../../hooks/useNotifications';
-import { NotificationDropdown } from '../features/notifications/NotificationDropdown';
 import { Button } from '../ui/Button';
+
+const NotificationDropdown = lazy(() =>
+  import('../features/notifications/NotificationDropdown').then((m) => ({ default: m.NotificationDropdown }))
+);
 
 type User = { fullName?: string; username?: string; avatarUrl?: string };
 
@@ -99,49 +101,42 @@ export function Header({
               <span className="text-xs font-medium text-[var(--text-secondary)] whitespace-nowrap hidden sm:inline">{t('overview.completeProfile')}</span>
               <ChevronRight className={`w-4 h-4 text-[var(--brand-text)] shrink-0 ${profileCompletionOpen ? 'rotate-90' : ''} ${i18n.language.startsWith('ar') ? 'rotate-180' : ''}`} />
             </Button>
-            <AnimatePresence>
-              {profileCompletionOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-50 overflow-hidden ltr:right-auto ltr:left-0"
-                >
-                  <div className="p-3 border-b border-[var(--border-subtle)]">
-                    <p className="text-sm font-medium text-[var(--text-secondary)]">{t('overview.profileCompletePercent', { p: profileCompletion.percentage })}</p>
-                    <div className="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden mt-2">
-                      <div className="h-full w-progress bg-[var(--brand)] rounded-full transition-[width]" style={{ ['--progress-width']: `${profileCompletion.percentage}%` } as React.CSSProperties} />
-                    </div>
+            {profileCompletionOpen && (
+              <div className="dropdown-appear absolute right-0 top-full mt-2 w-72 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-50 overflow-hidden ltr:right-auto ltr:left-0">
+                <div className="p-3 border-b border-[var(--border-subtle)]">
+                  <p className="text-sm font-medium text-[var(--text-secondary)]">{t('overview.profileCompletePercent', { p: profileCompletion.percentage })}</p>
+                  <div className="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden mt-2">
+                    <div className="h-full w-progress bg-[var(--brand)] rounded-full transition-[width]" style={{ ['--progress-width']: `${profileCompletion.percentage}%` } as React.CSSProperties} />
                   </div>
-                  <div className="p-3">
-                    <p className="text-xs text-[var(--text-muted)] mb-2">{t('overview.missingLabel')}</p>
-                    <ul className="space-y-1.5">
-                      {profileCompletion.missing.map((m) => {
-                        const label = m.field === 'email' ? t('overview.missingEmail') : m.field === 'phone' ? t('overview.missingPhone') : m.field === 'username' ? t('overview.missingUsername') : m.field === 'goal' ? t('overview.missingGoal') : t('overview.missingWatchlist');
-                        return (
-                          <li key={m.field} className="flex items-center justify-between gap-2 text-sm">
-                            <span className="text-[var(--text-secondary)]">{label}</span>
-                            <Button
-                              type="button"
-                              variant="link"
-                              size="sm"
-                              onClick={() => {
-                                setProfileCompletionOpen(false);
-                                navigate(m.route);
-                              }}
-                              className="text-xs font-medium flex items-center gap-0.5"
-                            >
-                              {t('overview.add')}
-                              <ChevronRight className={`w-3 h-3 ${i18n.language.startsWith('ar') ? 'rotate-180' : ''}`} />
-                            </Button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </div>
+                <div className="p-3">
+                  <p className="text-xs text-[var(--text-muted)] mb-2">{t('overview.missingLabel')}</p>
+                  <ul className="space-y-1.5">
+                    {profileCompletion.missing.map((m) => {
+                      const label = m.field === 'email' ? t('overview.missingEmail') : m.field === 'phone' ? t('overview.missingPhone') : m.field === 'username' ? t('overview.missingUsername') : m.field === 'goal' ? t('overview.missingGoal') : t('overview.missingWatchlist');
+                      return (
+                        <li key={m.field} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="text-[var(--text-secondary)]">{label}</span>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            onClick={() => {
+                              setProfileCompletionOpen(false);
+                              navigate(m.route);
+                            }}
+                            className="text-xs font-medium flex items-center gap-0.5"
+                          >
+                            {t('overview.add')}
+                            <ChevronRight className={`w-3 h-3 ${i18n.language.startsWith('ar') ? 'rotate-180' : ''}`} />
+                          </Button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -175,35 +170,35 @@ export function Header({
           <Button type="button" variant="ghost" size="sm" onClick={() => { setNotificationsOpen((o) => !o); if (!notificationsOpen) fetchNotifications(); }} className="relative p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)]" icon={<Bell className="w-5 h-5" />} aria-label={t('settings.notifications')}>
             {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--danger)]" aria-hidden />}
           </Button>
-          <AnimatePresence>
-            {notificationsOpen && (
-              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className={`absolute left-0 top-full mt-2 w-80 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] flex flex-col ${notifications.length > 0 ? 'max-h-96 overflow-hidden' : ''} ltr:left-auto ltr:right-0`}>
-                <div className="shrink-0 border-b border-[var(--border-subtle)] px-4 py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-[var(--text-secondary)]">{t('settings.notifications')}</span>
-                    <Button type="button" variant="link" size="sm" onClick={() => { if (notifications.length > 0) setConfirmClearNotifications(true); }} className="text-xs" disabled={notifications.length === 0}>{t('settings.clearAllNotifications')}</Button>
-                  </div>
-                  <div className="mt-2 flex justify-end">
-                    <Button type="button" variant="link" size="sm" onClick={markAllRead} className="text-[var(--text-muted)]">{t('settings.markAllAsRead')}</Button>
-                  </div>
-                  {confirmClearNotifications && (
-                    <div className="mt-3 flex items-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-xs">
-                      <span className="text-[var(--text-secondary)]">{t('settings.confirmClearNotifications')}</span>
-                      <Button type="button" variant="link" size="sm" onClick={() => { clearAll(); setConfirmClearNotifications(false); }}>{t('settings.yes')}</Button>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmClearNotifications(false)} className="text-[var(--text-muted)]">{t('settings.no')}</Button>
-                    </div>
-                  )}
+          {notificationsOpen && (
+            <div className={`dropdown-appear absolute left-0 top-full mt-2 w-80 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] flex flex-col ${notifications.length > 0 ? 'max-h-96 overflow-hidden' : ''} ltr:left-auto ltr:right-0`}>
+              <div className="shrink-0 border-b border-[var(--border-subtle)] px-4 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-[var(--text-secondary)]">{t('settings.notifications')}</span>
+                  <Button type="button" variant="link" size="sm" onClick={() => { if (notifications.length > 0) setConfirmClearNotifications(true); }} className="text-xs" disabled={notifications.length === 0}>{t('settings.clearAllNotifications')}</Button>
                 </div>
-                <div className={`p-2 min-h-0 ${notifications.length > 0 ? 'overflow-y-auto flex-1' : 'overflow-hidden'}`}>
+                <div className="mt-2 flex justify-end">
+                  <Button type="button" variant="link" size="sm" onClick={markAllRead} className="text-[var(--text-muted)]">{t('settings.markAllAsRead')}</Button>
+                </div>
+                {confirmClearNotifications && (
+                  <div className="mt-3 flex items-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-xs">
+                    <span className="text-[var(--text-secondary)]">{t('settings.confirmClearNotifications')}</span>
+                    <Button type="button" variant="link" size="sm" onClick={() => { clearAll(); setConfirmClearNotifications(false); }}>{t('settings.yes')}</Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmClearNotifications(false)} className="text-[var(--text-muted)]">{t('settings.no')}</Button>
+                  </div>
+                )}
+              </div>
+              <div className={`p-2 min-h-0 ${notifications.length > 0 ? 'overflow-y-auto flex-1' : 'overflow-hidden'}`}>
+                <Suspense fallback={<div className="p-4 text-center text-[var(--text-muted)] text-sm">...</div>}>
                   <NotificationDropdown
                     notifications={notifications}
                     loading={notificationsLoading}
                     onItemClick={(id, type, isRead, route) => { if (!isRead) markOneRead(id); goToNotificationTarget(type, route); }}
                   />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </Suspense>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="relative" ref={userDropdownRef}>
@@ -212,27 +207,24 @@ export function Header({
               {user?.avatarUrl ? <img src={user.avatarUrl} alt={t('profile.avatarAlt', { name: user.fullName ?? '' })} width={32} height={32} className="w-full h-full object-cover" loading="lazy" /> : <UserIcon className="w-4 h-4 text-[var(--text-inverse)]" aria-hidden="true" />}
             </div>
           </Button>
-          <AnimatePresence>
-            {userDropdownOpen && (
-              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="absolute left-0 ltr:right-0 ltr:-left-40 top-full mt-2 w-[200px] rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] overflow-hidden">
-                <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
-                  <p className="font-medium text-[var(--text-secondary)] truncate">{user?.fullName || '-'}</p>
-                  <p className="text-sm text-[var(--text-muted)] truncate">{user?.username ? `@${user.username}` : '-'}</p>
-                </div>
-                <a href="#" onClick={(e) => { e.preventDefault(); goToSettings(); }} className="flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]">
-                  <SettingsIcon className="w-4 h-4" />
-                  {t('settings.settingsPage')}
-                </a>
-                <Button type="button" variant="ghost" size="md" fullWidth onClick={() => { onLogout(); setUserDropdownOpen(false); }} className="justify-start rounded-none border-t border-[var(--border-subtle)]">
-                  <LogOut className="w-4 h-4 shrink-0" />
-                  {t('settings.logout')}
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {userDropdownOpen && (
+            <div className="dropdown-appear absolute left-0 ltr:right-0 ltr:-left-40 top-full mt-2 w-[200px] rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-md)] z-[100] overflow-hidden">
+              <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
+                <p className="font-medium text-[var(--text-secondary)] truncate">{user?.fullName || '-'}</p>
+                <p className="text-sm text-[var(--text-muted)] truncate">{user?.username ? `@${user.username}` : '-'}</p>
+              </div>
+              <a href="#" onClick={(e) => { e.preventDefault(); goToSettings(); }} className="flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]">
+                <SettingsIcon className="w-4 h-4" />
+                {t('settings.settingsPage')}
+              </a>
+              <Button type="button" variant="ghost" size="md" fullWidth onClick={() => { onLogout(); setUserDropdownOpen(false); }} className="justify-start rounded-none border-t border-[var(--border-subtle)]">
+                <LogOut className="w-4 h-4 shrink-0" />
+                {t('settings.logout')}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </header>
   );
 }
-  

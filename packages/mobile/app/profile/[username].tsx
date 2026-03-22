@@ -91,7 +91,7 @@ export default function SocialProfilePage() {
       return;
     }
     void loadProfile();
-  }, [username]);
+  }, [isOwnProfile, loadProfile, router]);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);

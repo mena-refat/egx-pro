@@ -51,7 +51,7 @@ export default function LoginPage() {
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative w-full max-w-sm">
+      <main className="relative w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 items-center justify-center font-bold text-xl text-white shadow-xl shadow-emerald-900/40 mb-4">
@@ -99,8 +99,12 @@ export default function LoginPage() {
                   className="w-full ps-9 pe-10 py-2.5 bg-[#0d0d14] border border-white/[0.08] rounded-lg text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
                   placeholder="••••••••••••"
                 />
-                <button type="button" onClick={() => setShowPw((v) => !v)}
-                  className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  aria-label={showPw ? t('login.hidePassword') : t('login.showPassword')}
+                  className="absolute end-3 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-slate-300 transition-colors"
+                >
                   {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
@@ -155,13 +159,14 @@ export default function LoginPage() {
         <div className="mt-4 text-center">
           <button
             onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            aria-label={i18n.language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
+            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors py-2 px-3"
           >
             <Languages size={12} />
             {i18n.language === 'ar' ? 'English' : 'العربية'}
           </button>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

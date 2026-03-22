@@ -6,6 +6,10 @@
     <link rel="apple-touch-icon" href="/borsa-logo.webp" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Borsa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" /></noscript>
     <!-- تطبيق الثيم فورًا قبل React عشان نمنع الصفحة البيضاء -->
     <script>
       (function () {
@@ -32,7 +36,7 @@
       }
       @keyframes app-spin { to { transform: rotate(360deg); } }
     </style>
-    <script async src="https://pay.google.com/gp/p/js/pay.js"></script>
+    <script defer src="https://pay.google.com/gp/p/js/pay.js"></script>
   </head>
   <body>
     <div id="app-splash"><div class="app-splash-spinner"></div></div>

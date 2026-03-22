@@ -51,7 +51,7 @@ const HEALTH_CONFIG: Record<GoalHealth, {
 // ── Ring SVG ─────────────────────────────────────────────────────────────────
 function RingProgress({
   percent, color, icon: Icon,
-}: { percent: number; color: string; icon: React.ComponentType<{ className?: string }> }) {
+}: { percent: number; color: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> }) {
   const clamped  = Math.min(100, Math.max(0, percent));
   const dashOff  = RING_CIRC * (1 - clamped / 100);
 

@@ -187,10 +187,17 @@ export function useLogin() {
       const code =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         (err as { error?: string })?.error;
-      if (code === 'INVALID_CREDENTIALS') setError('البريد أو كلمة المرور غير صحيحة');
-      else if (code === 'ACCOUNT_LOCKED') setError('الحساب محجوب مؤقتاً — حاول بعد 30 دقيقة');
-      else if (code === 'ACCOUNT_SUSPENDED') setError('هذا الحساب موقوف — تواصل مع الدعم الفني');
-      else setError('حدث خطأ، حاول مرة أخرى');
+      // Server error codes: UNAUTHORIZED / account_not_found = wrong credentials
+      if (code === 'UNAUTHORIZED' || code === 'INVALID_CREDENTIALS' || code === 'account_not_found')
+        setError('البريد أو كلمة المرور غير صحيحة');
+      else if (code === 'account_locked' || code === 'ACCOUNT_LOCKED')
+        setError('الحساب محجوب مؤقتاً — حاول بعد 30 دقيقة');
+      else if (code === 'ACCOUNT_SUSPENDED')
+        setError('هذا الحساب موقوف — تواصل مع الدعم الفني');
+      else if (code === 'NETWORK_ERROR')
+        setError('لا يوجد اتصال بالإنترنت');
+      else
+        setError('حدث خطأ، حاول مرة أخرى');
     } finally {
       setLoading(false);
     }
@@ -292,11 +299,12 @@ export function useRegister() {
       const code =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
         (err as { error?: string })?.error;
-      if (code === 'EMAIL_EXISTS' || code === 'PHONE_EXISTS') {
+      if (code === 'ALREADY_REGISTERED' || code === 'EMAIL_EXISTS' || code === 'PHONE_EXISTS')
         setError('هذا البريد أو الموبايل مسجل بالفعل');
-      } else {
+      else if (code === 'NETWORK_ERROR')
+        setError('لا يوجد اتصال بالإنترنت');
+      else
         setError('حدث خطأ، حاول مرة أخرى');
-      }
     } finally {
       setLoading(false);
     }

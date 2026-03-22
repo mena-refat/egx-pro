@@ -14,6 +14,8 @@
     "dev": "npm run dev --workspace=@borsa/server",
     "dev:web": "npm run dev --workspace=@borsa/web",
     "dev:admin": "npm run dev --workspace=@borsa/admin",
+    "build:admin": "npm run build --workspace=@borsa/admin",
+    "preview:admin": "npm run preview --workspace=@borsa/admin",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",

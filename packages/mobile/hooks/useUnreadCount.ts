@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useFocusEffect } from 'expo-router';
 import apiClient from '../lib/api/client';
 
 export function useUnreadCount() {
   const [count, setCount] = useState(0);
   const mountedRef = useRef(true);
+
   useEffect(() => () => { mountedRef.current = false; }, []);
 
   const fetchCount = useCallback(() => {
@@ -13,11 +14,14 @@ export function useUnreadCount() {
       .then((res) => {
         const data = res.data as { unreadCount?: number };
         if (mountedRef.current) setCount(data.unreadCount ?? 0);
-      }).catch(() => null);
+      })
+      .catch(() => null);
     return () => c.abort();
   }, []);
 
-  useEffect(() => fetchCount(), [fetchCount]);
+  // useFocusEffect fires on initial focus AND every subsequent focus —
+  // no separate useEffect needed (avoids double-fetch on mount).
   useFocusEffect(useCallback(() => fetchCount(), [fetchCount]));
+
   return count;
 }

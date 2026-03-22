@@ -22,6 +22,13 @@ const getCookieOptions = () => ({
   maxAge: REFRESH_TOKEN_AGE_MS, // 30 days — must match REFRESH_TOKEN_AGE_MS
 });
 
+const getClearCookieOptions = () => ({
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: 'strict' as const,
+  path: '/api/auth',
+});
+
 function authContext(req: Request): AuthService.AuthContext {
   return {
     ip: req.ip ?? undefined,
@@ -47,7 +54,7 @@ function setRefreshCookie(res: Response, refreshToken: string): void {
 }
 
 function clearRefreshCookie(res: Response): void {
-  res.clearCookie('refreshToken', getCookieOptions());
+  res.clearCookie('refreshToken', getClearCookieOptions());
 }
 
 function handleError(e: unknown, res: Response, fallbackMessage = 'Request failed'): void {

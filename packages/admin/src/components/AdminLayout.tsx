@@ -190,6 +190,7 @@ export function AdminLayout() {
           {/* Language toggle */}
           <button
             onClick={toggleLang}
+            aria-label={isRtl ? 'Switch to English' : 'التبديل إلى العربية'}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] transition-all"
           >
             <Languages size={13} />
@@ -217,8 +218,9 @@ export function AdminLayout() {
             </div>
             <button
               onClick={handleLogout}
-              className="p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              className="p-2 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
               title={t('nav.logout')}
+              aria-label={t('nav.logout')}
             >
               <LogOut size={13} />
             </button>

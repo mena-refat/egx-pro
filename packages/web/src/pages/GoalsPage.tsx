@@ -249,7 +249,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
           goals={goalsData.activeGoals}
           currentWealth={currentWealth}
           locale={locale}
-          t={t}
+          t={t as (key: string, opts?: object) => string}
           isAr={isAr}
           onAdd={openAddModal}
         />
@@ -271,7 +271,7 @@ export default function GoalsPage({ currentWealth = 0 }: { currentWealth?: numbe
         <GoalsInsights
           goals={goalsData.activeGoals}
           locale={locale}
-          t={t}
+          t={t as (key: string, opts?: object) => string}
           isAr={isAr}
         />
       )}

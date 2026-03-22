@@ -98,7 +98,7 @@ export default function PortfolioPage() {
         },
       },
     ]);
-  }, [refresh]);
+  }, [refresh, t]);
 
 
   return (

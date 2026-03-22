@@ -70,8 +70,10 @@ const STATUS_LABELS: Record<string, string> = {
   EXPIRED: 'منتهية',
 };
 
+// ─── AvatarCircle (stable — defined outside component) ───────────
 function AvatarCircle({ name, size = 40 }: { name?: string | null; size?: number }) {
   const { colors } = useTheme();
+  void colors; // colours not needed here but keep consistent with rest of file
   const initial = (name ?? '؟').charAt(0).toUpperCase();
   return (
     <View style={{
@@ -79,6 +81,28 @@ function AvatarCircle({ name, size = 40 }: { name?: string | null; size?: number
       backgroundColor: BRAND + '22', alignItems: 'center', justifyContent: 'center',
     }}>
       <Text style={{ color: BRAND, fontSize: size * 0.38, fontWeight: WEIGHT.bold }}>{initial}</Text>
+    </View>
+  );
+}
+
+// ─── EmptyState (stable — defined outside component) ─────────────
+function EmptyState({
+  icon: Icon, text,
+}: {
+  icon: React.ComponentType<{ size: number; color: string }>;
+  text: string;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: SPACE.md }}>
+      <View style={{
+        width: 56, height: 56, borderRadius: 28,
+        backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon size={24} color={colors.textMuted} />
+      </View>
+      <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>{text}</Text>
     </View>
   );
 }
@@ -302,10 +326,18 @@ function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number
   );
 }
 
+const TABS: { id: DiscoverTab; label: string; Icon: React.ComponentType<{ size: number; color: string }> }[] = [
+  { id: 'community', label: 'المجتمع',    Icon: Trophy },
+  { id: 'followers', label: 'المتابِعون', Icon: Users },
+  { id: 'following', label: 'أتابعهم',   Icon: UserCheck },
+  { id: 'requests',  label: 'الطلبات',   Icon: UserPlus },
+];
+
 export default function DiscoverPage() {
   const router = useRouter();
   const { colors, isRTL } = useTheme();
   const [activeTab, setActiveTab] = useState<DiscoverTab>('community');
+  const mountedRef = useRef(true);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserItem[]>([]);
@@ -319,50 +351,74 @@ export default function DiscoverPage() {
   const [requests, setRequests]       = useState<UserItem[]>([]);
   const [loading, setLoading]         = useState(true);
 
+  useEffect(() => () => {
+    mountedRef.current = false;
+    // Clear debounce timer on unmount to prevent state updates after unmount
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+  }, []);
+
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
-  const loadCommunity = useCallback(async () => {
-    setLoading(true);
+  const loadCommunity = useCallback(async (signal?: AbortSignal) => {
+    if (mountedRef.current) setLoading(true);
     try {
       const [feedRes, lbRes] = await Promise.all([
-        apiClient.get('/api/predictions/feed?limit=20'),
-        apiClient.get('/api/predictions/leaderboard?limit=10'),
+        apiClient.get('/api/predictions/feed?limit=20', { signal }),
+        apiClient.get('/api/predictions/leaderboard?limit=10', { signal }),
       ]);
-      setFeed((feedRes.data as { items?: FeedPrediction[] }).items ?? []);
-      setLeaderboard((lbRes.data as { items?: LeaderboardEntry[] }).items ?? []);
-    } catch { /* ignore */ } finally { setLoading(false); }
+      if (!signal?.aborted && mountedRef.current) {
+        setFeed((feedRes.data as { items?: FeedPrediction[] }).items ?? []);
+        setLeaderboard((lbRes.data as { items?: LeaderboardEntry[] }).items ?? []);
+      }
+    } catch {
+      /* ignore cancelled / network errors */
+    } finally {
+      if (!signal?.aborted && mountedRef.current) setLoading(false);
+    }
   }, []);
 
-  const loadFollowers = useCallback(async () => {
-    setLoading(true);
+  const loadFollowers = useCallback(async (signal?: AbortSignal) => {
+    if (mountedRef.current) setLoading(true);
     try {
-      const res = await apiClient.get('/api/social/followers');
-      setFollowers((res.data as { items?: UserItem[] }).items ?? []);
-    } catch { /* ignore */ } finally { setLoading(false); }
+      const res = await apiClient.get('/api/social/followers', { signal });
+      if (!signal?.aborted && mountedRef.current)
+        setFollowers((res.data as { items?: UserItem[] }).items ?? []);
+    } catch { /* ignore */ } finally {
+      if (!signal?.aborted && mountedRef.current) setLoading(false);
+    }
   }, []);
 
-  const loadFollowing = useCallback(async () => {
-    setLoading(true);
+  const loadFollowing = useCallback(async (signal?: AbortSignal) => {
+    if (mountedRef.current) setLoading(true);
     try {
-      const res = await apiClient.get('/api/social/following');
-      setFollowing((res.data as { items?: UserItem[] }).items ?? []);
-    } catch { /* ignore */ } finally { setLoading(false); }
+      const res = await apiClient.get('/api/social/following', { signal });
+      if (!signal?.aborted && mountedRef.current)
+        setFollowing((res.data as { items?: UserItem[] }).items ?? []);
+    } catch { /* ignore */ } finally {
+      if (!signal?.aborted && mountedRef.current) setLoading(false);
+    }
   }, []);
 
-  const loadRequests = useCallback(async () => {
-    setLoading(true);
+  const loadRequests = useCallback(async (signal?: AbortSignal) => {
+    if (mountedRef.current) setLoading(true);
     try {
-      const res = await apiClient.get('/api/social/requests');
-      setRequests((res.data as { items?: UserItem[] }).items ?? []);
-    } catch { /* ignore */ } finally { setLoading(false); }
+      const res = await apiClient.get('/api/social/requests', { signal });
+      if (!signal?.aborted && mountedRef.current)
+        setRequests((res.data as { items?: UserItem[] }).items ?? []);
+    } catch { /* ignore */ } finally {
+      if (!signal?.aborted && mountedRef.current) setLoading(false);
+    }
   }, []);
 
+  // Load data for the active tab; cancel in-flight requests on tab switch
   useEffect(() => {
-    if (activeTab === 'community')  loadCommunity();
-    if (activeTab === 'followers')  loadFollowers();
-    if (activeTab === 'following')  loadFollowing();
-    if (activeTab === 'requests')   loadRequests();
-  }, [activeTab]);
+    const ctrl = new AbortController();
+    if (activeTab === 'community') loadCommunity(ctrl.signal);
+    if (activeTab === 'followers') loadFollowers(ctrl.signal);
+    if (activeTab === 'following') loadFollowing(ctrl.signal);
+    if (activeTab === 'requests')  loadRequests(ctrl.signal);
+    return () => ctrl.abort();
+  }, [activeTab, loadCommunity, loadFollowers, loadFollowing, loadRequests]);
 
   const handleSearch = useCallback((q: string) => {
     setSearchQuery(q);
@@ -372,8 +428,13 @@ export default function DiscoverPage() {
       setSearching(true);
       try {
         const res = await apiClient.get(`/api/social/username-search?q=${encodeURIComponent(q.trim())}`);
-        setSearchResults((res.data as { items?: UserItem[] }).items ?? []);
-      } catch { setSearchResults([]); } finally { setSearching(false); }
+        if (mountedRef.current)
+          setSearchResults((res.data as { items?: UserItem[] }).items ?? []);
+      } catch {
+        if (mountedRef.current) setSearchResults([]);
+      } finally {
+        if (mountedRef.current) setSearching(false);
+      }
     }, 400);
   }, []);
 
@@ -386,37 +447,15 @@ export default function DiscoverPage() {
   const acceptRequest = async (followerId: string) => {
     try {
       await apiClient.post(`/api/social/requests/${followerId}/accept`);
-      setRequests((prev) => prev.filter((r) => r.id !== followerId));
+      if (mountedRef.current) setRequests((prev) => prev.filter((r) => r.id !== followerId));
     } catch { /* ignore */ }
   };
   const declineRequest = async (followerId: string) => {
     try {
       await apiClient.post(`/api/social/requests/${followerId}/decline`);
-      setRequests((prev) => prev.filter((r) => r.id !== followerId));
+      if (mountedRef.current) setRequests((prev) => prev.filter((r) => r.id !== followerId));
     } catch { /* ignore */ }
   };
-
-  const TABS: { id: DiscoverTab; label: string; Icon: typeof Users }[] = [
-    { id: 'community', label: 'المجتمع',    Icon: Trophy },
-    { id: 'followers', label: 'المتابِعون', Icon: Users },
-    { id: 'following', label: 'أتابعهم',   Icon: UserCheck },
-    { id: 'requests',  label: 'الطلبات',   Icon: UserPlus },
-  ];
-
-  function EmptyState({ icon: Icon, text }: { icon: typeof Users; text: string }) {
-    return (
-      <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: SPACE.md }}>
-        <View style={{
-          width: 56, height: 56, borderRadius: 28,
-          backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
-          alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Icon size={24} color={colors.textMuted} />
-        </View>
-        <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>{text}</Text>
-      </View>
-    );
-  }
 
   return (
     <ScreenWrapper padded={false}>
@@ -601,7 +640,7 @@ export default function DiscoverPage() {
                     onPress={() => router.push(`/profile/${u.username}` as never)}
                     onUnfollow={async () => {
                       await unfollow(u.username);
-                      setFollowing((prev) => prev.filter((f) => f.id !== u.id));
+                      if (mountedRef.current) setFollowing((prev) => prev.filter((f) => f.id !== u.id));
                     }}
                   />
                 ))

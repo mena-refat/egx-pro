@@ -1,7 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
 import { useAuthPage } from '../hooks/useAuthPage';
 import { AuthBranding } from '../components/features/auth/AuthBranding';
 import { AuthCardTabs } from '../components/features/auth/AuthCardTabs';
@@ -39,7 +38,7 @@ export default function AuthPage() {
       <div className="w-full max-w-md">
         <AuthBranding />
 
-        <motion.div layout className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-8 shadow-[var(--shadow-xl)] card-elevated">
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-3xl p-8 shadow-[var(--shadow-xl)] card-elevated">
           <AuthCardTabs isLogin={isLogin} onLogin={switchToLogin} onRegister={switchToRegister} />
 
           {showTwoFactorInput ? (
@@ -67,7 +66,7 @@ export default function AuthPage() {
           )}
 
           <AuthLangSwitcher onChangeLanguage={(lng) => i18n.changeLanguage(lng)} />
-        </motion.div>
+        </div>
       </div>
     </div>
   );

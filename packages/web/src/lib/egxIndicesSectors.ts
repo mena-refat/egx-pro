@@ -150,7 +150,7 @@ export function isInEGX100(ticker: string): boolean {
   return EGX100_SET.has(ticker as typeof INDEX_EGX100[number]);
 }
 export function isInEGX35LV(ticker: string): boolean {
-  return EGX35_LV_SET.has(ticker);
+  return EGX35_LV_SET.has(ticker as typeof INDEX_EGX35_LV[number]);
 }
 export function isShariaCompliant(ticker: string): boolean {
   return EGX33_SET.has(ticker as typeof INDEX_EGX33_SHARIA[number]);

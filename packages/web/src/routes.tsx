@@ -2,8 +2,8 @@ import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import PageLoader from './components/shared/PageLoader';
-import DashboardPage from './pages/DashboardPage';
 import {
+  DashboardSkeleton,
   PortfolioSkeleton,
   MarketSkeleton,
   StocksSkeleton,
@@ -15,15 +15,17 @@ import {
   DiscoverSkeleton,
   CalculatorSkeleton,
   UsernameSetupSkeleton,
+  SettingsSkeleton,
 } from './components/skeletons';
-import {
-  SubscriptionTab,
-  AccountSettingsTab,
-  SecuritySettingsTab,
-  PreferencesSettingsTab,
-  DangerSettingsTab,
-} from './components/features/settings';
-import SettingsLayout from './components/layout/SettingsLayout';
+
+const DashboardPage          = lazy(() => import('./pages/DashboardPage'));
+
+const SettingsLayout          = lazy(() => import('./components/layout/SettingsLayout'));
+const AccountSettingsTab      = lazy(() => import('./components/features/settings/AccountSettingsTab').then(m => ({ default: m.AccountSettingsTab })));
+const SecuritySettingsTab     = lazy(() => import('./components/features/settings/SecuritySettingsTab').then(m => ({ default: m.SecuritySettingsTab })));
+const PreferencesSettingsTab  = lazy(() => import('./components/features/settings/PreferencesSettingsTab').then(m => ({ default: m.PreferencesSettingsTab })));
+const SubscriptionTab         = lazy(() => import('./components/features/settings/SubscriptionTab').then(m => ({ default: m.SubscriptionTab })));
+const DangerSettingsTab       = lazy(() => import('./components/features/settings/DangerSettingsTab').then(m => ({ default: m.DangerSettingsTab })));
 
 const PortfolioTracker       = lazy(() => import('./components/features/portfolio/PortfolioTracker'));
 const PortfolioOrdersPage    = lazy(() => import('./pages/PortfolioOrdersPage'));
@@ -51,8 +53,8 @@ interface AppRoutesProps {
 export function AppRoutes({ currentWealth }: AppRoutesProps) {
   return (
     <Routes>
-      <Route path="/" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
-      <Route path="/dashboard" element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
+      <Route path="/" element={<ErrorBoundary><Suspense fallback={<DashboardSkeleton />}><DashboardPage /></Suspense></ErrorBoundary>} />
+      <Route path="/dashboard" element={<ErrorBoundary><Suspense fallback={<DashboardSkeleton />}><DashboardPage /></Suspense></ErrorBoundary>} />
       <Route path="/portfolio" element={<ErrorBoundary><Suspense fallback={<PortfolioSkeleton />}><PortfolioTracker /></Suspense></ErrorBoundary>} />
       <Route path="/portfolio/orders" element={<ErrorBoundary><Suspense fallback={<PortfolioSkeleton />}><PortfolioOrdersPage /></Suspense></ErrorBoundary>} />
       <Route path="/stocks" element={<ErrorBoundary><Suspense fallback={<StocksSkeleton />}><StockScreener /></Suspense></ErrorBoundary>} />
@@ -61,13 +63,13 @@ export function AppRoutes({ currentWealth }: AppRoutesProps) {
       <Route path="/calculator" element={<ErrorBoundary><Suspense fallback={<CalculatorSkeleton />}><InvestmentCalculator /></Suspense></ErrorBoundary>} />
       <Route path="/goals" element={<ErrorBoundary><Suspense fallback={<GoalsSkeleton />}><GoalsPage currentWealth={currentWealth} /></Suspense></ErrorBoundary>} />
 
-      <Route path="/settings" element={<ErrorBoundary><SettingsLayout /></ErrorBoundary>}>
+      <Route path="/settings" element={<ErrorBoundary><Suspense fallback={<SettingsSkeleton />}><SettingsLayout /></Suspense></ErrorBoundary>}>
         <Route index element={null} />
-        <Route path="account"      element={<AccountSettingsTab />} />
-        <Route path="security"     element={<SecuritySettingsTab />} />
-        <Route path="preferences"  element={<PreferencesSettingsTab />} />
-        <Route path="subscription" element={<SubscriptionTab />} />
-        <Route path="danger"       element={<DangerSettingsTab />} />
+        <Route path="account"      element={<Suspense fallback={<div />}><AccountSettingsTab /></Suspense>} />
+        <Route path="security"     element={<Suspense fallback={<div />}><SecuritySettingsTab /></Suspense>} />
+        <Route path="preferences"  element={<Suspense fallback={<div />}><PreferencesSettingsTab /></Suspense>} />
+        <Route path="subscription" element={<Suspense fallback={<div />}><SubscriptionTab /></Suspense>} />
+        <Route path="danger"       element={<Suspense fallback={<div />}><DangerSettingsTab /></Suspense>} />
         {/* Redirects for old/moved routes */}
         <Route path="notifications" element={<Navigate to="/settings/preferences"              replace />} />
         <Route path="perks"         element={<Navigate to="/settings/subscription"             replace />} />

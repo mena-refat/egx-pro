@@ -324,7 +324,7 @@ function RatePills({ value, onChange }: { value: number; onChange: (r: number) =
 
 function StatCard({ label, value, color, icon: Icon }: {
   label: string; value: string; color: string;
-  icon?: React.ComponentType<{ size: number }>;
+  icon?: React.ComponentType<{ size?: number | string; className?: string }>;
 }) {
   return (
     <div className="card-base p-4 flex items-center gap-3">

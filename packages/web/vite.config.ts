@@ -36,6 +36,26 @@ export default defineConfig(({mode}) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
+    optimizeDeps: {
+      exclude: ['@sentry/react'],
+    },
+    build: {
+      target: 'es2020',
+      rollupOptions: {
+        output: {
+          // Only declare chunks that are truly in the EAGER import graph.
+          // Anything listed here gets a <link rel="modulepreload"> in the built HTML,
+          // forcing the browser to download AND parse it on every page load.
+          // framer-motion, @sentry/react, react-hook-form/zod are all lazy-only →
+          // omitting them here lets Rollup auto-split them without eager preloading.
+          manualChunks: {
+            'vendor-router': ['react-router-dom'],
+            'vendor-i18n': ['i18next', 'react-i18next', 'i18next-http-backend', 'i18next-browser-languagedetector'],
+            'egx-stocks': ['./src/lib/egxStocks'],
+          },
+        },
+      },
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.

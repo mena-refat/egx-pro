@@ -7,10 +7,37 @@ import { useNotifications } from './hooks/useNotifications';
 import { useTheme } from './hooks/useTheme';
 import { useProfileCompletion } from './hooks/useProfileCompletion';
 import { useDashboardStats } from './hooks/useDashboardStats';
-import { motion, AnimatePresence } from 'framer-motion';
 const OnboardingWizard = lazy(() => import('./components/features/onboarding/OnboardingWizard'));
+const AuthPage         = lazy(() => import('./pages/AuthPage'));
+
+/** Skeleton shown while AuthPage chunk loads — contains the LCP <h1> so it appears as early as possible */
+function AuthSkeleton() {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--bg-primary)' }}>
+      <div style={{ width: '100%', maxWidth: '28rem' }}>
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <img src="/borsa-logo.webp" alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'contain' }} fetchPriority="high" />
+            <h1 className="text-4xl font-bold tracking-tight mb-0">Borsa</h1>
+          </div>
+          <p style={{ color: 'var(--text-muted)' }}>Stock Market Intelligence</p>
+        </div>
+        <div className="rounded-3xl p-8" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', minHeight: '18rem' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+            <div className="skeleton-shimmer" style={{ flex: 1, height: 40, borderRadius: 12 }} />
+            <div className="skeleton-shimmer" style={{ flex: 1, height: 40, borderRadius: 12 }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="skeleton-shimmer" style={{ height: 48, borderRadius: 12 }} />
+            <div className="skeleton-shimmer" style={{ height: 48, borderRadius: 12 }} />
+            <div className="skeleton-shimmer" style={{ height: 52, borderRadius: 12, marginTop: 8 }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 import DelayNotice from './components/shared/DelayNotice';
-import AuthPage from './pages/AuthPage';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
@@ -141,9 +168,10 @@ export default function App() {
 
   useEffect(() => { document.documentElement.dir = i18n.language.startsWith('ar') ? 'rtl' : 'ltr'; document.documentElement.lang = i18n.language; }, [i18n.language]);
 
-  // لو المستخدم مكانش logged in قبل كده → انتظر التحقق
-  // لو كان logged in → اعرض الأبلكيشن فورًا والـ checkAuth يشتغل في الخلفية
-  if (!authChecked && !isAuthenticated) return <PageLoader />;
+  // For non-root paths: wait for auth check so deep links restore sessions correctly.
+  // For root path (/): show AuthSkeleton immediately — this lets the LCP <h1> paint
+  // before the checkAuth API round-trip, dramatically reducing LCP time.
+  if (!authChecked && !isAuthenticated && pathname !== '/') return <PageLoader />;
 
   if (isAuthenticated && user?.isFirstLogin) {
     return (
@@ -156,7 +184,7 @@ export default function App() {
     return <Navigate to="/setup-username" replace />;
   }
   if (!isAuthenticated && pathname !== '/') return <Navigate to="/" replace />;
-  if (!isAuthenticated) return <AuthPage />;
+  if (!isAuthenticated) return <Suspense fallback={<AuthSkeleton />}><AuthPage /></Suspense>;
 
   return (
     <div className="h-screen w-full max-w-[100vw] bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans flex flex-col md:flex-row overflow-hidden">
@@ -177,12 +205,10 @@ export default function App() {
           onThemeChange={handleThemeChange}
           profileCompletion={profileCompletion}
         />
-        <AnimatePresence mode="wait">
-          <motion.div key={pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+        <div key={pathname} className="page-fade-in">
             <DelayNotice showWhenStockPage={pathname === '/market' || pathname === '/stocks' || pathname.startsWith('/stocks/')} isPro={user?.plan === 'pro' || user?.plan === 'yearly' || false} />
             <AppRoutes currentWealth={stats.totalValue} />
-            </motion.div>
-        </AnimatePresence>
+        </div>
       </main>
       <BottomNav />
     </div>

@@ -17,7 +17,7 @@ interface TicketDetailPanelProps {
   canEscalate: boolean;
   quickReplies: QuickReply[];
   showQRDropdown: boolean;
-  currentAdminId?: number;
+  currentAdminId?: number | string;
   locale: string;
   t: (k: string) => string;
   onClose: () => void;

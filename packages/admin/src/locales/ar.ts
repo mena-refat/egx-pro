@@ -51,6 +51,8 @@ export const ar = {
     twoFaPrompt: 'أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة.',
     twoFaCode: 'رمز المصادقة',
     verify: 'تحقق',
+    showPassword: 'إظهار كلمة المرور',
+    hidePassword: 'إخفاء كلمة المرور',
   },
 
   dashboard: {

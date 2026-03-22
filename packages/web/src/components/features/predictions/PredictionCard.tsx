@@ -71,6 +71,7 @@ export interface PredictionCardProps {
   onLike?: () => Promise<void> | void;
   onDelete?: () => Promise<void>;
   variant?: 'feed' | 'my';
+  likeLoading?: boolean;
 }
 
 export const PredictionCard = memo(function PredictionCard({

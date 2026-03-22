@@ -5,11 +5,15 @@ export default function Index() {
   const { isAuthenticated, isLoading, user } = useAuthStore();
 
   if (isLoading) return null;
-  if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
-  if (user?.isFirstLogin || !user?.onboardingCompleted) {
+
+  // Not authenticated, OR authenticated but no user data loaded yet
+  // (can happen on network errors where isAuthenticated is kept from AsyncStorage but user is null)
+  if (!isAuthenticated || !user) return <Redirect href="/(auth)/login" />;
+
+  if (user.isFirstLogin || !user.onboardingCompleted) {
     return <Redirect href="/onboarding" />;
   }
-  if (!user?.username) return <Redirect href="/setup-username" />;
+  if (!user.username) return <Redirect href="/setup-username" />;
 
   return <Redirect href="/(tabs)" />;
 }

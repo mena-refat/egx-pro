@@ -51,6 +51,8 @@ export const en = {
     twoFaPrompt: 'Enter the 6-digit code from your authenticator app.',
     twoFaCode: 'Authentication Code',
     verify: 'Verify',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
   },
 
   dashboard: {
