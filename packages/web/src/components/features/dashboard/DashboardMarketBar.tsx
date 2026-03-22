@@ -45,7 +45,7 @@ export function DashboardMarketBar({ egx30, locale }: Props) {
 
   return (
     <div
-      className="sticky top-0 z-10 flex flex-wrap items-center justify-center gap-x-16 gap-y-2 px-10 py-3.5 text-sm text-white/60 bg-white/5 border border-white/10 rounded-2xl mx-3 mt-2"
+      className="sticky top-0 z-10 flex flex-wrap items-center justify-center gap-x-16 gap-y-2 px-10 py-3.5 text-sm text-white/60 bg-slate-900/75 dark:bg-[var(--bg-card)]/85 backdrop-blur-md border border-white/8 dark:border-[var(--border)]/50 rounded-2xl shadow-md"
       dir={isAr ? 'rtl' : 'ltr'}
     >
       <span className="shrink-0 flex items-center gap-2">

@@ -1,11 +1,11 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, FlatList, RefreshControl,
   Pressable, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Bell, Briefcase, Star, BarChart2, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { Bell, Briefcase, Star, BarChart2, TrendingUp, TrendingDown, Eye, EyeOff } from 'lucide-react-native';
 import { ProfileCompletionBanner } from '../../components/shared/ProfileCompletionBanner';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
@@ -117,6 +117,56 @@ function SectionHdr({
   );
 }
 
+// ─── BlurText ────────────────────────────────────────────────────
+// Simulates CSS filter:blur() using textShadowRadius — works on iOS & Android.
+// The original text is transparent (opacity 0) to reserve layout space;
+// the shadow layer spreads the glyph shapes into a genuine blur smear.
+function BlurText({
+  children, style, hidden, numberOfLines,
+}: {
+  children: string;
+  style?: object;
+  hidden: boolean;
+  numberOfLines?: number;
+}) {
+  if (!hidden) return <Text style={style} numberOfLines={numberOfLines}>{children}</Text>;
+  const color = (style as any)?.color ?? '#ffffff';
+  return (
+    <View>
+      {/* spacer — holds layout dimensions */}
+      <Text style={[style, { opacity: 0 }]} numberOfLines={numberOfLines}>{children}</Text>
+      {/* layer 1 — massive outer spread */}
+      <Text style={[style, {
+        position: 'absolute', top: 0, left: 0, right: 0,
+        color: 'transparent',
+        textShadowColor: color, textShadowRadius: 28, textShadowOffset: { width: 0, height: 0 },
+        opacity: 0.85,
+      }]} numberOfLines={numberOfLines}>{children}</Text>
+      {/* layer 2 */}
+      <Text style={[style, {
+        position: 'absolute', top: 0, left: 0, right: 0,
+        color: 'transparent',
+        textShadowColor: color, textShadowRadius: 18, textShadowOffset: { width: 0, height: 0 },
+        opacity: 0.85,
+      }]} numberOfLines={numberOfLines}>{children}</Text>
+      {/* layer 3 */}
+      <Text style={[style, {
+        position: 'absolute', top: 0, left: 0, right: 0,
+        color: 'transparent',
+        textShadowColor: color, textShadowRadius: 10, textShadowOffset: { width: 0, height: 0 },
+        opacity: 0.8,
+      }]} numberOfLines={numberOfLines}>{children}</Text>
+      {/* layer 4 — tight core keeps center bright */}
+      <Text style={[style, {
+        position: 'absolute', top: 0, left: 0, right: 0,
+        color: 'transparent',
+        textShadowColor: color, textShadowRadius: 4, textShadowOffset: { width: 0, height: 0 },
+        opacity: 0.75,
+      }]} numberOfLines={numberOfLines}>{children}</Text>
+    </View>
+  );
+}
+
 // ─── HomePage ────────────────────────────────────────────────────
 export default function HomePage() {
   const router      = useRouter();
@@ -175,6 +225,7 @@ export default function HomePage() {
 
   const isPositive = liveSummary.totalGainLoss >= 0;
   const gainColor  = isPositive ? GREEN : RED;
+  const [balHidden, setBalHidden] = useState(false);
 
   return (
     <ScreenWrapper padded={false} edges={['top']}>
@@ -254,29 +305,53 @@ export default function HomePage() {
                     <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs, marginBottom: SPACE.xs, textAlign: 'center' }}>
                       {t('dashboard.myPortfolio')}
                     </Text>
-                    <Text style={{ color: '#fff', fontSize: FONT['3xl'], fontWeight: WEIGHT.extrabold, fontVariant: ['tabular-nums'], textAlign: 'center' }}>
-                      {n(liveSummary.totalValue)} EGP
-                    </Text>
-                    <View style={{ marginTop: SPACE.sm }}>
+                    <BlurText
+                      hidden={balHidden}
+                      style={{ color: '#fff', fontSize: FONT['3xl'], fontWeight: WEIGHT.extrabold, fontVariant: ['tabular-nums'], textAlign: 'center' }}
+                    >
+                      {`${n(liveSummary.totalValue)} EGP`}
+                    </BlurText>
+                    <View style={{ marginTop: SPACE.sm, flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
                       <View style={{
                         paddingHorizontal: SPACE.sm, paddingVertical: 3, borderRadius: RADIUS.full,
                         backgroundColor: isPositive ? '#4ade8025' : '#f8717125',
                       }}>
-                        <Text style={{ color: gainColor, fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'], textAlign: 'center' }}>
-                          {isPositive ? '+' : ''}{n(liveSummary.totalGainLoss)} EGP ({liveSummary.totalGainLossPercent.toFixed(2)}%)
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <BlurText
+                            hidden={balHidden}
+                            style={{ color: gainColor, fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}
+                          >
+                            {`${isPositive ? '+' : ''}${n(liveSummary.totalGainLoss)} EGP`}
+                          </BlurText>
+                          <Text style={{ color: gainColor, fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>
+                            ({liveSummary.totalGainLossPercent.toFixed(2)}%)
+                          </Text>
+                        </View>
                       </View>
+                      <Pressable
+                        onPress={() => setBalHidden((v) => !v)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      >
+                        {balHidden
+                          ? <EyeOff size={16} color="rgba(255,255,255,0.6)" />
+                          : <Eye    size={16} color="rgba(255,255,255,0.6)" />
+                        }
+                      </Pressable>
                     </View>
-                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 56, marginTop: SPACE.lg }}>
-                      <View style={{ alignItems: 'center' }}>
+                    <View style={{ width: '100%', height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginTop: SPACE.lg }} />
+                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 0, marginTop: SPACE.md, width: '100%' }}>
+                      <View style={{ flex: 1, alignItems: 'center', borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.1)' }}>
                         <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>{t('dashboard.costBase')}</Text>
-                        <Text style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold, fontVariant: ['tabular-nums'] }}>
-                          {n(liveSummary.totalCost)} EGP
-                        </Text>
+                        <BlurText
+                          hidden={balHidden}
+                          style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold, fontVariant: ['tabular-nums'], marginTop: 2 }}
+                        >
+                          {`${n(liveSummary.totalCost)} EGP`}
+                        </BlurText>
                       </View>
-                      <View style={{ alignItems: 'center' }}>
+                      <View style={{ flex: 1, alignItems: 'center' }}>
                         <Text style={{ color: BRAND_LIGHT, fontSize: FONT.xs }}>{t('dashboard.stocksCount')}</Text>
-                        <Text style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>
+                        <Text style={{ color: '#e2d9f3', fontSize: FONT.sm, fontWeight: WEIGHT.semibold, marginTop: 2 }}>
                           {enrichedHoldings.length}
                         </Text>
                       </View>
@@ -335,9 +410,12 @@ export default function HomePage() {
                       </Text>
                     </View>
                     <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', marginStart: SPACE.sm, flexShrink: 0 }}>
-                      <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}>
-                        {n(h.currentValue)} EGP
-                      </Text>
+                      <BlurText
+                        hidden={balHidden}
+                        style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] }}
+                      >
+                        {`${n(h.currentValue)} EGP`}
+                      </BlurText>
                       <View style={{
                         flexDirection: 'row', alignItems: 'center', marginTop: 3,
                         paddingHorizontal: 6, paddingVertical: 2, borderRadius: 7,
@@ -448,7 +526,6 @@ export default function HomePage() {
               )}
             </View>
           )}
-
 
         </View>
       </ScrollView>

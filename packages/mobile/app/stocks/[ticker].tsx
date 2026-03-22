@@ -665,11 +665,11 @@ export default function StockDetailPage() {
                     </View>
                   </View>
                 )}
-                {(stock?.description) && (
-                  <Text style={{ color: colors.textSub, fontSize: FONT.sm, lineHeight: 20 }}>
-                    {stock.description}
+                {(info?.descriptionAr ?? info?.descriptionEn ?? stock?.description) ? (
+                  <Text style={{ color: colors.textSub, fontSize: FONT.sm, lineHeight: 22 }}>
+                    {info?.descriptionAr ?? info?.descriptionEn ?? stock?.description}
                   </Text>
-                )}
+                ) : null}
               </View>
             </View>
           )}

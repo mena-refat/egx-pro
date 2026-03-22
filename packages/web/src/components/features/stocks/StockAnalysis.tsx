@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BrainCircuit,
@@ -55,6 +55,14 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
   const navigate = useNavigate();
   const api = useStockAnalysis(stock);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
   const {
     activeTab,
     setActiveTab,
@@ -213,22 +221,22 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 </button>
               </div>
             )}
+        {/* Tabs — inside sticky header so they stay visible while scrolling */}
+        <div className="flex gap-1 border-b border-[var(--border)] mt-3 -mx-4 px-4 overflow-x-auto">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? 'border-[var(--brand)] text-[var(--brand)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}
+            >
+              {t(tab.labelKey)}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-[var(--border)] mb-6 overflow-x-auto">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id ? 'border-[var(--brand)] text-[var(--brand)]' : 'border-transparent text-[var(--text-muted)]  hover:text-[var(--text-secondary)]'}`}
-          >
-            {t(tab.labelKey)}
-          </button>
-        ))}
-              </div>
-
+      <div className="mt-6">
       {/* Tab: Details */}
       {activeTab === 'details' && (
         <div className="space-y-6">
@@ -254,7 +262,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                 <TradingViewChart
                   symbol={stock.ticker}
                   height={440}
-                  theme={typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
+                  theme={isDark ? 'dark' : 'light'}
                   locale={lang}
                   interval={chartRange === '1d' ? '60' : chartRange === '1w' ? 'W' : chartRange === '1mo' ? 'D' : chartRange === '6mo' || chartRange === '1y' || chartRange === '5y' ? 'D' : 'D'}
                 />
@@ -365,11 +373,19 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
           {/* About company */}
           <section>
             <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">{t('stockDetail.aboutCompany')}</h3>
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
-              <p className="font-medium text-[var(--text-primary)]">{getStockName(stock.ticker, lang as 'ar' | 'en')}</p>
-              <p className="text-sm text-[var(--text-muted)]  mt-1">{info?.nameEn}</p>
-              <p className="text-sm text-[var(--text-secondary)] mt-2">{stock.description || t('stockDetail.defaultDescription')}</p>
-              <p className="text-xs text-[var(--text-muted)]  mt-2">{t('stockDetail.listedIn')}: EGX30 | {sector}</p>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-2">
+              <div>
+                <p className="font-medium text-[var(--text-primary)]">{getStockName(stock.ticker, lang as 'ar' | 'en')}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{info?.nameEn}</p>
+              </div>
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                {((lang === 'ar' ? info?.descriptionAr : info?.descriptionEn)
+                  ?? info?.descriptionAr
+                  ?? info?.descriptionEn
+                  ?? stock.description)
+                  || t('stockDetail.defaultDescription')}
+              </p>
+              <p className="text-xs text-[var(--text-muted)] pt-1 border-t border-[var(--border)]">{t('stockDetail.listedIn')}: EGX | {sector}</p>
             </div>
           </section>
 
@@ -540,6 +556,7 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
         </div>
       </div>
       )}
+      </div>{/* end mt-6 tab content wrapper */}
     </div>
   );
 }

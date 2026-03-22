@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, TrendingUp, TrendingDown } from 'lucide-react';
 import { Skeleton } from '../../ui/Skeleton';
 import { BlurNum } from '../../ui/BlurNum';
 import { usePrivacyStore } from '../../../store/privacyStore';
@@ -23,19 +23,35 @@ export function DashboardPortfolioHero({ totalInvested, totalValue, totalGain, g
   const { isPrivate, toggle } = usePrivacyStore();
   const isProfit = totalGain > 0;
   const isLoss = totalGain < 0;
+
+  const accentGradient = isProfit
+    ? 'from-emerald-500 via-teal-400 to-emerald-400'
+    : isLoss
+      ? 'from-red-500 via-rose-400 to-red-400'
+      : 'from-[var(--brand)] via-violet-400 to-indigo-400';
+
   const profitLossColor = isProfit
     ? 'text-emerald-700 dark:text-emerald-400'
     : isLoss
       ? 'text-red-700 dark:text-red-400'
       : 'text-emerald-600 dark:text-emerald-500';
 
+  const gainBadgeClass = isProfit
+    ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/20'
+    : isLoss
+      ? 'bg-red-500/12 text-red-700 dark:text-red-400 ring-1 ring-red-500/20'
+      : 'bg-[var(--bg-secondary)] text-[var(--text-muted)]';
+
   if (loading) {
     return (
-      <div className="card-base card-elevated p-8 rounded-2xl">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-20 rounded-lg" />
-          ))}
+      <div className="card-base card-elevated rounded-2xl overflow-hidden">
+        <div className="h-1 bg-[var(--border)]" />
+        <div className="p-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -51,13 +67,16 @@ export function DashboardPortfolioHero({ totalInvested, totalValue, totalGain, g
 
   return (
     <div className="card-base card-elevated rounded-2xl overflow-hidden relative">
+      {/* Gradient accent top bar */}
+      <div className={`h-1 bg-gradient-to-r ${accentGradient}`} />
+
       {/* Privacy toggle */}
       <button
         type="button"
         onClick={toggle}
         aria-pressed={isPrivate}
         aria-label={isPrivate ? 'Show numbers' : 'Hide numbers'}
-        className={`absolute top-3 end-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+        className={`absolute top-4 end-4 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
           isPrivate
             ? 'bg-[var(--brand)]/15 text-[var(--brand)] ring-1 ring-[var(--brand)]/30'
             : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
@@ -68,30 +87,55 @@ export function DashboardPortfolioHero({ totalInvested, totalValue, totalGain, g
       </button>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[var(--border)]">
-        <div className="p-6 sm:p-8 flex flex-col items-center gap-1 text-center">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+        {/* Purchase Value */}
+        <div className="p-6 sm:p-8 flex flex-col items-center gap-2 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
             {t('dashboard.purchaseValue')}
           </p>
           <p className="text-2xl sm:text-3xl font-bold font-number tabular-nums text-[var(--text-primary)]">
-            <BlurNum>{formatEgp(totalInvested)}</BlurNum> <span className="text-base font-normal text-[var(--text-muted)]">EGP</span>
+            <BlurNum>{formatEgp(totalInvested)}</BlurNum>
           </p>
+          <span className="text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-secondary)] px-2.5 py-0.5 rounded-full">
+            EGP
+          </span>
         </div>
-        <div className="p-6 sm:p-8 flex flex-col items-center gap-1 text-center">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+
+        {/* Profit / Loss — center cell gets tinted glow */}
+        <div className="relative p-6 sm:p-8 flex flex-col items-center gap-2 text-center">
+          <div className={`absolute inset-0 pointer-events-none ${
+            isProfit ? 'bg-emerald-500/4' : isLoss ? 'bg-red-500/4' : ''
+          }`} />
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
             {t('dashboard.profitLoss')}
           </p>
-          <p className={`text-2xl sm:text-3xl font-bold font-number tabular-nums ${profitLossColor}`}>
-            <BlurNum>{isProfit ? '+' : ''}{formatEgp(totalGain)} <span className="text-base font-normal opacity-90">EGP</span></BlurNum>
-            <span className="text-lg font-semibold ms-1.5">({isProfit ? '+' : ''}{gainPercent.toFixed(2)}%)</span>
-          </p>
+          <div className="flex items-center gap-2">
+            {isProfit && <TrendingUp className="w-5 h-5 text-emerald-500 shrink-0" />}
+            {isLoss && <TrendingDown className="w-5 h-5 text-red-500 shrink-0" />}
+            <p className={`text-2xl sm:text-3xl font-bold font-number tabular-nums ${profitLossColor}`}>
+              <BlurNum>{isProfit ? '+' : ''}{formatEgp(totalGain)}</BlurNum>
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-bold tabular-nums px-2.5 py-0.5 rounded-full ${gainBadgeClass}`}>
+              {isProfit ? '+' : ''}{gainPercent.toFixed(2)}%
+            </span>
+            <span className="text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-secondary)] px-2.5 py-0.5 rounded-full">
+              EGP
+            </span>
+          </div>
         </div>
-        <div className="p-6 sm:p-8 flex flex-col items-center gap-1 text-center">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+
+        {/* Current Value */}
+        <div className="p-6 sm:p-8 flex flex-col items-center gap-2 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
             {t('dashboard.currentValue')}
           </p>
           <p className="text-2xl sm:text-3xl font-bold font-number tabular-nums text-[var(--text-primary)]">
-            <BlurNum>{formatEgp(totalValue)}</BlurNum> <span className="text-base font-normal text-[var(--text-muted)]">EGP</span>
+            <BlurNum>{formatEgp(totalValue)}</BlurNum>
           </p>
+          <span className="text-[11px] font-medium text-[var(--text-muted)] bg-[var(--bg-secondary)] px-2.5 py-0.5 rounded-full">
+            EGP
+          </span>
         </div>
       </div>
     </div>

@@ -21,6 +21,19 @@ export const PortfolioRepository = {
     return prisma.portfolio.count({ where: { userId } });
   },
 
+  async countUniqueTickersByUser(userId: number): Promise<number> {
+    const rows = await prisma.portfolio.findMany({
+      where: { userId },
+      distinct: ['ticker'],
+      select: { ticker: true },
+    });
+    return rows.length;
+  },
+
+  existsByUserAndTicker(userId: number, ticker: string): Promise<boolean> {
+    return prisma.portfolio.count({ where: { userId, ticker } }).then((n) => n > 0);
+  },
+
   create(data: { userId: number; ticker: string; shares: number; avgPrice: number; buyDate: Date }) {
     return prisma.portfolio.create({ data });
   },

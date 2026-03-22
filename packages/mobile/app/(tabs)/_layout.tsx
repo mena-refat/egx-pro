@@ -2,10 +2,11 @@ import { View } from 'react-native';
 import { Tabs, Redirect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { House, Briefcase, BarChart3, Sparkles, User } from 'lucide-react-native';
+import { House, Briefcase, BarChart3, FlaskConical, User } from 'lucide-react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import { useUnreadCount } from '../../hooks/useUnreadCount';
+import { useActivePredictions } from '../../hooks/useActivePredictions';
 import { useWatchlist } from '../../hooks/useWatchlist';
 import { useLivePrices } from '../../hooks/useLivePrices';
 import { useWatchlistTargets } from '../../hooks/useWatchlistTargets';
@@ -31,7 +32,7 @@ const TAB_LABELS: Record<TabName, { ar: string; en: string }> = {
   index:     { ar: 'الرئيسية', en: 'Home' },
   portfolio: { ar: 'محفظتي',   en: 'Portfolio' },
   market:    { ar: 'السوق',  en: 'Markets' },
-  ai:        { ar: 'الذكاء',   en: 'AI' },
+  ai:        { ar: 'تحليل',    en: 'Analyse' },
   profile:   { ar: 'حسابي',    en: 'Profile' },
 };
 
@@ -39,7 +40,7 @@ const TAB_ICONS: Record<TabName, React.ComponentType<{ size?: number; color?: st
   index: House,
   market: BarChart3,
   portfolio: Briefcase,
-  ai: Sparkles,
+  ai: FlaskConical,
   profile: User,
 };
 
@@ -76,7 +77,8 @@ export default function TabsLayout() {
   const { i18n }        = useTranslation();
   const insets          = useSafeAreaInsets();
   const { colors, isRTL } = useTheme();
-  const unreadCount     = useUnreadCount();
+  const unreadCount        = useUnreadCount();
+  const activePredictions  = useActivePredictions();
   const lang            = i18n.language?.startsWith('ar') ? 'ar' : 'en';
 
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
@@ -118,6 +120,11 @@ export default function TabsLayout() {
             ? {
                 tabBarBadge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : undefined,
                 tabBarBadgeStyle: { backgroundColor: '#ef4444', fontSize: 9, minWidth: 16, height: 16 },
+              }
+          : name === 'ai'
+            ? {
+                tabBarBadge: activePredictions > 0 ? activePredictions : undefined,
+                tabBarBadgeStyle: { backgroundColor: BRAND, fontSize: 9, minWidth: 16, height: 16 },
               }
             : {};
 

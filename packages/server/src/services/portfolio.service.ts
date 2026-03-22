@@ -89,11 +89,15 @@ export const PortfolioService = {
     const planUser = await UserRepository.getPlanUser(user.id);
     if (!planUser) throw new AppError('UNAUTHORIZED', 401);
     const portfolioLimit = getLimit(planUser, 'portfolioStocks');
-    const count = await PortfolioRepository.countByUser(user.id);
-    if (count >= (typeof portfolioLimit === 'number' ? portfolioLimit : 0))
-      throw new AppError('PORTFOLIO_LIMIT_REACHED', 403);
 
     const { ticker, shares, purchasePrice, purchaseDate } = parsed.data;
+
+    const alreadyOwns = await PortfolioRepository.existsByUserAndTicker(user.id, ticker);
+    if (!alreadyOwns) {
+      const uniqueCount = await PortfolioRepository.countUniqueTickersByUser(user.id);
+      if (uniqueCount >= (typeof portfolioLimit === 'number' ? portfolioLimit : 0))
+        throw new AppError('PORTFOLIO_LIMIT_REACHED', 403);
+    }
     const completedBefore = await getCompletedAchievementIds(user.id);
     const holding = await PortfolioRepository.create({
       userId: user.id,

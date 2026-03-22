@@ -393,17 +393,8 @@ export default function AnalyticsPage() {
             ))}
           </View>
 
-          {/* ─── Calculator ─── */}
-          <Animated.View entering={FadeInDown.duration(400).delay(320)}>
-            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
-              <View style={[styles.sectionDot, { backgroundColor: '#10b981' }]} />
-              <Text style={[styles.sectionLabel, { color: colors.textSub }]}>{t('ai.calculatorSection')}</Text>
-            </View>
-          </Animated.View>
-          <CalculatorCard onPress={() => router.push('/calculator')} />
-
           {/* ─── My Predictions ─── */}
-          <Animated.View entering={FadeInDown.duration(450).delay(750)} style={{ gap: SPACE.md }}>
+          <Animated.View entering={FadeInDown.duration(450).delay(520)} style={{ gap: SPACE.md }}>
             <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm }}>
                 <View style={[styles.sectionDot, { backgroundColor: BRAND }]} />
@@ -503,6 +494,15 @@ export default function AnalyticsPage() {
               )}
             </LinearGradient>
           </Animated.View>
+
+          {/* ─── Calculator ─── */}
+          <Animated.View entering={FadeInDown.duration(400).delay(720)}>
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
+              <View style={[styles.sectionDot, { backgroundColor: '#10b981' }]} />
+              <Text style={[styles.sectionLabel, { color: colors.textSub }]}>{t('ai.calculatorSection')}</Text>
+            </View>
+          </Animated.View>
+          <CalculatorCard onPress={() => router.push('/calculator')} />
 
           {/* ─── Disclaimer ─── */}
           <Animated.View entering={FadeIn.duration(600).delay(900)}>

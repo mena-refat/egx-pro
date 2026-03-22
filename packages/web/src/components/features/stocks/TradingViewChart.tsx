@@ -40,6 +40,7 @@ export function TradingViewChart({
       interval,
       timezone: 'Africa/Cairo',
       theme,
+      backgroundColor: theme === 'dark' ? 'rgba(22, 27, 34, 1)' : 'rgba(255, 255, 255, 1)',
       style: '1',
       locale,
       allow_symbol_change: false,

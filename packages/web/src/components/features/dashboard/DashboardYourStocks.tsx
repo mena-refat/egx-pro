@@ -1,6 +1,7 @@
 import React, { useState, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { PieChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { Skeleton } from '../../ui/Skeleton';
 import EmptyState from '../../shared/EmptyState';
@@ -179,7 +180,7 @@ export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings,
               <SortHeader active={sortKey === 'unrealized'} columnKey="unrealized" label={t('dashboard.unrealizedReturn')} sortDir={sortDir} onSort={handleSort} />
             </div>
           </div>
-          {sortedHoldings.map(({ holding, currentPrice, totalValue, gainEgp, gainPercent }) => {
+          {sortedHoldings.map(({ holding, currentPrice, totalValue, gainEgp, gainPercent }, idx) => {
             const isProfit = gainEgp > 0;
             const isLoss = gainEgp < 0;
             const returnColor = isProfit
@@ -189,9 +190,12 @@ export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings,
                 : 'text-emerald-600 dark:text-emerald-500';
 
             return (
-              <div
+              <motion.div
                 key={holding.id}
-                className="grid grid-cols-6 gap-4 items-center py-4 px-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--text-muted)]/30 transition-colors cursor-pointer min-w-0"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, delay: idx * 0.04, ease: [0.25, 0.1, 0.25, 1] }}
+                className="grid grid-cols-6 gap-4 items-center py-4 px-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] hover:border-[var(--brand)]/20 hover:shadow-sm hover:-translate-y-px transition-all duration-200 cursor-pointer min-w-0"
                 onClick={() => navigate(`/stocks/${holding.ticker}`)}
                 role="button"
                 tabIndex={0}
@@ -199,7 +203,13 @@ export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings,
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[var(--bg-primary)] text-[var(--text-primary)] font-bold text-sm"
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white text-sm font-bold shadow-sm ${
+                      isProfit
+                        ? 'bg-gradient-to-br from-emerald-400 to-teal-500 shadow-emerald-500/20'
+                        : isLoss
+                          ? 'bg-gradient-to-br from-red-400 to-rose-500 shadow-red-500/20'
+                          : 'bg-gradient-to-br from-[var(--brand)] to-violet-500 shadow-[var(--brand)]/20'
+                    }`}
                     aria-hidden
                   >
                     {holding.ticker.slice(0, 2)}
@@ -222,7 +232,7 @@ export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings,
                   {isProfit ? <TrendingUp className="w-4 h-4 shrink-0" /> : isLoss ? <TrendingDown className="w-4 h-4 shrink-0" /> : null}
                   ({isProfit ? '+' : ''}{gainPercent.toFixed(2)}%) <BlurNum>{isProfit ? '+' : ''}{formatEgp(gainEgp)} EGP</BlurNum>
                 </span>
-              </div>
+              </motion.div>
             );
           })}
           </div>

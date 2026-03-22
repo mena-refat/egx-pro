@@ -343,7 +343,7 @@ function NewsSection({ news }: { news: NewsItem[] }) {
             : null;
           return (
             <Pressable
-              key={item.url || i}
+              key={`${item.url ?? ''}_${i}`}
               onPress={() => router.push('/news')}
               style={({ pressed }) => ({
                 flexDirection: 'row',

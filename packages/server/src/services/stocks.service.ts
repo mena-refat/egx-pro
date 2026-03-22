@@ -14,7 +14,8 @@ const GICS_VALUES: GicsSector[] = [
 
 function quoteToPriceRow(
   q: { ticker: string; price: number; change: number; changePercent: number; volume: number },
-  sector: GicsSector | null
+  sector: GicsSector | null,
+  description?: string | null,
 ) {
   return {
     ticker: q.ticker,
@@ -23,6 +24,7 @@ function quoteToPriceRow(
     changePercent: q.changePercent,
     volume: q.volume,
     sector,
+    description: description ?? null,
     isDelayed: !marketDataService.isMarketOpen(),
     priceTime: new Date().toISOString().slice(11, 19),
   };
@@ -47,14 +49,19 @@ export const StocksService = {
     const quotes = cached.size > 0 ? cached : await marketDataService.getQuotes(tickers);
 
     const sectorMap = new Map<string, GicsSector>();
-    allStocks.forEach((s) => { if (s.sector) sectorMap.set(s.ticker, s.sector); });
+    const descriptionMap = new Map<string, string>();
+    allStocks.forEach((s) => {
+      if (s.sector) sectorMap.set(s.ticker, s.sector);
+      if (s.description) descriptionMap.set(s.ticker, s.description);
+    });
 
     const rows = [];
     for (const [ticker, q] of quotes.entries()) {
       if (q.price > 0) {
         rows.push(quoteToPriceRow(
           { ticker, price: q.price, change: q.change, changePercent: q.changePercent, volume: q.volume },
-          sectorMap.get(ticker) ?? null
+          sectorMap.get(ticker) ?? null,
+          descriptionMap.get(ticker) ?? null,
         ));
       }
     }
@@ -77,7 +84,10 @@ export const StocksService = {
 
   async getPrice(ticker: string, delayed: boolean) {
     const { getStockPrice, getStockPriceDelayed } = await import('../lib/stockData.ts');
-    const priceData = delayed ? await getStockPriceDelayed(ticker) : await getStockPrice(ticker);
+    const [priceData, stockInfo] = await Promise.all([
+      delayed ? getStockPriceDelayed(ticker) : getStockPrice(ticker),
+      StockRepository.findByTicker(ticker),
+    ]);
     if (!priceData) return null;
     return {
       ticker: priceData.ticker,
@@ -90,6 +100,7 @@ export const StocksService = {
       open: priceData.open,
       previousClose: priceData.previousClose,
       name: priceData.name,
+      description: stockInfo?.description ?? null,
       isDelayed: 'isDelayed' in priceData ? priceData.isDelayed : !marketDataService.isMarketOpen(),
       priceTime: 'priceTime' in priceData ? priceData.priceTime : new Date().toISOString().slice(11, 19),
     };
