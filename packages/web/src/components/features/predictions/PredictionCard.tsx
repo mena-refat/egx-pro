@@ -9,19 +9,22 @@ import type { PredictionTime } from '../../../lib/scoringConstants';
 
 const DELETION_WINDOW_MS = 5 * 60 * 1000;
 
-const TIER_STYLE: Record<MoveTier, { color: string; bg: string; border: string; labelKey: string }> = {
-  LIGHT:   { color: 'text-sky-400',    bg: 'bg-sky-500/10',    border: 'border-sky-500/20',    labelKey: 'predictions.tierLight'   },
-  MEDIUM:  { color: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', labelKey: 'predictions.tierMedium'  },
-  STRONG:  { color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'border-violet-500/20', labelKey: 'predictions.tierStrong'  },
-  EXTREME: { color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', labelKey: 'predictions.tierExtreme' },
+const TIER_STYLE: Record<MoveTier, {
+  color: string; bg: string; border: string; labelKey: string;
+  gradient: string; glowColor: string;
+}> = {
+  LIGHT:   { color: 'text-sky-400',    bg: 'bg-sky-500/10',    border: 'border-sky-500/20',    labelKey: 'predictions.tierLight',   gradient: 'from-sky-500/15 to-sky-500/5',    glowColor: 'rgba(14,165,233,0.15)'  },
+  MEDIUM:  { color: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', labelKey: 'predictions.tierMedium',  gradient: 'from-indigo-500/15 to-indigo-500/5', glowColor: 'rgba(99,102,241,0.15)'  },
+  STRONG:  { color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'border-violet-500/20', labelKey: 'predictions.tierStrong',  gradient: 'from-violet-500/15 to-violet-500/5', glowColor: 'rgba(139,92,246,0.15)'  },
+  EXTREME: { color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', labelKey: 'predictions.tierExtreme', gradient: 'from-orange-500/15 to-orange-500/5', glowColor: 'rgba(249,115,22,0.15)'  },
 };
 
-const RANK_META: Record<string, { color: string; labelKey: string }> = {
-  BEGINNER: { color: 'text-[var(--text-muted)]', labelKey: 'predictions.rankBeginner' },
-  ANALYST:  { color: 'text-blue-400',            labelKey: 'predictions.rankAnalyst'  },
-  SENIOR:   { color: 'text-purple-400',          labelKey: 'predictions.rankSenior'   },
-  EXPERT:   { color: 'text-amber-400',           labelKey: 'predictions.rankExpert'   },
-  LEGEND:   { color: 'text-rose-400',            labelKey: 'predictions.rankLegend'   },
+const RANK_META: Record<string, { color: string; labelKey: string; ring: string }> = {
+  BEGINNER: { color: 'text-[var(--text-muted)]', labelKey: 'predictions.rankBeginner', ring: 'rgba(255,255,255,0.08)' },
+  ANALYST:  { color: 'text-blue-400',            labelKey: 'predictions.rankAnalyst',  ring: 'rgba(96,165,250,0.35)' },
+  SENIOR:   { color: 'text-purple-400',          labelKey: 'predictions.rankSenior',   ring: 'rgba(192,132,252,0.35)' },
+  EXPERT:   { color: 'text-amber-400',           labelKey: 'predictions.rankExpert',   ring: 'rgba(251,191,36,0.4)' },
+  LEGEND:   { color: 'text-rose-400',            labelKey: 'predictions.rankLegend',   ring: 'rgba(251,113,133,0.4)' },
 };
 
 const TIMEFRAME_KEY: Record<string, string> = {
@@ -131,71 +134,114 @@ export const PredictionCard = memo(function PredictionCard({
     ? t(TIMEFRAME_KEY[prediction.timeframe] ?? prediction.timeframe)
     : `${daysTotal} ${t('predictions.day')}`;
 
+  // Bar colors / gradient
+  const barGradient = isHit
+    ? 'linear-gradient(to right, rgba(251,191,36,0.4), rgba(251,191,36,0.85))'
+    : (isMissed || isExpired)
+      ? 'linear-gradient(to right, rgba(255,255,255,0.06), rgba(255,255,255,0.12))'
+      : daysLeft <= 3
+        ? 'linear-gradient(to right, rgba(251,191,36,0.35), rgba(251,191,36,0.75))'
+        : 'linear-gradient(to right, var(--brand-dim, rgba(139,92,246,0.35)), var(--brand, rgba(139,92,246,0.75)))';
+
+  const dotColor = isHit ? '#fbbf24' : daysLeft <= 3 ? '#fbbf24' : 'var(--brand)';
+
+  // Top accent strip color
+  const accentGradient = isActive
+    ? 'linear-gradient(to right, transparent, var(--brand), transparent)'
+    : isHit
+      ? 'linear-gradient(to right, transparent, rgba(251,191,36,0.7), transparent)'
+      : 'linear-gradient(to right, transparent, rgba(255,255,255,0.06), transparent)';
+
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97 }}
-      transition={{ duration: 0.18 }}
-      className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden"
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+      whileHover={{ y: -2, transition: { duration: 0.15 } }}
+      className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden relative"
+      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
     >
-      <div className="p-4 space-y-3.5">
+      {/* Top accent gradient line */}
+      <div className="h-px w-full" style={{ background: accentGradient }} />
 
-        {/* ── 1. Author row ─────────────────────────────────────────
-            Who is speaking — establish credibility first           */}
+      <div className="p-4 space-y-3">
+
+        {/* ── 1. Author row ─────────────────────────────────────────── */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-[var(--brand)]/10 border border-[var(--brand)]/15 flex items-center justify-center shrink-0 text-xs font-bold text-[var(--brand)]">
+          {/* Avatar with rank-colored ring */}
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-black text-[var(--brand)] bg-[var(--brand)]/10"
+            style={{ boxShadow: `0 0 0 2px ${rankMeta.ring}` }}
+          >
             {(prediction.user?.username ?? '?').slice(0, 1).toUpperCase()}
           </div>
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
                 @{prediction.user?.username ?? '-'}
               </span>
-              <span className={`text-[11px] font-medium ${rankMeta.color}`}>
+              <span className={`text-[11px] font-semibold ${rankMeta.color}`}>
                 {t(rankMeta.labelKey)}
               </span>
               <span className="text-[11px] text-[var(--text-muted)]">
                 · {Math.round(prediction.userAccuracyRate ?? 0)}%
-                <span className="opacity-60"> ({prediction.userTotalPredictions ?? 0})</span>
+                <span className="opacity-50"> ({prediction.userTotalPredictions ?? 0})</span>
               </span>
             </div>
           </div>
-          {/* Status badge — top-right */}
-          {isActive && (
-            <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--brand)]/8 text-[var(--brand)] border border-[var(--brand)]/15">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand)] animate-pulse" />
-              {t('predictions.statusActive')}
-            </span>
-          )}
-          {isHit && (
-            <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/15">
-              <Trophy className="w-3 h-3" /> {t('predictions.hitBadge')}
-            </span>
-          )}
-          {isMissed && (
-            <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border)]">
-              {t('predictions.missedBadge')}
-            </span>
-          )}
-          {isExpired && (
-            <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border)]">
-              <Timer className="w-3 h-3" /> {t('predictions.expiredBadge')}
-            </span>
-          )}
+
+          {/* Status badge */}
+          <AnimatePresence mode="wait">
+            {isActive && (
+              <motion.span
+                key="active"
+                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[var(--brand)]/8 text-[var(--brand)] border border-[var(--brand)]/20"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand)] animate-pulse" />
+                {t('predictions.statusActive')}
+              </motion.span>
+            )}
+            {isHit && (
+              <motion.span
+                key="hit"
+                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-amber-500/12 text-amber-400 border border-amber-500/20"
+              >
+                <Trophy className="w-3 h-3" /> {t('predictions.hitBadge')}
+              </motion.span>
+            )}
+            {isMissed && (
+              <motion.span key="missed" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border)]">
+                {t('predictions.missedBadge')}
+              </motion.span>
+            )}
+            {isExpired && (
+              <motion.span key="expired" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[var(--bg-secondary)] text-[var(--text-muted)] border border-[var(--border)]">
+                <Timer className="w-3 h-3" /> {t('predictions.expiredBadge')}
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* ── 2. Prediction core ────────────────────────────────────
-            Ticker (big) + direction + tier  |  timeframe block    */}
+        {/* ── 2. Prediction core ──────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-2xl font-black text-[var(--text-primary)] tracking-tight leading-none mb-1.5">
+            <p className="text-2xl font-black text-[var(--text-primary)] tracking-tight leading-none mb-2">
               {prediction.ticker}
             </p>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {/* Direction — pill, neutral */}
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--bg-secondary)] border border-[var(--border)] text-xs font-semibold text-[var(--text-secondary)]">
+              {/* Direction — soft green/red */}
+              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                isUp
+                  ? 'text-emerald-400 bg-emerald-500/8 border-emerald-500/20'
+                  : 'text-rose-400 bg-rose-500/8 border-rose-500/20'
+              }`}>
                 {isUp
                   ? <TrendingUp  className="w-3.5 h-3.5" aria-hidden />
                   : <TrendingDown className="w-3.5 h-3.5" aria-hidden />
@@ -203,14 +249,17 @@ export const PredictionCard = memo(function PredictionCard({
                 {t(isUp ? 'predictions.directionUp' : 'predictions.directionDown')}
               </span>
 
-              {/* Tier or EXACT target */}
+              {/* Tier chip — gradient bg */}
               {prediction.mode === 'EXACT' && prediction.targetPrice != null ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]">
                   <Target className="w-3 h-3" aria-hidden />
                   {prediction.targetPrice.toFixed(2)} {t('common.egp')}
                 </span>
               ) : tier && prediction.timeframe ? (
-                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${tier.color} ${tier.bg} ${tier.border}`}>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border bg-gradient-to-br ${tier.gradient} ${tier.color} ${tier.border}`}
+                  style={{ boxShadow: `inset 0 1px 0 ${tier.glowColor}` }}
+                >
                   <Zap className="w-3 h-3" aria-hidden />
                   {t(tier.labelKey)}
                   <span className="opacity-50 text-[10px] tabular-nums">
@@ -221,14 +270,22 @@ export const PredictionCard = memo(function PredictionCard({
             </div>
           </div>
 
-          {/* Right block: timeframe + days left OR points for resolved */}
+          {/* Right info block */}
           {(isHit || isMissed) && prediction.pointsEarned != null ? (
-            <div className={`shrink-0 text-end px-3 py-2 rounded-xl ${isHit ? 'bg-amber-500/8 border border-amber-500/15' : 'bg-[var(--bg-secondary)] border border-[var(--border)]'}`}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 }}
+              className={`shrink-0 text-end px-3 py-2 rounded-xl border ${
+                isHit
+                  ? 'border-amber-500/20 bg-gradient-to-br from-amber-500/12 to-amber-500/4'
+                  : 'border-[var(--border)] bg-[var(--bg-secondary)]'
+              }`}
+            >
               <p className={`text-lg font-black tabular-nums leading-none ${isHit ? 'text-amber-400' : 'text-[var(--text-muted)]'}`}>
                 {isHit ? '+' : ''}{prediction.pointsEarned}
               </p>
               <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{t('predictions.pts')}</p>
-            </div>
+            </motion.div>
           ) : (
             <div className="shrink-0 text-end px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)]">
               <p className="text-xs font-bold text-[var(--text-primary)] leading-tight">{timeframeLabel}</p>
@@ -241,8 +298,7 @@ export const PredictionCard = memo(function PredictionCard({
           )}
         </div>
 
-        {/* ── 3. Price row ──────────────────────────────────────────
-            Full-width block: Entry left · arrow · Current right   */}
+        {/* ── 3. Price row — full-width block ─────────────────────────── */}
         <div className="flex items-stretch rounded-xl overflow-hidden bg-[var(--bg-secondary)] border border-[var(--border)]">
           <div className="flex-1 px-3 py-2.5">
             <p className="text-[10px] text-[var(--text-muted)] mb-0.5">{isAr ? 'سعر الدخول' : 'Entry'}</p>
@@ -271,28 +327,33 @@ export const PredictionCard = memo(function PredictionCard({
           </div>
 
           {diff != null && Math.abs(diff) >= 0.01 && (
-            <div className={`flex items-center px-3 border-s border-[var(--border)] ${
-              diffPos ? 'bg-green-500/8' : diffNeg ? 'bg-red-500/8' : ''
-            }`}>
+            <motion.div
+              initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.12 }}
+              className={`flex items-center px-3.5 border-s border-[var(--border)] ${
+                diffPos ? 'bg-gradient-to-b from-green-500/10 to-green-500/5'
+                : diffNeg ? 'bg-gradient-to-b from-red-500/10 to-red-500/5'
+                : ''
+              }`}
+            >
               <span className={`text-sm font-black tabular-nums ${
-                diffPos ? 'text-green-500' : diffNeg ? 'text-red-500' : 'text-[var(--text-muted)]'
+                diffPos ? 'text-green-400' : diffNeg ? 'text-red-400' : 'text-[var(--text-muted)]'
               }`}>
                 {diffPos ? '+' : ''}{diff.toFixed(2)}%
               </span>
-            </div>
+            </motion.div>
           )}
         </div>
 
-        {/* ── 4. Timeline progress ──────────────────────────────────*/}
+        {/* ── 4. Timeline ──────────────────────────────────────────────── */}
         <div className="rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] px-3 py-2.5 space-y-2">
-          {/* Dates row */}
           <div className="flex items-center justify-between text-[10px] tabular-nums">
             <span className="text-[var(--text-muted)]">{shortDate(prediction.createdAt, locale)}</span>
-            {/* Progress % label in center */}
-            <span className={`font-semibold text-[10px] ${
-              isHit ? 'text-amber-400' :
-              isMissed || isExpired ? 'text-[var(--text-muted)]' :
-              daysLeft <= 3 ? 'text-amber-400' : 'text-[var(--brand)]'
+            <span className={`font-bold text-[10px] ${
+              isHit ? 'text-amber-400'
+              : isMissed || isExpired ? 'text-[var(--text-muted)]'
+              : daysLeft <= 3 ? 'text-amber-400'
+              : 'text-[var(--brand)]'
             }`}>
               {Math.round(progressPct)}%
             </span>
@@ -300,51 +361,67 @@ export const PredictionCard = memo(function PredictionCard({
           </div>
 
           {/* Bar */}
-          <div className="relative h-2 rounded-full bg-[var(--bg-card)] overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-700 ${
-                isHit              ? 'bg-amber-400/80' :
-                isMissed || isExpired ? 'bg-[var(--text-muted)]/30' :
-                daysLeft <= 3     ? 'bg-amber-400/70' :
-                'bg-[var(--brand)]/70'
-              }`}
-              style={{ width: `${progressPct}%` }}
+          <div className="relative h-2 rounded-full bg-[var(--bg-card)] overflow-visible">
+            <motion.div
+              className="h-full rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPct}%` }}
+              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+              style={{ background: barGradient }}
             />
-            {/* Glow dot at tip (active only) */}
-            {isActive && progressPct > 2 && progressPct < 98 && (
-              <div
-                className={`absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full shadow-sm ${
-                  daysLeft <= 3 ? 'bg-amber-400' : 'bg-[var(--brand)]'
-                }`}
-                style={{ left: `calc(${progressPct}% - 4px)` }}
+            {/* Glow dot at tip */}
+            {isActive && progressPct > 3 && progressPct < 97 && (
+              <motion.div
+                className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full"
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.7, duration: 0.25 }}
+                style={{
+                  left: `calc(${progressPct}% - 5px)`,
+                  background: dotColor,
+                  boxShadow: `0 0 6px 2px ${dotColor === 'var(--brand)' ? 'rgba(139,92,246,0.5)' : 'rgba(251,191,36,0.5)'}`,
+                }}
               />
             )}
           </div>
         </div>
 
-        {/* ── 5. Reason ─────────────────────────────────────────────
-            Analyst's justification — quoted style                  */}
+        {/* ── 5. Reason ────────────────────────────────────────────────── */}
         {prediction.reason && (
-          <p className="text-xs text-[var(--text-muted)] leading-relaxed line-clamp-2 ps-3 border-s-[1.5px] border-[var(--border-strong)]">
+          <p className="text-xs text-[var(--text-muted)] leading-relaxed line-clamp-2 ps-3 border-s-[1.5px] border-[var(--brand)]/30">
             {prediction.reason}
           </p>
         )}
 
-        {/* ── 6. Footer ─────────────────────────────────────────────
-            Like · timestamp · delete                               */}
-        <div className="flex items-center gap-2 pt-0.5 border-t border-[var(--border)]">
+        {/* ── 6. Footer ────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-2 pt-1 border-t border-[var(--border)]">
+
           {/* Like button */}
           {showLikeButton && onLike && !isOwnPrediction ? (
-            <button
+            <motion.button
               type="button"
               onClick={handleLike}
               disabled={likeLoading}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-150 disabled:opacity-50
-                ${prediction.isLikedByMe ? 'text-red-500 bg-red-500/8' : 'text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/8'}`}
+              whileTap={{ scale: 0.82 }}
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.12 }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors duration-150 disabled:opacity-50 ${
+                prediction.isLikedByMe
+                  ? 'text-red-500 bg-red-500/10 border border-red-500/20'
+                  : 'text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/8 border border-transparent'
+              }`}
             >
-              <Heart className={`w-5 h-5 transition-transform ${likeLoading ? 'scale-90' : ''} ${prediction.isLikedByMe ? 'fill-red-500' : ''}`} aria-hidden />
+              <motion.div
+                animate={prediction.isLikedByMe ? { scale: [1, 1.35, 1] } : { scale: 1 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+              >
+                <Heart
+                  className={`w-5 h-5 ${likeLoading ? 'opacity-50' : ''} ${prediction.isLikedByMe ? 'fill-red-500' : ''}`}
+                  aria-hidden
+                />
+              </motion.div>
               <span className="tabular-nums font-bold text-sm">{prediction.likeCount}</span>
-            </button>
+            </motion.button>
           ) : (
             <span className="flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--text-muted)]">
               <Heart className="w-5 h-5" aria-hidden />
@@ -352,7 +429,7 @@ export const PredictionCard = memo(function PredictionCard({
             </span>
           )}
 
-          {/* Spacer + delete */}
+          {/* Spacer + delete + timestamp */}
           <div className="ms-auto flex items-center gap-2">
             <AnimatePresence mode="wait">
               {canDelete && deleteState === 'idle' && (
@@ -389,8 +466,7 @@ export const PredictionCard = memo(function PredictionCard({
               )}
             </AnimatePresence>
 
-            {/* Timestamp */}
-            <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+            <span className="text-xs text-[var(--text-muted)] tabular-nums">
               {new Date(prediction.createdAt).toLocaleDateString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
   User, Shield, Bell, CreditCard, LogOut,
   ChevronRight, ChevronLeft,
@@ -17,11 +18,6 @@ import {
 import { usePredictionScore } from '../../hooks/usePredictionScore';
 import { useNewAchievementsCount } from '../../hooks/useNewAchievementsCount';
 import { ProfileCompletionBanner } from '../../components/shared/ProfileCompletionBanner';
-
-const PLAN_LABELS: Record<string, string> = {
-  free: 'مجاني', pro: 'Pro', yearly: 'Pro سنوي',
-  ultra: 'Ultra', ultra_yearly: 'Ultra سنوي',
-};
 
 // ─── MenuItem ────────────────────────────────────────────────────
 function MenuItem({
@@ -91,7 +87,8 @@ function Section({ title, children, last = false }: { title?: string; children: 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const { colors } = useTheme();
+  const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
   const { score: predictionAccuracyRate, loading: predictionLoading } = usePredictionScore();
   const newAchievementsCount = useNewAchievementsCount();
 
@@ -100,7 +97,15 @@ export default function ProfilePage() {
     router.replace('/(auth)/login');
   };
 
-  const planLabel    = PLAN_LABELS[user?.plan ?? 'free'] ?? 'مجاني';
+  const getPlanLabel = (plan: string) => ({
+    free: t('profile.planFree'),
+    pro: 'Pro',
+    yearly: t('profile.planProYearly'),
+    ultra: 'Ultra',
+    ultra_yearly: t('profile.planUltraYearly'),
+  }[plan] ?? t('profile.planFree'));
+
+  const planLabel    = getPlanLabel(user?.plan ?? 'free');
   const isPro        = user?.plan && user.plan !== 'free';
   const initial      = user?.fullName?.[0]?.toUpperCase() ?? 'U';
 
@@ -110,7 +115,7 @@ export default function ProfilePage() {
 
         {/* ─── Header ─── */}
         <View style={{ borderBottomColor: colors.border, borderBottomWidth: 1, paddingHorizontal: SPACE.lg, paddingTop: 18, paddingBottom: 14 }}>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: WEIGHT.extrabold }}>حسابي</Text>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: WEIGHT.extrabold }}>{t('profile.myAccount')}</Text>
         </View>
 
         {/* ─── Avatar Hero ─── */}
@@ -118,7 +123,7 @@ export default function ProfilePage() {
           <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: RADIUS['2xl'], padding: SPACE.lg }}>
 
             {/* Avatar + info row */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.lg }}>
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.lg }}>
               <View style={{ width: 68, height: 68, borderRadius: 34, backgroundColor: BRAND_BG_STRONG, borderWidth: 2, borderColor: BRAND + '40', alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ fontSize: 26, fontWeight: WEIGHT.bold, color: BRAND, textAlign: 'center' }}>
                   {initial}
@@ -136,7 +141,7 @@ export default function ProfilePage() {
                   <Badge label={user?.plan ?? 'free'} />
                   {user?.planExpiresAt && (
                     <Text style={{ color: colors.textMuted, fontSize: 10 }}>
-                      حتى {new Date(user.planExpiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {t('profile.until', { date: new Date(user.planExpiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) })}
                     </Text>
                   )}
                 </View>
@@ -150,17 +155,17 @@ export default function ProfilePage() {
                   borderRadius: RADIUS.md, paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm,
                 })}
               >
-                <Text style={{ color: colors.textSub, fontSize: FONT.xs, fontWeight: WEIGHT.medium }}>تعديل</Text>
+                <Text style={{ color: colors.textSub, fontSize: FONT.xs, fontWeight: WEIGHT.medium }}>{t('profile.edit')}</Text>
               </Pressable>
             </View>
 
             {/* Stats row */}
             <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border, marginTop: SPACE.lg, paddingTop: SPACE.md }}>
               {[
-                { label: 'الخطة',      value: planLabel,                          color: isPro ? BRAND : colors.textSub },
-                { label: 'التحليلات',  value: String(user?.aiAnalysisUsedThisMonth ?? 0), color: colors.text },
+                { label: t('profile.plan'),      value: planLabel,                          color: isPro ? BRAND : colors.textSub },
+                { label: t('profile.analysesUsed'),  value: String(user?.aiAnalysisUsedThisMonth ?? 0), color: colors.text },
                 {
-                  label: 'اسكور التوقعات',
+                  label: t('profile.predictionScore'),
                   value:
                     predictionLoading
                       ? '—'
@@ -191,38 +196,38 @@ export default function ProfilePage() {
         </View>
 
         {/* ─── Account ─── */}
-        <Section title="الحساب">
-          <MenuItem icon={User}        label="البيانات الشخصية"  sub={user?.email ?? user?.phone ?? ''} onPress={() => router.push('/settings/account')}       iconColor={BRAND} />
-          <MenuItem icon={CreditCard}  label="الاشتراك والخطة"   sub={planLabel}                        onPress={() => router.push('/settings/subscription')}  iconColor="#4ade80" />
-          <MenuItem icon={Gift}        label="برنامج الإحالة"    sub="ادعُ أصدقاء واحصل على Pro مجاناً" onPress={() => router.push('/referral' as never)}       iconColor="#f59e0b" />
-          <MenuItem icon={Trophy}      label="إنجازاتي"           sub="اكتشف ما أنجزته حتى الآن"         onPress={() => router.push('/achievements' as never)}   iconColor="#f59e0b" badge={newAchievementsCount} />
+        <Section title={t('profile.sectionAccount')}>
+          <MenuItem icon={User}        label={t('settings.account')}       sub={user?.email ?? user?.phone ?? ''} onPress={() => router.push('/settings/account')}       iconColor={BRAND} />
+          <MenuItem icon={CreditCard}  label={t('settings.subscription')}  sub={planLabel}                        onPress={() => router.push('/settings/subscription')}  iconColor="#4ade80" />
+          <MenuItem icon={Gift}        label={t('settings.referral')}       sub={t('profile.referralSub')}         onPress={() => router.push('/referral' as never)}       iconColor="#f59e0b" />
+          <MenuItem icon={Trophy}      label={t('settings.achievements')}   sub={t('profile.achievementsSub')}     onPress={() => router.push('/achievements' as never)}   iconColor="#f59e0b" badge={newAchievementsCount} />
         </Section>
 
         {/* ─── Community ─── */}
-        <Section title="المجتمع">
-          <MenuItem icon={Users}       label="مجتمع بورصة"        sub="المتداولون والتوقعات والمتصدرون"  onPress={() => router.push('/discover' as never)}       iconColor="#3b82f6" />
+        <Section title={t('profile.sectionCommunity')}>
+          <MenuItem icon={Users}       label={t('profile.communityLabel')}  sub={t('profile.communitySub')}        onPress={() => router.push('/discover' as never)}       iconColor="#3b82f6" />
         </Section>
 
         {/* ─── Security ─── */}
-        <Section title="الأمان">
-          <MenuItem icon={Shield}      label="الأمان والخصوصية"  sub="كلمة المرور و2FA"                 onPress={() => router.push('/settings/security')}      iconColor="#f59e0b" />
-          <MenuItem icon={Fingerprint} label="البصمة والـ PIN"    sub="ادخل بسرعة بالبصمة أو PIN"       onPress={() => router.push('/settings/biometric')}     iconColor="#3b82f6" />
+        <Section title={t('profile.sectionSecurity')}>
+          <MenuItem icon={Shield}      label={t('settings.security')}       sub={t('profile.securitySub')}         onPress={() => router.push('/settings/security')}      iconColor="#f59e0b" />
+          <MenuItem icon={Fingerprint} label={t('settings.biometric')}      sub={t('profile.biometricSub')}        onPress={() => router.push('/settings/biometric')}     iconColor="#3b82f6" />
         </Section>
 
         {/* ─── Preferences ─── */}
-        <Section title="التفضيلات">
-          <MenuItem icon={Globe}       label="التفضيلات"          sub="المظهر، اللغة، الوضع الإسلامي، الخصوصية" onPress={() => router.push('/settings/preferences' as never)} iconColor="#8b5cf6" />
-          <MenuItem icon={Bell}        label="الإشعارات"          sub="تخصيص ما تستقبله"                onPress={() => router.push('/settings/notifications')} iconColor={BRAND} />
+        <Section title={t('profile.sectionPreferences')}>
+          <MenuItem icon={Globe}       label={t('settings.preferencesTitle')} sub={t('profile.preferencesSub')}   onPress={() => router.push('/settings/preferences' as never)} iconColor="#8b5cf6" />
+          <MenuItem icon={Bell}        label={t('settings.notificationsSettings')} sub={t('profile.notificationsSub')} onPress={() => router.push('/settings/notifications')} iconColor={BRAND} />
         </Section>
 
         {/* ─── Support ─── */}
-        <Section title="المساعدة">
-          <MenuItem icon={LifeBuoy}    label="الدعم الفني"         sub="تواصل مع فريق الدعم"             onPress={() => router.push('/support' as never)}        iconColor="#38bdf8" />
+        <Section title={t('profile.sectionHelp')}>
+          <MenuItem icon={LifeBuoy}    label={t('settings.support')}        sub={t('profile.supportSub')}          onPress={() => router.push('/support' as never)}        iconColor="#38bdf8" />
         </Section>
 
         {/* ─── Logout ─── */}
         <Section last>
-          <MenuItem icon={LogOut} label="تسجيل الخروج" onPress={handleLogout} danger />
+          <MenuItem icon={LogOut} label={t('auth.logout')} onPress={handleLogout} danger />
         </Section>
 
       </ScrollView>

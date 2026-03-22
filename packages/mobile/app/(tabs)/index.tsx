@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Bell, Briefcase, Star, BarChart2, Newspaper, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { Bell, Briefcase, Star, BarChart2, TrendingUp, TrendingDown } from 'lucide-react-native';
 import { ProfileCompletionBanner } from '../../components/shared/ProfileCompletionBanner';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
@@ -127,7 +127,7 @@ export default function HomePage() {
   const user        = useAuthStore((s) => s.user);
   const unreadCount = useUnreadCount();
 
-  const { stocks, news, loadingStocks, refreshing: mktRefreshing, refresh: refreshMarket } = useMarketData();
+  const { stocks, loadingStocks, refreshing: mktRefreshing, refresh: refreshMarket } = useMarketData();
   const { holdings, summary, loading: portLoading, refreshing: portRefreshing, refresh: refreshPortfolio } = usePortfolioData();
   const { items: watchlist, loading: watchlistLoading, refetch: refetchWatchlist } = useWatchlist();
 
@@ -172,35 +172,6 @@ export default function HomePage() {
     () => [...stocks].filter((s) => s.changePercent < 0).sort((a, b) => a.changePercent - b.changePercent).slice(0, 6),
     [stocks],
   );
-
-  const lastTwoDaysNews = useMemo(() => {
-    const sorted = [...news].sort((a, b) => {
-      const ta = new Date(a.publishedAt).getTime();
-      const tb = new Date(b.publishedAt).getTime();
-      return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
-    });
-
-    const now = new Date();
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
-
-    const yesterdayStart = new Date(todayStart);
-    yesterdayStart.setDate(todayStart.getDate() - 1);
-
-    const tomorrowStart = new Date(todayStart);
-    tomorrowStart.setDate(todayStart.getDate() + 1);
-
-    const msToday = todayStart.getTime();
-    const msYesterday = yesterdayStart.getTime();
-    const msTomorrow = tomorrowStart.getTime();
-
-    return sorted.filter((item) => {
-      const t = new Date(item.publishedAt).getTime();
-      if (!Number.isFinite(t)) return false;
-      // last 2 days (yesterday + today)
-      return t >= msYesterday && t < msTomorrow;
-    });
-  }, [news]);
 
   const isPositive = liveSummary.totalGainLoss >= 0;
   const gainColor  = isPositive ? GREEN : RED;
@@ -478,32 +449,6 @@ export default function HomePage() {
             </View>
           )}
 
-          {/* ─── 5. News preview ────────────────────────── */}
-          {lastTwoDaysNews.length > 0 && (
-            <View style={{ paddingHorizontal: SPACE.lg }}>
-              <SectionHdr title={t('dashboard.news')} icon={Newspaper} />
-              <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
-                {lastTwoDaysNews.slice(0, 3).map((item, i) => (
-                  <View
-                    // Some items might not have a stable `id`; fallback to index to avoid React key warnings.
-                    key={item.id ?? i}
-                    style={{
-                      paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
-                      borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: colors.border,
-                    }}
-                  >
-                    <Text style={{ color: colors.text, fontSize: FONT.sm, lineHeight: 20 }} numberOfLines={2}>
-                      {item.title}
-                    </Text>
-                    <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 4 }}>
-                      {item.source} ·{' '}
-                      {new Date(item.publishedAt).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
 
         </View>
       </ScrollView>

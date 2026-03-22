@@ -97,9 +97,7 @@ export const twoFaVerifyBodySchema = z.object({
 });
 
 /** 2FA setup — request body. */
-export const twoFaSetupBodySchema = z.object({
-  password: z.string().min(1, 'Password is required'),
-});
+export const twoFaSetupBodySchema = z.object({});
 
 /** 2FA authenticate — request body. */
 export const twoFaAuthenticateBodySchema = z.object({

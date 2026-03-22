@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, ArrowRight, Trophy, Lock, CheckCircle,
   TrendingUp, Award, Crown, Sprout, ChevronLeft, ChevronRight,
@@ -14,44 +15,44 @@ import { AchievementCongratsCard } from '../../components/features/achievements/
 
 /* ─── Achievement definitions (mirrors website) ─── */
 
-interface AchievementDef { id: string; backendId: string; titleAr: string; descAr: string }
-interface LevelDef { level: number; titleAr: string; color: string; bg: string; iconName: string; achievements: AchievementDef[] }
+interface AchievementDef { id: string; backendId: string; titleAr: string; descAr: string; titleEn: string; descEn: string }
+interface LevelDef { level: number; titleAr: string; titleEn: string; color: string; bg: string; iconName: string; achievements: AchievementDef[] }
 
 const LEVELS: LevelDef[] = [
   {
-    level: 1, titleAr: 'المبتدئ', color: '#4ade80', bg: '#4ade8015', iconName: 'Sprout',
+    level: 1, titleAr: 'المبتدئ', titleEn: 'Beginner', color: '#4ade80', bg: '#4ade8015', iconName: 'Sprout',
     achievements: [
-      { id: 'first_login',           backendId: 'first-step',       titleAr: 'الخطوة الأولى',   descAr: 'سجّل دخولك للمرة الأولى' },
-      { id: 'complete_profile',      backendId: 'profile-complete', titleAr: 'الملف المكتمل',   descAr: 'أكمل بياناتك الشخصية' },
-      { id: 'investment_personality',backendId: 'know-yourself',    titleAr: 'اعرف نفسك',       descAr: 'حدّد شخصيتك الاستثمارية' },
-      { id: 'first_watchlist',       backendId: 'watcher',          titleAr: 'المراقب',          descAr: 'أضف أول سهم لقائمة المراقبة' },
+      { id: 'first_login',           backendId: 'first-step',       titleAr: 'الخطوة الأولى',   descAr: 'سجّل دخولك للمرة الأولى',       titleEn: 'First Step',       descEn: 'Log in for the first time' },
+      { id: 'complete_profile',      backendId: 'profile-complete', titleAr: 'الملف المكتمل',   descAr: 'أكمل بياناتك الشخصية',           titleEn: 'Complete Profile', descEn: 'Fill in your personal info' },
+      { id: 'investment_personality',backendId: 'know-yourself',    titleAr: 'اعرف نفسك',       descAr: 'حدّد شخصيتك الاستثمارية',       titleEn: 'Know Yourself',    descEn: 'Set your investment personality' },
+      { id: 'first_watchlist',       backendId: 'watcher',          titleAr: 'المراقب',          descAr: 'أضف أول سهم لقائمة المراقبة',   titleEn: 'Watcher',          descEn: 'Add your first stock to watchlist' },
     ],
   },
   {
-    level: 2, titleAr: 'المستثمر', color: '#8b5cf6', bg: '#8b5cf615', iconName: 'TrendingUp',
+    level: 2, titleAr: 'المستثمر', titleEn: 'Investor', color: '#8b5cf6', bg: '#8b5cf615', iconName: 'TrendingUp',
     achievements: [
-      { id: 'first_ai_analysis', backendId: 'first-look', titleAr: 'أول نظرة',        descAr: 'حلّل أول سهم بالذكاء الاصطناعي' },
-      { id: 'first_portfolio',   backendId: 'investor',   titleAr: 'المحفظة الأولى',  descAr: 'أضف أول سهم لمحفظتك' },
-      { id: 'first_goal',        backendId: 'dreamer',    titleAr: 'صاحب الهدف',      descAr: 'حدد أول هدف مالي لك' },
-      { id: 'use_calculator',    backendId: 'first-look', titleAr: 'الحاسب الذكي',    descAr: 'استخدم الحاسبة الاستثمارية' },
+      { id: 'first_ai_analysis', backendId: 'first-look', titleAr: 'أول نظرة',        descAr: 'حلّل أول سهم بالذكاء الاصطناعي', titleEn: 'First Look',       descEn: 'Analyze your first stock with AI' },
+      { id: 'first_portfolio',   backendId: 'investor',   titleAr: 'المحفظة الأولى',  descAr: 'أضف أول سهم لمحفظتك',            titleEn: 'First Portfolio',  descEn: 'Add your first stock to portfolio' },
+      { id: 'first_goal',        backendId: 'dreamer',    titleAr: 'صاحب الهدف',      descAr: 'حدد أول هدف مالي لك',            titleEn: 'Goal Setter',      descEn: 'Set your first financial goal' },
+      { id: 'use_calculator',    backendId: 'first-look', titleAr: 'الحاسب الذكي',    descAr: 'استخدم الحاسبة الاستثمارية',     titleEn: 'Smart Calculator', descEn: 'Use the investment calculator' },
     ],
   },
   {
-    level: 3, titleAr: 'المحترف', color: '#f59e0b', bg: '#f59e0b15', iconName: 'Award',
+    level: 3, titleAr: 'المحترف', titleEn: 'Professional', color: '#f59e0b', bg: '#f59e0b15', iconName: 'Award',
     achievements: [
-      { id: 'watchlist_5',       backendId: 'long-list',         titleAr: 'قائمة المراقبة',  descAr: 'تابع 5 أسهم في قائمة المراقبة' },
-      { id: 'portfolio_diverse', backendId: 'diversified',       titleAr: 'التنويع الذكي',   descAr: 'امتلك 3 أسهم من قطاعات مختلفة' },
-      { id: 'ai_analysis_5',    backendId: 'active-analyst',    titleAr: 'المحلل المتمرس',  descAr: 'حلّل 5 أسهم بالذكاء الاصطناعي' },
-      { id: 'goal_progress_50', backendId: 'first-goal-achieved',titleAr: 'في المنتصف',     descAr: 'وصّل هدفاً لـ 50% من المستهدف' },
+      { id: 'watchlist_5',       backendId: 'long-list',          titleAr: 'قائمة المراقبة',  descAr: 'تابع 5 أسهم في قائمة المراقبة',      titleEn: 'Watchlist',         descEn: 'Track 5 stocks in your watchlist' },
+      { id: 'portfolio_diverse', backendId: 'diversified',        titleAr: 'التنويع الذكي',   descAr: 'امتلك 3 أسهم من قطاعات مختلفة',      titleEn: 'Smart Diversifier', descEn: 'Own stocks from 3 different sectors' },
+      { id: 'ai_analysis_5',    backendId: 'active-analyst',     titleAr: 'المحلل المتمرس',  descAr: 'حلّل 5 أسهم بالذكاء الاصطناعي',      titleEn: 'Seasoned Analyst',  descEn: 'Analyze 5 stocks with AI' },
+      { id: 'goal_progress_50', backendId: 'first-goal-achieved', titleAr: 'في المنتصف',     descAr: 'وصّل هدفاً لـ 50% من المستهدف',      titleEn: 'Halfway There',     descEn: 'Reach 50% of a financial goal' },
     ],
   },
   {
-    level: 4, titleAr: 'الخبير', color: '#f87171', bg: '#f8717115', iconName: 'Crown',
+    level: 4, titleAr: 'الخبير', titleEn: 'Expert', color: '#f87171', bg: '#f8717115', iconName: 'Crown',
     achievements: [
-      { id: 'referral_15',     backendId: 'network',       titleAr: 'السفير',              descAr: 'ادعُ 15 صديقاً للمنصة' },
-      { id: 'goal_complete',   backendId: 'strategist',    titleAr: 'المنجز',              descAr: 'أكمل هدفاً مالياً بالكامل' },
-      { id: 'pro_subscriber',  backendId: 'subscriber',    titleAr: 'المستثمر الحقيقي',   descAr: 'اشترك في الخطة الاحترافية' },
-      { id: 'portfolio_profit',backendId: 'wealth-builder',titleAr: 'الربح الأول',         descAr: 'حقق ربحاً في محفظتك' },
+      { id: 'referral_15',     backendId: 'network',        titleAr: 'السفير',              descAr: 'ادعُ 15 صديقاً للمنصة',          titleEn: 'Ambassador',    descEn: 'Invite 15 friends to the platform' },
+      { id: 'goal_complete',   backendId: 'strategist',     titleAr: 'المنجز',              descAr: 'أكمل هدفاً مالياً بالكامل',      titleEn: 'Achiever',      descEn: 'Complete a financial goal' },
+      { id: 'pro_subscriber',  backendId: 'subscriber',     titleAr: 'المستثمر الحقيقي',   descAr: 'اشترك في الخطة الاحترافية',      titleEn: 'True Investor', descEn: 'Subscribe to the Pro plan' },
+      { id: 'portfolio_profit',backendId: 'wealth-builder', titleAr: 'الربح الأول',         descAr: 'حقق ربحاً في محفظتك',            titleEn: 'First Profit',  descEn: 'Earn a profit in your portfolio' },
     ],
   },
 ];
@@ -92,6 +93,7 @@ function LevelIconComp({ name, color }: { name: string; color: string }) {
 export default function AchievementsPage() {
   const router = useRouter();
   const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
   const [unlocked, setUnlocked] = useState<Set<string>>(new Set());
   const [unlockedAt, setUnlockedAt] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -146,11 +148,11 @@ export default function AchievementsPage() {
         }
       }
     } catch {
-      if (!signal?.aborted && mountedRef.current) setError('فشل تحميل الإنجازات. حاول مرة أخرى.');
+      if (!signal?.aborted && mountedRef.current) setError(t('achievements.loadError'));
     } finally {
       if (!signal?.aborted && mountedRef.current) setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -194,7 +196,7 @@ export default function AchievementsPage() {
           <View className="w-8 h-8 rounded-xl items-center justify-center" style={{ backgroundColor: '#f59e0b18' }}>
             <Trophy size={15} color="#f59e0b" />
           </View>
-          <Text style={{ color: colors.text }} className="text-base font-bold">الإنجازات</Text>
+          <Text style={{ color: colors.text }} className="text-base font-bold">{t('achievements.title')}</Text>
         </View>
       </View>
 
@@ -227,7 +229,7 @@ export default function AchievementsPage() {
                   borderColor: colors.border,
                 })}
               >
-                <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>إعادة المحاولة</Text>
+                <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{t('common.retry')}</Text>
               </Pressable>
             </View>
           </View>
@@ -249,7 +251,7 @@ export default function AchievementsPage() {
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center gap-2">
                   <Trophy size={16} color="#f59e0b" />
-                  <Text style={{ color: colors.text }} className="text-sm font-bold">إجمالي الإنجازات</Text>
+                  <Text style={{ color: colors.text }} className="text-sm font-bold">{t('achievements.total')}</Text>
                 </View>
                 <Text
                   className="text-sm font-bold text-amber-400"
@@ -267,8 +269,8 @@ export default function AchievementsPage() {
               </View>
               <Text style={{ color: colors.textMuted }} className="text-xs">
                 {unlockedCount === TOTAL
-                  ? 'أكملت جميع الإنجازات!'
-                  : `متبقى ${TOTAL - unlockedCount} إنجازات لتكمل المجموعة`}
+                  ? t('achievements.allDone')
+                  : t('achievements.remaining', { count: TOTAL - unlockedCount })}
               </Text>
             </View>
 
@@ -287,7 +289,7 @@ export default function AchievementsPage() {
                         <LevelIconComp name={level.iconName} color={level.color} />
                       </View>
                       <Text style={{ color: colors.text }} className="text-sm font-bold">
-                        المستوى {level.level} — {level.titleAr}
+                        {t('achievements.levelLabel', { level: level.level, title: isRTL ? level.titleAr : level.titleEn })}
                       </Text>
                     </View>
                     <Text className="text-xs font-semibold" style={{ color: level.color }}>
@@ -331,7 +333,7 @@ export default function AchievementsPage() {
                               className="text-sm font-semibold"
                               numberOfLines={1}
                             >
-                              {ach.titleAr}
+                              {isRTL ? ach.titleAr : ach.titleEn}
                             </Text>
                             <Text
                               style={{ color: colors.textMuted }}
@@ -339,7 +341,7 @@ export default function AchievementsPage() {
                               numberOfLines={2}
                               ellipsizeMode="tail"
                             >
-                              {ach.descAr}
+                              {isRTL ? ach.descAr : ach.descEn}
                             </Text>
                             {isUnlocked && unlockedDate && (
                               <Text
@@ -347,7 +349,7 @@ export default function AchievementsPage() {
                                 className="text-[10px] mt-1 font-medium"
                                 numberOfLines={1}
                               >
-                                ✓ {new Date(unlockedDate).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                ✓ {new Date(unlockedDate).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                               </Text>
                             )}
                           </View>
@@ -355,16 +357,16 @@ export default function AchievementsPage() {
                           {/* Status / Action */}
                           {isUnlocked ? (
                             <View style={{ backgroundColor: level.bg }} className="px-2 py-0.5 rounded-lg">
-                              <Text className="text-[10px] font-bold" style={{ color: level.color }}>مكتمل</Text>
+                              <Text className="text-[10px] font-bold" style={{ color: level.color }}>{t('achievements.unlocked')}</Text>
                             </View>
                           ) : canNavigate ? (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#3b82f618', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                              <Text style={{ color: '#3b82f6', fontSize: 10, fontWeight: '700' }}>اذهب الآن</Text>
+                              <Text style={{ color: '#3b82f6', fontSize: 10, fontWeight: '700' }}>{t('achievements.goNow')}</Text>
                               <GoChevron size={10} color="#3b82f6" />
                             </View>
                           ) : (
                             <View style={{ backgroundColor: colors.hover }} className="px-2 py-0.5 rounded-lg">
-                              <Text style={{ color: colors.textMuted }} className="text-[10px]">مقفل</Text>
+                              <Text style={{ color: colors.textMuted }} className="text-[10px]">{t('achievements.locked')}</Text>
                             </View>
                           )}
                         </>
@@ -404,8 +406,8 @@ export default function AchievementsPage() {
       {currentCard && (
         <AchievementCongratsCard
           key={currentCard.id}
-          title={currentCard.titleAr}
-          description={currentCard.descAr}
+          title={isRTL ? currentCard.titleAr : currentCard.titleEn}
+          description={isRTL ? currentCard.descAr : currentCard.descEn}
           onComplete={handleCardComplete}
         />
       )}

@@ -9,27 +9,29 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Bell } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
 import { BRAND } from '../../lib/theme';
 
-const NOTIF_KEYS = [
-  { key: 'notifySignals',      label: 'إشارات السوق',     sub: 'تنبيهات عند وصول الأسعار لأهدافك' },
-  { key: 'notifyPortfolio',    label: 'المحفظة',           sub: 'تغيرات مهمة في محفظتك' },
-  { key: 'notifyNews',         label: 'الأخبار',           sub: 'آخر أخبار البورصة المصرية' },
-  { key: 'notifyAchievements', label: 'الإنجازات',         sub: 'احتفل بإنجازاتك الجديدة' },
-  { key: 'notifyGoals',        label: 'الأهداف المالية',   sub: 'تذكيرات لأهدافك وتقدمك' },
-] as const;
-
-type NotifKey = (typeof NOTIF_KEYS)[number]['key'];
+type NotifKey = 'notifySignals' | 'notifyPortfolio' | 'notifyNews' | 'notifyAchievements' | 'notifyGoals';
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
   const { colors, isRTL } = useTheme();
   const [saving, setSaving] = useState<NotifKey | null>(null);
+
+  const NOTIF_KEYS: { key: NotifKey; label: string; sub: string }[] = [
+    { key: 'notifySignals',      label: t('notifications.signals'),         sub: t('notifications.signalsSub') },
+    { key: 'notifyPortfolio',    label: t('notifications.portfolio'),        sub: t('notifications.portfolioSub') },
+    { key: 'notifyNews',         label: t('notifications.news'),             sub: t('notifications.newsSub') },
+    { key: 'notifyAchievements', label: t('notifications.achievements'),     sub: t('notifications.achievementsSub') },
+    { key: 'notifyGoals',        label: t('notifications.goalReminders'),    sub: t('notifications.goalRemindersSub') },
+  ];
 
   const toggle = async (key: NotifKey) => {
     const current = (user?.[key as keyof typeof user] as boolean | undefined) ?? true;
@@ -89,7 +91,7 @@ export default function NotificationsPage() {
           <Bell size={15} color={BRAND} />
         </View>
         <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>
-          إعدادات الإشعارات
+          {t('settings.notificationsSettings')}
         </Text>
       </View>
 

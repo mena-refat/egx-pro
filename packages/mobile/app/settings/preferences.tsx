@@ -8,6 +8,7 @@ import {
   ArrowLeft, ArrowRight, Globe, Eye, EyeOff,
   BookOpen, Lock, Unlock, Moon, Sun, Monitor,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
@@ -82,6 +83,7 @@ function RowItem({
 
 export default function PreferencesPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors, isRTL } = useTheme();
   const { user, updateUser } = useAuthStore();
 
@@ -93,6 +95,17 @@ export default function PreferencesPage() {
   const shariaMode    = user?.shariaMode ?? false;
   const isPrivate     = (user as { isPrivate?: boolean })?.isPrivate ?? false;
   const showPortfolio = (user as { showPortfolio?: boolean })?.showPortfolio ?? true;
+
+  const LANG_OPTIONS: { id: LangOption; label: string; nativeLabel: string }[] = [
+    { id: 'ar', label: t('settings.arabicLang'),   nativeLabel: 'Arabic'  },
+    { id: 'en', label: t('settings.englishLang'),  nativeLabel: 'English' },
+  ];
+
+  const THEME_OPTIONS: { id: ThemeOption; label: string; Icon: typeof Moon }[] = [
+    { id: 'dark',   label: t('settings.dark'),   Icon: Moon    },
+    { id: 'system', label: t('settings.system'), Icon: Monitor },
+    { id: 'light',  label: t('settings.light'),  Icon: Sun     },
+  ];
 
   const updateProfile = async (patch: Record<string, unknown>) => {
     setSaving(true);
@@ -123,17 +136,6 @@ export default function PreferencesPage() {
     await updateProfile({ language: lang });
   };
 
-  const LANG_OPTIONS: { id: LangOption; label: string; nativeLabel: string }[] = [
-    { id: 'ar', label: 'العربية',    nativeLabel: 'Arabic'  },
-    { id: 'en', label: 'الإنجليزية', nativeLabel: 'English' },
-  ];
-
-  const THEME_OPTIONS: { id: ThemeOption; label: string; Icon: typeof Moon }[] = [
-    { id: 'dark',   label: 'داكن',   Icon: Moon    },
-    { id: 'system', label: 'تلقائي', Icon: Monitor },
-    { id: 'light',  label: 'فاتح',   Icon: Sun     },
-  ];
-
   const handleThemeChange = (theme: ThemeOption) => {
     updateUser({ theme });
     void apiClient.put('/api/user/profile', { theme }).catch(() => null);
@@ -158,9 +160,9 @@ export default function PreferencesPage() {
           <BackIcon size={16} color={colors.textSub} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.text, fontSize: FONT.lg, fontWeight: WEIGHT.bold }}>التفضيلات</Text>
+          <Text style={{ color: colors.text, fontSize: FONT.lg, fontWeight: WEIGHT.bold }}>{t('settings.preferencesTitle')}</Text>
           <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 1 }}>
-            المظهر، اللغة، الوضع الإسلامي، الخصوصية
+            {t('profile.preferencesSub')}
           </Text>
         </View>
         {saving && <ActivityIndicator size="small" color={BRAND} />}
@@ -172,7 +174,7 @@ export default function PreferencesPage() {
       >
 
         {/* ─── Theme ─── */}
-        <SectionTitle title="المظهر" />
+        <SectionTitle title={t('settings.appearance')} />
         <View style={{
           flexDirection: 'row', gap: SPACE.sm,
           backgroundColor: colors.card, borderColor: colors.border,
@@ -201,7 +203,7 @@ export default function PreferencesPage() {
         </View>
 
         {/* ─── Language ─── */}
-        <SectionTitle title="اللغة" />
+        <SectionTitle title={t('settings.languageLabel')} />
         <View style={{
           flexDirection: 'row', gap: SPACE.sm,
           backgroundColor: colors.card, borderColor: colors.border,
@@ -232,12 +234,12 @@ export default function PreferencesPage() {
         </View>
 
         {/* ─── Sharia Mode ─── */}
-        <SectionTitle title="الوضع الإسلامي" />
+        <SectionTitle title={t('settings.islamicMode')} />
         <Card>
           <RowItem
             icon={BookOpen}
-            label="وضع الشريعة الإسلامية"
-            sub="إظهار الأسهم المتوافقة مع الشريعة فقط"
+            label={t('settings.islamicModeTitle')}
+            sub={t('settings.islamicModeDesc')}
             last
             right={
               <Switch
@@ -251,15 +253,15 @@ export default function PreferencesPage() {
         </Card>
 
         {/* ─── Privacy ─── */}
-        <SectionTitle title="الخصوصية" />
+        <SectionTitle title={t('settings.privacyLabel')} />
         <Card>
           <RowItem
             icon={isPrivate ? Lock : Unlock}
-            label="حساب خاص"
+            label={t('settings.privateAccount')}
             sub={
               isPrivate
-                ? 'فقط المتابَعون يرون محفظتك وتوقعاتك'
-                : 'حسابك عام — يمكن للجميع رؤية نشاطك'
+                ? t('settings.privateAccountOn')
+                : t('settings.privateAccountOff')
             }
             right={
               <Switch
@@ -272,11 +274,11 @@ export default function PreferencesPage() {
           />
           <RowItem
             icon={showPortfolio ? Eye : EyeOff}
-            label="إظهار المحفظة"
+            label={t('settings.showPortfolio')}
             sub={
               showPortfolio
-                ? 'المتابعون يرون تفاصيل محفظتك'
-                : 'محفظتك مخفية عن الجميع'
+                ? t('settings.showPortfolioOn')
+                : t('settings.showPortfolioOff')
             }
             last
             right={
@@ -296,7 +298,7 @@ export default function PreferencesPage() {
           lineHeight: 18, textAlign: 'center',
           marginTop: SPACE.lg, paddingHorizontal: SPACE.sm,
         }}>
-          تغييرات الخصوصية تنطبق فوراً على ملفك الشخصي وقائمة المتابعة.
+          {t('settings.privacyNote')}
         </Text>
 
       </ScrollView>

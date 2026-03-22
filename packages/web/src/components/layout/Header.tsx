@@ -181,7 +181,7 @@ export function Header({
                 <div className="shrink-0 border-b border-[var(--border-subtle)] px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-[var(--text-secondary)]">{t('settings.notifications')}</span>
-                    <Button type="button" variant="link" size="sm" onClick={() => setConfirmClearNotifications(true)} className="text-xs">{t('settings.clearAllNotifications')}</Button>
+                    <Button type="button" variant="link" size="sm" onClick={() => { if (notifications.length > 0) setConfirmClearNotifications(true); }} className="text-xs" disabled={notifications.length === 0}>{t('settings.clearAllNotifications')}</Button>
                   </div>
                   <div className="mt-2 flex justify-end">
                     <Button type="button" variant="link" size="sm" onClick={markAllRead} className="text-[var(--text-muted)]">{t('settings.markAllAsRead')}</Button>

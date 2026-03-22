@@ -63,8 +63,29 @@ export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings,
 
   const lang = isRTL ? 'ar' : 'en';
 
+  // Aggregate duplicate tickers by WACC before display
+  const aggregatedHoldings = useMemo<PortfolioHolding[]>(() => {
+    const map = new Map<string, { ticker: string; shares: number; totalCost: number; buyDate: string }>();
+    for (const h of holdings) {
+      if (map.has(h.ticker)) {
+        const e = map.get(h.ticker)!;
+        e.totalCost += h.avgPrice * h.shares;
+        e.shares += h.shares;
+      } else {
+        map.set(h.ticker, { ticker: h.ticker, shares: h.shares, totalCost: h.avgPrice * h.shares, buyDate: h.buyDate });
+      }
+    }
+    return Array.from(map.values()).map(({ ticker, shares, totalCost, buyDate }) => ({
+      id: ticker,
+      ticker,
+      shares,
+      avgPrice: shares > 0 ? totalCost / shares : 0,
+      buyDate,
+    }));
+  }, [holdings]);
+
   const sortedHoldings = useMemo(() => {
-    const withMeta = holdings.map((h) => {
+    const withMeta = aggregatedHoldings.map((h) => {
       const currentPrice = livePrices[h.ticker]?.price ?? h.avgPrice;
       const totalValue = currentPrice * h.shares;
       const cost = h.avgPrice * h.shares;
@@ -97,7 +118,7 @@ export const DashboardYourStocks = memo(function DashboardYourStocks({ holdings,
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return withMeta;
-  }, [holdings, livePrices, sortKey, sortDir, lang]);
+  }, [aggregatedHoldings, livePrices, sortKey, sortDir, lang]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {

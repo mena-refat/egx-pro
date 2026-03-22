@@ -53,12 +53,18 @@ export function DashboardMarketBar({ egx30, locale }: Props) {
         {open ? (
           <>
             <span className="text-green-400 font-medium">{t('dashboard.marketOpen')}</span>
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" aria-hidden />
+            <span className="relative flex w-2 h-2" aria-hidden>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60" />
+              <span className="relative inline-flex w-2 h-2 rounded-full bg-green-400" />
+            </span>
           </>
         ) : (
           <>
             <span className="text-red-400 font-medium">{t('dashboard.marketClosed')}</span>
-            <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" aria-hidden />
+            <span className="relative flex w-2 h-2" aria-hidden>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-50" />
+              <span className="relative inline-flex w-2 h-2 rounded-full bg-red-400" />
+            </span>
           </>
         )}
       </span>

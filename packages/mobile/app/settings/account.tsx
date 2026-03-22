@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Pencil } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
@@ -48,6 +49,7 @@ function FieldRow({ label, value, onEdit, editable = true }: FieldRowProps) {
 
 export default function AccountPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
   const { colors } = useTheme();
   const [editing, setEditing] = useState<EditableField | null>(null);
@@ -93,11 +95,11 @@ export default function AccountPage() {
     } catch (err: unknown) {
       const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
         ?? (err as { error?: string })?.error;
-      if (code === 'USERNAME_TAKEN') setError('اسم المستخدم محجوز، جرب آخر');
-      else if (code === 'EMAIL_ALREADY_EXISTS') setError('هذا البريد الإلكتروني مستخدم بالفعل');
-      else if (code === 'PHONE_ALREADY_EXISTS') setError('هذا الرقم مستخدم بالفعل');
-      else if (code === 'INVALID_PHONE') setError('رقم الموبايل غير صالح');
-      else setError('حدث خطأ، حاول مرة أخرى');
+      if (code === 'USERNAME_TAKEN') setError(t('settings.usernameTaken'));
+      else if (code === 'EMAIL_ALREADY_EXISTS') setError(t('settings.emailTaken'));
+      else if (code === 'PHONE_ALREADY_EXISTS') setError(t('settings.phoneTaken'));
+      else if (code === 'INVALID_PHONE') setError(t('settings.phoneInvalid'));
+      else setError(t('common.error'));
     } finally {
       setSaving(false);
     }
@@ -105,7 +107,7 @@ export default function AccountPage() {
 
   return (
     <ScreenWrapper padded={false}>
-      <AccountHeader title="البيانات الشخصية" onBack={() => router.back()} />
+      <AccountHeader title={t('settings.account')} onBack={() => router.back()} />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 20, gap: 16 }}
@@ -121,10 +123,10 @@ export default function AccountPage() {
           // rounded-2xl = 24, px-4 = 16
         >
           <View style={{ borderWidth: 1, borderRadius: 24, paddingHorizontal: 16, overflow: 'hidden' }}>
-            <FieldRow label="الاسم الكامل" value={user?.fullName ?? ''} onEdit={() => startEdit('fullName')} />
-            <FieldRow label="اسم المستخدم" value={user?.username ? `@${user.username}` : ''} onEdit={() => startEdit('username')} />
-            <FieldRow label="البريد الإلكتروني" value={user?.email ?? ''} onEdit={() => startEdit('email')} />
-            <FieldRow label="رقم الموبايل" value={user?.phone ?? ''} onEdit={() => startEdit('phone')} />
+            <FieldRow label={t('auth.fullName')} value={user?.fullName ?? ''} onEdit={() => startEdit('fullName')} />
+            <FieldRow label={t('auth.username')} value={user?.username ? `@${user.username}` : ''} onEdit={() => startEdit('username')} />
+            <FieldRow label={t('auth.email')} value={user?.email ?? ''} onEdit={() => startEdit('email')} />
+            <FieldRow label={t('auth.phone')} value={user?.phone ?? ''} onEdit={() => startEdit('phone')} />
           </View>
         </View>
 
@@ -158,7 +160,7 @@ export default function AccountPage() {
                   marginBottom: 12,
                 }}
               >
-                <Text style={{ color: colors.text, fontSize: 11, fontWeight: '600' }}>تم الحفظ</Text>
+                <Text style={{ color: colors.text, fontSize: 11, fontWeight: '600' }}>{t('settings.saved')}</Text>
               </View>
             )}
 

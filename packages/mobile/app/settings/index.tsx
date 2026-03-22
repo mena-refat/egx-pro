@@ -6,6 +6,7 @@ import {
   ChevronRight, ChevronLeft, Info, LogOut, Trash2, Moon, Sun, Monitor,
   Gift, Trophy, LifeBuoy, Globe, Users,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
@@ -87,6 +88,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { user, logout, updateUser } = useAuthStore();
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     await logout();
@@ -101,16 +103,16 @@ export default function SettingsPage() {
   const currentTheme = (user?.theme as ThemeOption | undefined) ?? 'system';
 
   const THEME_OPTIONS: { id: ThemeOption; label: string; Icon: typeof Moon }[] = [
-    { id: 'dark',   label: 'داكن',   Icon: Moon    },
-    { id: 'system', label: 'تلقائي', Icon: Monitor },
-    { id: 'light',  label: 'فاتح',   Icon: Sun     },
+    { id: 'dark',   label: t('settings.dark'),   Icon: Moon    },
+    { id: 'system', label: t('settings.system'), Icon: Monitor },
+    { id: 'light',  label: t('settings.light'),  Icon: Sun     },
   ];
 
   return (
     <ScreenWrapper padded={false}>
       <ScrollView contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         <Text style={{ color: colors.text, fontSize: FONT.xl, fontWeight: WEIGHT.bold, paddingHorizontal: SPACE.lg, marginBottom: 20 }}>
-          الإعدادات
+          {t('settings.title')}
         </Text>
 
         {/* ─── Theme ─── */}
@@ -120,7 +122,7 @@ export default function SettingsPage() {
             textTransform: 'uppercase', letterSpacing: 0.8,
             paddingHorizontal: 4, marginBottom: SPACE.sm,
           }}>
-            المظهر
+            {t('settings.appearance')}
           </Text>
           <View style={{
             backgroundColor: colors.card, borderColor: colors.border,
@@ -149,38 +151,38 @@ export default function SettingsPage() {
           </View>
         </View>
 
-        <Section title="الحساب">
-          <MenuItem icon={User}        label="البيانات الشخصية"  sub={user?.fullName ?? ''}                    onPress={() => router.push('/settings/account')} />
-          <MenuItem icon={CreditCard}  label="الاشتراك والخطة"   sub={(user?.plan ?? 'free').toUpperCase()}    onPress={() => router.push('/settings/subscription')} />
-          <MenuItem icon={Gift}        label="برنامج الإحالة"    sub="ادعُ أصدقاء — احصل على Pro مجاناً"      onPress={() => router.push('/referral' as never)} />
-          <MenuItem icon={Trophy}      label="إنجازاتي"           sub="تتبّع تقدمك ومستواك"                    onPress={() => router.push('/achievements' as never)} last />
+        <Section title={t('profile.sectionAccount')}>
+          <MenuItem icon={User}        label={t('settings.account')}       sub={user?.fullName ?? ''}                    onPress={() => router.push('/settings/account')} />
+          <MenuItem icon={CreditCard}  label={t('settings.subscription')}  sub={(user?.plan ?? 'free').toUpperCase()}    onPress={() => router.push('/settings/subscription')} />
+          <MenuItem icon={Gift}        label={t('settings.referral')}      sub={t('settings.referralSub')}               onPress={() => router.push('/referral' as never)} />
+          <MenuItem icon={Trophy}      label={t('settings.achievements')}  sub={t('settings.achievementsSub')}           onPress={() => router.push('/achievements' as never)} last />
         </Section>
 
-        <Section title="الأمان">
-          <MenuItem icon={Shield}      label="الأمان والخصوصية"  sub="كلمة المرور والمصادقة الثنائية"          onPress={() => router.push('/settings/security')} />
-          <MenuItem icon={Fingerprint} label="البصمة والـ PIN"    sub="ادخل بسرعة بالبصمة أو PIN"             onPress={() => router.push('/settings/biometric')} last />
+        <Section title={t('profile.sectionSecurity')}>
+          <MenuItem icon={Shield}      label={t('settings.security')}      sub={t('settings.securitySub')}               onPress={() => router.push('/settings/security')} />
+          <MenuItem icon={Fingerprint} label={t('settings.biometric')}     sub={t('settings.biometricSub')}              onPress={() => router.push('/settings/biometric')} last />
         </Section>
 
-        <Section title="التفضيلات والخصوصية">
-          <MenuItem icon={Globe}       label="اللغة والخصوصية"   sub="اللغة والوضع الإسلامي وإعدادات الظهور"  onPress={() => router.push('/settings/preferences' as never)} />
-          <MenuItem icon={Bell}        label="إعدادات الإشعارات" sub="تخصيص ما تستقبله"                       onPress={() => router.push('/settings/notifications')} last />
+        <Section title={t('settings.preferencesSection')}>
+          <MenuItem icon={Globe}       label={t('settings.preferencesLabel')}      sub={t('settings.preferencesSub')}    onPress={() => router.push('/settings/preferences' as never)} />
+          <MenuItem icon={Bell}        label={t('settings.notificationsSettings')} sub={t('settings.notificationsSub')}  onPress={() => router.push('/settings/notifications')} last />
         </Section>
 
-        <Section title="المجتمع والدعم">
-          <MenuItem icon={Users}       label="مجتمع بورصة"        sub="متابعة المتداولين والتوقعات"             onPress={() => router.push('/discover' as never)} />
-          <MenuItem icon={LifeBuoy}    label="الدعم الفني"        sub="تواصل مع الفريق — متوسط الرد 24س"       onPress={() => router.push('/support' as never)} last />
+        <Section title={t('settings.communitySection')}>
+          <MenuItem icon={Users}       label={t('settings.communityLabel')} sub={t('settings.communitySub')}             onPress={() => router.push('/discover' as never)} />
+          <MenuItem icon={LifeBuoy}    label={t('settings.support')}        sub={t('settings.supportSub')}               onPress={() => router.push('/support' as never)} last />
         </Section>
 
-        <Section title="التطبيق">
+        <Section title={t('settings.appSection')}>
           <MenuItem
             icon={Info}
-            label="عن التطبيق"
+            label={t('settings.about')}
             sub="Borsa v1.0.0"
             onPress={() =>
               Alert.alert(
-                'عن التطبيق',
-                'Borsa — منصة البورصة المصرية\nالإصدار 1.0.0\n\nتحليلات بالذكاء الاصطناعي وبيانات فورية.',
-                [{ text: 'حسناً', style: 'cancel' }],
+                t('settings.about'),
+                t('settings.aboutContent'),
+                [{ text: t('settings.ok'), style: 'cancel' }],
               )
             }
             last
@@ -188,11 +190,11 @@ export default function SettingsPage() {
         </Section>
 
         <Section>
-          <MenuItem icon={LogOut} label="تسجيل الخروج" onPress={handleLogout} danger />
+          <MenuItem icon={LogOut} label={t('auth.logout')} onPress={handleLogout} danger />
           <MenuItem
             icon={Trash2}
-            label="حذف الحساب"
-            sub="المنطقة الخطرة — إجراء لا يمكن التراجع عنه"
+            label={t('common.delete') + ' ' + t('profile.sectionAccount')}
+            sub={t('settings.deleteAccountSub')}
             onPress={() => router.push('/settings/danger' as never)}
             danger
             last

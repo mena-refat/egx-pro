@@ -18,7 +18,8 @@ export const PortfolioController = {
     }
     const page = req.query.page != null ? Math.max(1, parseInt(String(req.query.page), 10)) : undefined;
     const limit = req.query.limit != null ? Math.min(50, Math.max(1, parseInt(String(req.query.limit), 10))) : undefined;
-    const data = await PortfolioService.getPortfolio(userId, page, limit);
+    const aggregate = req.query.aggregate === 'true';
+    const data = await PortfolioService.getPortfolio(userId, page, limit, aggregate);
     sendSuccess(res, data);
   }),
 

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Crown, Zap, Check, Tag, X, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
@@ -28,12 +29,6 @@ const PLANS = [
     monthlyPrice: 0,
     yearlyPrice: 0,
     color: '#8b949e',
-    features: [
-      '3 تحليلات AI شهرياً',
-      '3 توقعات يومياً',
-      'محفظة حتى 5 أسهم',
-      'بيانات متأخرة 10 دقائق',
-    ],
   },
   {
     id: 'pro',
@@ -44,13 +39,6 @@ const PLANS = [
     monthlyPrice: 189,
     yearlyPrice: 1890,
     color: '#3b82f6',
-    features: [
-      '20 تحليل AI شهرياً',
-      '10 توقعات يومياً',
-      'محفظة حتى 20 سهم',
-      'بيانات شبه فورية',
-      'إشارات وتنبيهات',
-    ],
   },
   {
     id: 'ultra',
@@ -61,24 +49,8 @@ const PLANS = [
     monthlyPrice: 397,
     yearlyPrice: 3970,
     color: '#f59e0b',
-    features: [
-      '60 تحليل AI شهرياً',
-      'توقعات غير محدودة',
-      'محفظة غير محدودة',
-      'بيانات فورية',
-      'أولوية في الدعم',
-    ],
   },
 ] as const;
-
-// Display the current plan in a human-readable form
-const PLAN_LABELS: Record<string, string> = {
-  free:         'Free',
-  pro:          'Pro (شهري)',
-  annual:       'Pro (سنوي)',
-  ultra:        'Ultra (شهري)',
-  ultra_annual: 'Ultra (سنوي)',
-};
 
 interface DiscountResult {
   percent: number;
@@ -91,6 +63,7 @@ export default function SubscriptionPage() {
   const router = useRouter();
   const { user, updateUser } = useAuthStore();
   const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
   const [billing, setBilling] = useState<BillingPeriod>('monthly');
   const { connected, purchasing, purchasePlan } = useGooglePlayBilling();
 
@@ -104,6 +77,19 @@ export default function SubscriptionPage() {
   const currentPlan = user?.plan ?? 'free';
   const billingOptions: BillingPeriod[] = ['monthly', 'yearly'];
 
+  const getPlanLabel = (plan: string) => {
+    const labels: Record<string, string> = {
+      free: t('subscription.free'),
+      pro: t('subscription.planProMonthly'),
+      annual: t('subscription.planProYearly'),
+      ultra: t('subscription.planUltraMonthly'),
+      ultra_annual: t('subscription.planUltraYearly'),
+      yearly: t('subscription.planProYearly'),
+      ultra_yearly: t('subscription.planUltraYearly'),
+    };
+    return labels[plan] ?? plan.toUpperCase();
+  };
+
   // ── isActive: compares with server's effective plan values ──────────────────
   const isActive = (plan: typeof PLANS[number]) => {
     if (plan.id === 'free') return currentPlan === 'free';
@@ -116,9 +102,9 @@ export default function SubscriptionPage() {
 
   const getPrice = (plan: typeof PLANS[number]) => {
     if (plan.monthlyPrice === 0) return null;
-    if (billing === 'monthly') return { amount: plan.monthlyPrice, label: '/شهر' };
+    if (billing === 'monthly') return { amount: plan.monthlyPrice, label: t('subscription.perMonth') };
     const monthly = Math.round(plan.yearlyPrice / 12);
-    return { amount: monthly, label: '/شهر', yearly: plan.yearlyPrice };
+    return { amount: monthly, label: t('subscription.perMonth'), yearly: plan.yearlyPrice };
   };
 
   const getSavings = (plan: typeof PLANS[number]) => {
@@ -142,9 +128,9 @@ export default function SubscriptionPage() {
       setPromoResult(data);
     } catch (err: unknown) {
       const errorCode = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      if (errorCode === 'INVALID_DISCOUNT_CODE') setPromoError('كود الخصم غير صحيح أو منتهي الصلاحية');
-      else if (errorCode === 'DISCOUNT_ALREADY_USED') setPromoError('هذا الكود استُخدم من قبل');
-      else setPromoError('تعذّر التحقق من الكود، حاول مرة أخرى');
+      if (errorCode === 'INVALID_DISCOUNT_CODE') setPromoError(t('subscription.errorInvalidCode'));
+      else if (errorCode === 'DISCOUNT_ALREADY_USED') setPromoError(t('subscription.errorAlreadyUsed'));
+      else setPromoError(t('subscription.errorVerify'));
     } finally {
       setPromoLoading(false);
     }
@@ -195,7 +181,7 @@ export default function SubscriptionPage() {
             if (safePlan) updateUser({ plan: safePlan, planExpiresAt: d.planExpiresAt ?? null });
           } catch { /* ignore */ }
           clearPromo();
-          Alert.alert('تم الاشتراك!', 'تم تفعيل اشتراكك بنجاح 🎉');
+          Alert.alert(t('subscription.successTitle'), t('subscription.successMsg'));
           return;
         }
       } catch (err: unknown) {
@@ -203,7 +189,7 @@ export default function SubscriptionPage() {
         if (errCode === 'PAYMENT_TOKEN_REQUIRED') {
           // Partial discount — fall through to Google Play / email
         } else {
-          Alert.alert('خطأ', 'تعذّر تطبيق كود الخصم، حاول مرة أخرى');
+          Alert.alert(t('common.error'), t('subscription.errorApplyCode'));
           return;
         }
       }
@@ -223,20 +209,20 @@ export default function SubscriptionPage() {
               : null;
           if (safePlan) updateUser({ plan: safePlan, planExpiresAt: d.planExpiresAt ?? null });
         } catch { /* ignore */ }
-        Alert.alert('تم الاشتراك!', 'تم تفعيل اشتراكك بنجاح 🎉');
+        Alert.alert(t('subscription.successTitle'), t('subscription.successMsg'));
       } else if (result === 'error') {
-        Alert.alert('خطأ', 'تعذّر إتمام عملية الشراء، حاول مرة أخرى');
+        Alert.alert(t('common.error'), t('subscription.purchaseError'));
       }
       return;
     }
 
     // Fallback — iOS or no Google Play
     Alert.alert(
-      `ترقية لـ ${plan.label}`,
-      'للترقية تواصل معنا عبر البريد الإلكتروني وسنرسل لك رابط الدفع.',
+      t('subscription.upgradeAlertTitle', { plan: plan.label }),
+      t('subscription.upgradeAlertMsg'),
       [
-        { text: 'إلغاء', style: 'cancel' },
-        { text: 'تواصل معنا', onPress: () => Linking.openURL('mailto:support@borsa.app') },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('subscription.contactUs'), onPress: () => Linking.openURL('mailto:support@borsa.app') },
       ],
     );
   };
@@ -261,7 +247,7 @@ export default function SubscriptionPage() {
         <View className="w-8 h-8 rounded-xl bg-brand/15 items-center justify-center">
           <Crown size={15} color={BRAND} />
         </View>
-        <Text style={{ color: colors.text }} className="text-base font-bold">الاشتراك والخطة</Text>
+        <Text style={{ color: colors.text }} className="text-base font-bold">{t('subscription.title')}</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
@@ -270,11 +256,11 @@ export default function SubscriptionPage() {
         <View className="flex-row bg-brand/10 border border-brand/25 rounded-2xl px-4 py-3 items-center gap-2">
           <Crown size={16} color={BRAND} />
           <Text className="text-sm font-semibold text-brand flex-1">
-            خطتك الحالية: {PLAN_LABELS[currentPlan] ?? currentPlan.toUpperCase()}
+            {t('subscription.current')}: {getPlanLabel(currentPlan)}
           </Text>
           {user?.planExpiresAt && (
             <Text style={{ color: colors.textMuted }} className="text-xs">
-              تنتهي: {new Date(user.planExpiresAt).toLocaleDateString('ar-EG')}
+              {t('subscription.expires')}: {new Date(user.planExpiresAt).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US')}
             </Text>
           )}
         </View>
@@ -294,11 +280,11 @@ export default function SubscriptionPage() {
                 style={{ backgroundColor: active ? BRAND : 'transparent' }}
               >
                 <Text className="text-sm font-semibold" style={{ color: active ? '#fff' : colors.textMuted }}>
-                  {b === 'monthly' ? 'شهري' : 'سنوي'}
+                  {b === 'monthly' ? t('subscription.monthly') : t('subscription.yearly')}
                 </Text>
                 {b === 'yearly' && !active && (
                   <View className="bg-emerald-500/20 px-1.5 py-0.5 rounded-md">
-                    <Text className="text-[10px] font-bold text-emerald-400">شهرين مجاناً</Text>
+                    <Text className="text-[10px] font-bold text-emerald-400">{t('subscription.freeMonths')}</Text>
                   </View>
                 )}
               </Pressable>
@@ -331,14 +317,14 @@ export default function SubscriptionPage() {
                   <Text className="text-base font-bold" style={{ color: plan.color }}>{plan.label}</Text>
                   {active && (
                     <View className="bg-brand/20 px-2 py-0.5 rounded-md">
-                      <Text className="text-xs font-bold text-brand">خطتك الحالية</Text>
+                      <Text className="text-xs font-bold text-brand">{t('subscription.currentBadge')}</Text>
                     </View>
                   )}
                 </View>
 
                 <View className="items-end gap-0.5">
                   {price === null ? (
-                    <Text style={{ color: colors.text }} className="text-lg font-bold">مجاناً</Text>
+                    <Text style={{ color: colors.text }} className="text-lg font-bold">{t('subscription.free')}</Text>
                   ) : (
                     <>
                       {/* Discounted price */}
@@ -350,12 +336,12 @@ export default function SubscriptionPage() {
                           <Text className="text-lg font-bold tabular-nums text-emerald-400">
                             {discount.final} EGP
                             <Text className="text-xs font-normal text-emerald-400">
-                              {billing === 'yearly' ? '/سنة' : '/شهر'}
+                              {t(billing === 'yearly' ? 'subscription.perYear' : 'subscription.perMonth')}
                             </Text>
                           </Text>
                           <View className="bg-emerald-500/15 px-1.5 py-0.5 rounded-md">
                             <Text className="text-[10px] font-bold text-emerald-400">
-                              خصم {discount.percent}%
+                              {t('subscription.discountPct', { pct: discount.percent })}
                             </Text>
                           </View>
                         </View>
@@ -367,13 +353,13 @@ export default function SubscriptionPage() {
                           </Text>
                           {price.yearly && (
                             <Text style={{ color: colors.textMuted }} className="text-xs">
-                              {price.yearly} EGP/سنة
+                              {price.yearly} EGP{t('subscription.perYear')}
                             </Text>
                           )}
                           {savings && (
                             <View className="bg-emerald-500/15 px-1.5 py-0.5 rounded-md mt-0.5">
                               <Text className="text-[10px] font-bold text-emerald-400">
-                                وفّر {savings.saved} EGP
+                                {t('subscription.savedAmount', { amount: savings.saved })}
                               </Text>
                             </View>
                           )}
@@ -386,7 +372,7 @@ export default function SubscriptionPage() {
 
               {/* Features */}
               <View className="gap-2">
-                {plan.features.map((f, i) => (
+                {(t(`subscription.${plan.id}Features`, { returnObjects: true }) as string[]).map((f: string, i: number) => (
                   <View key={i} className="flex-row items-center gap-2">
                     <Check size={13} color={GREEN} />
                     <Text style={{ color: colors.textSub }} className="text-xs">{f}</Text>
@@ -408,8 +394,10 @@ export default function SubscriptionPage() {
                   {isPurchasing && <ActivityIndicator size="small" color="#fff" />}
                   <Text className="text-sm font-bold text-white">
                     {isPurchasing
-                      ? 'جارٍ الشراء...'
-                      : `ترقية لـ ${plan.label} ${billing === 'yearly' ? '(سنوي)' : '(شهري)'}`}
+                      ? t('subscription.purchasing')
+                      : billing === 'yearly'
+                        ? t('subscription.upgradeYearly', { plan: plan.label })
+                        : t('subscription.upgradeMonthly', { plan: plan.label })}
                   </Text>
                 </Pressable>
               )}
@@ -428,7 +416,7 @@ export default function SubscriptionPage() {
           >
             <Tag size={15} color={promoResult ? '#4ade80' : colors.textMuted} />
             <Text style={{ color: promoResult ? '#4ade80' : colors.text }} className="text-sm font-medium flex-1">
-              {promoResult ? `كود خصم مُطبَّق — خصم ${promoResult.percent}%` : 'عندك كود خصم؟'}
+              {promoResult ? t('subscription.promoApplied', { pct: promoResult.percent }) : t('subscription.promoCode')}
             </Text>
             {promoOpen
               ? <ChevronUp  size={14} color={colors.textMuted} />
@@ -445,7 +433,7 @@ export default function SubscriptionPage() {
                   <TextInput
                     value={promoCode}
                     onChangeText={(t) => { setPromoCode(t.toUpperCase()); setPromoError(null); if (!t) setPromoResult(null); }}
-                    placeholder="أدخل الكود"
+                    placeholder={t('subscription.promoPlaceholder')}
                     placeholderTextColor={colors.textMuted}
                     style={{ color: colors.text, flex: 1, paddingVertical: 10, fontSize: 14, fontWeight: '600', letterSpacing: 1 }}
                     autoCapitalize="characters"
@@ -473,7 +461,7 @@ export default function SubscriptionPage() {
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
                     <Text className="text-sm font-bold" style={{ color: promoResult ? '#f87171' : '#fff' }}>
-                      {promoResult ? 'إزالة' : 'تطبيق'}
+                      {promoResult ? t('subscription.removePromo') : t('subscription.applyPromo')}
                     </Text>
                   )}
                 </Pressable>
@@ -487,7 +475,7 @@ export default function SubscriptionPage() {
                 <View className="flex-row bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2.5 items-center gap-2">
                   <Tag size={13} color="#4ade80" />
                   <Text className="text-xs text-emerald-400 font-medium flex-1">
-                    تم تطبيق الكود — ستحصل على خصم {promoResult.percent}% على الاشتراك
+                    {t('subscription.promoSuccess', { pct: promoResult.percent })}
                   </Text>
                 </View>
               )}
@@ -497,8 +485,8 @@ export default function SubscriptionPage() {
 
         <Text style={{ color: colors.textMuted }} className="text-xs text-center leading-5 px-4">
           {Platform.OS === 'android'
-            ? 'الدفع عبر جوجل بلاي • يُجدَّد تلقائياً حتى الإلغاء'
-            : 'للترقية تواصل معنا — الدفع عبر Paymob'}
+            ? t('subscription.googlePlayNote')
+            : t('subscription.paymobNote')}
         </Text>
       </ScrollView>
     </ScreenWrapper>

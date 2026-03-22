@@ -8,6 +8,7 @@ import {
   ArrowLeft, ArrowRight, Gift, Users, Crown,
   Copy, Share2, Trophy, Sparkles, Check,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useTheme } from '../../hooks/useTheme';
@@ -28,23 +29,24 @@ interface ReferralData {
   }[];
 }
 
-function timeAgo(d: string) {
-  const diff = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
-  if (diff < 60) return 'الآن';
-  if (diff < 3600) return `منذ ${Math.floor(diff / 60)} د`;
-  if (diff < 86400) return `منذ ${Math.floor(diff / 3600)} س`;
-  if (diff < 604800) return `منذ ${Math.floor(diff / 86400)} ي`;
-  return new Date(d).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' });
-}
-
 export default function ReferralPage() {
   const router = useRouter();
   const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
   const [data, setData] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const mountedRef = useRef(true);
   const ArrowIcon = isRTL ? ArrowRight : ArrowLeft;
+
+  const timeAgo = (d: string) => {
+    const diff = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+    if (diff < 60) return t('referral.timeNow');
+    if (diff < 3600) return t('referral.timeMinutes', { m: Math.floor(diff / 60) });
+    if (diff < 86400) return t('referral.timeHours', { h: Math.floor(diff / 3600) });
+    if (diff < 604800) return t('referral.timeDays', { d: Math.floor(diff / 86400) });
+    return new Date(d).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' });
+  };
 
   useEffect(() => () => { mountedRef.current = false; }, []);
 
@@ -77,8 +79,8 @@ export default function ReferralPage() {
   const shareCode = async () => {
     if (!data?.referralCode) return;
     await Share.share({
-      message: `استخدم كود الدعوة الخاص بي ${data.referralCode} عند التسجيل في تطبيق Borsa واحصل على ميزات مجانية! 🚀`,
-      title: 'دعوة للانضمام لـ Borsa',
+      message: t('referral.shareMessage', { code: data.referralCode }),
+      title: t('referral.shareTitle'),
     });
   };
 
@@ -110,7 +112,7 @@ export default function ReferralPage() {
           <View className="w-8 h-8 rounded-xl items-center justify-center" style={{ backgroundColor: '#f59e0b18' }}>
             <Gift size={15} color="#f59e0b" />
           </View>
-          <Text style={{ color: colors.text }} className="text-base font-bold">برنامج الإحالة</Text>
+          <Text style={{ color: colors.text }} className="text-base font-bold">{t('referral.title')}</Text>
         </View>
       </View>
 
@@ -124,7 +126,7 @@ export default function ReferralPage() {
         ) : !data ? (
           <View className="items-center py-24 gap-3">
             <Gift size={32} color={colors.textMuted} />
-            <Text style={{ color: colors.textMuted }} className="text-sm">تعذّر تحميل بيانات الإحالة</Text>
+            <Text style={{ color: colors.textMuted }} className="text-sm">{t('referral.loadError')}</Text>
           </View>
         ) : (
           <>
@@ -134,12 +136,12 @@ export default function ReferralPage() {
                 <Gift size={26} color="#f59e0b" />
               </View>
               <Text style={{ color: colors.text }} className="text-base font-bold text-center">
-                ادعُ أصدقاءك واحصل على Pro مجاناً
+                {t('referral.heroTitle')}
               </Text>
               <Text style={{ color: colors.textSub }} className="text-xs text-center leading-5">
                 {remaining === 0
-                  ? 'أنت جاهز للحصول على شهر Pro مجاناً.'
-                  : `ادعُ ${remaining} صديقاً يفتح حسابه ويبقى نشطاً، وستحصل على شهر Pro مجاناً!`}
+                  ? t('referral.readyForReward')
+                  : t('referral.inviteN', { count: remaining })}
               </Text>
 
               {/* Referral code */}
@@ -148,7 +150,7 @@ export default function ReferralPage() {
                 className="w-full border rounded-xl flex-row items-center px-4 py-3 mt-1"
               >
                 <View className="flex-1">
-                  <Text style={{ color: colors.textMuted }} className="text-xs mb-0.5">كود الإحالة</Text>
+                  <Text style={{ color: colors.textMuted }} className="text-xs mb-0.5">{t('referral.code')}</Text>
                   <Text style={{ color: colors.text }} className="text-base font-bold tracking-widest">
                     {data.referralCode}
                   </Text>
@@ -171,7 +173,7 @@ export default function ReferralPage() {
                 className="w-full bg-amber-500 rounded-xl py-3 flex-row items-center justify-center gap-2"
               >
                 <Share2 size={15} color="#fff" />
-                <Text className="text-sm font-bold text-white">مشاركة كود الدعوة</Text>
+                <Text className="text-sm font-bold text-white">{t('referral.share')}</Text>
               </Pressable>
             </View>
 
@@ -180,14 +182,14 @@ export default function ReferralPage() {
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center gap-2">
                   <Crown size={14} color="#8b5cf6" />
-                  <Text style={{ color: colors.text }} className="text-sm font-semibold">التقدم نحو الجائزة</Text>
+                  <Text style={{ color: colors.text }} className="text-sm font-semibold">{t('referral.progress')}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={{ color: colors.textMuted }} className="text-xs">
                     {achievedInCycle}/{required}
                   </Text>
                   <Text style={{ color: colors.textSub }} className="text-[10px]">
-                    {progressPct}% مكتمل
+                    {t('referral.progressPct', { pct: progressPct })}
                   </Text>
                 </View>
               </View>
@@ -202,10 +204,10 @@ export default function ReferralPage() {
 
               <Text style={{ color: colors.textMuted }} className="text-xs">
                 {remaining === 0
-                  ? 'تم تحقيق الشرط للحصول على Pro مجاناً.'
+                  ? t('referral.rewardAchieved')
                   : remaining === required
-                    ? `ادعُ ${required} صديقاً لتحصل على شهر Pro مجاناً`
-                    : `متبقى ${remaining} دعوة لشهر Pro مجاناً`}
+                    ? t('referral.inviteToGet', { count: required })
+                    : t('referral.remainingInvites', { count: remaining })}
               </Text>
 
               {/* Expiry if active */}
@@ -213,8 +215,7 @@ export default function ReferralPage() {
                 <View className="flex-row items-center gap-2 bg-brand/10 rounded-xl px-3 py-2">
                   <Sparkles size={12} color="#8b5cf6" />
                   <Text className="text-xs text-brand font-medium">
-                    لديك Pro مجاناً حتى{' '}
-                    {new Date(data.referralProExpiresAt).toLocaleDateString('ar-EG', { month: 'long', day: 'numeric' })}
+                    {t('referral.proUntil', { date: new Date(data.referralProExpiresAt).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'long', day: 'numeric' }) })}
                   </Text>
                 </View>
               )}
@@ -223,9 +224,9 @@ export default function ReferralPage() {
             {/* Stats */}
             <View className="flex-row gap-3">
               {[
-                { label: 'إجمالي الدعوات', value: data.totalReferrals, icon: Users, color: '#3b82f6' },
-                { label: 'دعوات نشطة', value: data.activeReferrals, icon: Check, color: '#4ade80' },
-                { label: 'أشهر مجانية', value: data.totalMonthsEarned, icon: Trophy, color: '#f59e0b' },
+                { label: t('referral.totalReferrals'), value: data.totalReferrals, icon: Users, color: '#3b82f6' },
+                { label: t('referral.activeReferrals'), value: data.activeReferrals, icon: Check, color: '#4ade80' },
+                { label: t('referral.freeMonths'), value: data.totalMonthsEarned, icon: Trophy, color: '#f59e0b' },
               ].map((s) => (
                 <View
                   key={s.label}
@@ -245,7 +246,7 @@ export default function ReferralPage() {
             {data.recentReferrals.length > 0 && (
               <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl overflow-hidden">
                 <View style={{ borderBottomColor: colors.border, borderBottomWidth: 0.5 }} className="px-4 py-3">
-                  <Text style={{ color: colors.textSub }} className="text-xs font-semibold">آخر الدعوات</Text>
+                  <Text style={{ color: colors.textSub }} className="text-xs font-semibold">{t('referral.recentTitle')}</Text>
                 </View>
                 {data.recentReferrals.map((r, i) => (
                   <View
@@ -265,7 +266,7 @@ export default function ReferralPage() {
                       </View>
                       <View>
                         <Text style={{ color: colors.text }} className="text-sm font-medium">
-                          مستخدم جديد
+                          {t('referral.newUser')}
                         </Text>
                         <Text style={{ color: colors.textMuted }} className="text-xs">{timeAgo(r.createdAt)}</Text>
                       </View>
@@ -275,7 +276,7 @@ export default function ReferralPage() {
                       style={{ backgroundColor: r.isActive ? '#4ade8015' : colors.hover }}
                     >
                       <Text className="text-[11px] font-bold" style={{ color: r.isActive ? '#4ade80' : colors.textMuted }}>
-                        {r.isActive ? 'نشط' : 'غير نشط'}
+                        {r.isActive ? t('referral.active') : t('referral.inactive')}
                       </Text>
                     </View>
                   </View>
@@ -285,12 +286,12 @@ export default function ReferralPage() {
 
             {/* How it works */}
             <View style={{ backgroundColor: colors.card, borderColor: colors.border }} className="border rounded-2xl p-4 gap-3">
-              <Text style={{ color: colors.textSub }} className="text-xs font-semibold">كيف يعمل البرنامج؟</Text>
+              <Text style={{ color: colors.textSub }} className="text-xs font-semibold">{t('referral.howItWorks')}</Text>
               {[
-                { step: '١', text: 'شارك كود الدعوة مع أصدقائك' },
-                { step: '٢', text: `يسجّل ${required} صديقاً باستخدام الكود ويبقوا نشطين` },
-                { step: '٣', text: 'تحصل تلقائياً على شهر Pro مجاناً' },
-                { step: '٤', text: `يتكرر المكافأة مع كل ${required} دعوة جديدة` },
+                { step: t('referral.stepNum1'), text: t('referral.step1') },
+                { step: t('referral.stepNum2'), text: t('referral.step2', { count: required }) },
+                { step: t('referral.stepNum3'), text: t('referral.step3') },
+                { step: t('referral.stepNum4'), text: t('referral.step4', { count: required }) },
               ].map((item) => (
                 <View key={item.step} className="flex-row items-start gap-3">
                   <View className="w-6 h-6 rounded-full bg-brand/20 items-center justify-center shrink-0">

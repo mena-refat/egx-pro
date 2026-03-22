@@ -9,9 +9,11 @@ import {
   Trash2, LogOut, ShieldCheck, ShieldOff, ChevronRight, ChevronLeft,
   Monitor, MapPin,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api/client';
+import { getRefreshToken } from '../../lib/auth/tokens';
 import { BRAND, FONT, WEIGHT, RADIUS, SPACE } from '../../lib/theme';
 
 // ─── types ───────────────────────────────────────────────────────────────────
@@ -34,28 +36,29 @@ interface Session {
   country?: string;
   createdAt: string;
   expiresAt: string;
+  isCurrentSession?: boolean;
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-function fmtDate(iso?: string) {
+function fmtDate(iso?: string, locale = 'en-US') {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(iso).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function sessionLabel(s: Session) {
+function sessionLabel(s: Session): string | null {
   const parts: string[] = [];
   if (s.browser) parts.push(s.browser);
   if (s.os) parts.push(s.os);
   if (!parts.length && s.deviceInfo) parts.push(s.deviceInfo);
-  return parts.join(' — ') || 'جهاز غير معروف';
+  return parts.join(' — ') || null;
 }
 
 function sessionLocation(s: Session) {
   const parts: string[] = [];
   if (s.city) parts.push(s.city);
   if (s.country) parts.push(s.country);
-  return parts.join('، ');
+  return parts.join(', ');
 }
 
 // ─── 2FA Setup Modal ─────────────────────────────────────────────────────────
@@ -68,6 +71,7 @@ interface SetupModalProps {
 
 function TwoFASetupModal({ visible, onClose, onSuccess }: SetupModalProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [step, setStep]         = useState<'loading' | 'qr' | 'code'>('loading');
   const [qrUrl, setQrUrl]       = useState('');
   const [manualCode, setManual] = useState('');
@@ -84,8 +88,13 @@ function TwoFASetupModal({ visible, onClose, onSuccess }: SetupModalProps) {
         setQrUrl(d.qrCodeUrl);
         setManual(d.manualCode);
         setStep('qr');
-      } catch {
-        setError('حدث خطأ أثناء الإعداد');
+      } catch (err: unknown) {
+        const errCode = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+        if (errCode === '2fa_already_enabled') {
+          setError(t('security.alreadyEnabled'));
+        } else {
+          setError(t('security.setupError'));
+        }
         setStep('qr');
       }
     })();
@@ -99,7 +108,7 @@ function TwoFASetupModal({ visible, onClose, onSuccess }: SetupModalProps) {
       onSuccess();
       onClose();
     } catch {
-      setError('الكود غير صحيح — تأكد من تطبيق المصادقة وأعد المحاولة');
+      setError(t('security.invalidCode'));
     } finally {
       setSaving(false);
     }
@@ -116,7 +125,7 @@ function TwoFASetupModal({ visible, onClose, onSuccess }: SetupModalProps) {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
             <ShieldCheck size={18} color={BRAND} />
-            <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }}>تفعيل التحقق الثنائي</Text>
+            <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }}>{t('security.setupTitle')}</Text>
           </View>
           <Pressable onPress={onClose}><Text style={{ color: colors.textSub, fontSize: FONT.lg }}>✕</Text></Pressable>
         </View>
@@ -128,7 +137,7 @@ function TwoFASetupModal({ visible, onClose, onSuccess }: SetupModalProps) {
         ) : (
           <>
             <Text style={{ color: colors.textSub, fontSize: FONT.sm, lineHeight: 20 }}>
-              افتح تطبيق المصادقة (Google Authenticator أو Authy) وامسح الكود التالي:
+              {t('security.setupDesc')}
             </Text>
 
             {/* QR Code */}
@@ -147,7 +156,7 @@ function TwoFASetupModal({ visible, onClose, onSuccess }: SetupModalProps) {
             {/* Manual code */}
             {manualCode ? (
               <View style={{ backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.lg, padding: SPACE.md, gap: SPACE.xs }}>
-                <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>أو أدخله يدوياً:</Text>
+                <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>{t('security.orManual')}</Text>
                 <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.semibold, letterSpacing: 2 }}>
                   {manualCode}
                 </Text>
@@ -155,7 +164,7 @@ function TwoFASetupModal({ visible, onClose, onSuccess }: SetupModalProps) {
             ) : null}
 
             <View style={{ gap: SPACE.xs }}>
-              <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>أدخل الكود المكوّن من 6 أرقام:</Text>
+              <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>{t('security.enterCode')}</Text>
               <TextInput
                 value={code}
                 onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
@@ -186,7 +195,7 @@ function TwoFASetupModal({ visible, onClose, onSuccess }: SetupModalProps) {
             >
               {saving
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={{ color: '#fff', fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>تأكيد التفعيل</Text>
+                : <Text style={{ color: '#fff', fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>{t('security.confirmEnable')}</Text>
               }
             </Pressable>
           </>
@@ -207,6 +216,7 @@ interface DisableModalProps {
 
 function TwoFADisableModal({ visible, onClose, onSuccess }: DisableModalProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [code, setCode]           = useState('');
   const [password, setPassword]   = useState('');
   const [error, setError]         = useState<string | null>(null);
@@ -226,9 +236,9 @@ function TwoFADisableModal({ visible, onClose, onSuccess }: DisableModalProps) {
       onClose();
     } catch (err: unknown) {
       const errCode = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      if (errCode === 'wrong_password') setError('كلمة المرور غير صحيحة');
-      else if (errCode === 'invalid_code') setError('كود التحقق غير صحيح');
-      else setError('حدث خطأ، حاول مرة أخرى');
+      if (errCode === 'wrong_password') setError(t('security.wrongPassword'));
+      else if (errCode === 'invalid_code') setError(t('security.wrongCode'));
+      else setError(t('common.error'));
     } finally {
       setSaving(false);
     }
@@ -246,18 +256,18 @@ function TwoFADisableModal({ visible, onClose, onSuccess }: DisableModalProps) {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
             <ShieldOff size={18} color='#f87171' />
-            <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }}>تعطيل التحقق الثنائي</Text>
+            <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }}>{t('security.disableTitle')}</Text>
           </View>
           <Pressable onPress={onClose}><Text style={{ color: colors.textSub, fontSize: FONT.lg }}>✕</Text></Pressable>
         </View>
 
         <Text style={{ color: colors.textSub, fontSize: FONT.sm, lineHeight: 20 }}>
-          لتعطيل التحقق الثنائي، أدخل كلمة مرورك وكود المصادقة:
+          {t('security.disableDesc')}
         </Text>
 
         {/* Password */}
         <View style={{ gap: SPACE.xs }}>
-          <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>كلمة المرور</Text>
+          <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>{t('auth.password')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.lg, paddingHorizontal: SPACE.md }}>
             <TextInput
               value={password}
@@ -268,14 +278,14 @@ function TwoFADisableModal({ visible, onClose, onSuccess }: DisableModalProps) {
               style={{ flex: 1, color: colors.text, paddingVertical: SPACE.md, fontSize: FONT.sm }}
             />
             <Pressable onPress={() => setShowPass(p => !p)}>
-              <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>{showPass ? 'إخفاء' : 'إظهار'}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>{showPass ? t('security.hide') : t('security.show')}</Text>
             </Pressable>
           </View>
         </View>
 
         {/* 2FA code */}
         <View style={{ gap: SPACE.xs }}>
-          <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>كود التحقق (6 أرقام)</Text>
+          <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>{t('security.codeLabel')}</Text>
           <TextInput
             value={code}
             onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
@@ -306,7 +316,7 @@ function TwoFADisableModal({ visible, onClose, onSuccess }: DisableModalProps) {
         >
           {saving
             ? <ActivityIndicator color="#fff" />
-            : <Text style={{ color: '#fff', fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>تعطيل التحقق الثنائي</Text>
+            : <Text style={{ color: '#fff', fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>{t('security.disable2FA')}</Text>
           }
         </Pressable>
         <View style={{ height: SPACE.xl }} />
@@ -320,6 +330,7 @@ function TwoFADisableModal({ visible, onClose, onSuccess }: DisableModalProps) {
 export default function SecurityPage() {
   const router = useRouter();
   const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
 
   const [security,    setSecurity]    = useState<SecurityData | null>(null);
   const [sessions,    setSessions]    = useState<Session[]>([]);
@@ -331,9 +342,11 @@ export default function SecurityPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      const refreshToken = await getRefreshToken();
+      const sessHeaders = refreshToken ? { 'X-Refresh-Token': refreshToken } : {};
       const [secRes, sessRes] = await Promise.all([
         apiClient.get('/api/user/security'),
-        apiClient.get('/api/user/sessions'),
+        apiClient.get('/api/user/sessions', { headers: sessHeaders }),
       ]);
       setSecurity(secRes.data as SecurityData);
       const list = (sessRes.data as { sessions?: Session[] })?.sessions ?? (sessRes.data as Session[]) ?? [];
@@ -348,17 +361,17 @@ export default function SecurityPage() {
   useEffect(() => { void loadData(); }, [loadData]);
 
   const revokeSession = async (id: string) => {
-    Alert.alert('إنهاء الجلسة', 'هل تريد إنهاء هذه الجلسة؟', [
-      { text: 'إلغاء', style: 'cancel' },
+    Alert.alert(t('security.revokeSessionTitle'), t('security.revokeSessionMsg'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'إنهاء', style: 'destructive',
+        text: t('security.endSession'), style: 'destructive',
         onPress: async () => {
           setRevoking(id);
           try {
             await apiClient.delete(`/api/user/sessions/${id}`);
             setSessions((prev) => prev.filter((s) => s.id !== id));
           } catch {
-            Alert.alert('خطأ', 'تعذر إنهاء الجلسة');
+            Alert.alert(t('common.error'), t('security.revokeSessionError'));
           } finally {
             setRevoking(null);
           }
@@ -368,16 +381,18 @@ export default function SecurityPage() {
   };
 
   const revokeAllOthers = () => {
-    Alert.alert('إنهاء كل الجلسات', 'سيتم تسجيل الخروج من جميع الأجهزة الأخرى. هل أنت متأكد؟', [
-      { text: 'إلغاء', style: 'cancel' },
+    Alert.alert(t('security.revokeAllTitle'), t('security.revokeAllMsg'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'إنهاء الكل', style: 'destructive',
+        text: t('security.endAll'), style: 'destructive',
         onPress: async () => {
           try {
-            await apiClient.post('/api/user/sessions/revoke-all-other', {});
+            const refreshToken = await getRefreshToken();
+            const headers = refreshToken ? { 'X-Refresh-Token': refreshToken } : {};
+            await apiClient.post('/api/user/sessions/revoke-all-other', {}, { headers });
             await loadData();
           } catch {
-            Alert.alert('خطأ', 'تعذر إنهاء الجلسات');
+            Alert.alert(t('common.error'), t('security.revokeAllError'));
           }
         },
       },
@@ -407,7 +422,7 @@ export default function SecurityPage() {
         <View style={{ width: 32, height: 32, borderRadius: RADIUS.md, backgroundColor: `${BRAND}15`, alignItems: 'center', justifyContent: 'center' }}>
           <Shield size={15} color={BRAND} />
         </View>
-        <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }}>الأمان والخصوصية</Text>
+        <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }}>{t('settings.security')}</Text>
       </View>
 
       {loading ? (
@@ -421,13 +436,13 @@ export default function SecurityPage() {
           <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
               <Shield size={14} color={BRAND} />
-              <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>معلومات الأمان</Text>
+              <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('security.overview')}</Text>
             </View>
             <View style={{ paddingHorizontal: SPACE.lg, paddingVertical: SPACE.sm }}>
               {[
-                { label: 'آخر تسجيل دخول',     value: fmtDate(security?.lastLoginAt) },
-                { label: 'آخر تغيير كلمة مرور', value: fmtDate(security?.lastPasswordChangeAt) },
-                { label: 'آخر IP',               value: security?.lastLoginIp ?? '—' },
+                { label: t('security.lastLogin'),          value: fmtDate(security?.lastLoginAt, isRTL ? 'ar-EG' : 'en-US') },
+                { label: t('security.lastPasswordChange'), value: fmtDate(security?.lastPasswordChangeAt, isRTL ? 'ar-EG' : 'en-US') },
+                { label: t('security.lastIp'),             value: security?.lastLoginIp ?? '—' },
               ].map((row, i, arr) => (
                 <View key={row.label} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACE.sm + 2, borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: colors.border }}>
                   <Text style={{ color: colors.textSub, fontSize: FONT.sm }}>{row.label}</Text>
@@ -441,10 +456,10 @@ export default function SecurityPage() {
           <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
               <ShieldCheck size={14} color={twoFaEnabled ? '#4ade80' : BRAND} />
-              <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>التحقق الثنائي (2FA)</Text>
+              <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('security.twoFactor')}</Text>
               <View style={{ marginStart: 'auto', backgroundColor: twoFaEnabled ? '#4ade8018' : '#f59e0b18', paddingHorizontal: SPACE.sm, paddingVertical: 2, borderRadius: RADIUS.full }}>
                 <Text style={{ color: twoFaEnabled ? '#4ade80' : '#f59e0b', fontSize: 10, fontWeight: WEIGHT.semibold }}>
-                  {twoFaEnabled ? 'مفعّل' : 'معطّل'}
+                  {twoFaEnabled ? t('security.enabled') : t('security.disabled')}
                 </Text>
               </View>
             </View>
@@ -452,8 +467,8 @@ export default function SecurityPage() {
             <View style={{ paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md, gap: SPACE.md }}>
               <Text style={{ color: colors.textSub, fontSize: FONT.xs, lineHeight: 18 }}>
                 {twoFaEnabled
-                  ? `مفعّل منذ ${fmtDate(security?.twoFactorEnabledAt)} — حسابك محمي بطبقة إضافية من الأمان.`
-                  : 'فعّل التحقق الثنائي لحماية حسابك. ستحتاج كود من تطبيق المصادقة عند كل تسجيل دخول.'}
+                  ? t('security.twoFactorEnabledSince', { date: fmtDate(security?.twoFactorEnabledAt, isRTL ? 'ar-EG' : 'en-US') })
+                  : t('security.twoFactorDisabledDesc')}
               </Text>
 
               <Pressable
@@ -469,7 +484,7 @@ export default function SecurityPage() {
                   ? <ShieldOff size={15} color='#ef4444' />
                   : <ShieldCheck size={15} color={BRAND} />}
                 <Text style={{ color: twoFaEnabled ? '#ef4444' : BRAND, fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>
-                  {twoFaEnabled ? 'تعطيل التحقق الثنائي' : 'تفعيل التحقق الثنائي'}
+                  {twoFaEnabled ? t('security.disable2FA') : t('security.enable2FA')}
                 </Text>
               </Pressable>
             </View>
@@ -486,8 +501,8 @@ export default function SecurityPage() {
                   <Fingerprint size={18} color={colors.textSub} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.medium }}>البصمة والـ PIN</Text>
-                  <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 2 }}>تسجيل دخول سريع بدون كلمة مرور</Text>
+                  <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.medium }}>{t('security.biometricPin')}</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 2 }}>{t('security.biometricPinSub')}</Text>
                 </View>
                 {isRTL ? <ChevronLeft size={14} color={colors.textMuted} /> : <ChevronRight size={14} color={colors.textMuted} />}
               </View>
@@ -500,19 +515,19 @@ export default function SecurityPage() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACE.sm }}>
                 <Monitor size={14} color={BRAND} />
                 <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>
-                  الجلسات النشطة ({sessions.length})
+                  {t('security.activeSessions', { count: sessions.length })}
                 </Text>
               </View>
-              {sessions.length > 1 && (
+              {sessions.filter((s) => !s.isCurrentSession).length > 0 && (
                 <Pressable onPress={revokeAllOthers}>
-                  <Text style={{ color: '#ef4444', fontSize: FONT.xs, fontWeight: WEIGHT.medium }}>إنهاء الكل</Text>
+                  <Text style={{ color: '#ef4444', fontSize: FONT.xs, fontWeight: WEIGHT.medium }}>{t('security.endAll')}</Text>
                 </Pressable>
               )}
             </View>
 
             {sessions.length === 0 ? (
               <View style={{ paddingHorizontal: SPACE.lg, paddingVertical: SPACE.xl, alignItems: 'center' }}>
-                <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>لا توجد جلسات نشطة</Text>
+                <Text style={{ color: colors.textMuted, fontSize: FONT.sm }}>{t('security.noSessions')}</Text>
               </View>
             ) : (
               sessions.map((s, i) => (
@@ -528,7 +543,7 @@ export default function SecurityPage() {
                     </View>
                     <View style={{ flex: 1, gap: 3 }}>
                       <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.medium }} numberOfLines={1}>
-                        {sessionLabel(s)}
+                        {sessionLabel(s) ?? t('security.unknownDevice')}
                       </Text>
                       {sessionLocation(s) ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -537,18 +552,24 @@ export default function SecurityPage() {
                         </View>
                       ) : null}
                       <Text style={{ color: colors.textMuted, fontSize: 10 }}>
-                        منذ {fmtDate(s.createdAt)}
+                        {t('security.since', { date: fmtDate(s.createdAt, isRTL ? 'ar-EG' : 'en-US') })}
                       </Text>
                     </View>
-                    <Pressable
-                      onPress={() => revokeSession(s.id)}
-                      disabled={revoking === s.id}
-                      style={{ padding: SPACE.xs }}
-                    >
-                      {revoking === s.id
-                        ? <ActivityIndicator size="small" color='#ef4444' />
-                        : <LogOut size={16} color='#ef4444' />}
-                    </Pressable>
+                    {s.isCurrentSession ? (
+                      <View style={{ backgroundColor: `${BRAND}18`, paddingHorizontal: SPACE.sm, paddingVertical: 3, borderRadius: RADIUS.md }}>
+                        <Text style={{ fontSize: 10, fontWeight: WEIGHT.semibold, color: BRAND }}>{t('security.currentSession')}</Text>
+                      </View>
+                    ) : (
+                      <Pressable
+                        onPress={() => revokeSession(s.id)}
+                        disabled={revoking === s.id}
+                        style={{ padding: SPACE.xs }}
+                      >
+                        {revoking === s.id
+                          ? <ActivityIndicator size="small" color='#ef4444' />
+                          : <LogOut size={16} color='#ef4444' />}
+                      </Pressable>
+                    )}
                   </View>
                 </View>
               ))

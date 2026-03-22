@@ -4,23 +4,28 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, ArrowRight, Newspaper, X, TrendingUp, TrendingDown, Clock } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Newspaper, X, TrendingUp, TrendingDown, Clock, Bookmark } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useTheme } from '../../hooks/useTheme';
 import { getStockInfo } from '../../lib/egxStocks';
 import apiClient from '../../lib/api/client';
-import { BRAND, RADIUS, WEIGHT } from '../../lib/theme';
+import { BRAND, RADIUS, WEIGHT, FONT, SPACE } from '../../lib/theme';
 
 interface NewsItem {
   title: string;
   url: string;
   source: string;
+  sourceType?: string;
   publishedAt: string;
   summary?: string;
   sentiment?: string | null;
   tickers?: string[];
+  isMarketWide?: boolean;
 }
+
+type NewsFilter = 'all' | 'interests';
+type NewsScope  = 'twoDays' | 'today' | 'yesterday' | 'all';
 
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -36,23 +41,23 @@ function SentimentBadge({ sentiment, colors }: { sentiment?: string | null; colo
   const s = sentiment?.toLowerCase();
   if (s === 'positive' || s === 'bullish') {
     return (
-      <View style={{ backgroundColor: 'rgba(34,197,94,0.12)', borderRadius: 20 }} className="flex-row items-center gap-1 px-2 py-0.5">
+      <View style={{ backgroundColor: 'rgba(34,197,94,0.12)', borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 2 }}>
         <TrendingUp size={11} color="#16a34a" />
-        <Text style={{ color: '#16a34a' }} className="text-[11px] font-semibold">إيجابي</Text>
+        <Text style={{ color: '#16a34a', fontSize: 11, fontWeight: WEIGHT.semibold }}>إيجابي</Text>
       </View>
     );
   }
   if (s === 'negative' || s === 'bearish') {
     return (
-      <View style={{ backgroundColor: 'rgba(239,68,68,0.12)', borderRadius: 20 }} className="flex-row items-center gap-1 px-2 py-0.5">
+      <View style={{ backgroundColor: 'rgba(239,68,68,0.12)', borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 2 }}>
         <TrendingDown size={11} color="#dc2626" />
-        <Text style={{ color: '#dc2626' }} className="text-[11px] font-semibold">سلبي</Text>
+        <Text style={{ color: '#dc2626', fontSize: 11, fontWeight: WEIGHT.semibold }}>سلبي</Text>
       </View>
     );
   }
   return (
-    <View style={{ backgroundColor: colors.hover, borderRadius: 20 }} className="px-2 py-0.5">
-      <Text style={{ color: colors.textMuted }} className="text-[11px] font-semibold">عام</Text>
+    <View style={{ backgroundColor: colors.hover, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 }}>
+      <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: WEIGHT.semibold }}>عام</Text>
     </View>
   );
 }
@@ -88,7 +93,7 @@ function NewsDetailModal({
           style={{ backgroundColor: colors.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '88%' }}
         >
           {/* Drag handle */}
-          <View className="items-center pt-3 pb-1">
+          <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4 }}>
             <View style={{ width: 40, height: 4, borderRadius: 4, backgroundColor: colors.border }} />
           </View>
 
@@ -97,13 +102,13 @@ function NewsDetailModal({
             contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 40 }}
           >
             {/* Top: sentiment + time + close */}
-            <View className="flex-row items-center justify-between gap-3 mb-4">
-              <View className="flex-row flex-wrap items-center gap-2 flex-1">
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: 1 }}>
                 <SentimentBadge sentiment={item.sentiment} colors={colors} />
                 {item.publishedAt && (
-                  <View className="flex-row items-center gap-1">
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <Clock size={11} color={colors.textMuted} />
-                    <Text style={{ color: colors.textMuted }} className="text-[11px]">
+                    <Text style={{ color: colors.textMuted, fontSize: 11 }}>
                       {relativeTime(item.publishedAt)}
                     </Text>
                   </View>
@@ -117,11 +122,12 @@ function NewsDetailModal({
               </Pressable>
             </View>
 
+            {/* Accent bar */}
+            <View style={{ height: 3, backgroundColor: accentColor, borderRadius: 2, marginBottom: 12 }} />
+
             {/* Title */}
             <Text
-              style={{ color: colors.textMuted }}
-              className="text-sm font-semibold leading-5 mb-3"
-              numberOfLines={2}
+              style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold, lineHeight: 24, marginBottom: 12 }}
             >
               {item.title}
             </Text>
@@ -129,29 +135,34 @@ function NewsDetailModal({
             {/* Summary block */}
             <View style={{ backgroundColor: colors.hover, borderRadius: 16, padding: 16, marginBottom: 16 }}>
               {item.summary ? (
-                <Text style={{ color: colors.text }} className="text-base leading-7">
+                <Text style={{ color: colors.text, fontSize: FONT.sm, lineHeight: 26 }}>
                   {item.summary}
                 </Text>
               ) : (
-                <Text style={{ color: colors.textMuted }} className="text-sm text-center py-2">
+                <Text style={{ color: colors.textMuted, fontSize: FONT.sm, textAlign: 'center', paddingVertical: 8 }}>
                   لا يوجد ملخص متاح لهذا الخبر حالياً
                 </Text>
               )}
             </View>
 
+            {/* Source */}
+            <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 12 }}>
+              المصدر: {item.source}
+            </Text>
+
             {/* Affected tickers */}
             {item.tickers && item.tickers.length > 0 && (
               <View>
-                <Text style={{ color: colors.textMuted }} className="text-[11px] font-semibold uppercase tracking-wide mb-2">
+                <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: WEIGHT.semibold, letterSpacing: 0.5, marginBottom: 8 }}>
                   الأسهم المتأثرة
                 </Text>
-                <View className="flex-row flex-wrap gap-2">
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   {item.tickers.map(ticker => (
                     <View
                       key={ticker}
                       style={{ backgroundColor: colors.hover, borderColor: colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}
                     >
-                      <Text style={{ color: colors.text, fontFamily: 'monospace' }} className="text-xs font-bold">
+                      <Text style={{ color: colors.text, fontFamily: 'monospace', fontSize: 12, fontWeight: WEIGHT.bold }}>
                         {ticker}
                       </Text>
                     </View>
@@ -170,27 +181,31 @@ export default function NewsPage() {
   const router = useRouter();
   const { ticker } = useLocalSearchParams<{ ticker?: string }>();
   const { colors, isRTL } = useTheme();
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [news, setNews]           = useState<NewsItem[]>([]);
+  const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<NewsItem | null>(null);
+  const [error, setError]         = useState<string | null>(null);
+  const [selected, setSelected]   = useState<NewsItem | null>(null);
+  const [filter, setFilter]       = useState<NewsFilter>('all');
+  const [scope, setScope]         = useState<NewsScope>('twoDays');
 
-  type NewsScope = 'twoDays' | 'today' | 'yesterday' | 'all';
-  const [scope, setScope] = useState<NewsScope>('twoDays');
-
-  const stockInfo = ticker ? getStockInfo(ticker) : null;
+  const stockInfo   = ticker ? getStockInfo(ticker) : null;
   const isStockNews = !!ticker;
-  const title = isStockNews
+  const title       = isStockNews
     ? `أخبار ${stockInfo?.nameAr ?? ticker}`
     : 'أخبار البورصة';
 
   const fetchNews = async (signal?: AbortSignal) => {
     setError(null);
     try {
-      const endpoint = isStockNews
-        ? `/api/stocks/${ticker}/news`
-        : '/api/news/market';
+      let endpoint: string;
+      if (isStockNews) {
+        endpoint = `/api/stocks/${ticker}/news`;
+      } else if (filter === 'interests') {
+        endpoint = '/api/news/interests';
+      } else {
+        endpoint = '/api/news/market';
+      }
       const res = await apiClient.get(endpoint, { signal });
       const d = (res.data as { data?: NewsItem[] })?.data ?? res.data;
       setNews(Array.isArray(d) ? d : []);
@@ -210,7 +225,7 @@ export default function NewsPage() {
     fetchNews(ctrl.signal);
     return () => ctrl.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticker]);
+  }, [ticker, filter]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -226,11 +241,11 @@ export default function NewsPage() {
     return colors.border;
   }
 
-  const scopeTabs: { id: NewsScope; labelAr: string; labelEn: string }[] = [
-    { id: 'twoDays', labelAr: 'اليومين', labelEn: 'Last 2 days' },
-    { id: 'today', labelAr: 'اليوم', labelEn: 'Today' },
-    { id: 'yesterday', labelAr: 'أمس', labelEn: 'Yesterday' },
-    { id: 'all', labelAr: 'الكل', labelEn: 'All' },
+  const scopeTabs: { id: NewsScope; label: string }[] = [
+    { id: 'twoDays',   label: 'اليومين' },
+    { id: 'today',     label: 'اليوم' },
+    { id: 'yesterday', label: 'أمس' },
+    { id: 'all',       label: 'الكل' },
   ];
 
   const sortedNews = useMemo(() => {
@@ -244,68 +259,124 @@ export default function NewsPage() {
   const filteredNews = useMemo(() => {
     if (scope === 'all') return sortedNews;
 
-    const now = new Date();
-    const todayStart = new Date(now);
+    const now          = new Date();
+    const todayStart   = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
-
     const yesterdayStart = new Date(todayStart);
     yesterdayStart.setDate(todayStart.getDate() - 1);
-
-    const tomorrowStart = new Date(todayStart);
+    const tomorrowStart  = new Date(todayStart);
     tomorrowStart.setDate(todayStart.getDate() + 1);
 
-    const msToday = todayStart.getTime();
+    const msToday     = todayStart.getTime();
     const msYesterday = yesterdayStart.getTime();
-    const msTomorrow = tomorrowStart.getTime();
+    const msTomorrow  = tomorrowStart.getTime();
 
     return sortedNews.filter((item) => {
       const t = new Date(item.publishedAt).getTime();
       if (!Number.isFinite(t)) return false;
-      if (scope === 'today') return t >= msToday && t < msTomorrow;
+      if (scope === 'today')     return t >= msToday && t < msTomorrow;
       if (scope === 'yesterday') return t >= msYesterday && t < msToday;
       // twoDays
       return t >= msYesterday && t < msTomorrow;
     });
   }, [scope, sortedNews]);
 
+  const emptyMessage = isStockNews
+    ? 'لا توجد أخبار لهذا السهم حالياً'
+    : filter === 'interests'
+    ? 'لا توجد أخبار لأسهم قائمة المراقبة'
+    : 'لا توجد أخبار حالياً';
+
+  const emptyHint = !isStockNews && filter === 'interests'
+    ? 'أضف أسهماً إلى قائمة المراقبة لترى أخبارها هنا'
+    : null;
+
   return (
     <ScreenWrapper padded={false}>
       {/* Header */}
       <View
-        style={{ borderBottomColor: colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }}
-        className="items-center gap-3 px-4 pt-5 pb-4 border-b"
+        style={{
+          borderBottomColor: colors.border, borderBottomWidth: 1,
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'center', gap: 12,
+          paddingHorizontal: 16, paddingTop: 20, paddingBottom: 16,
+        }}
       >
         <Pressable
           onPress={() => router.back()}
-          style={{ backgroundColor: colors.hover, borderColor: colors.border }}
-          className="w-9 h-9 rounded-xl border items-center justify-center"
+          style={{ backgroundColor: colors.hover, borderColor: colors.border, borderWidth: 1, width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
         >
           <ArrowIcon size={16} color={colors.textMuted} />
         </Pressable>
-        <View className="w-8 h-8 rounded-xl bg-blue-500/15 items-center justify-center">
+        <View style={{ width: 32, height: 32, borderRadius: 12, backgroundColor: 'rgba(59,130,246,0.12)', alignItems: 'center', justifyContent: 'center' }}>
           <Newspaper size={16} color="#3b82f6" />
         </View>
-        <View className="flex-1">
-          <Text style={{ color: colors.text }} className="text-base font-bold" numberOfLines={1}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontSize: FONT.base, fontWeight: WEIGHT.bold }} numberOfLines={1}>
             {title}
           </Text>
           {isStockNews && ticker && (
-            <Text style={{ color: colors.textMuted }} className="text-xs">{ticker}</Text>
+            <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>{ticker}</Text>
           )}
         </View>
+        {/* News count badge */}
+        {!loading && news.length > 0 && (
+          <View style={{ backgroundColor: `${BRAND}18`, borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2 }}>
+            <Text style={{ color: BRAND, fontSize: 11, fontWeight: WEIGHT.semibold }}>{news.length}</Text>
+          </View>
+        )}
       </View>
 
-      {/* News scope tabs */}
+      {/* All / Interests filter — only for market news */}
+      {!isStockNews && (
+        <View
+          style={{
+            marginHorizontal: 16, marginTop: 12,
+            backgroundColor: colors.card,
+            borderColor: colors.border, borderWidth: 1,
+            borderRadius: RADIUS.lg, padding: 4,
+            flexDirection: isRTL ? 'row-reverse' : 'row',
+            gap: 4,
+          }}
+        >
+          {([
+            { id: 'all' as NewsFilter,       label: 'الكل',        Icon: Newspaper },
+            { id: 'interests' as NewsFilter, label: 'اهتماماتي',   Icon: Bookmark },
+          ]).map(({ id, label, Icon }) => {
+            const active = filter === id;
+            return (
+              <Pressable
+                key={id}
+                onPress={() => setFilter(id)}
+                style={{
+                  flex: 1,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  backgroundColor: active ? `${BRAND}18` : 'transparent',
+                  borderRadius: RADIUS.md - 4,
+                  paddingVertical: 9,
+                  borderWidth: active ? 1 : 0,
+                  borderColor: active ? `${BRAND}44` : 'transparent',
+                }}
+              >
+                <Icon size={13} color={active ? BRAND : colors.textMuted} />
+                <Text style={{ color: active ? BRAND : colors.textMuted, fontSize: 12, fontWeight: WEIGHT.semibold }}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Scope tabs (date filter) */}
       <View
         style={{
           marginHorizontal: 16,
-          marginTop: 12,
-          marginBottom: 6,
+          marginTop: 8,
+          marginBottom: 4,
           backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderWidth: 1,
-          borderRadius: RADIUS.lg,
-          padding: 4,
+          borderColor: colors.border, borderWidth: 1,
+          borderRadius: RADIUS.lg, padding: 4,
           flexDirection: isRTL ? 'row-reverse' : 'row',
           gap: 4,
         }}
@@ -318,23 +389,21 @@ export default function NewsPage() {
               onPress={() => setScope(t.id)}
               style={{
                 flex: 1,
-                backgroundColor: active ? BRAND + '18' : 'transparent',
+                backgroundColor: active ? colors.hover : 'transparent',
                 borderRadius: RADIUS.md - 4,
-                paddingVertical: 8,
+                paddingVertical: 7,
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderWidth: active ? 1 : 0,
-                borderColor: active ? BRAND + '44' : 'transparent',
               }}
             >
               <Text
                 style={{
-                  color: active ? BRAND : colors.textMuted,
+                  color: active ? colors.text : colors.textMuted,
                   fontSize: 11,
-                  fontWeight: WEIGHT.semibold,
+                  fontWeight: active ? WEIGHT.bold : WEIGHT.medium,
                 }}
               >
-                {isRTL ? t.labelAr : t.labelEn}
+                {t.label}
               </Text>
             </Pressable>
           );
@@ -342,7 +411,7 @@ export default function NewsPage() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40, gap: 12 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 40, gap: 12 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -360,63 +429,86 @@ export default function NewsPage() {
             ))}
           </>
         ) : error ? (
-          <View className="items-center py-16 gap-3">
-            <View
-              style={{ backgroundColor: colors.card, borderColor: colors.border }}
-              className="w-14 h-14 rounded-full border items-center justify-center"
-            >
+          <View style={{ alignItems: 'center', paddingVertical: 64, gap: 12 }}>
+            <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' }}>
               <Newspaper size={24} color={colors.textMuted} />
             </View>
-            <Text style={{ color: colors.textMuted }} className="text-sm text-center px-4">{error}</Text>
+            <Text style={{ color: colors.textMuted, fontSize: FONT.sm, textAlign: 'center', paddingHorizontal: 16 }}>{error}</Text>
           </View>
         ) : filteredNews.length === 0 ? (
-          <View className="items-center py-16 gap-3">
-            <View
-              style={{ backgroundColor: colors.card, borderColor: colors.border }}
-              className="w-14 h-14 rounded-full border items-center justify-center"
-            >
+          <View style={{ alignItems: 'center', paddingVertical: 64, gap: 12 }}>
+            <View style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' }}>
               <Newspaper size={24} color={colors.textMuted} />
             </View>
-            <Text style={{ color: colors.textMuted }} className="text-sm">
-              {isStockNews ? 'لا توجد أخبار لهذا السهم حالياً' : 'لا توجد أخبار حالياً'}
-            </Text>
+            <View style={{ alignItems: 'center', gap: 4 }}>
+              <Text style={{ color: colors.textMuted, fontSize: FONT.sm, fontWeight: WEIGHT.semibold }}>
+                {emptyMessage}
+              </Text>
+              {emptyHint && (
+                <Text style={{ color: colors.textMuted, fontSize: FONT.xs, textAlign: 'center', paddingHorizontal: 32 }}>
+                  {emptyHint}
+                </Text>
+              )}
+            </View>
           </View>
         ) : (
           filteredNews.map((item, i) => (
             <Pressable
-              key={i}
+              key={item.url || i}
               onPress={() => setSelected(item)}
-              style={({ pressed }) => [
-                { backgroundColor: pressed ? colors.hover : colors.card, borderColor: colors.border },
-              ]}
-              className="border rounded-2xl overflow-hidden"
+              style={({ pressed }) => ({
+                backgroundColor: pressed ? colors.hover : colors.card,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderRadius: 16,
+                overflow: 'hidden',
+              })}
             >
               {/* Sentiment accent strip */}
               <View style={{ height: 3, backgroundColor: accentColor(item.sentiment) }} />
 
-              <View className="p-4 gap-2">
+              <View style={{ padding: 16, gap: 8 }}>
                 {/* Sentiment + time */}
-                <View className="flex-row items-center justify-between gap-2">
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <SentimentBadge sentiment={item.sentiment} colors={colors} />
-                  <View className="flex-row items-center gap-1">
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <Clock size={10} color={colors.textMuted} />
-                    <Text style={{ color: colors.textMuted }} className="text-xs">
+                    <Text style={{ color: colors.textMuted, fontSize: FONT.xs }}>
                       {relativeTime(item.publishedAt)}
                     </Text>
                   </View>
                 </View>
 
                 {/* Title */}
-                <Text style={{ color: colors.text }} className="text-sm font-semibold leading-5" numberOfLines={1}>
+                <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.semibold, lineHeight: 20 }} numberOfLines={2}>
                   {item.title}
                 </Text>
 
                 {/* Summary preview */}
                 {item.summary && (
-                  <Text style={{ color: colors.textMuted }} className="text-xs leading-5" numberOfLines={3}>
+                  <Text style={{ color: colors.textMuted, fontSize: FONT.xs, lineHeight: 18 }} numberOfLines={2}>
                     {item.summary}
                   </Text>
                 )}
+
+                {/* Source + tickers row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 10 }} numberOfLines={1}>
+                    {item.source}
+                  </Text>
+                  {item.tickers && item.tickers.length > 0 && (
+                    <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1 }}>
+                      {item.tickers.slice(0, 3).map(t => (
+                        <View key={t} style={{ backgroundColor: `${BRAND}12`, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                          <Text style={{ color: BRAND, fontSize: 10, fontWeight: WEIGHT.bold }}>{t}</Text>
+                        </View>
+                      ))}
+                      {item.tickers.length > 3 && (
+                        <Text style={{ color: colors.textMuted, fontSize: 10, alignSelf: 'center' }}>+{item.tickers.length - 3}</Text>
+                      )}
+                    </View>
+                  )}
+                </View>
               </View>
             </Pressable>
           ))

@@ -30,12 +30,24 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps = {}
 
   if (screener.loading) {
     return (
-      <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
-        <div className="h-12 w-full max-w-md bg-[var(--bg-secondary)] rounded-xl animate-pulse" />
-        <div className="h-10 w-full overflow-hidden rounded-xl bg-[var(--bg-secondary)] animate-pulse" />
-        <div className="space-y-4">
+      <div className="space-y-5" dir={isAr ? 'rtl' : 'ltr'}>
+        <div className="h-11 w-full max-w-md bg-[var(--bg-secondary)] rounded-xl animate-pulse" />
+        <div className="h-10 w-full rounded-xl bg-[var(--bg-secondary)] animate-pulse" />
+        <div className="space-y-2">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-24 bg-[var(--bg-secondary)] rounded-xl animate-pulse" />
+            <div
+              key={i}
+              className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] animate-pulse"
+              style={{ animationDelay: `${i * 60}ms` }}
+            >
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3.5 w-16 rounded-md bg-[var(--bg-secondary)]" />
+                <div className="h-2.5 w-28 rounded-md bg-[var(--bg-secondary)]" />
+              </div>
+              <div className="h-7 w-16 rounded-lg bg-[var(--bg-secondary)]" />
+              <div className="h-8 w-16 rounded-md bg-[var(--bg-secondary)]" />
+              <div className="h-8 w-8 rounded-lg bg-[var(--bg-secondary)]" />
+            </div>
           ))}
         </div>
       </div>

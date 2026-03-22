@@ -8,6 +8,7 @@ import {
   ArrowLeft, ArrowRight, Trash2, AlertTriangle,
   Lock, CheckCircle,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
@@ -20,7 +21,10 @@ const DANGER_BG  = '#ef444412';
 export default function DangerZonePage() {
   const router  = useRouter();
   const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
   const { logout } = useAuthStore();
+
+  const CONFIRM_KEYWORD = t('danger.confirmKeyword');
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [password, setPassword]               = useState('');
@@ -30,15 +34,14 @@ export default function DangerZonePage() {
   const [showSuccess, setShowSuccess]         = useState(false);
 
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
-  const CONFIRM_KEYWORD = 'حذف';
 
   const handleDeleteAccount = async () => {
     if (confirmText.trim() !== CONFIRM_KEYWORD) {
-      setDeleteError(`اكتب كلمة "${CONFIRM_KEYWORD}" للتأكيد`);
+      setDeleteError(t('danger.confirmKeywordLabel', { keyword: CONFIRM_KEYWORD }));
       return;
     }
     if (!password.trim()) {
-      setDeleteError('أدخل كلمة المرور للتأكيد');
+      setDeleteError(t('danger.enterPassword'));
       return;
     }
 
@@ -58,11 +61,11 @@ export default function DangerZonePage() {
     } catch (err: unknown) {
       const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       if (code === 'INVALID_PASSWORD' || code === 'WRONG_PASSWORD') {
-        setDeleteError('كلمة المرور غير صحيحة');
+        setDeleteError(t('danger.wrongPassword'));
       } else if (code === 'INVALID_CONFIRMATION') {
-        setDeleteError(`اكتب كلمة "${CONFIRM_KEYWORD}" بالضبط`);
+        setDeleteError(t('danger.exactKeyword', { keyword: CONFIRM_KEYWORD }));
       } else {
-        setDeleteError('حدث خطأ — حاول مرة أخرى');
+        setDeleteError(t('common.error'));
       }
     } finally {
       setDeleting(false);
@@ -71,12 +74,12 @@ export default function DangerZonePage() {
 
   const openDeleteModal = () => {
     Alert.alert(
-      'حذف الحساب',
-      'هذا الإجراء لا يمكن التراجع عنه. ستُحذف جميع بياناتك نهائياً بعد 30 يوماً.',
+      t('danger.deleteAccount'),
+      t('danger.alertMsg'),
       [
-        { text: 'إلغاء', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'متابعة',
+          text: t('danger.proceed'),
           style: 'destructive',
           onPress: () => {
             setPassword('');
@@ -108,9 +111,9 @@ export default function DangerZonePage() {
           <BackIcon size={16} color={colors.textSub} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: DANGER_RED, fontSize: FONT.lg, fontWeight: WEIGHT.bold }}>المنطقة الخطرة</Text>
+          <Text style={{ color: DANGER_RED, fontSize: FONT.lg, fontWeight: WEIGHT.bold }}>{t('danger.title')}</Text>
           <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 1 }}>
-            إجراءات لا يمكن التراجع عنها
+            {t('danger.subtitle')}
           </Text>
         </View>
       </View>
@@ -127,10 +130,10 @@ export default function DangerZonePage() {
           <AlertTriangle size={20} color={DANGER_RED} style={{ marginTop: 2 }} />
           <View style={{ flex: 1 }}>
             <Text style={{ color: DANGER_RED, fontSize: FONT.sm, fontWeight: WEIGHT.bold, marginBottom: 4 }}>
-              تحذير
+              {t('danger.warning')}
             </Text>
             <Text style={{ color: colors.textSub, fontSize: FONT.xs, lineHeight: 18 }}>
-              الإجراءات في هذه الصفحة خطيرة وقد تؤدي إلى فقدان بياناتك بشكل دائم. تأكد من قرارك قبل المتابعة.
+              {t('danger.warningText')}
             </Text>
           </View>
         </View>
@@ -148,19 +151,19 @@ export default function DangerZonePage() {
               <Trash2 size={20} color={DANGER_RED} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontSize: FONT.md, fontWeight: WEIGHT.bold }}>حذف الحساب</Text>
+              <Text style={{ color: colors.text, fontSize: FONT.md, fontWeight: WEIGHT.bold }}>{t('danger.deleteAccount')}</Text>
               <Text style={{ color: colors.textMuted, fontSize: FONT.xs, marginTop: 2 }}>
-                حذف نهائي لجميع بياناتك
+                {t('danger.deleteAccountSub')}
               </Text>
             </View>
           </View>
 
           <View style={{ gap: SPACE.sm }}>
             {[
-              'ستُحذف محفظتك وتوقعاتك وأهدافك',
-              'لن تتمكن من استعادة حسابك بعد 30 يوماً',
-              'سيُلغى اشتراكك الحالي دون استرداد',
-              'سيتم حذف جميع بياناتك الشخصية',
+              t('danger.bullet1'),
+              t('danger.bullet2'),
+              t('danger.bullet3'),
+              t('danger.bullet4'),
             ].map((item) => (
               <View key={item} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.sm }}>
                 <View style={{
@@ -178,7 +181,7 @@ export default function DangerZonePage() {
           }}>
             <Lock size={13} color={colors.textMuted} />
             <Text style={{ color: colors.textMuted, fontSize: FONT.xs, flex: 1, lineHeight: 16 }}>
-              لديك 30 يوماً لإلغاء حذف الحساب عبر تسجيل الدخول مجدداً
+              {t('danger.recoveryNote')}
             </Text>
           </View>
 
@@ -193,7 +196,7 @@ export default function DangerZonePage() {
           >
             <Trash2 size={16} color="#fff" />
             <Text style={{ color: '#fff', fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>
-              حذف حسابي نهائياً
+              {t('danger.deleteButton')}
             </Text>
           </Pressable>
         </View>
@@ -219,7 +222,7 @@ export default function DangerZonePage() {
           {/* Modal header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ color: DANGER_RED, fontSize: FONT.md, fontWeight: WEIGHT.bold }}>
-              تأكيد حذف الحساب
+              {t('danger.confirmTitle')}
             </Text>
             {!deleting && (
               <Pressable onPress={() => setShowDeleteModal(false)}>
@@ -241,9 +244,7 @@ export default function DangerZonePage() {
           {/* Confirm keyword */}
           <View style={{ gap: 6 }}>
             <Text style={{ color: colors.textSub, fontSize: FONT.xs }}>
-              اكتب كلمة{' '}
-              <Text style={{ color: DANGER_RED, fontWeight: WEIGHT.bold }}>"{CONFIRM_KEYWORD}"</Text>
-              {' '}للتأكيد
+              {t('danger.confirmKeywordLabel', { keyword: CONFIRM_KEYWORD })}
             </Text>
             <TextInput
               value={confirmText}
@@ -257,14 +258,15 @@ export default function DangerZonePage() {
                 borderColor: confirmText === CONFIRM_KEYWORD ? DANGER_RED + '60' : colors.border,
                 borderWidth: 1, borderRadius: RADIUS.xl,
                 paddingHorizontal: SPACE.md, paddingVertical: 12,
-                fontSize: FONT.sm, fontWeight: WEIGHT.bold, textAlign: 'right',
+                fontSize: FONT.sm, fontWeight: WEIGHT.bold,
+                textAlign: isRTL ? 'right' : 'left',
               }}
             />
           </View>
 
           {/* Password */}
           <View style={{ gap: 6 }}>
-            <Text style={{ color: colors.textSub, fontSize: FONT.xs }}>كلمة المرور الحالية</Text>
+            <Text style={{ color: colors.textSub, fontSize: FONT.xs }}>{t('danger.currentPassword')}</Text>
             <TextInput
               value={password}
               onChangeText={setPassword}
@@ -277,7 +279,8 @@ export default function DangerZonePage() {
                 borderColor: colors.border, borderWidth: 1,
                 borderRadius: RADIUS.xl,
                 paddingHorizontal: SPACE.md, paddingVertical: 12,
-                fontSize: FONT.sm, textAlign: 'right',
+                fontSize: FONT.sm,
+                textAlign: isRTL ? 'right' : 'left',
               }}
             />
           </View>
@@ -295,7 +298,7 @@ export default function DangerZonePage() {
             {deleting
               ? <ActivityIndicator color="#fff" />
               : <Text style={{ color: '#fff', fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>
-                  تأكيد الحذف النهائي
+                  {t('danger.confirmDelete')}
                 </Text>
             }
           </Pressable>
@@ -316,12 +319,12 @@ export default function DangerZonePage() {
               <CheckCircle size={32} color="#4ade80" />
             </View>
             <Text style={{ color: colors.text, fontSize: FONT.lg, fontWeight: WEIGHT.bold }}>
-              تم جدولة الحذف
+              {t('danger.scheduledTitle')}
             </Text>
             <Text style={{ color: colors.textMuted, fontSize: FONT.sm, textAlign: 'center', lineHeight: 20 }}>
-              سيُحذف حسابك نهائياً بعد 30 يوماً. يمكنك إلغاء الحذف بتسجيل الدخول خلال هذه المدة.
+              {t('danger.scheduledMsg')}
             </Text>
-            <Text style={{ color: BRAND, fontSize: FONT.xs }}>جاري تسجيل الخروج...</Text>
+            <Text style={{ color: BRAND, fontSize: FONT.xs }}>{t('danger.loggingOut')}</Text>
           </View>
         </View>
       </Modal>

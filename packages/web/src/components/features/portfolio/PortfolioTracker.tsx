@@ -127,6 +127,25 @@ export default function PortfolioTracker() {
     }
   };
 
+  // Aggregate duplicate tickers by WACC for the Holdings view
+  const aggregatedHoldings = useMemo(() => {
+    const map = new Map<string, { ticker: string; shares: number; totalCost: number }>();
+    for (const h of holdings) {
+      if (map.has(h.ticker)) {
+        const e = map.get(h.ticker)!;
+        e.totalCost += h.avgPrice * h.shares;
+        e.shares += h.shares;
+      } else {
+        map.set(h.ticker, { ticker: h.ticker, shares: h.shares, totalCost: h.avgPrice * h.shares });
+      }
+    }
+    return Array.from(map.values()).map(({ ticker, shares, totalCost }) => ({
+      ticker,
+      shares,
+      avgPrice: shares > 0 ? totalCost / shares : 0,
+    }));
+  }, [holdings]);
+
   const chartData = useMemo(() => {
     const sectorData: Record<string, number> = {};
     holdings.forEach(h => {
@@ -221,7 +240,7 @@ export default function PortfolioTracker() {
             <PieChartIcon className="w-4 h-4" />
             <span className="text-sm font-medium uppercase tracking-wider">{t('portfolio.holdingsCount')}</span>
           </div>
-          <p className="text-3xl font-bold">{holdings.length}</p>
+          <p className="text-3xl font-bold">{aggregatedHoldings.length}</p>
         </div>
       </div>
 
@@ -236,7 +255,7 @@ export default function PortfolioTracker() {
           </div>
 
           <div className="card-base overflow-hidden">
-            {holdings.length === 0 && !isLoading ? (
+            {aggregatedHoldings.length === 0 && !isLoading ? (
               <EmptyState
                 icon={PieChartIcon}
                 title={t('portfolio.emptyTitle')}
@@ -254,27 +273,24 @@ export default function PortfolioTracker() {
                     <th className="px-6 py-4 font-medium">{t('portfolio.avgPrice')}</th>
                     <th className="px-6 py-4 font-medium">{t('portfolio.currentPrice')}</th>
                     <th className="px-6 py-4 font-medium">{t('portfolio.pnl')}</th>
-                    <th className="px-6 py-4 font-medium"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border-subtle)]">
-                  {holdings.map(h => {
+                  {aggregatedHoldings.map(h => {
                     const currentPrice = livePrices[h.ticker]?.price || h.avgPrice;
                     const profit = (currentPrice - h.avgPrice) * h.shares;
                     const profitPercent = h.avgPrice > 0 ? ((currentPrice - h.avgPrice) / h.avgPrice) * 100 : 0;
                     const lang = isRTL ? 'ar' : 'en';
-                    const info = getStockInfo(h.ticker);
 
                     return (
-                      <tr key={h.id} className="hover:bg-[var(--bg-card-hover)] transition-colors">
+                      <tr key={h.ticker} className="hover:bg-[var(--bg-card-hover)] transition-colors">
                         <td className="px-6 py-4">
                           <div className="font-bold">{getStockName(h.ticker, lang)}</div>
                           <div className="text-xs text-[var(--text-muted)]">{h.ticker}</div>
-                          {info?.nameEn && <div className="text-xs text-[var(--text-secondary)] mt-0.5">{info.nameEn}</div>}
                         </td>
                         <td className="px-6 py-4 font-mono">{h.shares.toLocaleString()}</td>
-                        <td className="px-6 py-4 font-mono">{h.avgPrice.toLocaleString()}</td>
-                        <td className="px-6 py-4 font-mono">{currentPrice.toLocaleString()}</td>
+                        <td className="px-6 py-4 font-mono">{h.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="px-6 py-4 font-mono">{currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         <td className="px-6 py-4">
                           <div className={`font-bold ${profit >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
                             {profit >= 0 ? '+' : ''}{profit.toLocaleString(undefined, { maximumFractionDigits: 2 })}
@@ -282,11 +298,6 @@ export default function PortfolioTracker() {
                           <div className={`text-xs ${profit >= 0 ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'}`}>
                             {profitPercent.toFixed(2)}%
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Button type="button" variant="ghost" size="sm" onClick={() => handleDelete(h.id)} className="p-2 text-[var(--text-muted)] hover:text-[var(--danger)]">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
                         </td>
                       </tr>
                     );

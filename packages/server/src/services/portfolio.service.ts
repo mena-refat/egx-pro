@@ -8,7 +8,7 @@ import { UserRepository } from '../repositories/user.repository.ts';
 import type { AuthUser } from '../routes/types.ts';
 
 export const PortfolioService = {
-  async getPortfolio(userId: number, page?: number, limit?: number) {
+  async getPortfolio(userId: number, page?: number, limit?: number, aggregate = false) {
     const user = await UserRepository.getPlanUser(userId);
     void user;
     const pageNum = page != null ? Math.max(1, page) : 1;
@@ -18,7 +18,28 @@ export const PortfolioService = {
     const take = usePagination ? limitNum : undefined;
     const [holdings, total] = await PortfolioRepository.findByUser(userId, skip, take);
 
-    const tickers = holdings.map((h) => h.ticker);
+    // Aggregate duplicate tickers by WACC when requested
+    const resolvedHoldings = aggregate
+      ? (() => {
+          const map = new Map<string, { id: string; ticker: string; userId: number; shares: number; totalCost: number; buyDate: Date; createdAt: Date; updatedAt: Date }>();
+          for (const h of holdings) {
+            if (map.has(h.ticker)) {
+              const e = map.get(h.ticker)!;
+              e.totalCost += h.avgPrice * h.shares;
+              e.shares += h.shares;
+            } else {
+              map.set(h.ticker, { ...h, totalCost: h.avgPrice * h.shares });
+            }
+          }
+          return Array.from(map.values()).map(({ totalCost, shares, ...rest }) => ({
+            ...rest,
+            shares,
+            avgPrice: shares > 0 ? totalCost / shares : 0,
+          }));
+        })()
+      : holdings;
+
+    const tickers = resolvedHoldings.map((h) => h.ticker);
     const priceMap = new Map<string, { price: number; isDelayed?: boolean; priceTime?: string }>();
     const quotes = await marketDataService.getQuotes(tickers);
     quotes.forEach((q, symbol) => {
@@ -27,7 +48,7 @@ export const PortfolioService = {
 
     let totalValue = 0;
     let totalCost = 0;
-    const enrichedHoldings = holdings.map((holding) => {
+    const enrichedHoldings = resolvedHoldings.map((holding) => {
       const currentPriceData = priceMap.get(holding.ticker);
       const currentPrice = currentPriceData?.price ?? holding.avgPrice;
       const currentValue = currentPrice * holding.shares;

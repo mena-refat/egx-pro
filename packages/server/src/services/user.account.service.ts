@@ -6,7 +6,7 @@ import { RefreshTokenRepository } from '../repositories/refreshToken.repository.
 import { ReferralRepository } from '../repositories/referral.repository.ts';
 import { createNotification } from '../lib/createNotification.ts';
 import { auditLog } from '../lib/audit.ts';
-import { verifyPassword } from '../lib/auth.ts';
+import { verifyPassword, hashRefreshToken } from '../lib/auth.ts';
 import { AppError } from '../lib/errors.ts';
 import { REFERRAL_REQUIRED } from '../lib/constants/plans.ts';
 
@@ -122,8 +122,14 @@ export const UserAccountService = {
     return { success: true, referrerName: referrer.fullName || 'صاحب الدعوة' };
   },
 
-  async getSessions(userId: number) {
+  async getSessions(userId: number, currentRefreshToken?: string) {
     const list = await RefreshTokenRepository.findActiveSessions(userId);
+    let currentSessionId: string | null = null;
+    if (currentRefreshToken) {
+      const hash = hashRefreshToken(currentRefreshToken);
+      const current = await RefreshTokenRepository.findByTokenSelect(hash, { id: true });
+      if (current) currentSessionId = (current as { id: string }).id;
+    }
     return list.map((s) => ({
       id: s.id,
       deviceType: s.deviceType ?? undefined,
@@ -134,7 +140,7 @@ export const UserAccountService = {
       country: s.country ?? undefined,
       createdAt: s.createdAt,
       expiresAt: s.expiresAt,
-      isCurrentSession: false,
+      isCurrentSession: currentSessionId ? s.id === currentSessionId : false,
     }));
   },
 
@@ -142,7 +148,15 @@ export const UserAccountService = {
     await RefreshTokenRepository.updateMany({ id: sessionId, userId }, { isRevoked: true });
   },
 
-  async revokeAllOtherSessions(userId: number) {
+  async revokeAllOtherSessions(userId: number, currentRefreshToken?: string) {
+    if (currentRefreshToken) {
+      const hash = hashRefreshToken(currentRefreshToken);
+      const current = await RefreshTokenRepository.findByTokenSelect(hash, { id: true });
+      if (current) {
+        await RefreshTokenRepository.revokeAllByUserExcept(userId, (current as { id: string }).id);
+        return;
+      }
+    }
     await RefreshTokenRepository.revokeAllByUser(userId);
   },
 

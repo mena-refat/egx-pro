@@ -60,25 +60,25 @@ interface CompletionData {
   missing?: { field: string; route: string }[];
 }
 
-function fieldLabel(field: string): string {
+function fieldLabel(field: string, tFn: (k: string) => string): string {
   const map: Record<string, string> = {
-    email: 'البريد الإلكتروني',
-    phone: 'رقم الهاتف',
-    username: 'اسم المستخدم',
-    goal: 'هدفك الاستثماري',
-    watchlist: 'قائمة المتابعة',
-    fullName: 'الاسم الكامل',
+    email:    tFn('profile.fieldEmail'),
+    phone:    tFn('profile.fieldPhone'),
+    username: tFn('profile.fieldUsername'),
+    goal:     tFn('profile.fieldGoal'),
+    watchlist: tFn('profile.fieldWatchlist'),
+    fullName:  tFn('profile.fieldFullName'),
   };
   return map[field] ?? field;
 }
 
 type ProfileTab = 'overview' | 'investor' | 'achievements' | 'referral';
 
-const PROFILE_TABS: { id: ProfileTab; label: string; icon: typeof UserIcon }[] = [
-  { id: 'overview',     label: 'نظرة عامة',     icon: UserIcon  },
-  { id: 'investor',     label: 'ملف المستثمر',  icon: TrendingUp },
-  { id: 'achievements', label: 'الإنجازات',     icon: Award     },
-  { id: 'referral',     label: 'الإحالة',       icon: Gift      },
+const PROFILE_TAB_DEFS: { id: ProfileTab; labelKey: string; icon: typeof UserIcon }[] = [
+  { id: 'overview',     labelKey: 'profile.tabOverview',     icon: UserIcon  },
+  { id: 'investor',     labelKey: 'profile.tabInvestor',     icon: TrendingUp },
+  { id: 'achievements', labelKey: 'profile.tabAchievements', icon: Award     },
+  { id: 'referral',     labelKey: 'profile.tabReferral',     icon: Gift      },
 ];
 
 // ── Inner component (consumes dirty context + handles navigation blocking) ────
@@ -116,6 +116,7 @@ function ProfilePageInner() {
     totalPoints?: number;
     bestStreak?: number;
   } | null>(null);
+  const [predictionStatsLoading, setPredictionStatsLoading] = useState(true);
 
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [completion, setCompletion] = useState<CompletionData | null>(null);
@@ -163,15 +164,19 @@ function ProfilePageInner() {
   useEffect(() => {
     if (!profileUser?.username) return;
     let cancelled = false;
+    setPredictionStatsLoading(true);
     void fetchMyStats(profileUser.username).then((s) => {
-      if (cancelled || !s || ('private' in s && (s as { private?: boolean }).private)) return;
-      setPredictionStats({
-        rank: (s as { rank?: string }).rank ?? 'BEGINNER',
-        totalPredictions: (s as { totalPredictions?: number }).totalPredictions ?? 0,
-        accuracyRate: (s as { accuracyRate?: number }).accuracyRate,
-        totalPoints: (s as { totalPoints?: number }).totalPoints,
-        bestStreak: (s as { bestStreak?: number }).bestStreak,
-      });
+      if (cancelled) return;
+      if (s && !('private' in s && (s as { private?: boolean }).private)) {
+        setPredictionStats({
+          rank: (s as { rank?: string }).rank ?? 'BEGINNER',
+          totalPredictions: (s as { totalPredictions?: number }).totalPredictions ?? 0,
+          accuracyRate: (s as { accuracyRate?: number }).accuracyRate,
+          totalPoints: (s as { totalPoints?: number }).totalPoints,
+          bestStreak: (s as { bestStreak?: number }).bestStreak,
+        });
+      }
+      setPredictionStatsLoading(false);
     });
     return () => { cancelled = true; };
   }, [profileUser?.username, fetchMyStats]);
@@ -261,7 +266,7 @@ function ProfilePageInner() {
                 {stats?.daysSinceJoined != null && (
                   <p className="text-xs text-[var(--text-muted)] mt-1.5 flex items-center gap-1">
                     <CalendarCheck className="w-3.5 h-3.5" />
-                    عضو منذ {stats.daysSinceJoined} يوم
+                    {t('profile.memberSince', { days: stats.daysSinceJoined })}
                   </p>
                 )}
               </div>
@@ -273,7 +278,7 @@ function ProfilePageInner() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors shrink-0"
             >
               <Settings className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">تعديل</span>
+              <span className="hidden sm:inline">{t('profile.edit')}</span>
             </button>
           </div>
 
@@ -290,7 +295,7 @@ function ProfilePageInner() {
 
       {/* ── Profile Tabs ── */}
       <div className="flex gap-1 border-b border-[var(--border)] -mx-0">
-        {PROFILE_TABS.map((tab) => {
+        {PROFILE_TAB_DEFS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
@@ -307,7 +312,7 @@ function ProfilePageInner() {
               `}
             >
               <Icon className="w-4 h-4 shrink-0" />
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           );
         })}
@@ -320,7 +325,7 @@ function ProfilePageInner() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               {
-                label: 'قيمة المحفظة',
+                label: t('profile.statPortfolioValue'),
                 value: stats?.portfolioValue ? `${Math.round(stats.portfolioValue).toLocaleString('en-US')}` : '-',
                 unit: stats?.portfolioValue ? 'EGP' : undefined,
                 icon: Wallet,
@@ -328,21 +333,21 @@ function ProfilePageInner() {
                 bg: 'bg-[var(--brand)]/8',
               },
               {
-                label: 'تحليلات AI',
+                label: t('profile.statAiAnalyses'),
                 value: stats?.analysesCount ?? '-',
                 icon: BarChart2,
                 color: 'text-violet-400',
                 bg: 'bg-violet-400/8',
               },
               {
-                label: 'المراقبة',
+                label: t('profile.statWatchlist'),
                 value: stats?.watchlistCount ?? '-',
                 icon: Star,
                 color: 'text-amber-400',
                 bg: 'bg-amber-400/8',
               },
               {
-                label: 'إجمالي التوقعات',
+                label: t('profile.statTotalPredictions'),
                 value: predictionStats?.totalPredictions ?? '-',
                 icon: Crosshair,
                 color: 'text-emerald-400',
@@ -368,7 +373,7 @@ function ProfilePageInner() {
           {completion?.percentage != null && completion.percentage < 100 && (
             <div className="rounded-xl border border-amber-400/40 bg-amber-400/8 p-4">
               <div className="flex items-center justify-between mb-2.5">
-                <span className="text-sm font-semibold text-amber-400">أكمل ملفك الشخصي</span>
+                <span className="text-sm font-semibold text-amber-400">{t('profile.completeProfile')}</span>
                 <span className="text-sm font-bold text-amber-400">{completion.percentage}%</span>
               </div>
               <div className="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden mb-3">
@@ -385,47 +390,49 @@ function ProfilePageInner() {
                     onClick={() => navigate(m.route)}
                     className="text-xs px-2.5 py-1 rounded-lg bg-amber-400/15 text-amber-400 hover:bg-amber-400/25 transition-colors font-medium"
                   >
-                    + {fieldLabel(m.field)}
+                    + {fieldLabel(m.field, t)}
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Prediction stats */}
-          {predictionStats && (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-[var(--brand)]/10 flex items-center justify-center">
-                    <Trophy className="w-4 h-4 text-[var(--brand)]" />
-                  </div>
-                  <span className="font-semibold text-[var(--text-primary)] text-sm">إحصائيات التوقعات</span>
+          {/* Prediction stats — always visible, skeleton while loading */}
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[var(--brand)]/10 flex items-center justify-center">
+                  <Trophy className="w-4 h-4 text-[var(--brand)]" />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => navigate('/predictions')}
-                  className="text-xs text-[var(--brand)] hover:underline flex items-center gap-0.5"
-                >
-                  عرض الكل
-                  <ChevronEnd className="w-3.5 h-3.5" />
-                </button>
+                <span className="font-semibold text-[var(--text-primary)] text-sm">{t('predictions.statsSection')}</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {[
-                  { label: 'المستوى', value: t(rankKey, { defaultValue: predictionStats.rank }) },
-                  { label: 'الدقة', value: predictionStats.accuracyRate != null ? `${Math.round(predictionStats.accuracyRate)}%` : '-' },
-                  { label: 'النقاط', value: predictionStats.totalPoints != null ? predictionStats.totalPoints.toLocaleString('en-US') : '-' },
-                  { label: 'أفضل سلسلة', value: predictionStats.bestStreak ? `${predictionStats.bestStreak} ✓` : '-' },
-                ].map((item) => (
-                  <div key={item.label} className="p-3 rounded-xl bg-[var(--bg-secondary)] text-center">
-                    <p className="text-base font-bold text-[var(--text-primary)]">{item.value}</p>
-                    <p className="text-xs text-[var(--text-muted)] mt-0.5">{item.label}</p>
-                  </div>
-                ))}
-              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/predictions')}
+                className="text-xs text-[var(--brand)] hover:underline flex items-center gap-0.5"
+              >
+                {t('profile.viewAll')}
+                <ChevronEnd className="w-3.5 h-3.5" />
+              </button>
             </div>
-          )}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {[
+                { label: t('predictions.statLevel'),      value: predictionStats ? t(rankKey, { defaultValue: predictionStats.rank }) : null },
+                { label: t('predictions.statAccuracy'),   value: predictionStats?.accuracyRate != null ? `${Math.round(predictionStats.accuracyRate)}%` : null },
+                { label: t('predictions.statPoints'),     value: predictionStats?.totalPoints != null ? predictionStats.totalPoints.toLocaleString('en-US') : null },
+                { label: t('predictions.statBestStreak'), value: predictionStats?.bestStreak ? `${predictionStats.bestStreak} ✓` : null },
+              ].map((item) => (
+                <div key={item.label} className="p-3 rounded-xl bg-[var(--bg-secondary)] text-center">
+                  {predictionStatsLoading ? (
+                    <div className="h-6 w-12 mx-auto rounded-md bg-[var(--border)] animate-pulse mb-1" />
+                  ) : (
+                    <p className="text-base font-bold text-[var(--text-primary)]">{item.value ?? '-'}</p>
+                  )}
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">{item.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </>
       )}
 

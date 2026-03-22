@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Search, ChevronDown, ChevronUp,
   BarChart2, Eye, EyeOff, DollarSign,
+  Newspaper, TrendingUp, TrendingDown, Clock,
 } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { MarketStatusBadge } from '../../components/shared/MarketStatusBadge';
@@ -291,6 +292,110 @@ function IndicesSection({ overview, loading }: { overview: MarketOverview | null
   );
 }
 
+// ─── NewsFooterSection ───────────────────────────────────────────
+type NewsItem = {
+  id?: string; title: string; url: string; source: string;
+  publishedAt: string; summary?: string; sentiment?: string | null;
+};
+
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60_000);
+  const h = Math.floor(diff / 3_600_000);
+  const d = Math.floor(diff / 86_400_000);
+  if (m < 60) return `منذ ${Math.max(1, m)} د`;
+  if (h < 24) return `منذ ${h} س`;
+  return `منذ ${d} ي`;
+}
+
+function NewsFooterSection({ news }: { news: NewsItem[] }) {
+  const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
+  const router = useRouter();
+
+  const recent = useMemo(() => {
+    const sorted = [...news].sort((a, b) => {
+      const ta = new Date(a.publishedAt).getTime();
+      const tb = new Date(b.publishedAt).getTime();
+      return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
+    });
+    const now = new Date();
+    const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+    const twoDaysAgo = new Date(todayStart); twoDaysAgo.setDate(todayStart.getDate() - 1);
+    const tomorrow   = new Date(todayStart); tomorrow.setDate(todayStart.getDate() + 1);
+    const filtered = sorted.filter((item) => {
+      const t = new Date(item.publishedAt).getTime();
+      return Number.isFinite(t) && t >= twoDaysAgo.getTime() && t < tomorrow.getTime();
+    });
+    return filtered.length > 0 ? filtered : sorted.slice(0, 5);
+  }, [news]);
+
+  if (recent.length === 0) return <View style={{ height: 32 }} />;
+
+  return (
+    <View style={{ marginHorizontal: SPACE.lg, marginTop: SPACE.lg, marginBottom: SPACE.xl }}>
+      {/* Header */}
+      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.sm }}>
+        <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: SPACE.sm }}>
+          <View style={{ width: 26, height: 26, borderRadius: RADIUS.sm, backgroundColor: 'rgba(59,130,246,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+            <Newspaper size={13} color="#3b82f6" />
+          </View>
+          <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('dashboard.news')}</Text>
+        </View>
+        <Pressable onPress={() => router.push('/news')} style={{ paddingVertical: 4, paddingHorizontal: SPACE.sm }}>
+          <Text style={{ color: BRAND, fontSize: FONT.xs, fontWeight: WEIGHT.semibold }}>{t('dashboard.seeAll')}</Text>
+        </Pressable>
+      </View>
+
+      {/* Cards */}
+      <View style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, overflow: 'hidden' }}>
+        {recent.slice(0, 5).map((item, i) => {
+          const s = item.sentiment?.toLowerCase();
+          const accentCol =
+            s === 'positive' || s === 'bullish' ? '#16a34a'
+            : s === 'negative' || s === 'bearish' ? '#dc2626'
+            : colors.border;
+          const SentIcon =
+            s === 'positive' || s === 'bullish' ? TrendingUp
+            : s === 'negative' || s === 'bearish' ? TrendingDown
+            : null;
+          return (
+            <Pressable
+              key={item.url || i}
+              onPress={() => router.push('/news')}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                backgroundColor: pressed ? colors.hover : 'transparent',
+                borderBottomWidth: i < Math.min(recent.length, 5) - 1 ? 1 : 0,
+                borderBottomColor: colors.border,
+              })}
+            >
+              {/* Sentiment strip */}
+              <View style={{ width: 3, backgroundColor: accentCol }} />
+              <View style={{ flex: 1, paddingHorizontal: SPACE.md, paddingVertical: SPACE.md, gap: 4 }}>
+                <Text style={{ color: colors.text, fontSize: FONT.sm, fontWeight: WEIGHT.semibold, lineHeight: 20 }} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
+                  {SentIcon && <SentIcon size={11} color={accentCol} />}
+                  <Text style={{ color: colors.textMuted, fontSize: 10 }} numberOfLines={1}>
+                    {item.source}
+                  </Text>
+                  <Text style={{ color: colors.border, fontSize: 10 }}>·</Text>
+                  <Clock size={10} color={colors.textMuted} />
+                  <Text style={{ color: colors.textMuted, fontSize: 10 }}>
+                    {relativeTime(item.publishedAt)}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 // ─── MarketListHeader ────────────────────────────────────────────
 interface HeaderProps {
   overview: MarketOverview | null;
@@ -358,7 +463,7 @@ export default function MarketPage() {
   const isCompact = width < 380;
   const [tab, setTab] = useState<TrendTab>('gainers');
   const [search, setSearch] = useState('');
-  const { overview, stocks, loadingStocks, loadingOverview, refreshing, refresh } = useMarketData();
+  const { overview, stocks, news, loadingStocks, loadingOverview, refreshing, refresh } = useMarketData();
 
   const [visibleTickers, setVisibleTickers] = useState<string[]>([]);
   const { prices } = useLivePrices(visibleTickers);
@@ -471,7 +576,7 @@ export default function MarketPage() {
           getItemLayout={getItemLayout}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
-          ListFooterComponent={<View style={{ height: 32 }} />}
+          ListFooterComponent={<NewsFooterSection news={news as NewsItem[]} />}
           initialNumToRender={15}
           maxToRenderPerBatch={10}
           windowSize={5}

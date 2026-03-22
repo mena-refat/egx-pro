@@ -18,7 +18,18 @@ export function useMarketData() {
   const [overview, setOverview] = useState<MarketOverview | null>(null);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [news, setNews] = useState<
-    { id: string; title: string; publishedAt: string; source: string; url: string }[]
+    {
+      id?: string;
+      title: string;
+      url: string;
+      source: string;
+      sourceType?: string;
+      publishedAt: string;
+      summary?: string;
+      sentiment?: string | null;
+      tickers?: string[];
+      isMarketWide?: boolean;
+    }[]
   >([]);
   const [loadingStocks, setLoadingStocks] = useState(true);
   const [loadingOverview, setLoadingOverview] = useState(true);

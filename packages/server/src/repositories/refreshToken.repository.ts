@@ -19,6 +19,9 @@ export const RefreshTokenRepository = {
   revokeAllByUser(userId: number) {
     return prisma.refreshToken.updateMany({ where: { userId }, data: { isRevoked: true } });
   },
+  revokeAllByUserExcept(userId: number, excludeId: string) {
+    return prisma.refreshToken.updateMany({ where: { userId, id: { not: excludeId } }, data: { isRevoked: true } });
+  },
   findActiveSessions(userId: number) {
     return prisma.refreshToken.findMany({
       where: { userId, isRevoked: false, expiresAt: { gt: new Date() } },

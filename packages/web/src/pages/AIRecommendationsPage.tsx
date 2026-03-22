@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, Sparkles, UserCog, ArrowRight } from 'lucide-react';
 import api, { ANALYSIS_TIMEOUT_MS } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { useProfileGuard } from '../hooks/useProfileGuard';
@@ -81,6 +81,31 @@ export default function AIRecommendationsPage() {
         <h1 className={styles.title}>{t('ai.personalRecommendations')}</h1>
         <p className={styles.subtitle}>{t('ai.personalRecommendationsDesc')}</p>
       </header>
+
+      {/* Investor profile tip */}
+      {!result && !loading && (
+        <div className="mx-auto w-full max-w-xl rounded-2xl border border-[var(--brand)]/20 bg-[var(--brand)]/5 px-4 py-3.5 flex gap-3 items-start mb-6">
+          <div className="shrink-0 mt-0.5 w-8 h-8 rounded-xl bg-[var(--brand)]/10 flex items-center justify-center">
+            <UserCog className="w-4 h-4 text-[var(--brand)]" aria-hidden />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-[var(--text-primary)] mb-0.5">
+              {t('ai.investorProfileTipTitle')}
+            </p>
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+              {t('ai.investorProfileTipBody')}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/profile?tab=investor')}
+              className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)] hover:underline"
+            >
+              {t('ai.investorProfileTipCta')}
+              <ArrowRight className="w-3 h-3 rtl:rotate-180" aria-hidden />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className={styles.form}>
         <Button

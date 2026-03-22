@@ -160,7 +160,9 @@ export const UserController = {
     const id = userId(req);
     if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
-      const list = await UserService.getSessions(id);
+      const rawHeader = req.headers['x-refresh-token'];
+      const refreshToken = typeof rawHeader === 'string' ? rawHeader : undefined;
+      const list = await UserService.getSessions(id, refreshToken);
       sendSuccess(res, list);
     } catch (err) {
       logger.error('Sessions list error:', err);
@@ -185,7 +187,9 @@ export const UserController = {
     const id = userId(req);
     if (!id) return sendError(res, 'UNAUTHORIZED', 401);
     try {
-      await UserService.revokeAllOtherSessions(id);
+      const rawHeader = req.headers['x-refresh-token'];
+      const refreshToken = typeof rawHeader === 'string' ? rawHeader : undefined;
+      await UserService.revokeAllOtherSessions(id, refreshToken);
       sendSuccess(res, { success: true });
     } catch (err) {
       logger.error('Revoke all sessions error', { err });

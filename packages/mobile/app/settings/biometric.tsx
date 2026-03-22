@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Fingerprint, Hash } from 'lucide-react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
+import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { Button } from '../../components/ui/Button';
 import { OTPInput } from '../../components/ui/OTPInput';
@@ -20,6 +21,7 @@ export default function BiometricPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
 
   const [supported, setSupported] = useState(false);
   const [enrolled, setEnrolled] = useState(false);
@@ -50,22 +52,22 @@ export default function BiometricPage() {
 
   const enableBiometric = async () => {
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'تأكيد تفعيل الدخول بالبصمة',
-      cancelLabel: 'إلغاء',
+      promptMessage: t('security.biometricPrompt'),
+      cancelLabel: t('common.cancel'),
     });
     if (!result.success) return;
 
     const existing = await SecureStore.getItemAsync(BIOMETRIC_CREDS_KEY).catch(() => null);
     if (existing) {
       setBiometricEnabled(true);
-      Alert.alert('تم التفعيل ✓', 'يمكنك الآن الدخول بالبصمة');
+      Alert.alert(t('security.enabledTitle'), t('security.biometricEnabledMsg'));
       return;
     }
 
     // User is already authenticated — save their identifier now
     const emailOrPhone = user?.email ?? user?.phone ?? '';
     if (!emailOrPhone) {
-      Alert.alert('خطأ', 'تعذّر قراءة بيانات المستخدم');
+      Alert.alert(t('common.error'), t('security.userDataError'));
       return;
     }
 
@@ -75,14 +77,14 @@ export default function BiometricPage() {
       { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY },
     );
     setBiometricEnabled(true);
-    Alert.alert('تم التفعيل ✓', 'يمكنك الآن الدخول بالبصمة');
+    Alert.alert(t('security.enabledTitle'), t('security.biometricEnabledMsg'));
   };
 
   const disableBiometric = () => {
-    Alert.alert('تعطيل الدخول بالبصمة', 'هل أنت متأكد؟', [
-      { text: 'إلغاء', style: 'cancel' },
+    Alert.alert(t('security.disableBiometricTitle'), t('security.confirmQuestion'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'تعطيل',
+        text: t('security.disable'),
         style: 'destructive',
         onPress: async () => {
           await SecureStore.deleteItemAsync(BIOMETRIC_CREDS_KEY).catch(() => null);
@@ -105,7 +107,7 @@ export default function BiometricPage() {
 
     if (pinStep === 'confirm') {
       if (pin !== pinFirst) {
-        setPinError('الـ PIN غير متطابق — حاول مرة أخرى');
+        setPinError(t('security.pinMismatch'));
         setPinFirst('');
         setPinStep('enter');
         resetPinInput();
@@ -117,14 +119,14 @@ export default function BiometricPage() {
       setPinEnabled(true);
       setPinStep('idle');
       setPinError(null);
-      Alert.alert('تم تفعيل PIN ✓', 'يمكنك الآن الدخول بالـ PIN');
+      Alert.alert(t('security.pinEnabledTitle'), t('security.pinEnabledMsg'));
       return;
     }
 
     if (pinStep === 'remove') {
       const storedPin = await SecureStore.getItemAsync(PIN_KEY).catch(() => null);
       if (!storedPin || storedPin !== pin) {
-        setPinError('الـ PIN غير صحيح');
+        setPinError(t('security.pinWrong'));
         resetPinInput();
         return;
       }
@@ -143,16 +145,16 @@ export default function BiometricPage() {
   };
 
   const pinStepTitle = pinStep === 'enter'
-    ? 'أدخل رمز PIN الجديد'
+    ? t('security.enterNewPin')
     : pinStep === 'confirm'
-    ? 'أكد رمز PIN'
-    : 'أدخل رمز PIN الحالي';
+    ? t('security.confirmPin')
+    : t('security.enterCurrentPin');
 
   const pinStepSub = pinStep === 'enter'
-    ? 'اختر رمزاً مكوناً من 6 أرقام'
+    ? t('security.enterNewPinSub')
     : pinStep === 'confirm'
-    ? 'أعد إدخال الرمز للتأكيد'
-    : 'أدخل رمزك الحالي لتعطيله';
+    ? t('security.confirmPinSub')
+    : t('security.enterCurrentPinSub');
 
   return (
     <ScreenWrapper padded={false}>
@@ -176,7 +178,7 @@ export default function BiometricPage() {
           {pinStep !== 'idle' ? <Hash size={15} color="#8b5cf6" /> : <Fingerprint size={15} color="#8b5cf6" />}
         </View>
         <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>
-          {pinStep !== 'idle' ? 'إعداد PIN' : 'البصمة والـ PIN'}
+          {pinStep !== 'idle' ? t('security.pinSetup') : t('security.biometricPin')}
         </Text>
       </View>
 
@@ -204,7 +206,7 @@ export default function BiometricPage() {
           )}
 
           <Pressable onPress={cancelPin} style={tw('py-3')}>
-            <Text style={[{ color: colors.textMuted }, tw('text-sm') ]}>إلغاء</Text>
+            <Text style={[{ color: colors.textMuted }, tw('text-sm') ]}>{t('common.cancel')}</Text>
           </Pressable>
         </View>
       ) : (
@@ -226,23 +228,23 @@ export default function BiometricPage() {
             </View>
             <View style={tw('items-center gap-1')}>
               <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>
-                {biometricEnabled ? 'الدخول بالبصمة مفعّل' : 'الدخول بالبصمة معطّل'}
+                {biometricEnabled ? t('security.biometricEnabled') : t('security.biometricDisabled')}
               </Text>
               <Text style={[{ color: colors.textSub }, tw('text-sm text-center leading-5')]}>
                 {!supported
-                  ? 'جهازك لا يدعم المصادقة البيومترية'
+                  ? t('security.biometricNotSupported')
                   : !enrolled
-                    ? 'أضف بصمة في إعدادات الجهاز أولاً'
+                    ? t('security.addBiometricFirst')
                     : biometricEnabled
-                      ? 'يمكنك الدخول للتطبيق بدون كلمة مرور'
-                      : 'فعّل للدخول بسرعة وأمان'}
+                      ? t('security.biometricLoginDesc')
+                      : t('security.enableBiometricDesc')}
               </Text>
             </View>
 
             {supported && enrolled && (
               biometricEnabled ? (
                 <Button
-                  label="تعطيل الدخول بالبصمة"
+                  label={t('security.disableBiometric')}
                   onPress={disableBiometric}
                   variant="danger"
                   fullWidth
@@ -250,7 +252,7 @@ export default function BiometricPage() {
                 />
               ) : (
                 <Button
-                  label="تفعيل الدخول بالبصمة"
+                  label={t('security.enableBiometric')}
                   onPress={enableBiometric}
                   fullWidth
                   size="lg"
@@ -276,18 +278,18 @@ export default function BiometricPage() {
             </View>
             <View style={tw('items-center gap-1')}>
               <Text style={[{ color: colors.text }, tw('text-base font-bold')]}>
-                {pinEnabled ? 'رمز PIN مفعّل' : 'رمز PIN معطّل'}
+                {pinEnabled ? t('security.pinEnabled') : t('security.pinDisabled')}
               </Text>
               <Text style={[{ color: colors.textSub }, tw('text-sm text-center leading-5')]}>
                 {pinEnabled
-                  ? 'يمكنك الدخول للتطبيق برمز 6 أرقام'
-                  : 'فعّل للدخول برمز سري من 6 أرقام'}
+                  ? t('security.pinLoginDesc')
+                  : t('security.enablePinDesc')}
               </Text>
             </View>
 
             {pinEnabled ? (
               <Button
-                label="تعطيل رمز PIN"
+                label={t('security.disablePin')}
                 onPress={() => { setPinError(null); setPinStep('remove'); }}
                 variant="danger"
                 fullWidth
@@ -295,7 +297,7 @@ export default function BiometricPage() {
               />
             ) : (
               <Button
-                label="إعداد رمز PIN"
+                label={t('security.setupPin')}
                 onPress={() => { setPinError(null); setPinStep('enter'); }}
                 fullWidth
                 size="lg"
@@ -310,7 +312,7 @@ export default function BiometricPage() {
             ]}
           >
             <Text style={[{ color: colors.textMuted }, tw('text-xs leading-5 text-center')]}>
-              بياناتك محفوظة في Keychain (iOS) أو Keystore (Android) — أمان تخزين على جهازك
+              {t('security.storageNote')}
             </Text>
           </View>
         </View>
