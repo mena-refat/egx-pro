@@ -237,7 +237,10 @@ async function fetchText(url: string): Promise<string> {
 }
 
 async function fetchNewsApi(query: string, explicitTicker?: string, isMarketWide = false): Promise<IngestedNews[]> {
-  if (!NEWS_API_KEY) return [];
+  if (!NEWS_API_KEY) {
+    logger.warn('NewsAPI skipped — NEWS_API_KEY not set');
+    return [];
+  }
   type NewsApiResponse = {
     articles?: Array<{
       title?: string;
@@ -487,6 +490,11 @@ export const NewsService = {
       ...(newsApiItems.status === 'fulfilled' ? newsApiItems.value : []),
       ...(egxItems.status === 'fulfilled' ? egxItems.value : []),
     ];
+    const googleCount  = googleItems.status  === 'fulfilled' ? googleItems.value.length  : 0;
+    const newsApiCount = newsApiItems.status === 'fulfilled' ? newsApiItems.value.length : 0;
+    const egxCount     = egxItems.status     === 'fulfilled' ? egxItems.value.length     : 0;
+    logger.info('News sync sources', { GOOGLE_RSS: googleCount, NEWS_API: newsApiCount, EGX_DISCLOSURE: egxCount });
+
     if (googleItems.status === 'rejected') {
       logger.warn('Google RSS market sync failed', { error: googleItems.reason instanceof Error ? googleItems.reason.message : 'UNKNOWN_ERROR' });
     }

@@ -54,6 +54,7 @@ export const NewsRepository = {
             title: item.title,
             summary: item.summary ?? undefined,
             source: item.source,
+            sourceType: item.sourceType,
             url: item.url,
             publishedAt: item.publishedAt,
             fetchedAt: item.fetchedAt,
