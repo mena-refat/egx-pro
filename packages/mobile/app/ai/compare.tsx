@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView,
   ActivityIndicator,
@@ -245,7 +245,14 @@ export default function ComparePage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CompareResult | null>(null);
 
-  const run = async () => {
+  const abortRef   = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => () => {
+    mountedRef.current = false;
+    abortRef.current?.abort();
+  }, []);
+
+  const run = useCallback(async () => {
     const a = t1.trim().toUpperCase();
     const b = t2.trim().toUpperCase();
     if (!a || !b) { setError(t('aiCompare.errorEnterTickers')); return; }
@@ -253,9 +260,18 @@ export default function ComparePage() {
     if (!getStockInfo(b)) { setError(t('aiCompare.errorTickerNotFound', { ticker: b })); return; }
     if (a === b) { setError(t('aiCompare.errorSameStock')); return; }
 
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
     setError(null); setResult(null); setLoading(true);
     try {
-      const res = await apiClient.post('/api/analysis/compare', { ticker1: a, ticker2: b, mode }, { timeout: 120_000 });
+      const res = await apiClient.post(
+        '/api/analysis/compare',
+        { ticker1: a, ticker2: b, mode },
+        { timeout: 120_000, signal: ctrl.signal },
+      );
+      if (!mountedRef.current) return;
       const data =
         (res.data as { data?: { comparison?: CompareResult } })?.data?.comparison ??
         (res.data as { comparison?: CompareResult })?.comparison ??
@@ -263,17 +279,21 @@ export default function ComparePage() {
       if (data) setResult(data as CompareResult);
       else setError(t('aiCompare.errorNoResult'));
     } catch (err: unknown) {
-      const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      if (!mountedRef.current) return;
+      const isAborted = (err as { name?: string })?.name === 'CanceledError' ||
+                        (err as { code?: string })?.code === 'ERR_CANCELED';
+      if (isAborted) return;
+      const code   = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       const status = (err as { response?: { status?: number } })?.response?.status;
-      if (code === 'ANALYSIS_LIMIT_REACHED') setError(t('aiAnalyze.limitReached'));
-      else if (code === 'SAME_STOCK_COMPARE') setError(t('aiCompare.errorSameStock'));
+      if (code === 'ANALYSIS_LIMIT_REACHED')          setError(t('aiAnalyze.limitReached'));
+      else if (code === 'SAME_STOCK_COMPARE')         setError(t('aiCompare.errorSameStock'));
       else if (code === 'UNAUTHORIZED' || status === 401) setError(t('aiAnalyze.sessionExpired'));
       else if ((err as { error?: string })?.error === 'NETWORK_ERROR') setError(t('aiAnalyze.noInternet'));
-      else setError(t('aiAnalyze.error'));
+      else                                            setError(t('aiAnalyze.error'));
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
-  };
+  }, [t1, t2, mode, t]);
 
   const s1 = result?.stock1 ?? result?.ticker1;
   const s2 = result?.stock2 ?? result?.ticker2;

@@ -28,8 +28,12 @@ export function useWatchlist() {
     return () => c.abort();
   }, [load]);
 
+  const refetchCtrlRef = useRef<AbortController | null>(null);
+
   const refetch = useCallback(() => {
+    refetchCtrlRef.current?.abort();
     const c = new AbortController();
+    refetchCtrlRef.current = c;
     return load(c.signal);
   }, [load]);
 

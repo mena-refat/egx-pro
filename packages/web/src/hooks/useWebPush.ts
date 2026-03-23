@@ -57,13 +57,17 @@ export function useWebPush() {
       await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       const reg = await navigator.serviceWorker.ready;
 
-      // 4. Subscribe to push using the active registration
+      // 4. Clear any stale subscription (different VAPID key causes "push service error")
+      const existingSub = await reg.pushManager.getSubscription();
+      if (existingSub) await existingSub.unsubscribe();
+
+      // 5. Subscribe to push using the active registration
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey),
       });
 
-      // 5. Send to backend
+      // 6. Send to backend
       const json = sub.toJSON();
       await api.post('/notifications/push/subscribe', {
         endpoint: json.endpoint,

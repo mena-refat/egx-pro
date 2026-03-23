@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useFocusEffect } from 'expo-router';
 import apiClient from '../lib/api/client';
 
@@ -27,30 +27,33 @@ export const FIELD_LABELS: Record<CompletionField, string> = {
 };
 
 export function useProfileCompletion() {
-  const [data, setData] = useState<ProfileCompletionData | null>(null);
+  const [data, setData]       = useState<ProfileCompletionData | null>(null);
   const [loading, setLoading] = useState(true);
+  const mountedRef            = useRef(true);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await apiClient.get<ProfileCompletionData>('/api/profile/completion');
-      const raw = res.data;
-      setData({
-        percentage: raw.percentage,
-        missing: raw.missing.map((m) => ({
-          field: m.field,
-          route: MOBILE_ROUTES[m.field],
-        })),
-      });
-    } catch {
-      /* silent */
-    } finally {
-      setLoading(false);
-    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useCallback(() => () => { mountedRef.current = false; }, []);
+
+  const load = useCallback(() => {
+    const c = new AbortController();
+    apiClient.get<ProfileCompletionData>('/api/profile/completion', { signal: c.signal })
+      .then((res) => {
+        if (!mountedRef.current) return;
+        const raw = res.data;
+        setData({
+          percentage: raw.percentage,
+          // Only remap if missing is a valid array — prevents crash on malformed response
+          missing: Array.isArray(raw.missing)
+            ? raw.missing.map((m) => ({ field: m.field, route: MOBILE_ROUTES[m.field] ?? '/' }))
+            : [],
+        });
+      })
+      .catch(() => null)
+      .finally(() => { if (mountedRef.current) setLoading(false); });
+    return () => c.abort();
   }, []);
 
-  useFocusEffect(useCallback(() => {
-    void load();
-  }, [load]));
+  useFocusEffect(useCallback(() => load(), [load]));
 
   return { data, loading };
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, Pressable, ScrollView,
   ActivityIndicator,
@@ -126,28 +126,46 @@ export default function RecommendationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RecommendationsResult | null>(null);
 
-  const run = async () => {
-    setError(null);
-    setResult(null);
-    setLoading(true);
+  const abortRef   = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => () => {
+    mountedRef.current = false;
+    abortRef.current?.abort();
+  }, []);
+
+  const run = useCallback(async () => {
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    setError(null); setResult(null); setLoading(true);
     try {
-      const res = await apiClient.post('/api/analysis/recommendations', undefined, { timeout: 120_000 });
+      const res = await apiClient.post(
+        '/api/analysis/recommendations',
+        undefined,
+        { timeout: 120_000, signal: ctrl.signal },
+      );
+      if (!mountedRef.current) return;
       const data =
         (res.data as { data?: RecommendationsResult })?.data ??
         (res.data as RecommendationsResult);
       if (data) setResult(data as RecommendationsResult);
       else setError(t('aiRec.errorNoResult'));
     } catch (err: unknown) {
-      const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      if (!mountedRef.current) return;
+      const isAborted = (err as { name?: string })?.name === 'CanceledError' ||
+                        (err as { code?: string })?.code === 'ERR_CANCELED';
+      if (isAborted) return;
+      const code   = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       const status = (err as { response?: { status?: number } })?.response?.status;
-      if (code === 'ANALYSIS_LIMIT_REACHED') setError(t('aiAnalyze.limitReached'));
+      if (code === 'ANALYSIS_LIMIT_REACHED')          setError(t('aiAnalyze.limitReached'));
       else if (code === 'UNAUTHORIZED' || status === 401) setError(t('aiAnalyze.sessionExpired'));
       else if ((err as { error?: string })?.error === 'NETWORK_ERROR') setError(t('aiAnalyze.noInternet'));
-      else setError(t('aiAnalyze.error'));
+      else                                            setError(t('aiAnalyze.error'));
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
-  };
+  }, [t]);
 
   const recs = result?.recommendations ?? [];
 

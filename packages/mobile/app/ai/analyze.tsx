@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView,
   ActivityIndicator,
@@ -442,36 +442,61 @@ export default function AnalyzePage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
+  // Tracks the in-flight request so we can cancel it on unmount or re-run
+  const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => () => {
+    mountedRef.current = false;
+    abortRef.current?.abort();
+  }, []);
+
   const toggleMode = useCallback(() => {
     if (!hasPaidPlan) return;
     setMode((prev) => prev === 'beginner' ? 'professional' : 'beginner');
   }, [hasPaidPlan]);
 
-  const run = async () => {
+  const run = useCallback(async () => {
     const tick = ticker.trim().toUpperCase();
     if (!tick) { setError(t('aiAnalyze.enterTicker')); return; }
     if (!getStockInfo(tick)) { setError(t('aiAnalyze.tickerNotFound')); return; }
+
+    // Cancel any previous in-flight request before starting a new one
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
     setError(null); setResult(null); setLoading(true);
     try {
-      const res = await apiClient.post(`/api/analysis/${tick}`, { mode }, { timeout: 120_000 });
+      const res = await apiClient.post(
+        `/api/analysis/${tick}`,
+        { mode },
+        { timeout: 120_000, signal: ctrl.signal },
+      );
+      if (!mountedRef.current) return;
       const data =
         (res.data as { data?: { analysis?: AnalysisResult } })?.data?.analysis ??
         (res.data as { analysis?: AnalysisResult })?.analysis;
       if (data) setResult(data as AnalysisResult);
       else setError(t('aiAnalyze.noResult'));
     } catch (err: unknown) {
-      const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      if (!mountedRef.current) return;
+      const isAborted = (err as { name?: string })?.name === 'CanceledError' ||
+                        (err as { code?: string })?.code === 'ERR_CANCELED';
+      if (isAborted) return;
+      const code   = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       const status = (err as { response?: { status?: number } })?.response?.status;
-      const net = (err as { error?: string })?.error;
-      if (code === 'ANALYSIS_LIMIT_REACHED') setError(t('aiAnalyze.limitReached'));
-      else if (code === 'UNAUTHORIZED' || status === 401) setError(t('aiAnalyze.sessionExpired'));
-      else if (status === 429) setError(t('aiAnalyze.busy'));
+      const net    = (err as { error?: string })?.error;
+      if (code === 'ANALYSIS_LIMIT_REACHED')                                setError(t('aiAnalyze.limitReached'));
+      else if (code === 'UNAUTHORIZED' || status === 401)                   setError(t('aiAnalyze.sessionExpired'));
+      else if (status === 429)                                              setError(t('aiAnalyze.busy'));
       else if (code === 'ANALYSIS_TIMEOUT' || status === 504 || net === 'REQUEST_TIMEOUT') setError(t('aiAnalyze.timeout'));
-      else if (status === 502 || status === 503) setError(t('aiAnalyze.unavailable'));
-      else if (net === 'NETWORK_ERROR') setError(t('aiAnalyze.noInternet'));
-      else setError(t('aiAnalyze.error'));
-    } finally { setLoading(false); }
-  };
+      else if (status === 502 || status === 503)                            setError(t('aiAnalyze.unavailable'));
+      else if (net === 'NETWORK_ERROR')                                     setError(t('aiAnalyze.noInternet'));
+      else                                                                  setError(t('aiAnalyze.error'));
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, [ticker, mode, t]);
 
   // ── normalise result ──
   const verdict = result?.verdictBadge ?? result?.verdict ?? '';

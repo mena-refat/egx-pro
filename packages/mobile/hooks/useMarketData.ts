@@ -80,8 +80,14 @@ export function useMarketData() {
     delete CACHE['/api/stocks/prices'];
     delete CACHE['/api/stocks/market/overview'];
     delete CACHE['/api/news/market'];
-    await Promise.all([fetchOverview(), fetchStocks(), fetchNews()]);
+    const ctrl = new AbortController();
+    await Promise.all([
+      fetchOverview(ctrl.signal),
+      fetchStocks(ctrl.signal),
+      fetchNews(ctrl.signal),
+    ]);
     if (mountedRef.current) setRefreshing(false);
+    return () => ctrl.abort();
   }, [fetchOverview, fetchStocks, fetchNews]);
 
   useEffect(() => {
@@ -158,15 +164,14 @@ export function usePortfolioData() {
         summary?: typeof summary;
       }) ?? { holdings: undefined, summary: undefined };
       if (!signal?.aborted && mountedRef.current) {
-        setHoldings(groupHoldingsByTicker(payload.holdings ?? []));
-        setSummary(
-          payload.summary ?? {
-            totalValue: 0,
-            totalCost: 0,
-            totalGainLoss: 0,
-            totalGainLossPercent: 0,
-          },
-        );
+        // Batch both state updates in a single React.startTransition to avoid
+        // two consecutive renders for the same data fetch.
+        const grouped = groupHoldingsByTicker(payload.holdings ?? []);
+        const sum = payload.summary ?? {
+          totalValue: 0, totalCost: 0, totalGainLoss: 0, totalGainLossPercent: 0,
+        };
+        setHoldings(grouped);
+        setSummary(sum);
       }
     } catch {
       // silent

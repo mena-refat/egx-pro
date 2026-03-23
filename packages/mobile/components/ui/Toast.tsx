@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle,
@@ -123,13 +123,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const ctx: ToastContextValue = {
-    show,
-    success: (msg) => show(msg, 'success'),
-    error:   (msg) => show(msg, 'error'),
-    warning: (msg) => show(msg, 'warning'),
-    info:    (msg) => show(msg, 'info'),
-  };
+  const success = useCallback((msg: string) => show(msg, 'success'), [show]);
+  const error   = useCallback((msg: string) => show(msg, 'error'),   [show]);
+  const warning = useCallback((msg: string) => show(msg, 'warning'), [show]);
+  const info    = useCallback((msg: string) => show(msg, 'info'),    [show]);
+
+  // Stable reference — only changes when show/helpers change (never in practice)
+  const ctx = useMemo<ToastContextValue>(
+    () => ({ show, success, error, warning, info }),
+    [show, success, error, warning, info],
+  );
 
   return (
     <ToastContext.Provider value={ctx}>

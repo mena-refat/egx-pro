@@ -3,7 +3,9 @@ import { AppState, type AppStateStatus } from 'react-native';
 import Constants from 'expo-constants';
 import apiClient from '../lib/api/client';
 
-const isExpoGo = Constants.appOwnership === 'expo';
+const isExpoGo =
+  Constants.executionEnvironment === 'storeClient' ||
+  Constants.appOwnership === 'expo';
 
 interface WatchlistItem {
   ticker: string;
