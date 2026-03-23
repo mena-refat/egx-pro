@@ -117,11 +117,11 @@ export default function LoginPage() {
           width: 64, height: 64, borderRadius: RADIUS.xl,
           backgroundColor: BRAND, alignItems: 'center', justifyContent: 'center',
         }}>
-          <Text style={{ fontSize: FONT['2xl'], fontWeight: WEIGHT.extrabold, color: '#fff' }}>E</Text>
+          <Text style={{ fontSize: FONT['2xl'], fontWeight: WEIGHT.extrabold, color: '#fff' }}>B</Text>
         </View>
-        <Text style={{ color: '#f1f5f9', fontSize: FONT['2xl'], fontWeight: WEIGHT.bold }}>EGX Pro</Text>
+        <Text style={{ color: '#f1f5f9', fontSize: FONT['2xl'], fontWeight: WEIGHT.bold }}>Borsa</Text>
         <Text style={{ color: BRAND_LIGHT, fontSize: FONT.sm, textAlign: 'center', paddingHorizontal: SPACE['3xl'] }}>
-          استثمر بثقة في البورصة المصرية
+          استثمر بذكاء في البورصة
         </Text>
       </View>
 

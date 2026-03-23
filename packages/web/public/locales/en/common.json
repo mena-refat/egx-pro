@@ -1326,6 +1326,7 @@
     "errors": {
       "INVALID_DISCOUNT_CODE": "Invalid or expired discount code",
       "DISCOUNT_ALREADY_USED": "You've already used this code",
+      "DISCOUNT_ALREADY_ACTIVE": "You have an active discounted subscription — you can't use another code until your current plan expires",
       "PAYMENT_TOKEN_REQUIRED": "Please complete payment",
       "INVALID_PLAN": "Invalid plan selected"
     },

@@ -80,7 +80,7 @@ export default function PortfolioOrdersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-subtle)]">
-                {holdings.map(h => {
+                {[...holdings].sort((a, b) => new Date(b.buyDate).getTime() - new Date(a.buyDate).getTime()).map(h => {
                   const lang = isRTL ? 'ar' : 'en';
                   const date = new Date(h.buyDate);
                   const dateStr = date.toLocaleDateString(isRTL ? 'ar-EG' : 'en-GB', {

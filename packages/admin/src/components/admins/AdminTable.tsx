@@ -1,5 +1,6 @@
-import { Trash2, ToggleLeft, ToggleRight, Pencil, KeyRound, ShieldOff, Sliders } from 'lucide-react';
+import { Trash2, ToggleLeft, ToggleRight, Pencil, KeyRound, ShieldOff, Sliders, ExternalLink } from 'lucide-react';
 import { Badge } from '../Badge';
+import { slugify } from '../../lib/slugify';
 
 interface Admin {
   id: string | number;
@@ -22,11 +23,12 @@ interface AdminTableProps {
   onResetPassword: (id: string) => void;
   onReset2FA: (id: string) => void;
   onEditPermissions: (admin: Admin) => void;
+  onViewDetails: (id: string, slug: string) => void;
 }
 
 export function AdminTable({
   admins, currentAdminId, isSuperAdmin, t,
-  onToggleActive, onDelete, onEditProfile, onResetPassword, onReset2FA, onEditPermissions,
+  onToggleActive, onDelete, onEditProfile, onResetPassword, onReset2FA, onEditPermissions, onViewDetails,
 }: AdminTableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border border-white/[0.07] bg-[#111118]">
@@ -44,7 +46,15 @@ export function AdminTable({
           {admins.map((a) => (
             <tr key={a.id} className="hover:bg-white/[0.02]">
               <td className="px-3 py-2 text-slate-200">{a.email}</td>
-              <td className="px-3 py-2 text-slate-300">{a.fullName}</td>
+              <td className="px-3 py-2">
+                <button
+                  onClick={() => onViewDetails(String(a.id), slugify(a.fullName))}
+                  className="flex items-center gap-1 text-slate-300 hover:text-emerald-400 transition-colors group"
+                >
+                  {a.fullName}
+                  <ExternalLink size={10} className="opacity-0 group-hover:opacity-60 transition-opacity" />
+                </button>
+              </td>
               <td className="px-3 py-2"><Badge label={a.role ?? 'ADMIN'} /></td>
               <td className="px-3 py-2">
                 <span className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded ${
@@ -56,6 +66,9 @@ export function AdminTable({
               <td className="px-3 py-2">
                 {a.id !== currentAdminId && (
                   <div className="flex items-center gap-2">
+                    <button onClick={() => onViewDetails(String(a.id), slugify(a.fullName))} title={t('admins.viewDetails')} className="text-slate-600 hover:text-emerald-400 transition-colors">
+                      <ExternalLink size={13} />
+                    </button>
                     {isSuperAdmin && (
                       <>
                         <button onClick={() => onEditProfile(a)} title={t('admins.editProfile')} className="text-slate-600 hover:text-blue-400 transition-colors">

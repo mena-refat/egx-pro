@@ -130,6 +130,7 @@ export default function SubscriptionPage() {
       const errorCode = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       if (errorCode === 'INVALID_DISCOUNT_CODE') setPromoError(t('subscription.errorInvalidCode'));
       else if (errorCode === 'DISCOUNT_ALREADY_USED') setPromoError(t('subscription.errorAlreadyUsed'));
+      else if (errorCode === 'DISCOUNT_ALREADY_ACTIVE') setPromoError(t('subscription.errorActiveDiscount'));
       else setPromoError(t('subscription.errorVerify'));
     } finally {
       setPromoLoading(false);

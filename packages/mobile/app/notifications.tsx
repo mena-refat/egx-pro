@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, Pressable, RefreshControl,
   ActivityIndicator, Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import {
   ArrowLeft, ArrowRight, ChevronLeft, ChevronRight,
   Bell, TrendingUp, Briefcase,
@@ -13,6 +13,7 @@ import { ScreenWrapper } from '../components/layout/ScreenWrapper';
 import { Skeleton } from '../components/ui/Skeleton';
 import { useTheme } from '../hooks/useTheme';
 import apiClient from '../lib/api/client';
+import { resetUnreadCount } from '../hooks/useUnreadCount';
 import { BRAND, WEIGHT } from '../lib/theme';
 
 interface Notification {
@@ -82,11 +83,25 @@ export default function NotificationsPage() {
     }
   }, []);
 
+  // On mount: fetch notifications AND mark all as read simultaneously.
+  // resetUnreadCount() fires first so the tab-bar badge clears instantly.
   useEffect(() => {
     const c = new AbortController();
-    void load(c.signal);
+    resetUnreadCount();
+    Promise.all([
+      load(c.signal),
+      apiClient.patch('/api/notifications/read-all').catch(() => null),
+    ]).then(() => {
+      if (!c.signal.aborted && mountedRef.current) {
+        setUnreadCount(0);
+        setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      }
+    });
     return () => c.abort();
   }, [load]);
+
+  // Keep the badge at 0 if user navigates away and comes back.
+  useFocusEffect(useCallback(() => { resetUnreadCount(); }, []));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

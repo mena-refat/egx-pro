@@ -1326,6 +1326,7 @@
     "errors": {
       "INVALID_DISCOUNT_CODE": "الكود غير صحيح أو منتهي",
       "DISCOUNT_ALREADY_USED": "استخدمت هذا الكود من قبل",
+      "DISCOUNT_ALREADY_ACTIVE": "عندك اشتراك مفعَّل بكود خصم — ما تقدرش تستخدم كود تاني لحد ما الاشتراك الحالي ينتهي",
       "PAYMENT_TOKEN_REQUIRED": "يرجى إتمام الدفع",
       "INVALID_PLAN": "خطة غير صحيحة"
     },

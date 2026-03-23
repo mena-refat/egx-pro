@@ -434,6 +434,10 @@ router.get('/admins', adminAuthenticate, requireSuperAdmin, (req, res, next) => 
   void AdminAdminsController.list(req as any, res).catch(next);
 });
 
+router.get('/admins/:id', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
+  void AdminAdminsController.getOne(req as any, res).catch(next);
+});
+
 router.post('/admins', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
   void AdminAdminsController.create(req as any, res).catch(next);
 });

@@ -15,6 +15,7 @@ import cron from 'node-cron';
 import * as Sentry from '@sentry/node';
 import { setupWebSocket } from './websocket.ts';
 import { validateEnv } from './lib/env.ts';
+import { initWebPush } from './lib/webPush.ts';
 import { logger } from './lib/logger.ts';
 import { RATE_LIMITS } from './lib/constants.ts';
 import { AppError } from './lib/errors.ts';
@@ -64,6 +65,7 @@ async function startServer() {
   }
 
   validateEnv();
+  initWebPush();
 
   const app = express();
   app.set('trust proxy', 1);
@@ -194,7 +196,7 @@ async function startServer() {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => ipKey(req),
-    skip: (req) => req.path.startsWith('/api/auth'), // لا نحسب تسجيل الدخول/التسجيل ضمن الحد العام
+    skip: (req) => req.path.startsWith('/auth') || req.path.startsWith('/admin'), // req.path is stripped of /api/ prefix by app.use
     handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
   });
 
@@ -345,7 +347,12 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.join(__dirname, 'dist')));
+    // tsx runs source directly — __dirname = packages/server/src/
+    // Web builds to packages/web/dist, admin builds to packages/admin/dist
+    const webDist = path.join(__dirname, '..', '..', 'web', 'dist');
+    const adminDist = path.join(__dirname, '..', '..', 'admin', 'dist');
+
+    app.use(express.static(webDist));
 
     // Admin portal — stricter security policy applied before static file serving.
     // The main app CSP allows external AI APIs; the admin portal only needs 'self'.
@@ -371,7 +378,7 @@ async function startServer() {
       next();
     });
 
-    app.use('/admin', express.static(path.join(__dirname, 'dist', 'admin'), {
+    app.use('/admin', express.static(adminDist, {
       // Hashed asset files can be cached long-term; override Cache-Control for them
       setHeaders(res, filePath) {
         if (/\.(js|css|woff2?|png|svg|ico)$/.test(filePath)) {
@@ -381,10 +388,10 @@ async function startServer() {
     }));
     app.get('/admin/*', (_req, res) => {
       res.setHeader('Cache-Control', 'no-store');
-      res.sendFile(path.join(__dirname, 'dist', 'admin', 'index.html'));
+      res.sendFile(path.join(adminDist, 'index.html'));
     });
     app.get('*', (_req, res) => {
-      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+      res.sendFile(path.join(webDist, 'index.html'));
     });
   }
 

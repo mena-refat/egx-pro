@@ -29,13 +29,16 @@ export async function registerPushToken(): Promise<void> {
       });
     }
 
-    const projectId =
+    const projectId: string | undefined =
       Constants.expoConfig?.extra?.eas?.projectId ??
       Constants.easConfig?.projectId;
 
-    const token = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined,
-    );
+    if (!projectId || projectId === 'YOUR_EAS_PROJECT_ID') {
+      // Project not yet linked to EAS — push tokens unavailable.
+      return;
+    }
+
+    const token = await Notifications.getExpoPushTokenAsync({ projectId });
 
     await apiClient.post('/api/mobile/push-token', {
       token: token.data,

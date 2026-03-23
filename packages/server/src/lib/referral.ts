@@ -15,7 +15,7 @@ export async function generateUniqueReferralCode(): Promise<string> {
   const MAX_ATTEMPTS = 10;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    let code = 'EGX-';
+    let code = 'BRS-';
     for (let i = 0; i < CODE_LENGTH; i++) {
       code += CHARS[Math.floor(Math.random() * CHARS.length)];
     }
@@ -28,7 +28,7 @@ export async function generateUniqueReferralCode(): Promise<string> {
     if (!existing) return code;
   }
 
-  return `EGX-${Date.now().toString(36).toUpperCase()}`;
+  return `BRS-${Date.now().toString(36).toUpperCase()}`;
 }
 
 /**

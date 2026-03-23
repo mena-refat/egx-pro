@@ -14,6 +14,8 @@ const UserDetailPage = lazy(() => import('./pages/UserDetailPage'));
 const DiscountsPage = lazy(() => import('./pages/DiscountsPage'));
 const SupportPage = lazy(() => import('./pages/SupportPage'));
 const AdminsPage = lazy(() => import('./pages/AdminsPage'));
+const AdminDetailPage = lazy(() => import('./pages/AdminDetailPage'));
+const AdminGroupPage = lazy(() => import('./pages/AdminGroupPage'));
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const RevenuePage = lazy(() => import('./pages/RevenuePage'));
@@ -45,6 +47,8 @@ function AuthenticatedRoutes({ admin }: { admin: NonNullable<ReturnType<typeof u
             <Route path="/support" element={<SupportPage />} />
             <Route path="/account" element={<AdminAccountPage />} />
             {isSuperAdmin && <Route path="/admins" element={<AdminsPage />} />}
+            {isSuperAdmin && <Route path="/admins/group/:type" element={<AdminGroupPage />} />}
+            {isSuperAdmin && <Route path="/admins/:id" element={<AdminDetailPage />} />}
             {isSuperAdmin && <Route path="/audit" element={<AuditLogPage />} />}
             <Route path="/notifications" element={<NotificationsPage />} />
           </Route>

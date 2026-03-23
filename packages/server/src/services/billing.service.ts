@@ -77,6 +77,10 @@ export const BillingService = {
     const used = await DiscountRepository.findUsage(userId, discount.id);
     if (used) throw new AppError('DISCOUNT_ALREADY_USED', 400);
 
+    // منع تطبيق كود جديد لو الاشتراك المفعَّل بكود سابق لسه شغال
+    const activeDiscount = await DiscountRepository.hasActiveDiscount(userId);
+    if (activeDiscount) throw new AppError('DISCOUNT_ALREADY_ACTIVE', 400);
+
     const planKey = plan === 'ultra_annual' ? 'ultra_yearly' : plan === 'ultra' ? 'ultra' : plan === 'annual' ? 'yearly' : 'pro';
     const basePrice: number = getBasePrice(planKey as 'pro' | 'yearly' | 'ultra' | 'ultra_yearly');
     let finalPrice: number = basePrice;
@@ -131,6 +135,9 @@ export const BillingService = {
       }
       const alreadyUsed = await DiscountRepository.findUsage(userId, code.id);
       if (alreadyUsed) throw new AppError('DISCOUNT_ALREADY_USED', 400);
+
+      const activeDiscount = await DiscountRepository.hasActiveDiscount(userId);
+      if (activeDiscount) throw new AppError('DISCOUNT_ALREADY_ACTIVE', 400);
 
       discount = { id: code.id, type: code.type, value: code.value, maxUses: code.maxUses };
       const basePrice = getBasePrice(planValue);

@@ -1,5 +1,6 @@
 import { prisma } from './prisma.ts';
 import { logger } from './logger.ts';
+import { sendWebPush } from './webPush.ts';
 
 export type NotificationType =
   | 'achievement'
@@ -49,8 +50,25 @@ export async function createNotification(
     await prisma.notification.create({
       data: { userId, type, title, body, route: options?.route ?? undefined },
     });
+
+    // ── Expo push (mobile) ──
     if (options?.pushToken) {
       await sendExpoPush(options.pushToken, title, body, { route: options.route });
+    }
+
+    // ── Web push (browser) ──
+    const webSubs = await prisma.webPushSubscription.findMany({ where: { userId } });
+    const expiredIds: number[] = [];
+    await Promise.all(
+      webSubs.map(async (sub) => {
+        const result = await sendWebPush(sub.endpoint, sub.p256dh, sub.auth, {
+          title, body, route: options?.route, tag: type,
+        });
+        if (result === 'expired') expiredIds.push(sub.id);
+      }),
+    );
+    if (expiredIds.length > 0) {
+      await prisma.webPushSubscription.deleteMany({ where: { id: { in: expiredIds } } });
     }
   } catch (err) {
     logger.error('Create notification error', { err });

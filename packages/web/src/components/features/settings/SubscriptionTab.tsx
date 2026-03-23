@@ -123,9 +123,11 @@ export function SubscriptionTab() {
       const data = (res.data as { data?: { percent?: number } })?.data ?? res.data;
       setDiscountPercent((data as { percent?: number }).percent ?? 0);
       setBillingMessage({ type: 'success', text: t('billing.codeSuccess') });
-    } catch {
+    } catch (err: unknown) {
       setDiscountPercent(null);
-      setBillingMessage({ type: 'error', text: t('billing.codeInvalid') });
+      const errorCode = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      const msg = errorCode ? (t(`billing.errors.${errorCode}`, { defaultValue: '' }) || t('billing.codeInvalid')) : t('billing.codeInvalid');
+      setBillingMessage({ type: 'error', text: msg });
     } finally { setValidating(false); }
   };
 

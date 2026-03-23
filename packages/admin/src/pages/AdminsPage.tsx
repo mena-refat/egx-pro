@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { RefreshCw, Copy, Check, Eye, EyeOff } from 'lucide-react';
 
 import { adminApi } from '../lib/adminApi';
@@ -30,6 +31,7 @@ const EMPTY_FORM = {
 
 export default function AdminsPage() {
   const { t } = useTranslation();
+  const nav = useNavigate();
   const currentAdmin = useAdminStore((s) => s.admin);
   const PERM_LABELS = getPermLabels(t);
   const PRESET_ROLES = getPresetRoles(t);
@@ -89,8 +91,6 @@ export default function AdminsPage() {
   const [editPermManagerId, setEditPermManagerId] = useState<string>('');
   const [editPermSaving, setEditPermSaving] = useState(false);
 
-  /* Team group */
-  const [teamGroup, setTeamGroup] = useState<{ label: string; desc: string; color: string; members: any[] } | null>(null);
 
   /* ── API ── */
   const loadAdmins = () =>
@@ -441,9 +441,9 @@ export default function AdminsPage() {
 
   /* ─── RENDER ─────────────────────────────────────────────────── */
   const groups = [
-    { label: t('dashboard.superAdmins'), desc: t('dashboard.superAdminsDesc'), color: 'text-amber-400', border: 'border-amber-500/15', hover: 'hover:border-amber-500/40', members: admins.filter((a) => a.role === 'SUPER_ADMIN') },
-    { label: t('dashboard.managers'),    desc: t('dashboard.managersDesc'),    color: 'text-violet-400', border: 'border-violet-500/15', hover: 'hover:border-violet-500/40', members: admins.filter((a) => a.role === 'ADMIN' && a.permissions?.includes('support.manage')) },
-    { label: t('dashboard.staff'),       desc: t('dashboard.staffDesc'),       color: 'text-blue-400',   border: 'border-blue-500/15',   hover: 'hover:border-blue-500/40',   members: admins.filter((a) => a.role === 'ADMIN' && !a.permissions?.includes('support.manage')) },
+    { slug: 'super-admins', label: t('dashboard.superAdmins'), desc: t('dashboard.superAdminsDesc'), color: 'text-amber-400', border: 'border-amber-500/15', hover: 'hover:border-amber-500/40', members: admins.filter((a) => a.role === 'SUPER_ADMIN') },
+    { slug: 'managers',     label: t('dashboard.managers'),    desc: t('dashboard.managersDesc'),    color: 'text-violet-400', border: 'border-violet-500/15', hover: 'hover:border-violet-500/40', members: admins.filter((a) => a.role === 'ADMIN' && a.permissions?.includes('support.manage')) },
+    { slug: 'staff',        label: t('dashboard.staff'),       desc: t('dashboard.staffDesc'),       color: 'text-blue-400',   border: 'border-blue-500/15',   hover: 'hover:border-blue-500/40',   members: admins.filter((a) => a.role === 'ADMIN' && !a.permissions?.includes('support.manage')) },
   ];
 
   return (
@@ -460,7 +460,7 @@ export default function AdminsPage() {
       {admins.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           {groups.map((g) => (
-            <button key={g.label} onClick={() => setTeamGroup(g)} className={`rounded-xl border ${g.border} ${g.hover} bg-[#111118] py-4 px-3 flex flex-col items-center gap-1 transition-all cursor-pointer w-full`}>
+            <button key={g.label} onClick={() => nav(`/admins/group/${g.slug}`)} className={`rounded-xl border ${g.border} ${g.hover} bg-[#111118] py-4 px-3 flex flex-col items-center gap-1 transition-all cursor-pointer w-full`}>
               <span className={`text-2xl font-bold tabular-nums ${g.color}`}>{g.members.length}</span>
               <span className="text-[11px] text-slate-400 font-medium">{g.label}</span>
               <span className="text-[10px] text-slate-600 text-center leading-snug mt-0.5">{g.desc}</span>
@@ -468,52 +468,6 @@ export default function AdminsPage() {
           ))}
         </div>
       )}
-
-      {/* Team group modal */}
-      <Modal open={!!teamGroup} title={teamGroup?.label ?? ''} onClose={() => setTeamGroup(null)}>
-        {teamGroup?.desc && <p className="text-xs text-slate-400 bg-white/[0.03] border border-white/[0.05] rounded-lg px-3 py-2 mb-3">{teamGroup.desc}</p>}
-        {teamGroup?.members.length === 0 ? (
-          <p className="text-sm text-slate-500 text-center py-6">لا يوجد أحد في هذه المجموعة</p>
-        ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {(teamGroup?.members ?? []).map((a) => {
-              const visiblePerms = (a.permissions ?? []).filter((p: string) => PERM_LABELS[p]).slice(0, 3);
-              return (
-                <div key={a.id} className="rounded-lg bg-white/[0.03] border border-white/[0.05] px-3 py-2.5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-xs font-bold text-slate-300 shrink-0">
-                      {(a.fullName?.[0] ?? a.email?.[0] ?? '?').toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-slate-200 truncate">{a.fullName || '—'}</p>
-                      <p className="text-[11px] text-slate-500 truncate">{a.email}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${a.isActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                        {a.isActive ? t('admins.active') : t('admins.deactivate')}
-                      </span>
-                      {a.lastLoginAt && <span className="text-[10px] text-slate-600">{new Date(a.lastLoginAt).toLocaleDateString()}</span>}
-                    </div>
-                  </div>
-                  {a.role !== 'SUPER_ADMIN' && visiblePerms.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2 ps-10">
-                      {visiblePerms.map((p: string) => (
-                        <span key={p} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.05] text-slate-400 border border-white/[0.06]">{PERM_LABELS[p]}</span>
-                      ))}
-                      {(a.permissions ?? []).filter((p: string) => PERM_LABELS[p]).length > 3 && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.05] text-slate-500 border border-white/[0.06]">+{(a.permissions ?? []).filter((p: string) => PERM_LABELS[p]).length - 3}</span>
-                      )}
-                    </div>
-                  )}
-                  {a.role === 'SUPER_ADMIN' && (
-                    <div className="mt-2 ps-10"><span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">{t('admins.superAdmin')}</span></div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Modal>
 
       {/* Admin table */}
       <AdminTable
@@ -532,6 +486,7 @@ export default function AdminsPage() {
           setEditPermManagerId('');
           void loadSupportManagers();
         }}
+        onViewDetails={(_id, name) => nav(`/admins/${name}`)}
       />
 
       {/* Delete modal */}

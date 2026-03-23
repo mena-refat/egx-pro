@@ -260,8 +260,9 @@ model User {
   notifyNews         Boolean @default(true)
   notifyAchievements Boolean @default(true)
   notifyGoals        Boolean @default(true)
-  pushToken          String?
-  pushPlatform       String?
+  pushToken            String?
+  pushPlatform         String?
+  webPushSubscriptions WebPushSubscription[]
 
   // ── Plan & Billing ───────────────────────────────────────────────────────
   plan                    UserPlan  @default(free)
@@ -677,6 +678,19 @@ model Notification {
   @@index([createdAt])
 }
 
+model WebPushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Billing & Discounts
 // ─────────────────────────────────────────────────────────────────────────────
@@ -711,14 +725,16 @@ model DiscountCode {
 }
 
 model DiscountUsage {
-  userId       Int
-  codeId       String
-  usedAt       DateTime     @default(now())
-  discountCode DiscountCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        Int
+  codeId        String
+  usedAt        DateTime     @default(now())
+  planExpiresAt DateTime?    // متى ينتهي الاشتراك المفعَّل بهذا الكود — لمنع تطبيق كود جديد أثناء الاشتراك
+  discountCode  DiscountCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, codeId])
   @@index([codeId])
+  @@index([userId, planExpiresAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

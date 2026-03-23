@@ -12,6 +12,16 @@ export const DiscountRepository = {
     });
   },
 
+  /** هل عند اليوزر ده اشتراك مفعَّل بكود خصم لسه ما انتهاش؟ */
+  hasActiveDiscount(userId: number) {
+    return prisma.discountUsage.findFirst({
+      where: {
+        userId,
+        planExpiresAt: { gt: new Date() },
+      },
+    });
+  },
+
   /** ترقية مع كود خصم 100% — atomic check-and-increment to prevent race conditions */
   async applyFullDiscount(
     userId: number,
@@ -40,7 +50,7 @@ export const DiscountRepository = {
         });
       }
 
-      await tx.discountUsage.create({ data: { userId, codeId } });
+      await tx.discountUsage.create({ data: { userId, codeId, planExpiresAt } });
       await tx.user.update({ where: { id: userId }, data: { plan: planValue as import('@prisma/client').UserPlan, planExpiresAt } });
     });
   },
@@ -82,7 +92,7 @@ export const DiscountRepository = {
           });
         }
 
-        await tx.discountUsage.create({ data: { userId, codeId: discount.id } });
+        await tx.discountUsage.create({ data: { userId, codeId: discount.id, planExpiresAt } });
       }
 
       await tx.user.update({ where: { id: userId }, data: { plan: planValue as import('@prisma/client').UserPlan, planExpiresAt } });

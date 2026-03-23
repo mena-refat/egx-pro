@@ -5,6 +5,10 @@ import { sendSuccess, sendError } from '../../lib/apiResponse.ts';
 import { adminAudit, type AdminRequest } from '../../middleware/adminAuth.middleware.ts';
 import { hashPassword, verifyPassword } from '../../lib/auth.ts';
 
+function slugify(name: string): string {
+  return name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
+}
+
 async function verifySuperAdminPassword(req: AdminRequest, confirmPassword?: string): Promise<boolean> {
   if (!confirmPassword || !req.admin) return false;
   const me = await prisma.admin.findUnique({
@@ -16,6 +20,72 @@ async function verifySuperAdminPassword(req: AdminRequest, confirmPassword?: str
 }
 
 export const AdminAdminsController = {
+  async getOne(req: AdminRequest, res: Response): Promise<void> {
+    if (req.admin?.role !== 'SUPER_ADMIN') { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
+    const param = req.params.id;
+
+    // Resolve slug → numeric id
+    let resolvedId: number;
+    const numericId = parseInt(param, 10);
+    if (!isNaN(numericId) && String(numericId) === param) {
+      resolvedId = numericId;
+    } else {
+      // Slug lookup — fetch names of all non-deleted admins and match
+      const all = await prisma.admin.findMany({
+        where: { isDeleted: false },
+        select: { id: true, fullName: true },
+      });
+      const match = all.find((a) => slugify(a.fullName) === param);
+      if (!match) { sendError(res, 'NOT_FOUND', 404); return; }
+      resolvedId = match.id;
+    }
+
+    const admin = await prisma.admin.findUnique({
+      where: { id: resolvedId, isDeleted: false },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        fullName: true,
+        role: true,
+        permissions: true,
+        isActive: true,
+        twoFactorEnabled: true,
+        mustChangePassword: true,
+        mustSetup2FA: true,
+        managerId: true,
+        createdBy: true,
+        lastLoginAt: true,
+        lastLoginIp: true,
+        createdAt: true,
+        manager: { select: { id: true, fullName: true, email: true } },
+      },
+    });
+    if (!admin) { sendError(res, 'NOT_FOUND', 404); return; }
+
+    // Most recent login entry — for device / city info
+    const lastLoginLog = await prisma.adminAuditLog.findFirst({
+      where: { adminId: resolvedId, action: 'ADMIN_LOGIN' },
+      orderBy: { createdAt: 'desc' },
+      select: { userAgent: true, city: true },
+    });
+
+    // Recent activity (last 30 events)
+    const recentActivity = await prisma.adminAuditLog.findMany({
+      where: { adminId: resolvedId },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+      select: { id: true, action: true, target: true, details: true, city: true, createdAt: true },
+    });
+
+    sendSuccess(res, {
+      ...admin,
+      lastLoginDevice: lastLoginLog?.userAgent ?? null,
+      lastLoginCity: lastLoginLog?.city ?? null,
+      recentActivity,
+    });
+  },
+
   async list(req: AdminRequest, res: Response): Promise<void> {
     if (req.admin?.role !== 'SUPER_ADMIN') {
       sendError(res, 'ADMIN_FORBIDDEN', 403);
@@ -33,6 +103,7 @@ export const AdminAdminsController = {
         isActive: true,
         managerId: true,
         lastLoginAt: true,
+        lastLoginIp: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'asc' },

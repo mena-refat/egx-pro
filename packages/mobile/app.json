@@ -42,6 +42,11 @@
         "android.permission.VIBRATE"
       ]
     },
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
@@ -49,7 +54,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/notification-icon.png",
-          "color": "#10b981",
+          "color": "#8b5cf6",
           "sounds": []
         }
       ],

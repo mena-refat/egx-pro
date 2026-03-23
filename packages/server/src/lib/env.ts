@@ -42,24 +42,23 @@ export function validateEnv(): void {
   }
 
   if (isProd) {
+    // These are degraded-mode warnings — server starts but features are disabled
+    const degraded: string[] = [];
     const prodResult = requiredInProdSchema.safeParse({
       RESEND_API_KEY: process.env.RESEND_API_KEY,
       FROM_EMAIL: process.env.FROM_EMAIL,
     });
     if (!prodResult.success) {
       const keys = prodResult.error.issues.map((e) => e.path.join('.')).filter(Boolean);
-      keys.forEach((k) => missing.push(k));
+      keys.forEach((k) => degraded.push(k));
     }
-
-    // Payment & third-party integrations
-    if (!process.env.PAYMOB_API_KEY?.trim()) {
-      missing.push('PAYMOB_API_KEY');
-    }
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()) {
-      missing.push('GOOGLE_SERVICE_ACCOUNT_JSON (Google Play billing)');
-    }
-    if (!process.env.GOOGLE_PUBSUB_AUDIENCE?.trim()) {
-      missing.push('GOOGLE_PUBSUB_AUDIENCE (Google Play RTDN webhook)');
+    if (!process.env.PAYMOB_API_KEY?.trim()) degraded.push('PAYMOB_API_KEY');
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim()) degraded.push('GOOGLE_SERVICE_ACCOUNT_JSON');
+    if (!process.env.GOOGLE_PUBSUB_AUDIENCE?.trim()) degraded.push('GOOGLE_PUBSUB_AUDIENCE');
+    if (degraded.length > 0) {
+      console.warn(
+        `[env] تحذير: المتغيرات التالية غير مضبوطة — بعض الميزات لن تعمل: ${degraded.join(', ')}`
+      );
     }
   }
 

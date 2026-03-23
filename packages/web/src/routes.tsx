@@ -18,13 +18,16 @@ import {
   SettingsSkeleton,
 } from './components/skeletons';
 
+// Reuse SettingsSkeleton for subscription page (same card grid style)
+const SubscriptionSkeleton = SettingsSkeleton;
+
 const DashboardPage          = lazy(() => import('./pages/DashboardPage'));
 
 const SettingsLayout          = lazy(() => import('./components/layout/SettingsLayout'));
 const AccountSettingsTab      = lazy(() => import('./components/features/settings/AccountSettingsTab').then(m => ({ default: m.AccountSettingsTab })));
 const SecuritySettingsTab     = lazy(() => import('./components/features/settings/SecuritySettingsTab').then(m => ({ default: m.SecuritySettingsTab })));
 const PreferencesSettingsTab  = lazy(() => import('./components/features/settings/PreferencesSettingsTab').then(m => ({ default: m.PreferencesSettingsTab })));
-const SubscriptionTab         = lazy(() => import('./components/features/settings/SubscriptionTab').then(m => ({ default: m.SubscriptionTab })));
+const SubscriptionPage        = lazy(() => import('./pages/SubscriptionPage'));
 const DangerSettingsTab       = lazy(() => import('./components/features/settings/DangerSettingsTab').then(m => ({ default: m.DangerSettingsTab })));
 
 const PortfolioTracker       = lazy(() => import('./components/features/portfolio/PortfolioTracker'));
@@ -68,13 +71,13 @@ export function AppRoutes({ currentWealth }: AppRoutesProps) {
         <Route path="account"      element={<Suspense fallback={<div />}><AccountSettingsTab /></Suspense>} />
         <Route path="security"     element={<Suspense fallback={<div />}><SecuritySettingsTab /></Suspense>} />
         <Route path="preferences"  element={<Suspense fallback={<div />}><PreferencesSettingsTab /></Suspense>} />
-        <Route path="subscription" element={<Suspense fallback={<div />}><SubscriptionTab /></Suspense>} />
+        <Route path="subscription" element={<Navigate to="/subscription" replace />} />
         <Route path="danger"       element={<Suspense fallback={<div />}><DangerSettingsTab /></Suspense>} />
         {/* Redirects for old/moved routes */}
-        <Route path="notifications" element={<Navigate to="/settings/preferences"              replace />} />
-        <Route path="perks"         element={<Navigate to="/settings/subscription"             replace />} />
-        <Route path="overview"      element={<Navigate to="/settings/subscription"             replace />} />
-        <Route path="investor"      element={<Navigate to="/profile?tab=investor"             replace />} />
+        <Route path="notifications" element={<Navigate to="/settings/preferences"  replace />} />
+        <Route path="perks"         element={<Navigate to="/subscription"          replace />} />
+        <Route path="overview"      element={<Navigate to="/subscription"          replace />} />
+        <Route path="investor"      element={<Navigate to="/profile?tab=investor"  replace />} />
         <Route path="referral"      element={<Navigate to="/profile?tab=referral"              replace />} />
         <Route path="referrals"     element={<Navigate to="/profile?tab=referral"              replace />} />
         <Route path="achievements"  element={<Navigate to="/profile?tab=achievements"          replace />} />
@@ -89,6 +92,7 @@ export function AppRoutes({ currentWealth }: AppRoutesProps) {
       <Route path="/ai/analyze" element={<ErrorBoundary><Suspense fallback={<AIPageSkeleton />}><AIAnalyzePage /></Suspense></ErrorBoundary>} />
       <Route path="/ai/compare" element={<ErrorBoundary><Suspense fallback={<AIPageSkeleton />}><AIComparePage /></Suspense></ErrorBoundary>} />
       <Route path="/ai/recommendations" element={<ErrorBoundary><Suspense fallback={<AIPageSkeleton />}><AIRecommendationsPage /></Suspense></ErrorBoundary>} />
+      <Route path="/subscription" element={<ErrorBoundary><Suspense fallback={<SubscriptionSkeleton />}><SubscriptionPage /></Suspense></ErrorBoundary>} />
       <Route path="/support" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><SupportPage /></Suspense></ErrorBoundary>} />
       <Route path="/banned" element={<Suspense fallback={<PageLoader />}><BannedPage /></Suspense>} />
       <Route path="*" element={<Navigate to="/" replace />} />

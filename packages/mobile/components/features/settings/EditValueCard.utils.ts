@@ -65,7 +65,7 @@ export function getEditSchema(field: EditableField) {
 
 export const EDIT_PLACEHOLDERS: Record<EditableField, string> = {
   fullName: 'مثال: أحمد محمد',
-  username: 'مثال: ahmed_egypt',
+  username: 'مثال: ahmed_borsa',
   email: 'example@email.com',
   phone: 'مثال: 01012345678',
 };
