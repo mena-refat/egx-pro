@@ -52,13 +52,14 @@ function isStepValid(stepIndex: number, data: FormData): boolean {
     case 3: return data.budgetBand !== '';
     case 5: return data.sectors.length > 0;
     case 6: return data.level !== '';
+    case 7: return data.hearAboutUs.length > 0;
     default: return true;
   }
 }
 
 const INITIAL_FORM: FormData = {
   goal: '', timeline: '', reaction30: '', budgetBand: '',
-  shariaMode: false, sectors: [], level: '', hearAboutUs: '', referralCode: '',
+  shariaMode: false, sectors: [], level: '', hearAboutUs: [], referralCode: '',
 };
 
 export default function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
@@ -112,12 +113,12 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
         investorProfile: {
           goal: formData.goal, timeline: formData.timeline, reaction30: formData.reaction30,
           budgetBand: formData.budgetBand, shariaMode: formData.shariaMode, sectors: formData.sectors,
-          level: formData.level, hearAboutUs: formData.hearAboutUs || null,
+          level: formData.level, hearAboutUs: formData.hearAboutUs.length ? formData.hearAboutUs.join(', ') : null,
         },
         onboardingCompleted: true,
         isFirstLogin: false,
       };
-      if (formData.hearAboutUs?.trim()) payload.hearAboutUs = formData.hearAboutUs.trim();
+      if (formData.hearAboutUs.length) payload.hearAboutUs = formData.hearAboutUs.join(', ');
 
       const res = await fetch('/api/user/profile', {
         method: 'PUT',
@@ -179,7 +180,11 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
       setValidationError(null);
     }} />,
     <StepLevel formData={formData} onSelect={(level) => advance({ ...formData, level }, 6)} />,
-    <StepHear formData={formData} onSelect={(hearAboutUs) => setFormData({ ...formData, hearAboutUs })} />,
+    <StepHear formData={formData} onToggle={(v) => {
+      const current = formData.hearAboutUs;
+      const updated = current.includes(v) ? current.filter((x) => x !== v) : [...current, v];
+      setFormData({ ...formData, hearAboutUs: updated });
+    }} />,
     <StepReferral
       formData={formData}
       referralState={referralState}

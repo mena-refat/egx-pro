@@ -11,7 +11,7 @@ export interface FormData {
   shariaMode: boolean;
   sectors: string[];
   level: string;
-  hearAboutUs: string;
+  hearAboutUs: string[];
   referralCode: string;
 }
 
