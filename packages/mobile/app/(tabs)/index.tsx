@@ -511,6 +511,10 @@ export default function HomePage() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 keyExtractor={(s) => s.ticker}
+                initialNumToRender={6}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                removeClippedSubviews
                 contentContainerStyle={{
                   paddingHorizontal: SPACE.lg,
                   gap: SPACE.sm,

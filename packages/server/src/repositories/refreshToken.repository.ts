@@ -1,13 +1,21 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.ts';
+import { userApiSelect } from '../lib/userApiSelect.ts';
 
 export const RefreshTokenRepository = {
   create(data: { token: string; userId: number; expiresAt: Date; [key: string]: unknown }) {
     return prisma.refreshToken.create({ data: data as Parameters<typeof prisma.refreshToken.create>[0]['data'] });
   },
   findByToken(token: string) {
-    return prisma.refreshToken.findUnique({ where: { token }, include: { user: true } });
+    return prisma.refreshToken.findUnique({
+      where: { token },
+      include: { user: { select: userApiSelect } },
+    });
   },
-  findByTokenSelect(token: string, select: Record<string, boolean>) {
+  findByTokenSelect<S extends Prisma.RefreshTokenSelect>(
+    token: string,
+    select: S
+  ): Promise<Prisma.RefreshTokenGetPayload<{ select: S }> | null> {
     return prisma.refreshToken.findUnique({ where: { token }, select });
   },
   revokeByToken(token: string) {
@@ -25,6 +33,17 @@ export const RefreshTokenRepository = {
   findActiveSessions(userId: number) {
     return prisma.refreshToken.findMany({
       where: { userId, isRevoked: false, expiresAt: { gt: new Date() } },
+      select: {
+        id: true,
+        deviceType: true,
+        browser: true,
+        os: true,
+        deviceInfo: true,
+        city: true,
+        country: true,
+        createdAt: true,
+        expiresAt: true,
+      },
       orderBy: { createdAt: 'desc' },
     });
   },

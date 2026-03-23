@@ -128,7 +128,7 @@ export const UserAccountService = {
     if (currentRefreshToken) {
       const hash = hashRefreshToken(currentRefreshToken);
       const current = await RefreshTokenRepository.findByTokenSelect(hash, { id: true });
-      if (current) currentSessionId = (current as { id: string }).id;
+      if (current) currentSessionId = current.id;
     }
     return list.map((s) => ({
       id: s.id,
@@ -153,7 +153,7 @@ export const UserAccountService = {
       const hash = hashRefreshToken(currentRefreshToken);
       const current = await RefreshTokenRepository.findByTokenSelect(hash, { id: true });
       if (current) {
-        await RefreshTokenRepository.revokeAllByUserExcept(userId, (current as { id: string }).id);
+        await RefreshTokenRepository.revokeAllByUserExcept(userId, current.id);
         return;
       }
     }

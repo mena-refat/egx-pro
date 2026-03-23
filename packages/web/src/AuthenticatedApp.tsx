@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
@@ -35,7 +35,10 @@ export default function AuthenticatedApp() {
   } = useNotifications(true);
   const stats = useDashboardStats(true, pathname);
 
-  const supportUnreadCount = notifications.filter(n => n.type === 'support_reply' && !n.isRead).length;
+  const supportUnreadCount = useMemo(
+    () => notifications.filter((n) => n.type === 'support_reply' && !n.isRead).length,
+    [notifications],
+  );
 
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed));

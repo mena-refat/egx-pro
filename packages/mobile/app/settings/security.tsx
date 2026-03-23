@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, Pressable, ScrollView, ActivityIndicator,
-  Modal, TextInput, Alert, Image,
+  Modal, TextInput, Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import {
   ArrowLeft, ArrowRight, Shield, Fingerprint, Smartphone,
@@ -147,7 +148,8 @@ function TwoFASetupModal({ visible, onClose, onSuccess }: SetupModalProps) {
                   <Image
                     source={{ uri: qrUrl }}
                     style={{ width: 180, height: 180 }}
-                    resizeMode="contain"
+                    contentFit="contain"
+                    cachePolicy="memory-disk"
                   />
                 </View>
               </View>

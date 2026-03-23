@@ -4,7 +4,8 @@ import { marketDataService } from '../services/market-data/market-data.service.t
 import { getMarketStatusForStocks } from '../lib/marketHours.ts';
 import { isPro } from '../lib/plan.ts';
 import type { AuthRequest } from '../routes/types.ts';
-import { sendSuccess, sendError } from '../lib/apiResponse.ts';
+import { sendSuccess, sendSuccessCached, sendError } from '../lib/apiResponse.ts';
+import { HTTP_CACHE_SECONDS } from '../lib/constants.ts';
 
 async function useDelayed(req: AuthRequest): Promise<boolean> {
   const userId = req.user?.id ?? req.userId;
@@ -29,13 +30,20 @@ export const StocksController = {
     const delayed = await useDelayed(req);
     const sector = typeof req.query.sector === 'string' ? req.query.sector : undefined;
     const prices = await StocksService.getBulkPrices(delayed, sector);
-    sendSuccess(res, prices);
+    sendSuccessCached(res, prices, {
+      maxAgeSec: HTTP_CACHE_SECONDS.stockListPrices,
+      scope: 'private',
+      vary: 'Authorization, Cookie',
+    });
   }),
 
   search: run(async (req, res) => {
     const q = typeof req.query.q === 'string' ? req.query.q : '';
     const results = await StocksService.search(q);
-    sendSuccess(res, results);
+    sendSuccessCached(res, results, {
+      maxAgeSec: HTTP_CACHE_SECONDS.stockSearch,
+      scope: 'public',
+    });
   }),
 
   getPrice: run(async (req, res) => {
@@ -46,14 +54,21 @@ export const StocksController = {
       sendError(res, 'NOT_FOUND', 404);
       return;
     }
-    sendSuccess(res, price);
+    sendSuccessCached(res, price, {
+      maxAgeSec: HTTP_CACHE_SECONDS.stockQuote,
+      scope: 'private',
+      vary: 'Authorization, Cookie',
+    });
   }),
 
   getHistory: run(async (req, res) => {
     const { ticker } = req.params;
     const { range } = req.query;
     const history = await StocksService.getHistory(ticker, range as string);
-    sendSuccess(res, history);
+    sendSuccessCached(res, history, {
+      maxAgeSec: HTTP_CACHE_SECONDS.stockHistory,
+      scope: 'public',
+    });
   }),
 
   getFinancials: run(async (req, res) => {
@@ -63,20 +78,30 @@ export const StocksController = {
       sendError(res, 'NOT_FOUND', 404);
       return;
     }
-    sendSuccess(res, financials);
+    sendSuccessCached(res, financials, {
+      maxAgeSec: HTTP_CACHE_SECONDS.stockFinancials,
+      scope: 'public',
+    });
   }),
 
   getNews: run(async (req, res) => {
     const { ticker } = req.params;
     const news = await StocksService.getNews(ticker);
-    sendSuccess(res, news);
+    sendSuccessCached(res, news, {
+      maxAgeSec: HTTP_CACHE_SECONDS.stockNews,
+      scope: 'public',
+    });
   }),
 
   getGainersLosers: run(async (req, res) => {
     const raw = typeof req.query.period === 'string' ? req.query.period : 'day';
     const period = ['day', 'week', 'month', 'year'].includes(raw) ? (raw as 'day' | 'week' | 'month' | 'year') : 'day';
     const data = await StocksService.gainersLosers(period);
-    sendSuccess(res, data);
+    sendSuccessCached(res, data, {
+      maxAgeSec: HTTP_CACHE_SECONDS.stockGainersLosers,
+      scope: 'private',
+      vary: 'Authorization, Cookie',
+    });
   }),
 
   orderDepth: (_req: AuthRequest, res: Response) => {
@@ -102,7 +127,7 @@ export const StocksController = {
       sendError(res, 'NOT_FOUND', 404);
       return;
     }
-    sendSuccess(res, {
+    sendSuccessCached(res, {
       ticker: quote.symbol,
       price: quote.price,
       change: quote.change,
@@ -113,6 +138,10 @@ export const StocksController = {
       previousClose: quote.previousClose,
       volume: quote.volume,
       symbol: quote.symbol,
+    }, {
+      maxAgeSec: HTTP_CACHE_SECONDS.stockQuote,
+      scope: 'private',
+      vary: 'Authorization, Cookie',
     });
   }),
 
@@ -152,6 +181,9 @@ export const StocksController = {
   /** GET /api/stocks/market-status — { isOpen, nextOpen, nextClose } */
   getMarketStatus: run(async (_req, res) => {
     const status = getMarketStatusForStocks();
-    sendSuccess(res, status);
+    sendSuccessCached(res, status, {
+      maxAgeSec: HTTP_CACHE_SECONDS.marketStatus,
+      scope: 'public',
+    });
   }),
 };

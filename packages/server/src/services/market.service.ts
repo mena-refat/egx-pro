@@ -1,6 +1,14 @@
 import { getMarketOverview } from '../lib/macro.ts';
 import { getMarketStatus, getGoldMarketStatus } from '../lib/marketHours.ts';
 
+const OVERVIEW_TTL_MS = 3_000;
+const overviewCache = new Map<string, { expiresAt: number; value: unknown }>();
+const overviewInFlight = new Map<string, Promise<unknown>>();
+
+function overviewCacheKey(delayed: boolean): string {
+  return delayed ? 'delayed' : 'realtime';
+}
+
 export const MarketService = {
   getStatus() {
     const egx = getMarketStatus();
@@ -9,6 +17,16 @@ export const MarketService = {
   },
 
   async getOverview(delayed?: boolean) {
+    const delayedFlag = Boolean(delayed);
+    const key = overviewCacheKey(delayedFlag);
+    const now = Date.now();
+    const hit = overviewCache.get(key);
+    if (hit && hit.expiresAt > now) return hit.value;
+
+    const inflight = overviewInFlight.get(key);
+    if (inflight) return inflight;
+
+    const computePromise = (async () => {
     const overview = await getMarketOverview();
     const egxStatus = getMarketStatus();
     const goldStatus = getGoldMarketStatus();
@@ -33,11 +51,21 @@ export const MarketService = {
       egxStatus: ReturnType<typeof getMarketStatus>;
       goldMarketStatus: ReturnType<typeof getGoldMarketStatus>;
     };
-    if (delayed && goldStatus.isOpen) {
+    if (delayedFlag && goldStatus.isOpen) {
       const o = overview as { gold: Record<string, unknown>; silver: Record<string, unknown> };
       (payload as Record<string, unknown>).gold = { ...o.gold, isDelayed: true };
       (payload as Record<string, unknown>).silver = { ...o.silver, isDelayed: true };
     }
     return payload;
+    })();
+
+    overviewInFlight.set(key, computePromise);
+    try {
+      const value = await computePromise;
+      overviewCache.set(key, { value, expiresAt: now + OVERVIEW_TTL_MS });
+      return value;
+    } finally {
+      overviewInFlight.delete(key);
+    }
   },
 };

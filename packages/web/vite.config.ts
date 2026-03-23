@@ -5,6 +5,7 @@ import {defineConfig, loadEnv} from 'vite';
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '../../', '');
+  const prod = mode === 'production';
   return {
     plugins: [react(), tailwindcss()],
     test: {
@@ -41,6 +42,7 @@ export default defineConfig(({mode}) => {
     },
     build: {
       target: 'es2020',
+      esbuild: prod ? { drop: ['console', 'debugger'], legalComments: 'none' } : undefined,
       rollupOptions: {
         output: {
           // Only declare chunks that are truly in the EAGER import graph.
@@ -51,6 +53,7 @@ export default defineConfig(({mode}) => {
           manualChunks: {
             'vendor-router': ['react-router-dom'],
             'vendor-i18n': ['i18next', 'react-i18next', 'i18next-http-backend', 'i18next-browser-languagedetector'],
+            'vendor-charts': ['recharts', 'lightweight-charts'],
             'egx-stocks': ['./src/lib/egxStocks'],
           },
         },

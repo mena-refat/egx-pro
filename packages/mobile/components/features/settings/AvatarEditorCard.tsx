@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
 import { useTheme } from '../../../hooks/useTheme';
 import { useAuthStore } from '../../../store/authStore';
 import apiClient from '../../../lib/api/client';
@@ -70,7 +71,9 @@ export function AvatarEditorCard() {
           <Image
             source={{ uri: user.avatarUrl }}
             style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={120}
           />
         ) : (
           <Text style={{ fontSize: 30, fontWeight: '800', color: BRAND }}>

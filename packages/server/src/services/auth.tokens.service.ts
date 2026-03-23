@@ -13,7 +13,12 @@ export async function refresh(
 ): Promise<{ accessToken: string; refreshToken: string }> {
   if (!refreshTokenCookie) throw new AppError('UNAUTHORIZED', 401);
   const refreshHash = hashRefreshToken(refreshTokenCookie);
-  const rt = await RefreshTokenRepository.findByToken(refreshHash);
+  const rt = await RefreshTokenRepository.findByTokenSelect(refreshHash, {
+    id: true,
+    userId: true,
+    isRevoked: true,
+    expiresAt: true,
+  });
   const now = new Date();
   if (!rt || rt.isRevoked || rt.expiresAt < now) {
     if (rt?.id) await RefreshTokenRepository.updateMany({ id: rt.id }, { isRevoked: true });
@@ -24,12 +29,12 @@ export async function refresh(
   const newRefreshHash = hashRefreshToken(newRefreshToken);
   const expiresAt = new Date(Date.now() + REFRESH_TOKEN_AGE_MS);
   await RefreshTokenRepository.updateMany({ id: rt.id }, { isRevoked: true });
-  const refreshData = await buildRefreshTokenData(rt.user.id, newRefreshHash, expiresAt, ctx?.ip ?? null, ctx?.userAgent).catch(() =>
-    buildRefreshTokenData(rt.user.id, newRefreshHash, expiresAt, null, ctx?.userAgent)
+  const refreshData = await buildRefreshTokenData(rt.userId, newRefreshHash, expiresAt, ctx?.ip ?? null, ctx?.userAgent).catch(() =>
+    buildRefreshTokenData(rt.userId, newRefreshHash, expiresAt, null, ctx?.userAgent)
   );
   await RefreshTokenRepository.create(refreshData);
 
-  const accessToken = generateAccessToken({ id: rt.user.id });
+  const accessToken = generateAccessToken({ id: rt.userId });
   return { accessToken, refreshToken: newRefreshToken };
 }
 
@@ -117,7 +122,7 @@ export async function getMe(refreshTokenCookie: string | undefined): Promise<{ u
   const now = new Date();
   if (!rt || rt.isRevoked || rt.expiresAt < now) throw new AppError('invalid_or_expired_token', 401, 'Invalid or expired refresh token');
 
-  if ((rt.user as { isSuspended?: boolean }).isSuspended) {
+  if (rt.user.isSuspended) {
     throw new AppError('ACCOUNT_SUSPENDED', 403, 'هذا الحساب محظور');
   }
 

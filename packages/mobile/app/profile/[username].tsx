@@ -85,14 +85,6 @@ export default function SocialProfilePage() {
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
   const isOwnProfile = authUser?.username === username;
 
-  useEffect(() => {
-    if (isOwnProfile) {
-      router.replace('/(tabs)/profile');
-      return;
-    }
-    void loadProfile();
-  }, [isOwnProfile, loadProfile, router]);
-
   const loadProfile = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -106,6 +98,14 @@ export default function SocialProfilePage() {
       setLoading(false);
     }
   }, [username]);
+
+  useEffect(() => {
+    if (isOwnProfile) {
+      router.replace('/(tabs)/profile');
+      return;
+    }
+    void loadProfile();
+  }, [isOwnProfile, loadProfile, router]);
 
   const handleFollow = async () => {
     if (!profile) return;

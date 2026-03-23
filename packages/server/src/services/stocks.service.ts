@@ -13,6 +13,8 @@ const GICS_VALUES: GicsSector[] = [
   'REAL_ESTATE', 'COMMUNICATION_SERVICES',
 ];
 
+const BULK_PRICES_TTL_MS = 2_500;
+
 function quoteToPriceRow(
   q: { ticker: string; price: number; change: number; changePercent: number; volume: number },
   sector: GicsSector | null,
@@ -31,8 +33,20 @@ function quoteToPriceRow(
   };
 }
 
+type PriceRow = ReturnType<typeof quoteToPriceRow>;
+const bulkPricesCache = new Map<string, { expiresAt: number; value: PriceRow[] }>();
+const bulkPricesInFlight = new Map<string, Promise<PriceRow[]>>();
+
 export const StocksService = {
   async getBulkPrices(_delayed: boolean, sector?: string) {
+    const cacheKey = `${_delayed ? 'delayed' : 'realtime'}:${sector ?? 'all'}`;
+    const now = Date.now();
+    const hit = bulkPricesCache.get(cacheKey);
+    if (hit && hit.expiresAt > now) return hit.value;
+    const inflight = bulkPricesInFlight.get(cacheKey);
+    if (inflight) return inflight;
+
+    const buildPromise = (async () => {
     let tickers = EGX_TICKERS;
     if (sector && GICS_VALUES.includes(sector as GicsSector)) {
       const stocks = await StockRepository.findTickersBySector(sector as GicsSector);
@@ -56,7 +70,7 @@ export const StocksService = {
       if (s.description) descriptionMap.set(s.ticker, s.description);
     });
 
-    const rows = [];
+    const rows: PriceRow[] = [];
     for (const [ticker, q] of quotes.entries()) {
       if (q.price > 0) {
         rows.push(quoteToPriceRow(
@@ -67,6 +81,16 @@ export const StocksService = {
       }
     }
     return rows;
+    })();
+
+    bulkPricesInFlight.set(cacheKey, buildPromise);
+    try {
+      const value = await buildPromise;
+      bulkPricesCache.set(cacheKey, { value, expiresAt: now + BULK_PRICES_TTL_MS });
+      return value;
+    } finally {
+      bulkPricesInFlight.delete(cacheKey);
+    }
   },
 
   async search(q: string) {

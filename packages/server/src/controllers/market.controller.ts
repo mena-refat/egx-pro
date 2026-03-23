@@ -3,7 +3,8 @@ import { MarketService } from '../services/market.service.ts';
 import { isPro } from '../lib/plan.ts';
 import type { AuthRequest } from '../routes/types.ts';
 import { logger } from '../lib/logger.ts';
-import { sendSuccess, sendError } from '../lib/apiResponse.ts';
+import { sendSuccess, sendSuccessCached, sendError } from '../lib/apiResponse.ts';
+import { HTTP_CACHE_SECONDS } from '../lib/constants.ts';
 
 function run(fn: (req: AuthRequest, res: Response) => Promise<void>) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -15,7 +16,10 @@ export const MarketController = {
   getStatus: (_req: AuthRequest, res: Response) => {
     try {
       const data = MarketService.getStatus();
-      sendSuccess(res, data);
+      sendSuccessCached(res, data, {
+        maxAgeSec: HTTP_CACHE_SECONDS.marketStatus,
+        scope: 'public',
+      });
     } catch {
       sendError(res, 'INTERNAL_ERROR', 500);
     }
@@ -31,7 +35,11 @@ export const MarketController = {
         delayed = u ? !isPro(u) : false;
       }
       const payload = await MarketService.getOverview(delayed);
-      sendSuccess(res, payload);
+      sendSuccessCached(res, payload, {
+        maxAgeSec: HTTP_CACHE_SECONDS.marketOverviewPrivate,
+        scope: 'private',
+        vary: 'Authorization, Cookie',
+      });
     } catch (error) {
       logger.error('Stocks /market/overview error', { error });
       const { getMarketStatus, getGoldMarketStatus } = await import('../lib/marketHours.ts');

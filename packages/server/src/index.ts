@@ -7,6 +7,7 @@ import cors from 'cors';
 import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import compression from 'compression';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
@@ -17,7 +18,7 @@ import { setupWebSocket } from './websocket.ts';
 import { validateEnv } from './lib/env.ts';
 import { initWebPush } from './lib/webPush.ts';
 import { logger } from './lib/logger.ts';
-import { RATE_LIMITS } from './lib/constants.ts';
+import { PERF_THRESHOLDS_MS, RATE_LIMITS } from './lib/constants.ts';
 import { AppError } from './lib/errors.ts';
 import { sanitizeInput } from './lib/sanitize.ts';
 import authRoutes from './routes/auth.ts';
@@ -53,6 +54,7 @@ import { runResetAiUsageJob } from './jobs/reset-ai-usage.ts';
 import { runDelayedPricesJob, DELAYED_PRICES_INTERVAL_MS } from './jobs/delayed-prices.ts';
 import { runScheduledNotificationsJob } from './jobs/scheduled-notifications.ts';
 import { runPrewarmNewsAnalysisJob } from './jobs/prewarm-news-analysis.ts';
+import { flushRequestLatencyTop, recordRequestLatency, startPerfTelemetry } from './lib/perfTelemetry.ts';
 
 async function startServer() {
   if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
@@ -86,6 +88,18 @@ async function startServer() {
   app.use('/api/profile/avatar', express.json({ limit: '2mb' }));
   app.use('/api/user/avatar', express.json({ limit: '2mb' }));
   app.use(cookieParser());
+
+  // gzip/brotli — smaller JSON payloads over the wire (client does not decompress manually)
+  app.use(
+    compression({
+      threshold: 1024,
+      level: 6,
+      filter: (req, res) => {
+        if (req.headers['x-no-compression']) return false;
+        return compression.filter(req, res);
+      },
+    }),
+  );
 
   app.use('/api', sanitizeInput);
 
@@ -157,12 +171,29 @@ async function startServer() {
         status: res.statusCode,
         durationMs: duration,
       });
+      recordRequestLatency(req.method, req.path, duration);
+      if (duration >= PERF_THRESHOLDS_MS.slowRequest) {
+        logger.warn('slow_http_request', {
+          reqId,
+          method: req.method,
+          path: req.path,
+          status: res.statusCode,
+          durationMs: duration,
+        });
+      }
     });
     next();
   });
 
-  // Static uploads (avatars, etc.)
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+  // Static uploads (avatars, etc.) — long cache + ETag for repeat visits
+  app.use(
+    '/uploads',
+    express.static(path.join(__dirname, '../uploads'), {
+      maxAge: 86_400_000,
+      etag: true,
+      lastModified: true,
+    }),
+  );
 
   // Rate Limiting — always respond with JSON so the client never gets "Too many requests" as plain text
   const ipKey = (req: express.Request) => ipKeyGenerator(req.ip ?? 'unknown');
@@ -242,6 +273,7 @@ async function startServer() {
   });
 
   let wsHandlers: ReturnType<typeof setupWebSocket> | null = null;
+  const stopPerfTelemetry = startPerfTelemetry();
 
   app.get('/api/health/ready', async (_req, res) => {
     const checks: Record<string, string> = {};
@@ -352,7 +384,20 @@ async function startServer() {
     const webDist = path.join(__dirname, '..', '..', 'web', 'dist');
     const adminDist = path.join(__dirname, '..', '..', 'admin', 'dist');
 
-    app.use(express.static(webDist));
+    app.use(
+      express.static(webDist, {
+        index: false,
+        setHeaders(res, filePath) {
+          if (filePath.endsWith('index.html')) {
+            res.setHeader('Cache-Control', 'no-store');
+            return;
+          }
+          if (/\.(js|css|woff2?|png|jpe?g|svg|ico|webp|map)$/.test(filePath)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          }
+        },
+      }),
+    );
 
     // Admin portal — stricter security policy applied before static file serving.
     // The main app CSP allows external AI APIs; the admin portal only needs 'self'.
@@ -486,6 +531,8 @@ async function startServer() {
     scheduledNotifCron.stop();
     newsPrewarmCron.stop();
     clearInterval(pricesInterval);
+    stopPerfTelemetry();
+    flushRequestLatencyTop();
     server.close(() => {
       logger.info('HTTP server closed');
     });

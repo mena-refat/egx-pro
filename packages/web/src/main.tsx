@@ -5,6 +5,7 @@ import App from './App.tsx';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import './index.css';
 import './lib/i18n';
+import { initWebPerformanceTracking } from './lib/performance';
 
 if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
   import('@sentry/react').then((Sentry) => {
@@ -32,6 +33,8 @@ if (splash) {
   splash.style.pointerEvents = 'none';
   setTimeout(() => splash.remove(), 300);
 }
+
+initWebPerformanceTracking();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

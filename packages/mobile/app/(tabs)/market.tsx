@@ -445,6 +445,10 @@ function TopMoversSection({ stocks, loading }: { stocks: { ticker: string; chang
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(s) => s.ticker}
+            initialNumToRender={6}
+            maxToRenderPerBatch={6}
+            windowSize={3}
+            removeClippedSubviews
             contentContainerStyle={{ paddingHorizontal: SPACE.lg, gap: SPACE.sm, flexDirection: isRTL ? 'row-reverse' : 'row' }}
             renderItem={({ item: s }) => (
               <MoverChip
@@ -468,6 +472,10 @@ function TopMoversSection({ stocks, loading }: { stocks: { ticker: string; chang
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(s) => s.ticker}
+            initialNumToRender={6}
+            maxToRenderPerBatch={6}
+            windowSize={3}
+            removeClippedSubviews
             contentContainerStyle={{ paddingHorizontal: SPACE.lg, gap: SPACE.sm, flexDirection: isRTL ? 'row-reverse' : 'row' }}
             renderItem={({ item: s }) => (
               <MoverChip

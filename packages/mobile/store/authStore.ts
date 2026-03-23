@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { setAccessToken, setRefreshToken, clearTokens } from '../lib/auth/tokens';
+import { getAccessToken, setAccessToken, setRefreshToken, clearTokens } from '../lib/auth/tokens';
 import apiClient from '../lib/api/client';
 import { ENDPOINTS } from '../lib/api/endpoints';
 
