@@ -4,6 +4,7 @@ export type Ticket = {
   message: string;
   status: string;
   priority: string;
+  category: string | null;
   assignedTo: number | null;
   assignedAt: string | null;
   assignedAgent: { fullName: string; email: string } | null;

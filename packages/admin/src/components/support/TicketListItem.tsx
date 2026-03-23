@@ -1,7 +1,7 @@
 import { Star, AlertTriangle, ArrowUpCircle, Clock } from 'lucide-react';
 import { Badge } from '../Badge';
 import type { Ticket } from './types';
-import { STATUS_BAR, PRIORITY_DOT, PRIORITY_TEXT, PRIORITY_KEY, isOverdue, timeAgo, userInitial } from './helpers';
+import { STATUS_BAR, PRIORITY_DOT, PRIORITY_TEXT, PRIORITY_KEY, CAT_BADGE, isOverdue, timeAgo, userInitial } from './helpers';
 
 interface TicketListItemProps {
   tk: Ticket;
@@ -75,6 +75,11 @@ export function TicketListItem({ tk, isSelected, managerMode, isChecked, locale,
               <span className={`text-[10px] font-medium ${PRIORITY_TEXT[tk.priority] ?? 'text-slate-500'}`}>
                 {PRIORITY_KEY[tk.priority] ? t(PRIORITY_KEY[tk.priority]) : tk.priority}
               </span>
+              {tk.category && CAT_BADGE[tk.category] && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${CAT_BADGE[tk.category].cls}`}>
+                  {CAT_BADGE[tk.category].label}
+                </span>
+              )}
               {tk.assignedAgent ? (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/15">
                   {tk.assignedAgent.fullName || tk.assignedAgent.email}

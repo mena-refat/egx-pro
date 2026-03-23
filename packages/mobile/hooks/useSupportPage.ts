@@ -37,10 +37,13 @@ export function useSupportPage() {
   const referralProExpiresAt = (user as { referralProExpiresAt?: string | null } | null)?.referralProExpiresAt;
   const hasReferralPro = !!referralProExpiresAt && new Date(referralProExpiresAt) > new Date();
 
-  // If allowedPlans not yet fetched, fall back to old behaviour (non-free = allowed)
-  const canUseSupport = allowedPlans
-    ? allowedPlans.includes(plan) || (hasReferralPro && allowedPlans.includes('pro'))
-    : plan !== 'free' || hasReferralPro;
+  // Is the user on a paid plan at all?
+  const isPlanEligible = plan !== 'free' || hasReferralPro;
+
+  // Did the admin disable support for this plan? (only meaningful once settings loaded)
+  const isAdminLocked = allowedPlans !== null && !allowedPlans.includes(plan) && !(hasReferralPro && allowedPlans.includes('pro'));
+
+  const canUseSupport = isPlanEligible && !isAdminLocked;
 
   useEffect(() => {
     if (!canUseSupport) {
@@ -114,6 +117,8 @@ export function useSupportPage() {
   return {
     user,
     canUseSupport,
+    isPlanEligible,
+    isAdminLocked,
     tickets,
     loading,
     refreshing,

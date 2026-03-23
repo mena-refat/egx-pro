@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import EmptyState from '../../shared/EmptyState';
 import { Button } from '../../ui/Button';
 import { StockFilters } from './StockFilters';
@@ -89,20 +89,57 @@ export default function StockScreener({ onSelectStock }: StockScreenerProps = {}
         t={screener.t}
       />
       <StockTable
-        stocks={screener.sorted}
+        stocks={screener.stocks}
         watchlist={screener.watchlist}
         onSelectStock={(s: StockWithMeta) => handleSelectStock(s)}
         onToggleWatchlist={screener.toggleWatchlist}
         t={screener.t}
         lang={screener.isAr ? 'ar' : 'en'}
       />
-      {screener.sorted.length === 0 && (
+      {screener.stocks.length === 0 && (
         <EmptyState
           icon={Search}
           title={screener.t('stocks.noResults')}
           description={screener.t('stocks.noResultsDescription')}
         />
       )}
+
+      {/* Pagination */}
+      {screener.pages > 1 && (
+        <div className="flex items-center justify-between px-1 py-2">
+          <span className="text-xs text-[var(--text-muted)]">
+            {isAr ? `${screener.total} سهم` : `${screener.total} stocks`}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => screener.setPage(screener.page - 1)}
+              disabled={screener.page <= 1}
+              className="p-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              aria-label={isAr ? 'السابق' : 'Previous'}
+            >
+              {isAr
+                ? <ChevronRight className="w-4 h-4 text-[var(--text-secondary)]" />
+                : <ChevronLeft  className="w-4 h-4 text-[var(--text-secondary)]" />}
+            </button>
+            <span className="text-sm text-[var(--text-secondary)] tabular-nums min-w-[60px] text-center">
+              {isAr
+                ? `${screener.page} / ${screener.pages}`
+                : `${screener.page} / ${screener.pages}`}
+            </span>
+            <button
+              onClick={() => screener.setPage(screener.page + 1)}
+              disabled={screener.page >= screener.pages}
+              className="p-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              aria-label={isAr ? 'التالي' : 'Next'}
+            >
+              {isAr
+                ? <ChevronLeft  className="w-4 h-4 text-[var(--text-secondary)]" />
+                : <ChevronRight className="w-4 h-4 text-[var(--text-secondary)]" />}
+            </button>
+          </div>
+        </div>
+      )}
+
       <WatchlistTargetModal
         addTargetModal={screener.addTargetModal}
         addTargetPrice={screener.addTargetPrice}

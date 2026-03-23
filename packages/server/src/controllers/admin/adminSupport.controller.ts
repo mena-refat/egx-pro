@@ -22,6 +22,11 @@ export const AdminSupportController = {
 
     if (!manager) {
       where.assignedTo = req.admin!.id;
+      // Filter by agent's assigned categories (empty = all categories)
+      const agentCats = req.admin!.supportCategories;
+      if (agentCats.length > 0) {
+        where.category = { in: agentCats };
+      }
     } else if (agentId === 'unassigned') {
       where.assignedTo = null;
     } else if (agentId) {
@@ -80,7 +85,7 @@ export const AdminSupportController = {
         return a.createdAt.getTime() - b.createdAt.getTime();
       });
 
-      const tickets = allTickets.slice((pageNum - 1) * 20, pageNum * 20);
+      const tickets = allTickets.slice((pageNum - 1) * 50, pageNum * 50);
 
       const agentIds = [...new Set(tickets.map((t) => t.assignedTo).filter(Boolean))] as number[];
       let agentMap: Record<number, { fullName: string; email: string }> = {};
@@ -99,7 +104,7 @@ export const AdminSupportController = {
         })),
         total,
         page: pageNum,
-        totalPages: Math.ceil(total / 20),
+        totalPages: Math.ceil(total / 50),
         isManager: manager,
       });
       return;
@@ -275,11 +280,24 @@ export const AdminSupportController = {
     sendSuccess(res, ticket);
   },
 
+  async getManagers(req: AdminRequest, res: Response): Promise<void> {
+    const managers = await prisma.admin.findMany({
+      where: {
+        isActive: true,
+        isDeleted: false,
+        permissions: { has: 'support.manage' },
+      },
+      select: { id: true, fullName: true, email: true },
+      orderBy: { fullName: 'asc' },
+    });
+    sendSuccess(res, managers);
+  },
+
   async getAgents(req: AdminRequest, res: Response): Promise<void> {
     const where: Record<string, unknown> = {
       isActive: true,
       isDeleted: false,
-      permissions: { has: 'support.reply' },
+      permissions: { hasSome: ['support.view', 'support.reply', 'support.assign', 'support.manage'] },
     };
     // Managers (non-super-admin) see only agents assigned to them
     if (req.admin!.role !== 'SUPER_ADMIN') {
@@ -621,26 +639,23 @@ export const AdminSupportController = {
 
   async escalate(req: AdminRequest, res: Response): Promise<void> {
     const { id } = req.params as { id: string };
-    const { note } = req.body as { note?: string };
+    const { note, managerId: bodyManagerId } = req.body as { note?: string; managerId?: number };
 
-    // Only agents (non-managers) with support.reply can escalate
-    if (isManager(req.admin)) {
-      sendError(res, 'ADMIN_FORBIDDEN', 403);
-      return;
-    }
-
-    const ticket = await prisma.supportTicket.findUnique({ where: { id }, select: { assignedTo: true, escalatedAt: true, status: true } });
+    const ticket = await prisma.supportTicket.findUnique({ where: { id }, select: { escalatedAt: true, status: true } });
     if (!ticket) { sendError(res, 'NOT_FOUND', 404); return; }
-    if (ticket.assignedTo !== req.admin!.id) { sendError(res, 'ADMIN_FORBIDDEN', 403); return; }
     if (ticket.escalatedAt) { sendError(res, 'ALREADY_ESCALATED', 400); return; }
     if (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') {
       sendError(res, 'TICKET_ALREADY_CLOSED', 400);
       return;
     }
 
-    // Get the agent's manager
-    const agent = await prisma.admin.findUnique({ where: { id: req.admin!.id }, select: { managerId: true } });
-    if (!agent?.managerId) { sendError(res, 'NO_MANAGER_ASSIGNED', 400); return; }
+    // Determine target manager: body override > agent's own manager
+    let targetManagerId: number | null = bodyManagerId ?? null;
+    if (!targetManagerId) {
+      const agent = await prisma.admin.findUnique({ where: { id: req.admin!.id }, select: { managerId: true } });
+      targetManagerId = agent?.managerId ?? null;
+    }
+    if (!targetManagerId) { sendError(res, 'NO_MANAGER_ASSIGNED', 400); return; }
 
     const [updated] = await Promise.all([
       prisma.supportTicket.update({
@@ -649,12 +664,10 @@ export const AdminSupportController = {
           escalatedAt: new Date(),
           escalatedBy: req.admin!.id,
           escalationNote: note?.trim() || null,
-          escalatedToManager: agent.managerId,
+          escalatedToManager: targetManagerId,
           priority: 'HIGH',
         },
       }),
-      // Manager notification skipped: Admin IDs and User IDs are separate ID spaces.
-      // Managers see escalated tickets via the support list filtered by escalatedAt.
       req.admin ? adminAudit(req.admin.id, 'SUPPORT_ESCALATED', id, note?.trim() || '', req) : null,
     ]);
 

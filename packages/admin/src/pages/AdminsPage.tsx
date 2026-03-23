@@ -19,6 +19,7 @@ const EMPTY_FORM = {
   fullName: '',
   password: '',
   permissions: [] as string[],
+  supportCategories: [] as string[],
   isSuperAdmin: false,
   mustChangePassword: true,
   mustSetup2FA: true,
@@ -29,6 +30,12 @@ const EMPTY_FORM = {
   managerId: '' as string,
 };
 
+const SUPPORT_CATS = ['BUG', 'PAYMENT', 'INQUIRY', 'ACCOUNT', 'FEATURE', 'OTHER'] as const;
+const CAT_LABELS: Record<string, string> = {
+  BUG: 'Bug Reports', PAYMENT: 'Payment', INQUIRY: 'Inquiries',
+  ACCOUNT: 'Account', FEATURE: 'Features', OTHER: 'Other',
+};
+
 export default function AdminsPage() {
   const { t } = useTranslation();
   const nav = useNavigate();
@@ -37,7 +44,7 @@ export default function AdminsPage() {
   const PRESET_ROLES = getPresetRoles(t);
 
   const [admins, setAdmins] = useState<any[]>([]);
-  const [supportManagers, setSupportManagers] = useState<{ id: number; fullName: string; email: string }[]>([]);
+  const supportManagers = admins.filter((a) => (a.permissions ?? []).includes('support.manage'));
 
   /* Create modal */
   const [open, setOpen] = useState(false);
@@ -86,20 +93,16 @@ export default function AdminsPage() {
   const [showReset2FAPwd, setShowReset2FAPwd] = useState(false);
 
   /* Edit permissions */
-  const [editPermAdmin, setEditPermAdmin] = useState<{ id: number; email: string; fullName: string; permissions: string[]; managerId: number | null } | null>(null);
+  const [editPermAdmin, setEditPermAdmin] = useState<{ id: number; email: string; fullName: string; permissions: string[]; managerId: number | null; supportCategories: string[] } | null>(null);
   const [editPermissions, setEditPermissions] = useState<string[]>([]);
   const [editPermManagerId, setEditPermManagerId] = useState<string>('');
+  const [editPermCategories, setEditPermCategories] = useState<string[]>([]);
   const [editPermSaving, setEditPermSaving] = useState(false);
 
 
   /* ── API ── */
   const loadAdmins = () =>
     adminApi.get('/admins').then((r) => setAdmins(r.data.data)).catch(() => setAdmins([]));
-
-  const loadSupportManagers = () =>
-    adminApi.get('/admins')
-      .then((r) => setSupportManagers((r.data.data ?? []).filter((a: any) => (a.permissions ?? []).includes('support.manage'))))
-      .catch(() => null);
 
   useEffect(() => { void loadAdmins(); }, []); // eslint-disable-line
 
@@ -171,6 +174,7 @@ export default function AdminsPage() {
         email: form.email, phone: form.phone || undefined,
         fullName: form.fullName, password: form.password, confirmPassword: confirmPwd,
         permissions: form.permissions,
+        supportCategories: form.supportCategories,
         role: form.isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN',
         managerId: form.managerId ? parseInt(form.managerId, 10) : null,
         options: {
@@ -262,11 +266,12 @@ export default function AdminsPage() {
     try {
       await adminApi.patch(`/admins/${editPermAdmin.id}/permissions`, {
         permissions: editPermissions,
+        supportCategories: editPermCategories,
         managerId: editPermManagerId ? parseInt(editPermManagerId, 10) : null,
       });
       setAdmins((prev) => prev.map((a) =>
         a.id === editPermAdmin.id
-          ? { ...a, permissions: editPermissions, managerId: editPermManagerId ? parseInt(editPermManagerId, 10) : null }
+          ? { ...a, permissions: editPermissions, supportCategories: editPermCategories, managerId: editPermManagerId ? parseInt(editPermManagerId, 10) : null }
           : a
       ));
       setEditPermAdmin(null);
@@ -374,10 +379,45 @@ export default function AdminsPage() {
             showSuperAdmin
             t={t}
             onPermissionToggle={togglePermission}
-            onManagerChange={(id) => setForm((f) => ({ ...f, managerId: id }))}
+            onManagerChange={(id) => {
+              const mgr = admins.find((a) => a.id === parseInt(id, 10));
+              const mgrCats: string[] = mgr?.supportCategories ?? [];
+              setForm((f) => ({
+                ...f,
+                managerId: id,
+                supportCategories: mgrCats.length > 0 ? f.supportCategories.filter((c) => mgrCats.includes(c)) : f.supportCategories,
+              }));
+            }}
             onSuperAdminChange={(checked) => setForm((f) => ({ ...f, isSuperAdmin: checked }))}
             onPresetSelect={(permissions) => setForm((f) => ({ ...f, permissions }))}
           />
+          {form.permissions.some((p) => p.startsWith('support.')) && (
+            <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3">
+              <p className="text-xs text-slate-400 mb-2">Support Categories <span className="text-slate-600">(empty = all)</span></p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {SUPPORT_CATS.map((cat) => {
+                  const mgr = admins.find((a) => a.id === parseInt(form.managerId, 10));
+                  const mgrCats: string[] = mgr?.supportCategories ?? [];
+                  const available = mgrCats.length === 0 || mgrCats.includes(cat);
+                  return (
+                    <label key={cat} className={`flex items-center gap-2 cursor-pointer ${!available ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                      <input
+                        type="checkbox"
+                        disabled={!available}
+                        checked={form.supportCategories.includes(cat)}
+                        onChange={(e) => setForm((f) => ({
+                          ...f,
+                          supportCategories: e.target.checked ? [...f.supportCategories, cat] : f.supportCategories.filter((c) => c !== cat),
+                        }))}
+                        className="w-3.5 h-3.5 rounded accent-violet-500"
+                      />
+                      <span className="text-xs text-slate-400">{CAT_LABELS[cat]}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="flex justify-between gap-3 pt-1">
             <button type="button" onClick={goBack} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200">{t('common.back')}</button>
             <button type="button" onClick={goNext} className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg transition-all">{t('common.next')}</button>
@@ -481,10 +521,10 @@ export default function AdminsPage() {
         onResetPassword={(id) => { setResetPwdId(id); setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); setResetPwdNewError(''); setShowResetPwdConfirm(false); }}
         onReset2FA={(id) => { setReset2FAId(id); setReset2FAPwd(''); setReset2FAError(''); setShowReset2FAPwd(false); }}
         onEditPermissions={(a) => {
-          setEditPermAdmin({ id: Number(a.id), email: a.email, fullName: a.fullName, permissions: a.permissions ?? [], managerId: null });
+          setEditPermAdmin({ id: Number(a.id), email: a.email, fullName: a.fullName, permissions: a.permissions ?? [], managerId: a.managerId ?? null, supportCategories: a.supportCategories ?? [] });
           setEditPermissions(a.permissions ?? []);
-          setEditPermManagerId('');
-          void loadSupportManagers();
+          setEditPermManagerId(a.managerId ? String(a.managerId) : '');
+          setEditPermCategories(a.supportCategories ?? []);
         }}
         onViewDetails={(_id, name) => nav(`/admins/${name}`)}
       />
@@ -597,9 +637,43 @@ export default function AdminsPage() {
               supportManagers={supportManagers}
               t={t}
               onPermissionToggle={(perm) => setEditPermissions((prev) => resolvePermToggle(perm, prev))}
-              onManagerChange={setEditPermManagerId}
+              onManagerChange={(id) => {
+                setEditPermManagerId(id);
+                // Clear categories that are no longer available under new manager
+                const mgr = admins.find((a) => a.id === parseInt(id, 10));
+                const mgrCats: string[] = mgr?.supportCategories ?? [];
+                if (mgrCats.length > 0) {
+                  setEditPermCategories((prev) => prev.filter((c) => mgrCats.includes(c)));
+                }
+              }}
               onPresetSelect={setEditPermissions}
             />
+            {editPermissions.some((p) => p.startsWith('support.')) && (
+              <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3">
+                <p className="text-xs text-slate-400 mb-2">Support Categories <span className="text-slate-600">(empty = all)</span></p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {SUPPORT_CATS.map((cat) => {
+                    const mgr = admins.find((a) => a.id === parseInt(editPermManagerId, 10));
+                    const mgrCats: string[] = mgr?.supportCategories ?? [];
+                    const available = mgrCats.length === 0 || mgrCats.includes(cat);
+                    return (
+                      <label key={cat} className={`flex items-center gap-2 cursor-pointer ${!available ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                        <input
+                          type="checkbox"
+                          disabled={!available}
+                          checked={editPermCategories.includes(cat)}
+                          onChange={(e) => setEditPermCategories((prev) =>
+                            e.target.checked ? [...prev, cat] : prev.filter((c) => c !== cat)
+                          )}
+                          className="w-3.5 h-3.5 rounded accent-violet-500"
+                        />
+                        <span className="text-xs text-slate-400">{CAT_LABELS[cat]}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="flex gap-3 justify-end pt-1">
               <button onClick={() => setEditPermAdmin(null)} className="px-4 py-2 text-sm text-slate-400">{t('common.cancel')}</button>
               <button onClick={() => void handleSavePermissions()} disabled={editPermSaving} className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all">

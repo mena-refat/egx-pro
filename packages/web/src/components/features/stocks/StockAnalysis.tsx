@@ -18,6 +18,7 @@ import {
   Bell,
   Newspaper,
   Clock,
+  Calculator,
 } from 'lucide-react';
 import { Skeleton } from '../../ui/Skeleton';
 const TradingViewChart = lazy(() => import('./TradingViewChart').then((m) => ({ default: m.TradingViewChart })));
@@ -31,6 +32,7 @@ import { formatNum, formatBig } from '../analysis/analysisUtils';
 import type { TabId, ChartRange, NewsItem } from '../../../hooks/useStockAnalysis';
 import styles from './StockAnalysis.module.scss';
 import { PriceAlertDialog } from './PriceAlertDialog';
+import { GrowthCalculatorModal } from './GrowthCalculatorModal';
 
 export interface StockAnalysisProps {
   stock: Stock;
@@ -193,7 +195,8 @@ function StockNewsTab({ news, locale, t }: { news: NewsItem[]; locale: string; t
 export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
   const navigate = useNavigate();
   const api = useStockAnalysis(stock);
-  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [alertDialogOpen, setAlertDialogOpen]         = useState(false);
+  const [growthCalcOpen,  setGrowthCalcOpen]           = useState(false);
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -307,6 +310,14 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
                   : t('stockDetail.priceAlertSet')}
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setGrowthCalcOpen(true)}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-muted)] hover:border-emerald-400/40 hover:text-emerald-400 transition-all"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              {isRTL ? 'حاسبة النمو' : 'Growth Calc'}
+            </button>
           </div>
         </div>
 
@@ -803,6 +814,17 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
         currentAlert={watchlistAlert}
         isPro={isPro}
         onSave={updateAlert}
+        isRTL={isRTL}
+      />
+
+      <GrowthCalculatorModal
+        isOpen={growthCalcOpen}
+        onClose={() => setGrowthCalcOpen(false)}
+        ticker={stock.ticker}
+        stockName={stock.name ?? stock.ticker}
+        price={(priceDetail as Record<string, number> | null)?.price ?? price ?? 0}
+        high52w={high52w ?? 0}
+        low52w={low52w ?? 0}
         isRTL={isRTL}
       />
 

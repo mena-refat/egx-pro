@@ -6,6 +6,7 @@ import type { GicsSector } from '@prisma/client';
 import { marketDataService } from './market-data/market-data.service.ts';
 import { NewsService } from './news.service.ts';
 import { getCache, setCache } from '../lib/redis.ts';
+import { isInEGX30, isInEGX70, isInEGX100, isInEGX35LV, isInEGX33 } from '../lib/egxIndices.ts';
 
 const GICS_VALUES: GicsSector[] = [
   'INFORMATION_TECHNOLOGY', 'HEALTH_CARE', 'FINANCIALS', 'CONSUMER_DISCRETIONARY',
@@ -14,6 +15,8 @@ const GICS_VALUES: GicsSector[] = [
 ];
 
 const BULK_PRICES_TTL_MS = 2_500;
+const PAGE_SIZE_DEFAULT = 25;
+const PAGE_SIZE_MAX = 100;
 
 function quoteToPriceRow(
   q: { ticker: string; price: number; change: number; changePercent: number; volume: number },
@@ -34,63 +37,160 @@ function quoteToPriceRow(
 }
 
 type PriceRow = ReturnType<typeof quoteToPriceRow>;
+export type FilterId = 'all' | 'egx30' | 'egx70' | 'egx100' | 'egx35lv' | 'egx33' | 'topGainers' | 'topLosers';
+export type SortId = 'ticker' | 'price' | 'change' | 'volume';
+
+export interface BulkPricesResult {
+  stocks: PriceRow[];
+  total: number;
+  page: number;
+  pages: number;
+  limit: number;
+}
+
+// Cache always stores the full unfiltered list — filtering/sorting/pagination is in-memory
 const bulkPricesCache = new Map<string, { expiresAt: number; value: PriceRow[] }>();
 const bulkPricesInFlight = new Map<string, Promise<PriceRow[]>>();
 
+// Pre-build name lookup from EGX_STOCKS for fast search
+const egxNameMap = new Map<string, { nameAr: string; nameEn: string }>();
+EGX_STOCKS.forEach((s) => egxNameMap.set(s.ticker, s));
+
 export const StocksService = {
-  async getBulkPrices(_delayed: boolean, sector?: string) {
-    const cacheKey = `${_delayed ? 'delayed' : 'realtime'}:${sector ?? 'all'}`;
+  async getBulkPrices(
+    _delayed: boolean,
+    options: {
+      q?: string;
+      filter?: string;
+      sector?: string;
+      sort?: string;
+      order?: string;
+      page?: number;
+      limit?: number;
+    } = {},
+  ): Promise<BulkPricesResult> {
+    // Step 1: Get full unfiltered list from cache (always key = delayed:all / realtime:all)
+    const cacheKey = `${_delayed ? 'delayed' : 'realtime'}:all`;
     const now = Date.now();
+
+    let allRows: PriceRow[] = [];
     const hit = bulkPricesCache.get(cacheKey);
-    if (hit && hit.expiresAt > now) return hit.value;
-    const inflight = bulkPricesInFlight.get(cacheKey);
-    if (inflight) return inflight;
+    if (hit && hit.expiresAt > now) {
+      allRows = hit.value;
+    } else {
+      const inflight = bulkPricesInFlight.get(cacheKey);
+      if (inflight) {
+        allRows = await inflight;
+      } else {
+        const buildPromise = (async () => {
+          const [cached, allStocks] = await Promise.all([
+            marketDataService.getCachedQuotes(EGX_TICKERS),
+            StockRepository.findAllWithSector(),
+          ]);
+          // Only serve from cache — never fire live API calls from the HTTP endpoint.
+          // The polling loop (startPolling) is the sole writer to the cache.
+          // Firing live calls here too causes concurrent Yahoo Finance requests → 429.
+          const quotes = cached;
 
-    const buildPromise = (async () => {
-    let tickers = EGX_TICKERS;
-    if (sector && GICS_VALUES.includes(sector as GicsSector)) {
-      const stocks = await StockRepository.findTickersBySector(sector as GicsSector);
-      tickers = stocks.map((s) => s.ticker);
-      if (tickers.length === 0) return [];
-    }
+          const sectorMap = new Map<string, GicsSector>();
+          const descriptionMap = new Map<string, string>();
+          allStocks.forEach((s) => {
+            if (s.sector) sectorMap.set(s.ticker, s.sector);
+            if (s.description) descriptionMap.set(s.ticker, s.description);
+          });
 
-    const [cached, allStocks] = await Promise.all([
-      marketDataService.getCachedQuotes(tickers),
-      StockRepository.findAllWithSector(),
-    ]);
+          const rows: PriceRow[] = [];
+          for (const [ticker, q] of quotes.entries()) {
+            if (q.price > 0) {
+              rows.push(quoteToPriceRow(
+                { ticker, price: q.price, change: q.change, changePercent: q.changePercent, volume: q.volume },
+                sectorMap.get(ticker) ?? null,
+                descriptionMap.get(ticker) ?? null,
+              ));
+            }
+          }
+          return rows;
+        })();
 
-    // If cache is warm, serve instantly. If completely cold (server just started),
-    // fall back to a live fetch so the first page load always has data.
-    const quotes = cached.size > 0 ? cached : await marketDataService.getQuotes(tickers);
-
-    const sectorMap = new Map<string, GicsSector>();
-    const descriptionMap = new Map<string, string>();
-    allStocks.forEach((s) => {
-      if (s.sector) sectorMap.set(s.ticker, s.sector);
-      if (s.description) descriptionMap.set(s.ticker, s.description);
-    });
-
-    const rows: PriceRow[] = [];
-    for (const [ticker, q] of quotes.entries()) {
-      if (q.price > 0) {
-        rows.push(quoteToPriceRow(
-          { ticker, price: q.price, change: q.change, changePercent: q.changePercent, volume: q.volume },
-          sectorMap.get(ticker) ?? null,
-          descriptionMap.get(ticker) ?? null,
-        ));
+        bulkPricesInFlight.set(cacheKey, buildPromise);
+        try {
+          allRows = await buildPromise;
+          // Don't cache empty results — let the next request retry once polling warms up
+          if (allRows.length > 0) {
+            bulkPricesCache.set(cacheKey, { value: allRows, expiresAt: now + BULK_PRICES_TTL_MS });
+          }
+        } finally {
+          bulkPricesInFlight.delete(cacheKey);
+        }
       }
     }
-    return rows;
-    })();
 
-    bulkPricesInFlight.set(cacheKey, buildPromise);
-    try {
-      const value = await buildPromise;
-      bulkPricesCache.set(cacheKey, { value, expiresAt: now + BULK_PRICES_TTL_MS });
-      return value;
-    } finally {
-      bulkPricesInFlight.delete(cacheKey);
+    // Step 2: Apply filtering, sorting, pagination in memory
+    const {
+      q,
+      filter = 'all',
+      sector,
+      sort = 'ticker',
+      order = 'asc',
+      page: rawPage = 1,
+      limit: rawLimit = PAGE_SIZE_DEFAULT,
+    } = options;
+
+    const limit = Math.min(PAGE_SIZE_MAX, Math.max(1, Number(rawLimit) || PAGE_SIZE_DEFAULT));
+
+    let rows = allRows;
+
+    // Text search (ticker or stock name)
+    if (q?.trim()) {
+      const qLower = q.trim().toLowerCase();
+      const qUpper = q.trim().toUpperCase();
+      rows = rows.filter((r) => {
+        const info = egxNameMap.get(r.ticker);
+        return (
+          r.ticker.includes(qUpper) ||
+          info?.nameAr.toLowerCase().includes(qLower) ||
+          info?.nameEn.toLowerCase().includes(qLower)
+        );
+      });
     }
+
+    // GICS sector filter
+    if (sector && GICS_VALUES.includes(sector as GicsSector)) {
+      rows = rows.filter((r) => r.sector === sector);
+    }
+
+    // Index / special filter
+    if (filter === 'egx30')       rows = rows.filter((r) => isInEGX30(r.ticker));
+    else if (filter === 'egx70')  rows = rows.filter((r) => isInEGX70(r.ticker));
+    else if (filter === 'egx100') rows = rows.filter((r) => isInEGX100(r.ticker));
+    else if (filter === 'egx35lv') rows = rows.filter((r) => isInEGX35LV(r.ticker));
+    else if (filter === 'egx33')  rows = rows.filter((r) => isInEGX33(r.ticker));
+    else if (filter === 'topGainers') {
+      rows = [...rows].sort((a, b) => b.changePercent - a.changePercent).slice(0, 50);
+    } else if (filter === 'topLosers') {
+      rows = [...rows].sort((a, b) => a.changePercent - b.changePercent).slice(0, 50);
+    }
+
+    // Sort (skip for topGainers/topLosers — already sorted above)
+    if (filter !== 'topGainers' && filter !== 'topLosers') {
+      const dir = order === 'desc' ? -1 : 1;
+      rows = [...rows].sort((a, b) => {
+        switch (sort) {
+          case 'price':  return dir * (a.price - b.price);
+          case 'change': return dir * (a.changePercent - b.changePercent);
+          case 'volume': return dir * (a.volume - b.volume);
+          default:       return dir * a.ticker.localeCompare(b.ticker);
+        }
+      });
+    }
+
+    // Paginate
+    const total = rows.length;
+    const pages = Math.max(1, Math.ceil(total / limit));
+    const page  = Math.min(Math.max(1, Number(rawPage) || 1), pages);
+    const stocks = rows.slice((page - 1) * limit, page * limit);
+
+    return { stocks, total, page, pages, limit };
   },
 
   async search(q: string) {

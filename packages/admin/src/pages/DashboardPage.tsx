@@ -32,6 +32,8 @@ type Health = {
   openTickets: number;
   expiringSoon: number;
   churnRisk: number;
+  deletedUsers: number;
+  churnedUsers: number;
 };
 
 export default function DashboardPage() {
@@ -180,6 +182,8 @@ export default function DashboardPage() {
                   { label: t('dashboard.openTickets'),      value: health.openTickets,      color: health.openTickets > 5 ? 'text-red-400' : 'text-slate-300' },
                   { label: t('dashboard.expiringSoon'),     value: health.expiringSoon,     color: health.expiringSoon > 0 ? 'text-amber-400' : 'text-slate-300' },
                   { label: t('dashboard.churnRisk'),        value: health.churnRisk,        color: health.churnRisk > 10 ? 'text-red-400' : 'text-slate-400' },
+                  { label: t('dashboard.deletedUsers'),     value: health.deletedUsers  ?? 0, color: (health.deletedUsers  ?? 0) > 0 ? 'text-red-400'    : 'text-slate-400' },
+                  { label: t('dashboard.churnedUsers'),     value: health.churnedUsers  ?? 0, color: (health.churnedUsers  ?? 0) > 5 ? 'text-orange-400' : 'text-slate-400' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between">
                     <span className="text-xs text-slate-500">{item.label}</span>

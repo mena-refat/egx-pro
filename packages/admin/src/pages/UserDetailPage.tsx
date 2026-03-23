@@ -5,7 +5,7 @@ import { adminApi } from '../lib/adminApi';
 import { Badge } from '../components/Badge';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Modal } from '../components/Modal';
-import { ArrowLeft, ShieldOff, ShieldCheck, Ban, ShieldAlert, Users } from 'lucide-react';
+import { ArrowLeft, ShieldOff, ShieldCheck, Ban, ShieldAlert, Users, AlertTriangle } from 'lucide-react';
 import { useAdminStore } from '../store/adminAuthStore';
 
 const PLANS = ['free', 'pro', 'yearly', 'ultra', 'ultra_yearly'];
@@ -141,6 +141,19 @@ export default function UserDetailPage() {
             <div className="flex items-center gap-1.5">
               <Users size={13} className="text-emerald-400" />
               <span className="text-white text-sm font-semibold">{user._count?.referralsSent ?? user.totalReferrals ?? 0}</span>
+            </div>
+          )},
+          { label: t('userDetail.warnings'), value: (
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle size={13} className={user.warningCount >= 2 ? 'text-red-400' : user.warningCount === 1 ? 'text-amber-400' : 'text-slate-600'} />
+              <span className={`text-sm font-bold ${user.warningCount >= 2 ? 'text-red-400' : user.warningCount === 1 ? 'text-amber-400' : 'text-slate-500'}`}>
+                {user.warningCount} / 2
+              </span>
+              {user.warningCount >= 2 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/20 font-medium">
+                  {t('userDetail.suspended')}
+                </span>
+              )}
             </div>
           )},
         ].map((item) => (

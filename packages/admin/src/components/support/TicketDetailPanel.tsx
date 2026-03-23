@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '../Badge';
 import type { Ticket, QuickReply } from './types';
-import { STATUS_BAR, PRIORITY_TEXT, PRIORITY_KEY, timeAgo, userInitial } from './helpers';
+import { STATUS_BAR, PRIORITY_TEXT, PRIORITY_KEY, CAT_BADGE, timeAgo, userInitial } from './helpers';
 
 interface TicketDetailPanelProps {
   selected: Ticket;
@@ -60,6 +60,11 @@ export function TicketDetailPanel({
             <span className={`text-[10px] font-semibold ${PRIORITY_TEXT[selected.priority] ?? ''}`}>
               {PRIORITY_KEY[selected.priority] ? t(PRIORITY_KEY[selected.priority]) : selected.priority}
             </span>
+            {selected.category && CAT_BADGE[selected.category] && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${CAT_BADGE[selected.category].cls}`}>
+                {CAT_BADGE[selected.category].label}
+              </span>
+            )}
             <span className="text-[10px] text-slate-600">
               {new Date(selected.createdAt).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' })}
             </span>
@@ -159,7 +164,7 @@ export function TicketDetailPanel({
                 <UserCheck size={12} /> {t('support.assign')}
               </button>
             )}
-            {canEscalate && selected.assignedTo === currentAdminId && !selected.escalatedAt &&
+            {canEscalate && !selected.escalatedAt &&
              (selected.status === 'OPEN' || selected.status === 'IN_PROGRESS') && (
               <button
                 onClick={onEscalateClick}

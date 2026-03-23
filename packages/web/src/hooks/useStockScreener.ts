@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
 import { clearCache } from '../lib/queryCache';
 import { useAuthStore } from '../store/authStore';
 import { useLivePrices } from './useLivePrices';
-import { searchStocks, getStockName, getStockInfo } from '../lib/egxStocks';
-import { getSector, isInEGX30, isInEGX70, isInEGX100, isInEGX35LV, isShariaCompliant } from '../lib/egxIndicesSectors';
+import { getStockInfo } from '../lib/egxStocks';
+import { getSector } from '../lib/egxIndicesSectors';
 import type { Stock } from '../types';
 
 export const SECTOR_OPTIONS = [
@@ -38,12 +38,6 @@ export const GICS_SECTOR_LABELS: Record<string, { ar: string; en: string }> = {
 };
 
 export interface StockWithMeta extends Stock {
-  inEGX30?: boolean;
-  inEGX70?: boolean;
-  inEGX100?: boolean;
-  inEGX35LV?: boolean;
-  inEGX33?: boolean;
-  /** GICS sector from API when available */
   gicsSector?: string | null;
 }
 
@@ -59,14 +53,14 @@ export type FilterId =
 export type SortId = 'ticker' | 'price' | 'change' | 'volume';
 
 export const FILTERS: { id: FilterId; labelKey: string }[] = [
-  { id: 'all', labelKey: 'stocks.filterAll' },
-  { id: 'egx30', labelKey: 'stocks.filterEGX30' },
-  { id: 'egx70', labelKey: 'stocks.filterEGX70EWI' },
-  { id: 'egx100', labelKey: 'stocks.filterEGX100EWI' },
-  { id: 'egx35lv', labelKey: 'stocks.filterEGX35LV' },
-  { id: 'egx33', labelKey: 'stocks.filterEGX33' },
+  { id: 'all',        labelKey: 'stocks.filterAll' },
+  { id: 'egx30',     labelKey: 'stocks.filterEGX30' },
+  { id: 'egx70',     labelKey: 'stocks.filterEGX70EWI' },
+  { id: 'egx100',    labelKey: 'stocks.filterEGX100EWI' },
+  { id: 'egx35lv',   labelKey: 'stocks.filterEGX35LV' },
+  { id: 'egx33',     labelKey: 'stocks.filterEGX33' },
   { id: 'topGainers', labelKey: 'stocks.filterTopGainers' },
-  { id: 'topLosers', labelKey: 'stocks.filterTopLosers' },
+  { id: 'topLosers',  labelKey: 'stocks.filterTopLosers' },
 ];
 
 export function formatVolume(v: number): string {
@@ -76,73 +70,150 @@ export function formatVolume(v: number): string {
   return String(v);
 }
 
+// Default sort order per sort field (matches previous client-side behavior)
+const SORT_ORDER: Record<SortId, 'asc' | 'desc'> = {
+  ticker: 'asc',
+  price:  'desc',
+  change: 'desc',
+  volume: 'desc',
+};
+
+const PAGE_SIZE = 25;
+
+function mapRawStock(s: Record<string, unknown>, isAr: boolean, lang: 'ar' | 'en'): StockWithMeta {
+  const ticker = String(s.ticker ?? '');
+  const info = getStockInfo(ticker);
+  const nameAr = info?.nameAr ?? '';
+  const nameEn = info?.nameEn ?? '';
+  const apiSector = typeof s.sector === 'string' ? s.sector : null;
+  const fallbackSector = getSector(ticker, nameAr, nameEn, lang);
+  return {
+    ticker,
+    name: isAr ? nameAr : nameEn || ticker,
+    price: Number(s.price) || 0,
+    change: Number(s.change) || 0,
+    changePercent: Number(s.changePercent) || 0,
+    volume: Number(s.volume) || 0,
+    marketCap: Number(s.marketCap) || 0,
+    sector: apiSector
+      ? (GICS_SECTOR_LABELS[apiSector] ? (isAr ? GICS_SECTOR_LABELS[apiSector].ar : GICS_SECTOR_LABELS[apiSector].en) : apiSector)
+      : fallbackSector,
+    description: '',
+    gicsSector: apiSector,
+  };
+}
+
 export function useStockScreener() {
   const { t, i18n } = useTranslation('common');
   const user = useAuthStore((s) => s.user);
   const isPro = user?.plan === 'pro' || user?.plan === 'yearly';
   const isPaid = isPro || user?.plan === 'ultra' || user?.plan === 'ultra_yearly';
-  const [stocks, setStocks] = useState<StockWithMeta[]>([]);
+
   const isAr = i18n.language.startsWith('ar');
   const lang = isAr ? 'ar' : 'en';
+
+  // Pagination state
+  const [page,  setPage]  = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(1);
+
+  // Filter/sort state
+  const [filter, setFilterState] = useState<FilterId>('all');
+  const [sector, setSectorState] = useState('');
+  const [sort,   setSortState]   = useState<SortId>('ticker');
+
+  // Search state — separate immediate value (for UI) and debounced value (for API)
+  const [search,         setSearch]         = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search input (350 ms)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Setters that reset page to 1
+  const setFilter = useCallback((f: FilterId) => { setFilterState(f); setPage(1); }, []);
+  const setSector = useCallback((s: string)   => { setSectorState(s); setPage(1); }, []);
+  const setSort   = useCallback((s: SortId)   => { setSortState(s);   setPage(1); }, []);
+
+  // Reset page when debounced search changes
+  const prevDebouncedSearch = useRef(debouncedSearch);
+  useEffect(() => {
+    if (prevDebouncedSearch.current !== debouncedSearch) {
+      prevDebouncedSearch.current = debouncedSearch;
+      setPage(1);
+    }
+  }, [debouncedSearch]);
+
+  // Stocks data
+  const [stocks,   setStocks]   = useState<StockWithMeta[]>([]);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState<string | null>(null);
+
+  // Modal state
+  const [showWatchlistLimitModal,  setShowWatchlistLimitModal]  = useState(false);
+  const [showPriceAlertProModal,   setShowPriceAlertProModal]   = useState(false);
+  const [addTargetModal,           setAddTargetModal]           = useState<{ ticker: string } | null>(null);
+  const [addTargetPrice,           setAddTargetPrice]           = useState('');
+  const [addTargetSubmitting,      setAddTargetSubmitting]      = useState(false);
+  const [addTargetError,           setAddTargetError]           = useState<string | null>(null);
+
+  // Live prices for current page stocks only
   const subscribedTickers = useMemo(
     () => (stocks.length > 0 ? stocks.map((s) => s.ticker) : undefined),
-    [stocks]
+    [stocks],
   );
   const { prices: livePrices, isConnected, connectionError } = useLivePrices(subscribedTickers);
-  const [watchlist, setWatchlist] = useState<string[]>([]);
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<FilterId>('all');
-  const [sector, setSector] = useState('');
-  const [sort, setSort] = useState<SortId>('ticker');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showWatchlistLimitModal, setShowWatchlistLimitModal] = useState(false);
-  const [showPriceAlertProModal, setShowPriceAlertProModal] = useState(false);
-  const [addTargetModal, setAddTargetModal] = useState<{ ticker: string } | null>(null);
-  const [addTargetPrice, setAddTargetPrice] = useState('');
-  const [addTargetSubmitting, setAddTargetSubmitting] = useState(false);
-  const [addTargetError, setAddTargetError] = useState<string | null>(null);
 
+  // Fetch watchlist once on mount
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/watchlist').then((res) => {
+      if (cancelled) return;
+      const items = (res.data as { items?: { ticker: string }[] })?.items;
+      setWatchlist(Array.isArray(items) ? items.map((w) => w.ticker) : []);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  // Main data fetch — re-runs whenever any filter/sort/pagination param changes
   const fetchData = useCallback(
     async (signal?: AbortSignal) => {
       setLoading(true);
       setError(null);
       try {
-        const [stocksRes, watchlistRes] = await Promise.all([
-          api.get('/stocks/prices', { params: sector ? { sector } : {}, signal, timeout: 60_000 }),
-          api.get('/watchlist', { signal }),
-        ]);
+        const params: Record<string, string | number> = {
+          page,
+          limit: PAGE_SIZE,
+          sort,
+          order: SORT_ORDER[sort],
+        };
+        if (debouncedSearch) params.q = debouncedSearch;
+        if (filter !== 'all')  params.filter = filter;
+        if (sector)            params.sector = sector;
+
+        const stocksRes = await api.get('/stocks/prices', { params, signal, timeout: 60_000 });
         if (signal?.aborted) return;
-        const rawList = (stocksRes.data as { data?: unknown[] })?.data ?? stocksRes.data;
-        const raw = Array.isArray(rawList) ? rawList : [];
-        const withMeta: StockWithMeta[] = raw.map((s: Record<string, unknown>) => {
-          const ticker = String(s.ticker ?? '');
-          const info = getStockInfo(ticker);
-          const nameAr = info?.nameAr ?? '';
-          const nameEn = info?.nameEn ?? '';
-          const apiSector = typeof s.sector === 'string' ? s.sector : null;
-          const fallbackSector = getSector(ticker, nameAr, nameEn, lang);
-          return {
-            ticker,
-            name: isAr ? nameAr : nameEn || ticker,
-            price: Number(s.price) || 0,
-            change: Number(s.change) || 0,
-            changePercent: Number(s.changePercent) || 0,
-            volume: Number(s.volume) || 0,
-            marketCap: Number(s.marketCap) || 0,
-            sector: apiSector ? (GICS_SECTOR_LABELS[apiSector] ? (isAr ? GICS_SECTOR_LABELS[apiSector].ar : GICS_SECTOR_LABELS[apiSector].en) : apiSector) : fallbackSector,
-            description: '',
-            inEGX30: isInEGX30(ticker),
-            inEGX70: isInEGX70(ticker),
-            inEGX100: isInEGX100(ticker),
-            inEGX35LV: isInEGX35LV(ticker),
-            inEGX33: isShariaCompliant(ticker),
-            gicsSector: apiSector,
-          };
-        });
+
+        // Support both new paginated format { stocks, total, page, pages }
+        // and old flat-array format (for backward compat while server restarts)
+        const rd = stocksRes.data as { stocks?: unknown[]; total?: number; page?: number; pages?: number } | unknown[];
+        const raw: unknown[] = Array.isArray(rd)
+          ? rd
+          : Array.isArray((rd as { stocks?: unknown[] }).stocks)
+            ? (rd as { stocks: unknown[] }).stocks
+            : [];
+        const meta = Array.isArray(rd) ? null : rd as { total?: number; page?: number; pages?: number };
+
+        const withMeta: StockWithMeta[] = (raw as Record<string, unknown>[]).map((s) =>
+          mapRawStock(s, isAr, lang),
+        );
+
         setStocks(withMeta);
-        const watchlistItems = (watchlistRes.data as { items?: { ticker: string }[] })?.items;
-        setWatchlist(Array.isArray(watchlistItems) ? watchlistItems.map((w) => w.ticker) : []);
+        setTotal(meta?.total ?? withMeta.length);
+        setPages(meta?.pages ?? 1);
       } catch (err: unknown) {
         if (
           err instanceof Error &&
@@ -158,7 +229,7 @@ export function useStockScreener() {
         if (!signal?.aborted) setLoading(false);
       }
     },
-    [lang, isAr, sector, t]
+    [debouncedSearch, filter, sector, sort, page, isAr, lang, t],
   );
 
   useEffect(() => {
@@ -166,6 +237,15 @@ export function useStockScreener() {
     fetchData(controller.signal);
     return () => controller.abort();
   }, [fetchData]);
+
+  // Overlay live prices on current page stocks
+  const merged = useMemo(() => {
+    return stocks.map((s) =>
+      livePrices[s.ticker]
+        ? { ...s, ...livePrices[s.ticker], sector: s.sector, gicsSector: s.gicsSector }
+        : s,
+    );
+  }, [stocks, livePrices]);
 
   const toggleWatchlist = useCallback(
     async (e: React.MouseEvent, ticker: string) => {
@@ -184,7 +264,7 @@ export function useStockScreener() {
       setAddTargetModal({ ticker });
       setAddTargetPrice('');
     },
-    [watchlist]
+    [watchlist],
   );
 
   const submitAddWithTarget = useCallback(async () => {
@@ -213,7 +293,9 @@ export function useStockScreener() {
         }
       }
       clearCache('/watchlist');
-      setWatchlist((prev) => (prev.includes(addTargetModal.ticker) ? prev : [...prev, addTargetModal.ticker]));
+      setWatchlist((prev) =>
+        prev.includes(addTargetModal.ticker) ? prev : [...prev, addTargetModal.ticker],
+      );
       setAddTargetModal(null);
       setAddTargetPrice('');
       if (typeof window !== 'undefined') {
@@ -226,75 +308,29 @@ export function useStockScreener() {
           ? (err as { response?: { data?: { error?: string } } }).response?.data
           : undefined;
       const code = data?.error;
-      if (code === 'WATCHLIST_LIMIT_REACHED') setShowWatchlistLimitModal(true);
+      if (code === 'WATCHLIST_LIMIT_REACHED')   setShowWatchlistLimitModal(true);
       else if (code === 'PRICE_ALERTS_PRO') {
         setAddTargetModal(null);
         setAddTargetPrice('');
         setAddTargetError(null);
         setShowPriceAlertProModal(true);
       } else if (code === 'ALREADY_IN_WATCHLIST') setAddTargetError(t('stocks.alreadyInWatchlist'));
-      else setAddTargetError(t('stocks.watchlistError'));
+      else                                         setAddTargetError(t('stocks.watchlistError'));
     } finally {
       setAddTargetSubmitting(false);
     }
   }, [addTargetModal, addTargetPrice, isPaid, t]);
 
-  const merged = useMemo(() => {
-    return stocks.map((s) =>
-      livePrices[s.ticker]
-        ? {
-            ...s,
-            ...livePrices[s.ticker],
-            sector: s.sector,
-            inEGX30: s.inEGX30,
-            inEGX70: s.inEGX70,
-            inEGX100: s.inEGX100,
-            inEGX35LV: s.inEGX35LV,
-            inEGX33: s.inEGX33,
-          }
-        : s
-    );
-  }, [stocks, livePrices]);
-
-  const filtered = useMemo(() => {
-    let list = merged;
-    const searchTrim = search.trim();
-    if (searchTrim) {
-      const matches = searchStocks(searchTrim, lang).map((e) => e.ticker.toUpperCase());
-      const set = new Set(matches);
-      if (set.size > 0) list = list.filter((s) => set.has(s.ticker.toUpperCase()));
-      else
-        list = list.filter(
-          (s) =>
-            s.ticker.toUpperCase().includes(searchTrim.toUpperCase()) ||
-            getStockName(s.ticker, lang).toLowerCase().includes(searchTrim.toLowerCase())
-        );
-    }
-    if (filter === 'egx30') list = list.filter((s) => s.inEGX30);
-    if (filter === 'egx70') list = list.filter((s) => s.inEGX70);
-    if (filter === 'egx100') list = list.filter((s) => s.inEGX100);
-    if (filter === 'egx35lv') list = list.filter((s) => s.inEGX35LV);
-    if (filter === 'egx33') list = list.filter((s) => s.inEGX33);
-    if (filter === 'topGainers')
-      list = [...list].sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0)).slice(0, 50);
-    if (filter === 'topLosers')
-      list = [...list].sort((a, b) => (a.changePercent ?? 0) - (b.changePercent ?? 0)).slice(0, 50);
-    return list;
-  }, [merged, search, filter, isAr, lang]);
-
-  const sorted = useMemo(() => {
-    const list = [...filtered];
-    if (sort === 'ticker') list.sort((a, b) => a.ticker.localeCompare(b.ticker));
-    if (sort === 'price') list.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
-    if (sort === 'change') list.sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0));
-    if (sort === 'volume') list.sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0));
-    return list;
-  }, [filtered, sort]);
-
   return {
     isConnected,
     connectionError,
-    sorted,
+    stocks: merged,
+    // pagination
+    page,
+    setPage,
+    total,
+    pages,
+    // filters
     watchlist,
     search,
     setSearch,

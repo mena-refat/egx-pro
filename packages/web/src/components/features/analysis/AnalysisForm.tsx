@@ -41,6 +41,7 @@ export function AnalysisForm({
           type="button"
           variant="secondary"
           onClick={onGetAnalysis}
+          loading={loading}
           className="mx-auto border-[var(--danger)] text-[var(--danger)]"
         >
           <RefreshCw className="w-4 h-4" /> {t('stockDetail.retry')}
@@ -79,7 +80,12 @@ export function AnalysisForm({
       <p className="text-[var(--text-muted)] mb-6 max-w-md mx-auto">
         {t('stockDetail.aiAnalysisDesc')}
       </p>
-      <Button type="button" onClick={onGetAnalysis} className="mx-auto">
+      <Button
+        type="button"
+        onClick={onGetAnalysis}
+        loading={loading}
+        className="mx-auto"
+      >
         <Zap className="w-4 h-4" /> {t('stockDetail.generateAnalysis')}
       </Button>
     </div>

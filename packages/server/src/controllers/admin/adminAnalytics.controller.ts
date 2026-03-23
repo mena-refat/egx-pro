@@ -480,6 +480,8 @@ export const AdminAnalyticsController = {
       openTickets,
       expiringSoon,
       churnRisk,
+      deletedUsers,
+      churnedUsers,
     ] = await Promise.all([
       prisma.user.count({
         where: { isDeleted: false, lastLoginAt: { gte: last24h } },
@@ -513,6 +515,16 @@ export const AdminAnalyticsController = {
           },
         },
       }),
+      // Soft-deleted accounts (admin deleted or user self-deleted)
+      prisma.user.count({ where: { isDeleted: true } }),
+      // Was paid, didn't renew — plan expired and downgraded back to free
+      prisma.user.count({
+        where: {
+          isDeleted: false,
+          plan: 'free',
+          planExpiresAt: { not: null, lt: now },
+        },
+      }),
     ]);
 
     sendSuccess(res, {
@@ -523,6 +535,8 @@ export const AdminAnalyticsController = {
       openTickets,
       expiringSoon,
       churnRisk,
+      deletedUsers,
+      churnedUsers,
     });
   },
 

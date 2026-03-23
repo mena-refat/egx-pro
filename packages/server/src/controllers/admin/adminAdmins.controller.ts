@@ -49,6 +49,7 @@ export const AdminAdminsController = {
         fullName: true,
         role: true,
         permissions: true,
+        supportCategories: true,
         isActive: true,
         twoFactorEnabled: true,
         mustChangePassword: true,
@@ -100,6 +101,7 @@ export const AdminAdminsController = {
         fullName: true,
         role: true,
         permissions: true,
+        supportCategories: true,
         isActive: true,
         managerId: true,
         lastLoginAt: true,
@@ -116,12 +118,13 @@ export const AdminAdminsController = {
       sendError(res, 'ADMIN_FORBIDDEN', 403);
       return;
     }
-    const { email, phone, password, fullName, permissions = [], role, options = {}, confirmPassword, managerId } = req.body as {
+    const { email, phone, password, fullName, permissions = [], supportCategories = [], role, options = {}, confirmPassword, managerId } = req.body as {
       email?: string;
       phone?: string;
       password?: string;
       fullName?: string;
       permissions?: string[];
+      supportCategories?: string[];
       role?: 'SUPER_ADMIN' | 'ADMIN';
       confirmPassword?: string;
       managerId?: number | null;
@@ -159,6 +162,21 @@ export const AdminAdminsController = {
 
     const { hash, salt } = await hashPassword(password);
 
+    // Validate supportCategories subset constraint: staff cats must ⊆ manager cats
+    if (managerId != null && supportCategories.length > 0) {
+      const mgr = await prisma.admin.findUnique({
+        where: { id: managerId },
+        select: { supportCategories: true },
+      });
+      if (mgr && mgr.supportCategories.length > 0) {
+        const invalid = supportCategories.filter((c) => !mgr.supportCategories.includes(c));
+        if (invalid.length > 0) {
+          sendError(res, 'CATEGORIES_EXCEED_MANAGER', 400);
+          return;
+        }
+      }
+    }
+
     let admin;
     try {
       admin = await prisma.admin.create({
@@ -169,6 +187,7 @@ export const AdminAdminsController = {
           salt,
           fullName,
           permissions,
+          supportCategories,
           createdBy: req.admin?.id ?? null,
           role: role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'ADMIN',
           managerId: managerId ?? null,
@@ -323,15 +342,16 @@ export const AdminAdminsController = {
       return;
     }
 
-    const { permissions, isActive, managerId } = req.body as {
+    const { permissions, isActive, managerId, supportCategories } = req.body as {
       permissions?: string[];
       isActive?: boolean;
       managerId?: number | null;
+      supportCategories?: string[];
     };
 
     const target = await prisma.admin.findUnique({
       where: { id },
-      select: { role: true, isDeleted: true },
+      select: { role: true, isDeleted: true, managerId: true },
     });
     if (!target || target.isDeleted) {
       sendError(res, 'NOT_FOUND', 404);
@@ -354,12 +374,31 @@ export const AdminAdminsController = {
       }
     }
 
+    // Validate supportCategories subset constraint: staff cats must ⊆ manager cats
+    if (supportCategories && supportCategories.length > 0) {
+      const effectiveManagerId = managerId !== undefined ? managerId : target.managerId;
+      if (effectiveManagerId != null) {
+        const mgr = await prisma.admin.findUnique({
+          where: { id: effectiveManagerId },
+          select: { supportCategories: true },
+        });
+        if (mgr && mgr.supportCategories.length > 0) {
+          const invalid = supportCategories.filter((c) => !mgr.supportCategories.includes(c));
+          if (invalid.length > 0) {
+            sendError(res, 'CATEGORIES_EXCEED_MANAGER', 400);
+            return;
+          }
+        }
+      }
+    }
+
     await prisma.admin.update({
       where: { id },
       data: {
         ...(permissions && { permissions }),
         ...(isActive != null && { isActive }),
         ...(managerId !== undefined && { managerId }),
+        ...(supportCategories !== undefined && { supportCategories }),
       },
     });
 

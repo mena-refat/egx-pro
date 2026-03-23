@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight, LifeBuoy, Plus, Lock, AlertCircle } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, LifeBuoy, Plus, Lock, AlertCircle, Clock } from 'lucide-react-native';
 import { ScreenWrapper } from '../../components/layout/ScreenWrapper';
 import { useTheme } from '../../hooks/useTheme';
 import { BRAND } from '../../lib/theme';
@@ -16,6 +16,8 @@ export default function SupportPage() {
 
   const {
     canUseSupport,
+    isPlanEligible,
+    isAdminLocked,
     tickets,
     loading,
     refreshing,
@@ -120,6 +122,24 @@ export default function SupportPage() {
               {showCreate ? 'إلغاء' : 'تذكرة جديدة'}
             </Text>
           </Pressable>
+        ) : isPlanEligible && isAdminLocked ? (
+          /* Paid user, but admin disabled support — no action */
+          <View
+            style={{
+              backgroundColor: colors.hover,
+              borderColor: colors.border,
+              borderWidth: 1,
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              borderRadius: 12,
+            }}
+          >
+            <Clock size={13} color={colors.textMuted} />
+            <Text style={{ fontSize: 12, fontWeight: '800', color: colors.textMuted }}>مغلق مؤقتاً</Text>
+          </View>
         ) : (
           <Pressable
             onPress={() => router.push('/settings/subscription' as never)}
@@ -148,7 +168,43 @@ export default function SupportPage() {
           <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={BRAND} colors={[BRAND]} />
         }
       >
-        {!canUseSupport && <SupportLockedBanner onUpgrade={() => router.push('/settings/subscription' as never)} />}
+        {isPlanEligible && isAdminLocked && (
+          <View
+            style={{
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              borderWidth: 1,
+              borderRadius: 16,
+              padding: 16,
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'flex-start',
+              gap: 12,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: colors.hover,
+                borderRadius: 10,
+                width: 36,
+                height: 36,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Clock size={16} color={colors.textMuted} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontSize: 14, fontWeight: '800', lineHeight: 20 }}>
+                الدعم الفني غير متاح حالياً
+              </Text>
+              <Text style={{ color: colors.textSub, fontSize: 12.5, lineHeight: 20, marginTop: 2 }}>
+                تم إيقاف الدعم الفني مؤقتاً، سيعود قريباً.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {!isPlanEligible && <SupportLockedBanner onUpgrade={() => router.push('/settings/subscription' as never)} />}
 
         {canUseSupport && loadError && !loading && (
           <View

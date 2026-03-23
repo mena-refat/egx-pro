@@ -28,9 +28,16 @@ export const StocksController = {
 
   getPrices: run(async (req, res) => {
     const delayed = await useDelayed(req);
+    const q      = typeof req.query.q      === 'string' ? req.query.q      : undefined;
+    const filter = typeof req.query.filter === 'string' ? req.query.filter : 'all';
     const sector = typeof req.query.sector === 'string' ? req.query.sector : undefined;
-    const prices = await StocksService.getBulkPrices(delayed, sector);
-    sendSuccessCached(res, prices, {
+    const sort   = typeof req.query.sort   === 'string' ? req.query.sort   : 'ticker';
+    const order  = typeof req.query.order  === 'string' ? req.query.order  : 'asc';
+    const page   = parseInt(typeof req.query.page  === 'string' ? req.query.page  : '1',  10);
+    const limit  = parseInt(typeof req.query.limit === 'string' ? req.query.limit : '25', 10);
+
+    const result = await StocksService.getBulkPrices(delayed, { q, filter, sector, sort, order, page, limit });
+    sendSuccessCached(res, result, {
       maxAgeSec: HTTP_CACHE_SECONDS.stockListPrices,
       scope: 'private',
       vary: 'Authorization, Cookie',

@@ -10,6 +10,7 @@ interface Admin {
   isActive: boolean;
   permissions?: string[];
   managerId?: number | null;
+  supportCategories?: string[];
 }
 
 interface AdminTableProps {

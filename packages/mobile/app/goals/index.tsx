@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, Pressable, ScrollView, TextInput,
   ActivityIndicator, Alert, Modal,
@@ -56,12 +56,14 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   );
 }
 
-function GoalCard({ goal, onDelete, onAddAmount, onComplete, onAction }: {
+function GoalCard({ goal, onDelete, onAddAmount, onComplete, onAction, isPending = false }: {
   goal: Goal;
   onDelete: () => void;
   onAddAmount: () => void;
   onComplete: () => void;
   onAction: () => void;
+  /** True while a delete/complete API call is in-flight for this goal. */
+  isPending?: boolean;
 }) {
   const { colors, isRTL } = useTheme();
   const cat    = CATEGORIES[goal.category] ?? CATEGORIES.other;
@@ -136,24 +138,35 @@ function GoalCard({ goal, onDelete, onAddAmount, onComplete, onAction }: {
           </Pressable>
 
           {/* ── Secondary actions ───────────────────────────────── */}
-          <View className="flex-row gap-2">
+          <View className="flex-row gap-2" style={{ opacity: isPending ? 0.5 : 1 }}>
             <Pressable
               onPress={onAddAmount}
+              disabled={isPending}
               className="flex-1 py-2 rounded-xl bg-brand/15 items-center"
             >
               <Text className="text-xs font-bold text-brand">+ إضافة مبلغ</Text>
             </Pressable>
             <Pressable
               onPress={onComplete}
-              className="flex-1 py-2 rounded-xl bg-emerald-500/15 items-center"
+              disabled={isPending}
+              className="flex-1 py-2 rounded-xl bg-emerald-500/15 items-center justify-center"
             >
-              <Text className="text-xs font-bold text-emerald-400">إتمام</Text>
+              {isPending ? (
+                <ActivityIndicator size="small" color="#4ade80" />
+              ) : (
+                <Text className="text-xs font-bold text-emerald-400">إتمام</Text>
+              )}
             </Pressable>
             <Pressable
               onPress={onDelete}
+              disabled={isPending}
               className="w-9 h-9 rounded-xl bg-red-500/10 items-center justify-center"
             >
-              <Trash2 size={14} color="#f87171" />
+              {isPending ? (
+                <ActivityIndicator size="small" color="#f87171" />
+              ) : (
+                <Trash2 size={14} color="#f87171" />
+              )}
             </Pressable>
           </View>
         </>
@@ -161,10 +174,18 @@ function GoalCard({ goal, onDelete, onAddAmount, onComplete, onAction }: {
       {goal.isCompleted && (
         <Pressable
           onPress={onDelete}
+          disabled={isPending}
           className="flex-row items-center justify-center gap-1.5 py-2 rounded-xl bg-red-500/10"
+          style={{ opacity: isPending ? 0.5 : 1 }}
         >
-          <Trash2 size={12} color="#f87171" />
-          <Text className="text-xs text-red-400">حذف</Text>
+          {isPending ? (
+            <ActivityIndicator size="small" color="#f87171" />
+          ) : (
+            <>
+              <Trash2 size={12} color="#f87171" />
+              <Text className="text-xs text-red-400">حذف</Text>
+            </>
+          )}
         </Pressable>
       )}
     </View>
@@ -191,6 +212,13 @@ export default function GoalsPage() {
   // Add amount state
   const [addAmount, setAddAmount] = useState('');
   const [addingAmount, setAddingAmount] = useState(false);
+
+  // Per-goal in-flight state (delete / complete).
+  // Using a Set so multiple goals can't both be in-flight simultaneously
+  // but also so React sees a new reference on each update.
+  const [pendingGoals, setPendingGoals] = useState<Set<string>>(new Set());
+  const setPending  = useCallback((id: string) => setPendingGoals(prev => new Set([...prev, id])), []);
+  const clearPending = useCallback((id: string) => setPendingGoals(prev => { const s = new Set(prev); s.delete(id); return s; }), []);
 
   const fetchGoals = useCallback(async () => {
     try {
@@ -234,37 +262,45 @@ export default function GoalsPage() {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = useCallback((id: string) => {
+    if (pendingGoals.has(id)) return; // already in-flight
     Alert.alert('حذف الهدف', 'هل أنت متأكد من حذف هذا الهدف؟', [
       { text: 'إلغاء', style: 'cancel' },
       {
         text: 'حذف',
         style: 'destructive',
         onPress: async () => {
+          setPending(id);
           try {
             await apiClient.delete(`/api/goals/${id}`);
             setGoals((prev) => prev.filter((g) => g.id !== id));
-          } catch { /* ignore */ }
+          } catch { /* ignore */ } finally {
+            clearPending(id);
+          }
         },
       },
     ]);
-  };
+  }, [pendingGoals, setPending, clearPending]);
 
-  const handleComplete = (goal: Goal) => {
+  const handleComplete = useCallback((goal: Goal) => {
+    if (pendingGoals.has(goal.id)) return; // already in-flight
     Alert.alert('إتمام الهدف', `هل حققت هدف "${goal.title}"؟`, [
       { text: 'إلغاء', style: 'cancel' },
       {
         text: 'نعم!',
         onPress: async () => {
+          setPending(goal.id);
           try {
             const res = await apiClient.patch(`/api/goals/${goal.id}/complete`);
             const updated = res.data as Goal;
             setGoals((prev) => prev.map((g) => g.id === goal.id ? { ...g, ...updated } : g));
-          } catch { /* ignore */ }
+          } catch { /* ignore */ } finally {
+            clearPending(goal.id);
+          }
         },
       },
     ]);
-  };
+  }, [pendingGoals, setPending, clearPending]);
 
   const handleAddAmount = async () => {
     if (!showAddAmount) return;
@@ -343,6 +379,7 @@ export default function GoalsPage() {
                 <GoalCard
                   key={g.id}
                   goal={g}
+                  isPending={pendingGoals.has(g.id)}
                   onDelete={() => handleDelete(g.id)}
                   onAddAmount={() => { setShowAddAmount(g); setAddAmount(''); }}
                   onComplete={() => handleComplete(g)}
@@ -359,6 +396,7 @@ export default function GoalsPage() {
                 <GoalCard
                   key={g.id}
                   goal={g}
+                  isPending={pendingGoals.has(g.id)}
                   onDelete={() => handleDelete(g.id)}
                   onAddAmount={() => { setShowAddAmount(g); setAddAmount(''); }}
                   onComplete={() => handleComplete(g)}

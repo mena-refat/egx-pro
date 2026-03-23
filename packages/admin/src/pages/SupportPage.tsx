@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  RefreshCw, Inbox, Send, Filter, ArrowUpDown, CheckSquare,
+  RefreshCw, Inbox, ArrowUpDown, CheckSquare, Search,
   Users, ShieldAlert, Zap, ArrowUpCircle, Flag, AlertTriangle, X, Plus, Trash2, Pencil, ShieldCheck,
-  TrendingUp, Star, Clock,
+  TrendingUp, Star, Clock, SlidersHorizontal,
 } from 'lucide-react';
 
 import { adminApi } from '../lib/adminApi';
+import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { Pagination } from '../components/Pagination';
 import { Badge } from '../components/Badge';
@@ -31,7 +32,7 @@ export default function SupportPage() {
   const canReply = isSuperAdmin || currentAdmin?.permissions?.includes('support.reply') || hasManage;
   const canAssign = isSuperAdmin || currentAdmin?.permissions?.includes('support.assign') || hasManage;
   const managerMode = hasManage;
-  const canEscalate = !!(currentAdmin?.permissions?.includes('support.reply')) && !hasManage;
+  const canEscalate = isSuperAdmin || (!!(currentAdmin?.permissions?.includes('support.reply')) && !hasManage);
 
   const [view, setView] = useState<'tickets' | 'team' | 'abuse'>('tickets');
   const [selectedManager, setSelectedManager] = useState<ManagerStat | null>(null);
@@ -63,8 +64,10 @@ export default function SupportPage() {
   /* Escalate state */
   const [escalateTarget, setEscalateTarget] = useState<Ticket | null>(null);
   const [escalateNote, setEscalateNote] = useState('');
+  const [escalateManagerId, setEscalateManagerId] = useState<string>('');
   const [escalating, setEscalating] = useState(false);
   const [escalateError, setEscalateError] = useState('');
+  const [managers, setManagers] = useState<Agent[]>([]);
 
   /* Search */
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,6 +119,7 @@ export default function SupportPage() {
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [accessPlans, setAccessPlans] = useState<string[]>(['pro', 'yearly', 'ultra', 'ultra_yearly']);
   const [savingAccess, setSavingAccess] = useState(false);
+  const [accessSaveError, setAccessSaveError] = useState('');
 
   /* Team stats */
   const [agentStats, setAgentStats] = useState<AgentStat[]>([]);
@@ -188,6 +192,7 @@ export default function SupportPage() {
   }, [page, statusFilter, priorityFilter, agentFilter, sortOrder, searchQuery]);
 
   useEffect(() => { if (canAssign) { adminApi.get('/support/agents').then((r) => setAgents(r.data.data ?? [])).catch(() => null); } }, [canAssign]);
+  useEffect(() => { if (canEscalate) { adminApi.get('/support/managers').then((r) => setManagers(r.data.data ?? [])).catch(() => null); } }, [canEscalate]);
   useEffect(() => { loadQuickReplies(); }, [loadQuickReplies]);
 
   useEffect(() => {
@@ -332,8 +337,11 @@ export default function SupportPage() {
     if (!escalateTarget) return;
     setEscalating(true); setEscalateError('');
     try {
-      await adminApi.post(`/support/${escalateTarget.id}/escalate`, { note: escalateNote });
-      setEscalateTarget(null); setEscalateNote(''); setSelected(null);
+      await adminApi.post(`/support/${escalateTarget.id}/escalate`, {
+        note: escalateNote,
+        ...(escalateManagerId ? { managerId: parseInt(escalateManagerId, 10) } : {}),
+      });
+      setEscalateTarget(null); setEscalateNote(''); setEscalateManagerId(''); setSelected(null);
       void load(page, statusFilter, priorityFilter, agentFilter, sortOrder, searchQuery);
     } catch (err: any) {
       const code = err?.response?.data?.error;
@@ -400,12 +408,14 @@ export default function SupportPage() {
   };
 
   const handleSaveAccessPlans = async () => {
-    setShowAccessModal(false);
+    setAccessSaveError('');
     setSavingAccess(true);
     try {
       await adminApi.patch('/support/settings', { allowedPlans: accessPlans });
-    } catch { /* silent */ }
-    finally { setSavingAccess(false); }
+      setShowAccessModal(false);
+    } catch {
+      setAccessSaveError('فشل الحفظ — حاول تاني');
+    } finally { setSavingAccess(false); }
   };
 
   const toggleAccessPlan = (group: 'free' | 'pro' | 'ultra') => {
@@ -424,49 +434,34 @@ export default function SupportPage() {
   };
 
   /* ─── RENDER ─────────────────────────────────────────────────── */
+
+  const STATUS_TABS = [
+    { value: '',            label: t('support.all'),        dot: 'bg-slate-500' },
+    { value: 'OPEN',        label: t('support.open'),       dot: 'bg-blue-400' },
+    { value: 'IN_PROGRESS', label: t('support.inProgress'), dot: 'bg-amber-400' },
+    { value: 'RESOLVED',    label: t('support.resolved'),   dot: 'bg-emerald-400' },
+    { value: 'CLOSED',      label: t('support.closed'),     dot: 'bg-slate-600' },
+  ];
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-0">
 
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/15 flex items-center justify-center shrink-0">
-            <Inbox size={18} className="text-blue-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">{t('support.title')}</h1>
-            <p className="text-xs text-slate-500">
-              <span className="font-semibold text-slate-400">{total}</span> {t('support.tickets')}
-              {selectedIds.size > 0 && (
-                <span className="ms-2 text-blue-400 font-medium">· {selectedIds.size} {t('support.ticketsSelected')}</span>
-              )}
-            </p>
-          </div>
+      {/* ── Top bar: title + actions ── */}
+      <div className="flex items-center justify-between pb-4">
+        <div>
+          <h1 className="text-xl font-bold text-white">{t('support.title')}</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            <span className="font-semibold text-slate-400">{total.toLocaleString('en-US')}</span> {t('support.tickets')}
+            {selectedIds.size > 0 && (
+              <span className="ms-2 text-blue-400 font-medium">· {selectedIds.size.toLocaleString('en-US')} {t('support.ticketsSelected')}</span>
+            )}
+          </p>
         </div>
-
         <div className="flex items-center gap-2">
-          <div className="flex gap-0.5 p-0.5 bg-white/[0.04] border border-white/[0.06] rounded-lg">
-            {([
-              { key: 'tickets', label: t('support.ticketsView'), icon: <Inbox size={12} /> },
-              ...(managerMode ? [{ key: 'team', label: t('support.teamView'), icon: <Users size={12} /> }] : []),
-              ...(managerMode ? [{ key: 'abuse', label: t('support.abuseReports'), icon: <ShieldAlert size={12} /> }] : []),
-            ] as { key: 'tickets' | 'team' | 'abuse'; label: string; icon: ReactNode }[]).map((item) => (
-              <button
-                key={item.key}
-                onClick={() => setView(item.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  view === item.key ? 'bg-white/[0.1] text-white' : 'text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                {item.icon}{item.label}
-              </button>
-            ))}
-          </div>
-
           {managerMode && (
             <button
               onClick={() => setShowManageQR(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-500/25 text-violet-400 hover:bg-violet-500/10 text-xs font-medium transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-500/25 bg-violet-500/5 text-violet-400 hover:bg-violet-500/10 text-xs font-medium transition-all"
             >
               <Zap size={12} /> {t('support.quickReplies')}
             </button>
@@ -474,14 +469,14 @@ export default function SupportPage() {
           {isSuperAdmin && (
             <button
               onClick={() => setShowAccessModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-500/25 text-amber-400 hover:bg-amber-500/10 text-xs font-medium transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-500/25 bg-amber-500/5 text-amber-400 hover:bg-amber-500/10 text-xs font-medium transition-all"
             >
               <ShieldCheck size={12} /> {t('support.planAccess')}
             </button>
           )}
           <button
             onClick={() => void load(page, statusFilter, priorityFilter, agentFilter, sortOrder, searchQuery)}
-            aria-label="Refresh tickets"
+            aria-label="Refresh"
             className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05] transition-all"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
@@ -489,9 +484,32 @@ export default function SupportPage() {
         </div>
       </div>
 
-      {/* My Performance (agent only) */}
+      {/* ── View tabs ── */}
+      {managerMode && (
+        <div className="flex border-b border-white/[0.07] mb-5">
+          {([
+            { key: 'tickets' as const, label: t('support.ticketsView'), icon: <Inbox size={14} /> },
+            { key: 'team'    as const, label: t('support.teamView'),    icon: <Users size={14} /> },
+            { key: 'abuse'   as const, label: t('support.abuseReports'), icon: <ShieldAlert size={14} /> },
+          ]).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setView(tab.key)}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-all ${
+                view === tab.key
+                  ? 'border-blue-500 text-white'
+                  : 'border-transparent text-slate-500 hover:text-slate-300 hover:border-white/20'
+              }`}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── My Performance (agent only) ── */}
       {!managerMode && myStats && view === 'tickets' && (
-        <div className="rounded-xl border border-white/[0.07] bg-[#111118] overflow-hidden">
+        <div className="rounded-xl border border-white/[0.07] bg-[#111118] overflow-hidden mb-5">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.05]">
             <TrendingUp size={13} className="text-blue-400" />
             <h2 className="text-xs font-semibold text-white">{t('support.myPerformance')}</h2>
@@ -507,66 +525,82 @@ export default function SupportPage() {
         </div>
       )}
 
-      {/* Tickets View */}
+      {/* ── Tickets View ── */}
       {view === 'tickets' && (
         <>
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 rounded-xl bg-[#111118] border border-white/[0.06]">
-            <Filter size={12} className="text-slate-600 shrink-0" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder={t('support.searchPlaceholder')}
-              className="px-2.5 py-1.5 text-xs bg-white/[0.04] border border-white/[0.07] rounded-lg text-slate-300 focus:outline-none focus:border-blue-500/40 w-44 placeholder-slate-600"
-            />
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatus(e.target.value); applyFilter(e.target.value, priorityFilter, agentFilter, sortOrder); }}
-              className="px-2.5 py-1.5 text-xs bg-white/[0.04] border border-white/[0.07] rounded-lg text-slate-300 focus:outline-none"
-            >
-              <option value="">{t('support.all')}</option>
-              <option value="OPEN">{t('support.open')}</option>
-              <option value="IN_PROGRESS">{t('support.inProgress')}</option>
-              <option value="RESOLVED">{t('support.resolved')}</option>
-              <option value="CLOSED">{t('support.closed')}</option>
-            </select>
-            <select
-              value={priorityFilter}
-              onChange={(e) => { setPrio(e.target.value); applyFilter(statusFilter, e.target.value, agentFilter, sortOrder); }}
-              className="px-2.5 py-1.5 text-xs bg-white/[0.04] border border-white/[0.07] rounded-lg text-slate-300 focus:outline-none"
-            >
-              <option value="">{t('support.priorityFilter')}</option>
-              <option value="URGENT">{t('support.priorityUrgent')}</option>
-              <option value="HIGH">{t('support.priorityHigh')}</option>
-              <option value="NORMAL">{t('support.priorityNormal')}</option>
-              <option value="LOW">{t('support.priorityLow')}</option>
-            </select>
-            {managerMode && (
-              <select
-                value={agentFilter}
-                onChange={(e) => { setAgent(e.target.value); applyFilter(statusFilter, priorityFilter, e.target.value, sortOrder); }}
-                className="px-2.5 py-1.5 text-xs bg-white/[0.04] border border-white/[0.07] rounded-lg text-slate-300 focus:outline-none"
+          {/* Status pills */}
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {STATUS_TABS.map((s) => (
+              <button
+                key={s.value}
+                onClick={() => { setStatus(s.value); applyFilter(s.value, priorityFilter, agentFilter, sortOrder); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                  statusFilter === s.value
+                    ? 'bg-blue-500/15 border-blue-500/35 text-blue-300'
+                    : 'border-white/[0.08] text-slate-500 hover:text-slate-300 hover:border-white/[0.18]'
+                }`}
               >
-                <option value="">{t('support.allAgents')}</option>
-                <option value="unassigned">{t('support.unassigned')}</option>
-                {agents.map((a) => <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>)}
-              </select>
-            )}
-            <div className="flex items-center gap-1 px-2.5 py-1.5 bg-white/[0.04] border border-white/[0.07] rounded-lg">
-              <ArrowUpDown size={11} className="text-slate-500" />
-              <select
-                value={sortOrder}
-                onChange={(e) => { setSort(e.target.value); applyFilter(statusFilter, priorityFilter, agentFilter, e.target.value); }}
-                className="text-xs bg-transparent text-slate-300 focus:outline-none"
-              >
-                <option value="oldest">{t('support.sortOldest')}</option>
-                <option value="newest">{t('support.sortNewest')}</option>
-                <option value="priority">{t('support.sortPriority')}</option>
-              </select>
+                <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === s.value ? 'bg-blue-400' : s.dot}`} />
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Secondary filters */}
+          <div className="flex flex-wrap items-center gap-2 mb-5">
+            <div className="relative flex-1 min-w-[160px] max-w-xs">
+              <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder={t('support.searchPlaceholder')}
+                className="w-full pl-8 pr-3 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none focus:border-blue-500/40 placeholder-slate-600"
+              />
             </div>
+
+            <div className="flex items-center gap-1.5">
+              <SlidersHorizontal size={12} className="text-slate-600" />
+              <select
+                value={priorityFilter}
+                onChange={(e) => { setPrio(e.target.value); applyFilter(statusFilter, e.target.value, agentFilter, sortOrder); }}
+                className="px-2.5 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
+              >
+                <option value="">{t('support.priorityFilter')}</option>
+                <option value="URGENT">{t('support.priorityUrgent')}</option>
+                <option value="HIGH">{t('support.priorityHigh')}</option>
+                <option value="NORMAL">{t('support.priorityNormal')}</option>
+                <option value="LOW">{t('support.priorityLow')}</option>
+              </select>
+
+              {managerMode && (
+                <select
+                  value={agentFilter}
+                  onChange={(e) => { setAgent(e.target.value); applyFilter(statusFilter, priorityFilter, e.target.value, sortOrder); }}
+                  className="px-2.5 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-lg text-slate-300 focus:outline-none"
+                >
+                  <option value="">{t('support.allAgents')}</option>
+                  <option value="unassigned">{t('support.unassigned')}</option>
+                  {agents.map((a) => <option key={a.id} value={String(a.id)}>{a.fullName || a.email}</option>)}
+                </select>
+              )}
+
+              <div className="flex items-center gap-1 px-2.5 py-2 bg-white/[0.04] border border-white/[0.08] rounded-lg">
+                <ArrowUpDown size={11} className="text-slate-500 shrink-0" />
+                <select
+                  value={sortOrder}
+                  onChange={(e) => { setSort(e.target.value); applyFilter(statusFilter, priorityFilter, agentFilter, e.target.value); }}
+                  className="text-xs bg-transparent text-slate-300 focus:outline-none"
+                >
+                  <option value="oldest">{t('support.sortOldest')}</option>
+                  <option value="newest">{t('support.sortNewest')}</option>
+                  <option value="priority">{t('support.sortPriority')}</option>
+                </select>
+              </div>
+            </div>
+
             {managerMode && selectedIds.size === 0 && (
-              <div className="ms-auto flex items-center gap-2">
+              <div className="ms-auto flex items-center gap-1.5">
                 <span className="text-[10px] text-slate-600">{t('support.quickSelect')}:</span>
                 {[10, 50].map((n) => (
                   <button key={n} onClick={() => {
@@ -615,7 +649,7 @@ export default function SupportPage() {
                 />
               ))}
               <div className="pt-2">
-                <Pagination page={page} totalPages={Math.ceil(total / 20)} total={total} limit={20} onChange={(p) => {
+                <Pagination page={page} totalPages={Math.ceil(total / 50)} total={total} limit={50} onChange={(p) => {
                   skipNext.current = false;
                   setPage(p);
                 }} />
@@ -715,7 +749,7 @@ export default function SupportPage() {
       )}
 
       {/* Escalate Modal */}
-      <Modal open={!!escalateTarget} onClose={() => { setEscalateTarget(null); setEscalateNote(''); setEscalateError(''); }} title={t('support.escalateTitle')}>
+      <Modal open={!!escalateTarget} onClose={() => { setEscalateTarget(null); setEscalateNote(''); setEscalateManagerId(''); setEscalateError(''); }} title={t('support.escalateTitle')}>
         {escalateTarget && (
           <div className="space-y-4">
             <div className="flex items-start gap-2.5 rounded-xl bg-orange-500/[0.05] border border-orange-500/20 px-3 py-3">
@@ -726,16 +760,31 @@ export default function SupportPage() {
               <p className="text-sm font-semibold text-white">{escalateTarget.subject}</p>
               <p className="text-xs text-slate-500 mt-1 truncate">{escalateTarget.message}</p>
             </div>
+            {managers.length > 0 && (
+              <div>
+                <label className="text-xs text-slate-400 block mb-1.5">{t('support.escalateTo')}</label>
+                <select
+                  value={escalateManagerId}
+                  onChange={(e) => setEscalateManagerId(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-orange-500/50"
+                >
+                  <option value="">{t('support.escalateAutoManager')}</option>
+                  {managers.map((m) => (
+                    <option key={m.id} value={m.id}>{m.fullName || m.email}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="text-xs text-slate-400 block mb-1.5">{t('support.escalateNote')}</label>
               <textarea value={escalateNote} onChange={(e) => setEscalateNote(e.target.value)} rows={3} placeholder={t('support.escalateNotePlaceholder')} className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-xl text-white focus:outline-none focus:border-orange-500/50 resize-none placeholder-slate-600" />
             </div>
             {escalateError && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{escalateError}</p>}
             <div className="flex gap-3 justify-end pt-1">
-              <button onClick={() => { setEscalateTarget(null); setEscalateNote(''); setEscalateError(''); }} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">{t('common.cancel')}</button>
-              <button onClick={() => void handleEscalate()} disabled={escalating} className="px-4 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-400 text-white rounded-lg disabled:opacity-50 transition-all flex items-center gap-1.5">
-                <ArrowUpCircle size={13} /> {escalating ? t('support.escalating') : t('support.escalateConfirm')}
-              </button>
+              <button onClick={() => { setEscalateTarget(null); setEscalateNote(''); setEscalateManagerId(''); setEscalateError(''); }} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">{t('common.cancel')}</button>
+              <Button onClick={() => void handleEscalate()} loading={escalating} icon={<ArrowUpCircle size={13} />} className="bg-orange-500 hover:bg-orange-400 text-white border-transparent">
+                {t('support.escalateConfirm')}
+              </Button>
             </div>
           </div>
         )}
@@ -761,9 +810,9 @@ export default function SupportPage() {
             {assignError && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{assignError}</p>}
             <div className="flex gap-3 justify-end pt-1">
               <button onClick={() => { setAssignTarget(null); setAssignError(''); }} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">{t('common.cancel')}</button>
-              <button onClick={() => void handleAssign()} disabled={assigning} className="px-4 py-2 text-sm font-semibold bg-blue-500 hover:bg-blue-400 text-white rounded-lg disabled:opacity-50 transition-all">
-                {assigning ? t('common.saving') : t('support.confirmAssign')}
-              </button>
+              <Button onClick={() => void handleAssign()} loading={assigning}>
+                {t('support.confirmAssign')}
+              </Button>
             </div>
           </div>
         )}
@@ -794,9 +843,9 @@ export default function SupportPage() {
                 {reportError && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{reportError}</p>}
                 <div className="flex gap-3 justify-end pt-1">
                   <button onClick={() => { setReportTarget(null); setReportReason(''); setReportError(''); }} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">{t('common.cancel')}</button>
-                  <button onClick={() => void handleReportAbuse()} disabled={reporting || reportReason.trim().length < 5} className="px-4 py-2 text-sm font-semibold bg-red-500 hover:bg-red-400 text-white rounded-lg disabled:opacity-50 transition-all flex items-center gap-1.5">
-                    <Flag size={13} /> {reporting ? t('common.sending') : t('support.reportAbuseSubmit')}
-                  </button>
+                  <Button onClick={() => void handleReportAbuse()} loading={reporting} disabled={reporting || reportReason.trim().length < 5} variant="danger" icon={<Flag size={13} />}>
+                    {t('support.reportAbuseSubmit')}
+                  </Button>
                 </div>
               </>
             )}
@@ -835,9 +884,13 @@ export default function SupportPage() {
             {resolveError && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{resolveError}</p>}
             <div className="flex gap-3 justify-end pt-1">
               <button onClick={() => { setResolveTarget(null); setResolveNote(''); setResolveError(''); }} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">{t('common.cancel')}</button>
-              <button onClick={() => void handleResolveAbuse()} disabled={resolving} className={`px-4 py-2 text-sm font-semibold text-white rounded-lg disabled:opacity-50 transition-all flex items-center gap-1.5 ${resolveAction === 'warn' ? 'bg-amber-500 hover:bg-amber-400' : 'bg-slate-600 hover:bg-slate-500'}`}>
-                {resolving ? t('common.saving') : resolveAction === 'warn' ? t('support.warnUser') : t('support.dismissReport')}
-              </button>
+              <Button
+                onClick={() => void handleResolveAbuse()}
+                loading={resolving}
+                className={resolveAction === 'warn' ? 'bg-amber-500 hover:bg-amber-400 text-white border-transparent' : 'bg-slate-600 hover:bg-slate-500 text-white border-transparent'}
+              >
+                {resolveAction === 'warn' ? t('support.warnUser') : t('support.dismissReport')}
+              </Button>
             </div>
           </div>
         )}
@@ -856,7 +909,7 @@ export default function SupportPage() {
                       <input value={editQRTitle} onChange={(e) => setEditQRTitle(e.target.value)} maxLength={100} className="w-full px-2.5 py-1.5 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-violet-500/50" />
                       <textarea value={editQRContent} onChange={(e) => setEditQRContent(e.target.value)} rows={3} maxLength={2000} className="w-full px-2.5 py-1.5 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-lg text-white focus:outline-none focus:border-violet-500/50 resize-none" />
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => void handleUpdateQuickReply()} disabled={savingEditQR || !editQRTitle.trim() || !editQRContent.trim()} className="flex-1 text-[10px] px-2 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 transition-colors">{savingEditQR ? t('common.saving') : t('support.saveQuickReply')}</button>
+                        <Button type="button" size="xs" onClick={() => void handleUpdateQuickReply()} loading={savingEditQR} disabled={savingEditQR || !editQRTitle.trim() || !editQRContent.trim()} className="flex-1 bg-violet-600 hover:bg-violet-500 text-white border-transparent">{t('support.saveQuickReply')}</Button>
                         <button type="button" onClick={() => { setEditingQRId(null); setEditQRTitle(''); setEditQRContent(''); }} className="text-[10px] px-2 py-1.5 rounded-lg bg-white/[0.05] text-slate-400 hover:bg-white/[0.1] transition-colors">{t('common.cancel')}</button>
                       </div>
                     </div>
@@ -887,9 +940,9 @@ export default function SupportPage() {
               <input value={newQRTitle} onChange={(e) => setNewQRTitle(e.target.value)} placeholder={t('support.quickReplyTitle')} maxLength={100} className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-xl text-white focus:outline-none focus:border-violet-500/50 placeholder-slate-600" />
               <textarea value={newQRContent} onChange={(e) => setNewQRContent(e.target.value)} placeholder={t('support.quickReplyContent')} rows={3} maxLength={2000} className="w-full px-3 py-2 text-xs bg-[#0d0d14] border border-white/[0.08] rounded-xl text-white focus:outline-none focus:border-violet-500/50 resize-none placeholder-slate-600" />
               {qrError && <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1.5">{qrError}</p>}
-              <button type="button" onClick={() => void handleAddQuickReply()} disabled={savingQR || !newQRTitle.trim() || !newQRContent.trim()} className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white rounded-lg disabled:opacity-50 transition-all">
-                <Plus size={12} /> {savingQR ? t('common.saving') : t('support.addQuickReply')}
-              </button>
+              <Button type="button" size="sm" onClick={() => void handleAddQuickReply()} loading={savingQR} disabled={savingQR || !newQRTitle.trim() || !newQRContent.trim()} icon={<Plus size={12} />} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent">
+                {t('support.addQuickReply')}
+              </Button>
             </div>
           </div>
         </Modal>
@@ -937,17 +990,21 @@ export default function SupportPage() {
               {t('support.planAccessWarning')}
             </div>
 
+            {accessSaveError && (
+              <p className="text-xs text-red-400 text-center">{accessSaveError}</p>
+            )}
+
             <div className="flex gap-3 justify-end pt-1">
               <button onClick={() => setShowAccessModal(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">
                 {t('common.cancel')}
               </button>
-              <button
+              <Button
                 onClick={() => void handleSaveAccessPlans()}
-                disabled={savingAccess}
-                className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all"
+                loading={savingAccess}
+                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-transparent"
               >
-                {savingAccess ? t('common.saving') : t('common.save')}
-              </button>
+                {t('common.save')}
+              </Button>
             </div>
           </div>
         </Modal>

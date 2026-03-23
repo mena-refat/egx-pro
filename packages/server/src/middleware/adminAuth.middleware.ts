@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.ts';
 import { hasPermission, type AdminPermission } from '../lib/adminPermissions.ts';
 
 export interface AdminRequest extends Request {
-  admin?: { id: number; role: string; permissions: string[]; email: string };
+  admin?: { id: number; role: string; permissions: string[]; email: string; supportCategories: string[] };
 }
 
 export async function adminAuthenticate(
@@ -32,6 +32,7 @@ export async function adminAuthenticate(
         email: true,
         role: true,
         permissions: true,
+        supportCategories: true,
         isActive: true,
         isDeleted: true,
         tokenVersion: true,
@@ -51,6 +52,7 @@ export async function adminAuthenticate(
       email: admin.email,
       role: admin.role,
       permissions: admin.permissions,
+      supportCategories: admin.supportCategories,
     };
     next();
   } catch {

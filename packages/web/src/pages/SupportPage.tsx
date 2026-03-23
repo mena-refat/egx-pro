@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LifeBuoy, Plus, ArrowLeft, Inbox, RefreshCw, CheckCircle2, Lock, Zap } from 'lucide-react';
+import { LifeBuoy, Plus, ArrowLeft, Inbox, RefreshCw, CheckCircle2, Lock, Zap, Clock } from 'lucide-react';
 import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { SupportTicket, TicketStatus } from '../components/features/support/support.types';
@@ -10,19 +10,31 @@ import { TicketCard, StatsBar } from '../components/features/support/SupportTick
 
 type View = 'list' | 'new' | 'detail';
 
-function isSupportAllowed(plan: string | undefined, referralProExpiresAt: string | null | undefined): boolean {
-  if (!plan || plan === 'free') {
-    const now = new Date();
-    return !!(referralProExpiresAt && new Date(referralProExpiresAt) > now);
-  }
-  return plan !== 'free';
-}
-
 export default function SupportPage() {
   const { t, i18n } = useTranslation('common');
   const isAr = i18n.language.startsWith('ar');
   const user = useAuthStore(s => s.user);
-  const canUseSupport = isSupportAllowed(user?.plan, user?.referralProExpiresAt);
+
+  const plan = user?.plan ?? 'free';
+  const hasReferralPro = !!(user?.referralProExpiresAt && new Date(user.referralProExpiresAt) > new Date());
+  const isPlanEligible = plan !== 'free' || hasReferralPro;
+
+  const [allowedPlans, setAllowedPlans] = useState<string[] | null>(null);
+  useEffect(() => {
+    api.get('/support/settings')
+      .then((r) => {
+        const plans = (r.data as { data?: { allowedPlans?: string[] } })?.data?.allowedPlans
+          ?? (r.data as { allowedPlans?: string[] })?.allowedPlans;
+        if (Array.isArray(plans)) setAllowedPlans(plans);
+      })
+      .catch(() => null);
+  }, []);
+
+  const isAdminLocked = allowedPlans !== null
+    && !allowedPlans.includes(plan)
+    && !(hasReferralPro && allowedPlans.includes('pro'));
+
+  const canUseSupport = isPlanEligible && !isAdminLocked;
 
   const [tickets,  setTickets]  = useState<SupportTicket[]>([]);
   const [loading,  setLoading]  = useState(true);
@@ -111,6 +123,11 @@ export default function SupportPage() {
                 <Plus className="w-4 h-4" />
                 {t('support.newTicket')}
               </button>
+            ) : isPlanEligible && isAdminLocked ? (
+              <span className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-muted)] font-semibold text-sm cursor-default select-none">
+                <Clock className="w-4 h-4" />
+                {isAr ? 'مغلق مؤقتاً' : 'Temporarily closed'}
+              </span>
             ) : (
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))}
@@ -123,8 +140,25 @@ export default function SupportPage() {
           </div>
         </div>
 
+        {/* Admin-locked banner (paid user, support disabled by admin) */}
+        {isPlanEligible && isAdminLocked && (
+          <div className="flex items-start gap-4 p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border)]">
+            <div className="p-2 rounded-xl bg-[var(--bg-card-hover)] shrink-0">
+              <Clock className="w-5 h-5 text-[var(--text-muted)]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-[var(--text-primary)] text-sm">
+                {isAr ? 'الدعم الفني غير متاح حالياً' : 'Support temporarily unavailable'}
+              </p>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5 leading-relaxed">
+                {isAr ? 'تم إيقاف الدعم الفني مؤقتاً، سيعود قريباً.' : 'Support has been temporarily paused and will return soon.'}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Free plan banner */}
-        {!canUseSupport && (
+        {!isPlanEligible && (
           <div className="flex items-start gap-4 p-5 rounded-2xl bg-gradient-to-br from-amber-500/8 to-orange-500/8 border border-amber-500/20">
             <div className="p-2 rounded-xl bg-amber-500/15 shrink-0">
               <Zap className="w-5 h-5 text-amber-500" />
@@ -169,7 +203,13 @@ export default function SupportPage() {
             </div>
             <div>
               <p className="font-semibold text-[var(--text-primary)]">{t('support.noTickets')}</p>
-              <p className="text-sm text-[var(--text-muted)] mt-1">{t(canUseSupport ? 'support.noTicketsHint' : 'support.freeLockedDesc')}</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1">
+                {canUseSupport
+                  ? t('support.noTicketsHint')
+                  : isAdminLocked
+                  ? (isAr ? 'الدعم الفني متوقف مؤقتاً' : 'Support is temporarily paused')
+                  : t('support.freeLockedDesc')}
+              </p>
             </div>
             {canUseSupport ? (
               <button
@@ -179,7 +219,7 @@ export default function SupportPage() {
                 <Plus className="w-4 h-4" />
                 {t('support.newTicket')}
               </button>
-            ) : (
+            ) : !isPlanEligible ? (
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-subscription'))}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 transition-colors"
@@ -187,7 +227,7 @@ export default function SupportPage() {
                 <Zap className="w-4 h-4" />
                 {t('support.upgradeNow')}
               </button>
-            )}
+            ) : null}
           </div>
         ) : (
           <div className="space-y-2.5">
