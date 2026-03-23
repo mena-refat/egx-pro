@@ -112,6 +112,11 @@ export default function SupportPage() {
   const [savingEditQR, setSavingEditQR] = useState(false);
   const qrDropdownRef = useRef<HTMLDivElement>(null);
 
+  /* Support access settings */
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [accessPlans, setAccessPlans] = useState<string[]>(['pro', 'yearly', 'ultra', 'ultra_yearly']);
+  const [savingAccess, setSavingAccess] = useState(false);
+
   /* Team stats */
   const [agentStats, setAgentStats] = useState<AgentStat[]>([]);
   const [managerStats, setManagerStats] = useState<ManagerStat[]>([]);
@@ -220,7 +225,12 @@ export default function SupportPage() {
     }
   }, [managerMode, currentAdmin]);
 
-  useEffect(() => { void load(1, '', '', '', sortOrder, ''); }, []); // eslint-disable-line
+  useEffect(() => {
+    void load(1, '', '', '', sortOrder, '');
+    if (isSuperAdmin) {
+      adminApi.get('/support/settings').then((r) => setAccessPlans(r.data.data.allowedPlans ?? [])).catch(() => null);
+    }
+  }, []); // eslint-disable-line
 
   useEffect(() => {
     if (skipNext.current) { skipNext.current = false; return; }
@@ -389,6 +399,30 @@ export default function SupportPage() {
     finally { setSavingEditQR(false); }
   };
 
+  const handleSaveAccessPlans = async () => {
+    setShowAccessModal(false);
+    setSavingAccess(true);
+    try {
+      await adminApi.patch('/support/settings', { allowedPlans: accessPlans });
+    } catch { /* silent */ }
+    finally { setSavingAccess(false); }
+  };
+
+  const toggleAccessPlan = (group: 'free' | 'pro' | 'ultra') => {
+    const groupPlans: Record<string, string[]> = {
+      free:  ['free'],
+      pro:   ['pro', 'yearly'],
+      ultra: ['ultra', 'ultra_yearly'],
+    };
+    const plans = groupPlans[group];
+    const allIn = plans.every((p) => accessPlans.includes(p));
+    if (allIn) {
+      setAccessPlans((prev) => prev.filter((p) => !plans.includes(p)));
+    } else {
+      setAccessPlans((prev) => [...new Set([...prev, ...plans])]);
+    }
+  };
+
   /* ─── RENDER ─────────────────────────────────────────────────── */
   return (
     <div className="space-y-5">
@@ -435,6 +469,14 @@ export default function SupportPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-500/25 text-violet-400 hover:bg-violet-500/10 text-xs font-medium transition-all"
             >
               <Zap size={12} /> {t('support.quickReplies')}
+            </button>
+          )}
+          {isSuperAdmin && (
+            <button
+              onClick={() => setShowAccessModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-500/25 text-amber-400 hover:bg-amber-500/10 text-xs font-medium transition-all"
+            >
+              <ShieldCheck size={12} /> {t('support.planAccess')}
             </button>
           )}
           <button
@@ -847,6 +889,64 @@ export default function SupportPage() {
               {qrError && <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-1.5">{qrError}</p>}
               <button type="button" onClick={() => void handleAddQuickReply()} disabled={savingQR || !newQRTitle.trim() || !newQRContent.trim()} className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white rounded-lg disabled:opacity-50 transition-all">
                 <Plus size={12} /> {savingQR ? t('common.saving') : t('support.addQuickReply')}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Support Plan Access Modal */}
+      {isSuperAdmin && (
+        <Modal open={showAccessModal} onClose={() => setShowAccessModal(false)} title={t('support.planAccessTitle')} width="max-w-sm">
+          <div className="space-y-5">
+            <p className="text-xs text-slate-400 leading-relaxed">{t('support.planAccessDesc')}</p>
+
+            <div className="space-y-2">
+              {([
+                { group: 'free'  as const, label: 'Free',  color: 'emerald', plans: ['free'] },
+                { group: 'pro'   as const, label: 'Pro',   color: 'blue',    plans: ['pro', 'yearly'] },
+                { group: 'ultra' as const, label: 'Ultra', color: 'amber',   plans: ['ultra', 'ultra_yearly'] },
+              ]).map(({ group, label, color, plans }) => {
+                const allIn = plans.every((p) => accessPlans.includes(p));
+                return (
+                  <button
+                    key={group}
+                    onClick={() => toggleAccessPlan(group)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${
+                      allIn
+                        ? `border-${color}-500/30 bg-${color}-500/10`
+                        : 'border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`w-2 h-2 rounded-full ${allIn ? `bg-${color}-400` : 'bg-slate-600'}`} />
+                      <span className={`text-sm font-semibold ${allIn ? `text-${color}-300` : 'text-slate-500'}`}>
+                        {label}
+                      </span>
+                      <span className="text-[10px] text-slate-600">{plans.join(', ')}</span>
+                    </div>
+                    <div className={`w-9 h-5 rounded-full transition-colors relative ${allIn ? `bg-${color}-500` : 'bg-white/10'}`}>
+                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${allIn ? 'left-[18px]' : 'left-0.5'}`} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="rounded-xl bg-amber-500/5 border border-amber-500/15 px-3 py-2.5 text-[11px] text-amber-400/80 leading-relaxed">
+              {t('support.planAccessWarning')}
+            </div>
+
+            <div className="flex gap-3 justify-end pt-1">
+              <button onClick={() => setShowAccessModal(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors">
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={() => void handleSaveAccessPlans()}
+                disabled={savingAccess}
+                className="px-4 py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg disabled:opacity-50 transition-all"
+              >
+                {savingAccess ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>

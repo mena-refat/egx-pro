@@ -9,6 +9,8 @@ import { AdminAnalyticsController } from '../controllers/admin/adminAnalytics.co
 import { AdminAdminsController } from '../controllers/admin/adminAdmins.controller.ts';
 import { AdminNotificationsController } from '../controllers/admin/adminNotifications.controller.ts';
 import { AdminBlocklistController } from '../controllers/admin/adminBlocklist.controller.ts';
+import { getSupportAllowedPlans, setSupportAllowedPlans } from '../lib/appConfig.ts';
+import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 
 const router = Router();
 
@@ -189,6 +191,26 @@ router.delete(
     void AdminDiscountsController.remove(req as any, res).catch(next);
   }
 );
+
+// Support plan-access settings (SUPER_ADMIN only)
+router.get('/support/settings', adminAuthenticate, requireSuperAdmin, async (_req, res, next) => {
+  try {
+    const allowedPlans = await getSupportAllowedPlans();
+    sendSuccess(res, { allowedPlans });
+  } catch (err) { next(err); }
+});
+
+router.patch('/support/settings', adminAuthenticate, requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { allowedPlans } = req.body as { allowedPlans?: unknown };
+    const valid = ['free', 'pro', 'yearly', 'ultra', 'ultra_yearly'];
+    if (!Array.isArray(allowedPlans) || allowedPlans.some((p) => !valid.includes(p as string))) {
+      sendError(res, 'VALIDATION_ERROR', 400); return;
+    }
+    await setSupportAllowedPlans(allowedPlans as string[]);
+    sendSuccess(res, { allowedPlans });
+  } catch (err) { next(err); }
+});
 
 router.get(
   '/support/my-stats',

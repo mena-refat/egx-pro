@@ -1,6 +1,6 @@
 import React from 'react';
 import { MessageSquare, ArrowLeft } from 'lucide-react';
-import { SupportTicket, StatusBadge, relativeTime } from './support.types';
+import { SupportTicket, StatusBadge, CategoryBadge, relativeTime } from './support.types';
 
 /* ─── Stats Bar ────────────────────────────────────────────────────── */
 
@@ -67,7 +67,8 @@ export const TicketCard: React.FC<{
             )}
           </div>
           <p className="text-xs text-[var(--text-muted)] line-clamp-1 mb-2">{ticket.message}</p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {ticket.category && <CategoryBadge category={ticket.category} isAr={isAr} />}
             <StatusBadge status={ticket.status} isAr={isAr} />
             <span className="text-xs text-[var(--text-muted)]">·</span>
             <span className="text-xs text-[var(--text-muted)]">{relativeTime(ticket.createdAt, isAr)}</span>

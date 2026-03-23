@@ -12,6 +12,7 @@ export function useSupportPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [selected, setSelected] = useState<SupportTicket | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [allowedPlans, setAllowedPlans] = useState<string[] | null>(null);
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -21,10 +22,25 @@ export function useSupportPage() {
     };
   }, []);
 
+  // Fetch support settings on mount to know which plans are allowed
+  useEffect(() => {
+    apiClient
+      .get('/api/support/settings')
+      .then((r) => {
+        const plans = (r.data as { data?: { allowedPlans?: string[] } })?.data?.allowedPlans;
+        if (mountedRef.current && Array.isArray(plans)) setAllowedPlans(plans);
+      })
+      .catch(() => null);
+  }, []);
+
   const plan = user?.plan ?? 'free';
   const referralProExpiresAt = (user as { referralProExpiresAt?: string | null } | null)?.referralProExpiresAt;
-  const canUseSupport =
-    plan !== 'free' || (!!referralProExpiresAt && new Date(referralProExpiresAt) > new Date());
+  const hasReferralPro = !!referralProExpiresAt && new Date(referralProExpiresAt) > new Date();
+
+  // If allowedPlans not yet fetched, fall back to old behaviour (non-free = allowed)
+  const canUseSupport = allowedPlans
+    ? allowedPlans.includes(plan) || (hasReferralPro && allowedPlans.includes('pro'))
+    : plan !== 'free' || hasReferralPro;
 
   useEffect(() => {
     if (!canUseSupport) {

@@ -3,13 +3,15 @@ import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma.ts';
 import { sendSuccess, sendError } from '../lib/apiResponse.ts';
 import { authenticate } from '../middleware/auth.middleware.ts';
-import { requirePaid } from '../middleware/plan.middleware.ts';
 import type { AuthRequest } from './types.ts';
+import { getSupportAllowedPlans } from '../lib/appConfig.ts';
 
 const router = Router();
 
-const SUBJECT_MAX = 120;
-const MESSAGE_MAX = 2000;
+const SUBJECT_MAX  = 120;
+const MESSAGE_MAX  = 2000;
+const VALID_CATEGORIES = ['BUG', 'INQUIRY', 'ACCOUNT', 'PAYMENT', 'FEATURE', 'OTHER'] as const;
+type TicketCategoryValue = typeof VALID_CATEGORIES[number];
 const PAGE_SIZE    = 20;
 
 // 5 تيكيتات كل ساعة لكل مستخدم — يمنع spam الدعم
@@ -23,13 +25,23 @@ const ticketCreateLimiter = rateLimit({
   handler: (_req, res) => res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED' }),
 });
 
-router.post('/', authenticate, requirePaid, ticketCreateLimiter, async (req, res) => {
-  const userId = (req as AuthRequest).user?.id;
+router.post('/', authenticate, ticketCreateLimiter, async (req, res) => {
+  const authReq = req as AuthRequest;
+  const userId = authReq.user?.id;
   if (!userId) { sendError(res, 'UNAUTHORIZED', 401); return; }
 
-  const { subject, message } = req.body as { subject?: string; message?: string };
-  const trimmedSubject = subject?.trim() ?? '';
-  const trimmedMessage = message?.trim() ?? '';
+  const allowedPlans = await getSupportAllowedPlans();
+  const userPlan = authReq.user?.plan ?? 'free';
+  if (!allowedPlans.includes(userPlan)) {
+    sendError(res, 'PLAN_NOT_ALLOWED', 403); return;
+  }
+
+  const { subject, message, category } = req.body as { subject?: string; message?: string; category?: string };
+  const trimmedSubject  = subject?.trim() ?? '';
+  const trimmedMessage  = message?.trim() ?? '';
+  const safeCategory: TicketCategoryValue = VALID_CATEGORIES.includes(category as TicketCategoryValue)
+    ? (category as TicketCategoryValue)
+    : 'OTHER';
 
   if (!trimmedSubject || !trimmedMessage) {
     sendError(res, 'VALIDATION_ERROR', 400); return;
@@ -39,11 +51,17 @@ router.post('/', authenticate, requirePaid, ticketCreateLimiter, async (req, res
   }
 
   const ticket = await prisma.supportTicket.create({
-    data: { userId, subject: trimmedSubject, message: trimmedMessage },
+    data: { userId, subject: trimmedSubject, message: trimmedMessage, category: safeCategory as never },
     select: { id: true, subject: true, status: true, createdAt: true },
   });
 
   sendSuccess(res, ticket, 201);
+});
+
+// Public: which plans can access support (mobile uses this to show/hide UI)
+router.get('/settings', async (_req, res) => {
+  const allowedPlans = await getSupportAllowedPlans();
+  sendSuccess(res, { allowedPlans });
 });
 
 router.get('/my', authenticate, async (req, res) => {
@@ -61,6 +79,7 @@ router.get('/my', authenticate, async (req, res) => {
       take: PAGE_SIZE,
       select: {
         id: true, subject: true, message: true, status: true, priority: true,
+        category: true,
         reply: true, repliedAt: true, replyRead: true, rating: true, ratedAt: true,
         createdAt: true,
       },

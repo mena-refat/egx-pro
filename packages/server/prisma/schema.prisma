@@ -119,6 +119,15 @@ enum SupportTicketStatus {
   CANCELLED
 }
 
+enum TicketCategory {
+  BUG
+  INQUIRY
+  ACCOUNT
+  PAYMENT
+  FEATURE
+  OTHER
+}
+
 enum TicketPriority {
   LOW
   NORMAL
@@ -781,6 +790,7 @@ model SupportTicket {
   userId             Int
   subject            String
   message            String
+  category           TicketCategory      @default(OTHER)
   status             SupportTicketStatus @default(OPEN)
   priority           TicketPriority      @default(NORMAL)
   assignedTo         Int?
@@ -910,4 +920,14 @@ model ScheduledNotification {
 
   @@index([status, nextSendAt])
   @@index([createdById])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// App-wide configuration (key → JSON string value)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AppConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
