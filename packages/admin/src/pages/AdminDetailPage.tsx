@@ -99,7 +99,7 @@ export default function AdminDetailPage() {
   const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const nav = useNavigate();
-  const locale = i18n.language;
+  const locale = `${i18n.language}-u-nu-latn`;
   const isRtl = locale.startsWith('ar');
 
   const [admin, setAdmin] = useState<AdminDetail | null>(null);

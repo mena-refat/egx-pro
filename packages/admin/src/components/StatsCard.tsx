@@ -28,7 +28,7 @@ export function StatsCard({ label, value, sub, icon: Icon, accent = 'emerald' }:
       </div>
       <div>
         <p className="text-2xl font-bold text-white tabular-nums">
-          {typeof value === 'string' ? value : value.toLocaleString()}
+          {typeof value === 'string' ? value : value.toLocaleString('en-US')}
         </p>
         {sub && <p className="text-xs text-slate-500 mt-1">{sub}</p>}
       </div>

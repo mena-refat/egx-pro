@@ -87,7 +87,7 @@ export default function RevenuePage() {
             {p.name}:{' '}
             <span className="font-bold">
               {p.name.includes('Revenue')
-                ? `${p.value.toLocaleString()} EGP`
+                ? `${p.value.toLocaleString('en-US')} EGP`
                 : p.value}
             </span>
           </p>
@@ -131,8 +131,8 @@ export default function RevenuePage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatsCard label={t('revenue.mrr')}          value={data ? `${(data.mrr ?? 0).toLocaleString()} EGP` : 0}  icon={DollarSign} accent="emerald" sub={t('revenue.mrrSub')} />
-        <StatsCard label={t('revenue.arr')}          value={data ? `${(data.arr ?? 0).toLocaleString()} EGP` : 0}  icon={TrendingUp}  accent="blue"    sub={t('revenue.arrSub')} />
+        <StatsCard label={t('revenue.mrr')}          value={data ? `${(data.mrr ?? 0).toLocaleString('en-US')} EGP` : 0}  icon={DollarSign} accent="emerald" sub={t('revenue.mrrSub')} />
+        <StatsCard label={t('revenue.arr')}          value={data ? `${(data.arr ?? 0).toLocaleString('en-US')} EGP` : 0}  icon={TrendingUp}  accent="blue"    sub={t('revenue.arrSub')} />
         <StatsCard label={t('revenue.paidUsers')}    value={data?.totalPaidUsers ?? 0}                       icon={Users}       accent="amber"   sub={`+${newThis} ${t('common.thisMonth')} (${mrrGrowth}%)`} />
         <StatsCard label={t('revenue.freeUpgrades')} value={data?.freeUpgrades ?? 0}                         icon={Gift}        accent="rose"    sub={t('revenue.freeUpgradesSub')} />
       </div>
@@ -166,7 +166,7 @@ export default function RevenuePage() {
                       <Badge label={PLAN_LABELS[plan] ?? plan} />
                       <span className="text-xs text-slate-500">{stats.count} {t('revenue.users')}</span>
                     </div>
-                    <span className="text-xs font-semibold text-white">{Math.round(stats.mrr).toLocaleString()} EGP</span>
+                    <span className="text-xs font-semibold text-white">{Math.round(stats.mrr).toLocaleString('en-US')} EGP</span>
                   </div>
                   <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                     <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
@@ -277,11 +277,11 @@ export default function RevenuePage() {
                   <span className="text-xs text-slate-600">—</span>
                 )}
               </td>
-              <td className="px-4 py-3 text-xs text-slate-500">{new Date(s.subscribedAt).toLocaleDateString()}</td>
+              <td className="px-4 py-3 text-xs text-slate-500">{new Date(s.subscribedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
               <td className="px-4 py-3 text-xs">
                 {s.planExpiresAt ? (
                   <span className={new Date(s.planExpiresAt).getTime() < Date.now() + 7 * 24 * 60 * 60 * 1000 ? 'text-amber-400' : 'text-slate-500'}>
-                    {new Date(s.planExpiresAt).toLocaleDateString()}
+                    {new Date(s.planExpiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </span>
                 ) : (
                   <span className="text-slate-600">∞</span>

@@ -7,6 +7,7 @@ import { Badge } from '../components/Badge';
 import { Pagination } from '../components/Pagination';
 import { Search, Download, RefreshCw, ShieldOff, Trash2, Plus, ShieldCheck } from 'lucide-react';
 import { useAdminStore } from '../store/adminAuthStore';
+import { slugify } from '../lib/slugify';
 
 type UserRow = {
   id?: string; email: string | null; phone: string | null;
@@ -275,7 +276,10 @@ export default function UsersPage() {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     {isSuperAdmin && u.id && (
-                      <Link to={`/users/${u.id}`} className="text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
+                      <Link
+                        to={`/users/${slugify((u.fullName ?? u.username ?? '') || '') || u.id}`}
+                        className="text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
+                      >
                         {t('users.view')}
                       </Link>
                     )}

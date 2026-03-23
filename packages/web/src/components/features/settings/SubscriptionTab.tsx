@@ -229,12 +229,14 @@ export function SubscriptionTab() {
               {t('billing.currentPlan')}
             </p>
             <p className="text-2xl font-black text-[var(--text-primary)]">{currentPlanLabel}</p>
-            {planExpiresAt && currentPlan !== 'free' && (
+            {currentPlan !== 'free' && (
               <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg bg-[var(--brand)]/10 border border-[var(--brand)]/20">
                 <CalendarClock className="w-3.5 h-3.5 text-[var(--brand)] shrink-0" />
                 <span className="text-xs font-semibold text-[var(--brand)]">
-                  {isAr ? 'يُجدَّد في' : 'Renews'}{' '}
-                  {new Date(planExpiresAt).toLocaleDateString(isAr ? 'ar-EG' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {planExpiresAt
+                    ? <>{isAr ? 'يُجدَّد في' : 'Renews'}{' '}{new Date(planExpiresAt).toLocaleDateString(isAr ? 'ar-EG' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</>
+                    : (isAr ? 'اشتراك نشط · بلا تاريخ انتهاء' : 'Active subscription · No expiry set')
+                  }
                 </span>
               </div>
             )}

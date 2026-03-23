@@ -10,6 +10,7 @@ interface ReferralState {
 
 interface Props {
   formData: FormData;
+  isAr: boolean;
   referralState: ReferralState;
   saving: boolean;
   finishError: string | null;
@@ -18,24 +19,24 @@ interface Props {
   onSkip: () => void;
 }
 
-export function StepReferral({ formData, referralState, saving, finishError, onCodeChange, onApply, onSkip }: Props) {
+export function StepReferral({ formData, isAr, referralState, saving, finishError, onCodeChange, onApply, onSkip }: Props) {
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold">هل دعاك أحد للانضمام؟</h2>
-        <p className="text-[var(--text-secondary)] text-sm">اكتب كود الدعوة إن وجد - اختياري</p>
+        <h2 className="text-2xl font-bold">{isAr ? 'هل دعاك أحد للانضمام؟' : 'Were you referred by someone?'}</h2>
+        <p className="text-[var(--text-secondary)] text-sm">{isAr ? 'اكتب كود الدعوة إن وجد — اختياري' : 'Enter a referral code if you have one — optional'}</p>
       </div>
       <div className="space-y-4">
         <Input
           type="text"
           value={formData.referralCode}
           onChange={(e) => onCodeChange(e.target.value.toUpperCase())}
-          placeholder="مثال: EGX-A7K2M"
+          placeholder={isAr ? 'مثال: EGX-A7K2M' : 'e.g. EGX-A7K2M'}
           inputClassName="text-center text-lg tracking-[0.2em]"
         />
         {referralState.successName && (
           <p className="text-sm text-[var(--success)] text-center">
-            تم! انضممت عن طريق دعوة {referralState.successName}
+            {isAr ? `تم! انضممت عن طريق دعوة ${referralState.successName}` : `Done! You joined via ${referralState.successName}'s referral`}
           </p>
         )}
         {referralState.error && (
@@ -46,10 +47,14 @@ export function StepReferral({ formData, referralState, saving, finishError, onC
         )}
         <div className="flex flex-col sm:flex-row gap-3 mt-4">
           <Button type="button" variant="primary" size="lg" fullWidth onClick={onApply} disabled={referralState.checking || saving}>
-            {referralState.checking ? 'جاري التحقق...' : 'تأكيد وابدأ'}
+            {referralState.checking
+              ? (isAr ? 'جاري التحقق...' : 'Verifying...')
+              : (isAr ? 'تأكيد وابدأ' : 'Confirm & Start')}
           </Button>
           <Button type="button" variant="secondary" size="lg" fullWidth onClick={onSkip} disabled={saving}>
-            {saving ? 'جارٍ الحفظ...' : 'تخطي وابدأ'}
+            {saving
+              ? (isAr ? 'جارٍ الحفظ...' : 'Saving...')
+              : (isAr ? 'تخطي وابدأ' : 'Skip & Start')}
           </Button>
         </div>
       </div>

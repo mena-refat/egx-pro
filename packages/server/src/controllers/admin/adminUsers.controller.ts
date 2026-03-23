@@ -32,6 +32,10 @@ function generateTempPassword(): string {
   return chars.join('');
 }
 
+function slugify(name: string): string {
+  return name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
+}
+
 export const AdminUsersController = {
   async list(req: AdminRequest, res: Response): Promise<void> {
     const {
@@ -103,10 +107,28 @@ export const AdminUsersController = {
   },
 
   async getOne(req: AdminRequest, res: Response): Promise<void> {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) { sendError(res, 'VALIDATION_ERROR', 400); return; }
+    const param = req.params.id;
+    let resolvedId: number;
+
+    const numericId = parseInt(param, 10);
+    if (!isNaN(numericId) && String(numericId) === param) {
+      resolvedId = numericId;
+    } else {
+      const all = await prisma.user.findMany({
+        where: { isDeleted: false },
+        select: { id: true, fullName: true, username: true },
+      });
+      const match = all.find((u) => {
+        const nameSlug     = u.fullName  ? slugify(u.fullName)  : '';
+        const usernameSlug = u.username  ? slugify(u.username)  : '';
+        return nameSlug === param || usernameSlug === param;
+      });
+      if (!match) { sendError(res, 'NOT_FOUND', 404); return; }
+      resolvedId = match.id;
+    }
+
     const user = await prisma.user.findUnique({
-      where: { id },
+      where: { id: resolvedId },
       include: {
         _count: {
           select: {
@@ -115,6 +137,7 @@ export const AdminUsersController = {
             predictions: true,
             goals: true,
             watchlists: true,
+            referralsSent: true,
           },
         },
         referralsSent: {

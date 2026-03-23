@@ -16,7 +16,7 @@ export function Pagination({ page, totalPages, total, limit, onChange }: Props) 
 
   return (
     <div className="flex items-center justify-between text-sm text-slate-400 mt-4">
-      <p>{from}–{to} {t('common.of')} {total.toLocaleString()}</p>
+      <p>{from}–{to} {t('common.of')} {total.toLocaleString('en-US')}</p>
       <div className="flex gap-2">
         <button
           onClick={() => onChange(page - 1)} disabled={page === 1}

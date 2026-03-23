@@ -140,6 +140,7 @@ export const ar = {
     lastLogin: 'آخر دخول',
     portfolio: 'المحفظة',
     predictions: 'التوقعات',
+    referrals: 'الإحالات',
     changePlan: 'تغيير الخطة',
     deactivate: 'تعطيل الحساب',
     reactivate: 'تفعيل الحساب',

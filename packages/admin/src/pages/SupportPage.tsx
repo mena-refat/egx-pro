@@ -23,7 +23,7 @@ import { AbuseView } from '../components/support/AbuseView';
 
 export default function SupportPage() {
   const { t, i18n } = useTranslation();
-  const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-GB';
+  const locale = i18n.language === 'ar' ? 'ar-u-nu-latn' : 'en-GB';
   const currentAdmin = useAdminStore((s) => s.admin);
   const isSuperAdmin = currentAdmin?.role === 'SUPER_ADMIN';
 

@@ -290,7 +290,7 @@ export default function AuditLogPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">{t('audit.title')}</h1>
-          <p className="text-sm text-slate-500">{total.toLocaleString()} {t('audit.events')}</p>
+          <p className="text-sm text-slate-500">{total.toLocaleString('en-US')} {t('audit.events')}</p>
         </div>
         <div className="flex items-center gap-2">
           {hasFilters && (

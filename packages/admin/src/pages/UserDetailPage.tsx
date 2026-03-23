@@ -5,7 +5,7 @@ import { adminApi } from '../lib/adminApi';
 import { Badge } from '../components/Badge';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Modal } from '../components/Modal';
-import { ArrowLeft, ShieldOff, ShieldCheck, Ban, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, ShieldOff, ShieldCheck, Ban, ShieldAlert, Users } from 'lucide-react';
 import { useAdminStore } from '../store/adminAuthStore';
 
 const PLANS = ['free', 'pro', 'yearly', 'ultra', 'ultra_yearly'];
@@ -14,7 +14,7 @@ export default function UserDetailPage() {
   const { t } = useTranslation();
   const currentAdmin = useAdminStore((s) => s.admin);
   const isSuperAdmin = currentAdmin?.role === 'SUPER_ADMIN';
-  const { id } = useParams<{ id: string }>();
+  const { id: slug } = useParams<{ id: string }>();
   const nav    = useNavigate();
   const [user, setUser]               = useState<any>(null);
   const [loading, setLoading]         = useState(true);
@@ -26,22 +26,22 @@ export default function UserDetailPage() {
   const [saving, setSaving]           = useState(false);
 
   const load = useCallback(async () => {
-    if (!id) return;
+    if (!slug) return;
     setLoading(true);
     try {
-      const res = await adminApi.get(`/users/${id}`);
+      const res = await adminApi.get(`/users/${slug}`);
       setUser(res.data.data);
       setNewPlan(res.data.data?.plan ?? 'free');
     } catch { setUser(null); }
     finally { setLoading(false); }
-  }, [id]);
+  }, [slug]);
 
   useEffect(() => { void load(); }, [load]);
 
   const handleToggleDelete = async () => {
     setSaving(true);
     try {
-      await adminApi.patch(`/users/${id}/toggle-delete`);
+      await adminApi.patch(`/users/${user?.id}/toggle-delete`);
       setConfirmToggle(false);
       await load();
     } finally { setSaving(false); }
@@ -50,7 +50,7 @@ export default function UserDetailPage() {
   const handleToggleBan = async () => {
     setSaving(true);
     try {
-      await adminApi.patch(`/users/${id}/toggle-ban`);
+      await adminApi.patch(`/users/${user?.id}/toggle-ban`);
       setConfirmBan(false);
       await load();
     } finally { setSaving(false); }
@@ -59,7 +59,7 @@ export default function UserDetailPage() {
   const handleUpdatePlan = async () => {
     setSaving(true);
     try {
-      await adminApi.patch(`/users/${id}/plan`, {
+      await adminApi.patch(`/users/${user?.id}/plan`, {
         plan: newPlan,
         planExpiresAt: planDate || undefined,
       });
@@ -133,10 +133,16 @@ export default function UserDetailPage() {
           { label: t('userDetail.status'),      value: <span className={user.isSuspended ? 'text-orange-400 text-sm' : user.isDeleted ? 'text-red-400 text-sm' : 'text-emerald-400 text-sm'}>{user.isSuspended ? t('userDetail.banned') : user.isDeleted ? t('userDetail.deactivated') : t('userDetail.active')}</span> },
           { label: t('userDetail.aiUses'),      value: <span className="text-white text-sm">{user.aiAnalysisUsedThisMonth}</span> },
           { label: t('userDetail.verified'),    value: <span className={user.isEmailVerified ? 'text-emerald-400 text-sm' : 'text-slate-500 text-sm'}>{user.isEmailVerified ? t('common.yes') : t('common.no')}</span> },
-          { label: t('userDetail.joined'),      value: <span className="text-slate-300 text-sm">{new Date(user.createdAt).toLocaleDateString()}</span> },
-          { label: t('userDetail.lastLogin'),   value: <span className="text-slate-300 text-sm">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : '—'}</span> },
+          { label: t('userDetail.joined'),      value: <span className="text-slate-300 text-sm">{new Date(user.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span> },
+          { label: t('userDetail.lastLogin'),   value: <span className="text-slate-300 text-sm">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span> },
           { label: t('userDetail.portfolio'),   value: <span className="text-white text-sm">{user._count?.portfolios ?? 0}</span> },
           { label: t('userDetail.predictions'), value: <span className="text-white text-sm">{user._count?.predictions ?? 0}</span> },
+          { label: t('userDetail.referrals'),   value: (
+            <div className="flex items-center gap-1.5">
+              <Users size={13} className="text-emerald-400" />
+              <span className="text-white text-sm font-semibold">{user._count?.referralsSent ?? user.totalReferrals ?? 0}</span>
+            </div>
+          )},
         ].map((item) => (
           <div key={item.label} className="rounded-xl border border-white/[0.07] bg-[#111118] p-4">
             <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">{item.label}</p>

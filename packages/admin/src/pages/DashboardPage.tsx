@@ -104,7 +104,7 @@ export default function DashboardPage() {
             { label: t('dashboard.recommendations'),   value: overview?.analyses.byRecommendations ?? 0, color: 'text-emerald-400' },
           ].map((item) => (
             <div key={item.label} className="flex flex-col items-center gap-1 rounded-lg bg-white/[0.03] py-3 px-2">
-              <span className={`text-xl font-bold tabular-nums ${item.color}`}>{item.value.toLocaleString()}</span>
+              <span className={`text-xl font-bold tabular-nums ${item.color}`}>{item.value.toLocaleString('en-US')}</span>
               <span className="text-[11px] text-slate-500 text-center">{item.label}</span>
             </div>
           ))}
@@ -153,7 +153,7 @@ export default function DashboardPage() {
                 <div key={p.plan} className="flex items-center justify-between">
                   <Badge label={p.plan} />
                   <span className="text-sm font-semibold text-white tabular-nums">
-                    {p._count.plan.toLocaleString()}
+                    {p._count.plan.toLocaleString('en-US')}
                   </span>
                 </div>
               ))}

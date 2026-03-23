@@ -461,16 +461,16 @@ export default function NotificationsPage() {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <p className="text-xs text-slate-300 tabular-nums">
-                      {new Date(row.scheduledAt).toLocaleString()}
+                      {new Date(row.scheduledAt).toLocaleString('en-GB')}
                     </p>
                     {row.repeat !== 'NONE' && row.status === 'PENDING' && (
                       <p className="text-[11px] text-slate-600 mt-0.5">
-                        Next: {new Date(row.nextSendAt).toLocaleString()}
+                        Next: {new Date(row.nextSendAt).toLocaleString('en-GB')}
                       </p>
                     )}
                     {row.lastSentAt && (
                       <p className="text-[11px] text-emerald-600 mt-0.5">
-                        Last: {new Date(row.lastSentAt).toLocaleString()}
+                        Last: {new Date(row.lastSentAt).toLocaleString('en-GB')}
                       </p>
                     )}
                   </td>

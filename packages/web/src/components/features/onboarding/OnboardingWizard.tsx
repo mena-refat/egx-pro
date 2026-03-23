@@ -186,24 +186,25 @@ export default function OnboardingWizard({ onComplete }: { onComplete: () => voi
   const isMultiSelect = !AUTO_ADVANCE_STEPS.has(currentStep) && currentStep !== STEPS.length - 1;
 
   const stepContent = [
-    <StepGoal     formData={formData} onSelect={(goal)       => advance({ ...formData, goal }, 0)} />,
-    <StepTimeline formData={formData} onSelect={(timeline)   => advance({ ...formData, timeline }, 1)} />,
-    <StepRisk     formData={formData} onSelect={(reaction30) => advance({ ...formData, reaction30 }, 2)} />,
-    <StepBudget   formData={formData} onSelect={(budgetBand) => advance({ ...formData, budgetBand }, 3)} />,
-    <StepIslamic  formData={formData} onSelect={(shariaMode) => advance({ ...formData, shariaMode }, 4)} />,
-    <StepSectors  formData={formData} onToggle={(id) => {
+    <StepGoal     isAr={isAr} formData={formData} onSelect={(goal)       => advance({ ...formData, goal }, 0)} />,
+    <StepTimeline isAr={isAr} formData={formData} onSelect={(timeline)   => advance({ ...formData, timeline }, 1)} />,
+    <StepRisk     isAr={isAr} formData={formData} onSelect={(reaction30) => advance({ ...formData, reaction30 }, 2)} />,
+    <StepBudget   isAr={isAr} formData={formData} onSelect={(budgetBand) => advance({ ...formData, budgetBand }, 3)} />,
+    <StepIslamic  isAr={isAr} formData={formData} onSelect={(shariaMode) => advance({ ...formData, shariaMode }, 4)} />,
+    <StepSectors  isAr={isAr} formData={formData} onToggle={(id) => {
       const sectors = formData.sectors.includes(id) ? formData.sectors.filter((s) => s !== id) : [...formData.sectors, id];
       setFormData({ ...formData, sectors });
       setValidationError(null);
     }} />,
-    <StepLevel formData={formData} onSelect={(level) => advance({ ...formData, level }, 6)} />,
-    <StepHear  formData={formData} onToggle={(v) => {
+    <StepLevel isAr={isAr} formData={formData} onSelect={(level) => advance({ ...formData, level }, 6)} />,
+    <StepHear  isAr={isAr} formData={formData} onToggle={(v) => {
       const current = formData.hearAboutUs;
       const updated = current.includes(v) ? current.filter((x) => x !== v) : [...current, v];
       setFormData({ ...formData, hearAboutUs: updated });
       setValidationError(null);
     }} />,
     <StepReferral
+      isAr={isAr}
       formData={formData}
       referralState={referralState}
       saving={saving}

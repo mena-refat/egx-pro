@@ -71,9 +71,10 @@ const SECTOR_LABELS: Record<string, { en: string; ar: string }> = {
 };
 
 const LEVEL_LABELS: Record<string, { en: string; ar: string }> = {
-  beginner:     { en: 'Beginner',     ar: 'مبتدئ' },
-  intermediate: { en: 'Intermediate', ar: 'متوسط' },
-  advanced:     { en: 'Advanced',     ar: 'متقدم' },
+  beginner:     { en: 'Complete Beginner', ar: 'مبتدئ تماماً' },
+  basics:       { en: 'Know the Basics',  ar: 'بعرف الأساسيات' },
+  intermediate: { en: 'Intermediate',     ar: 'متوسط' },
+  advanced:     { en: 'Advanced',         ar: 'متقدم' },
 };
 
 /* ── helper ──────────────────────────────────────────────────── */
@@ -178,13 +179,13 @@ export default function OnboardingPage() {
           <span className="text-[10px] text-slate-500 uppercase tracking-wide flex items-center gap-1">
             <Users size={10} /> {isAr ? 'إجمالي المستخدمين' : 'Total Users'}
           </span>
-          <span className="text-2xl font-bold text-white tabular-nums">{stats.totalUsers.toLocaleString()}</span>
+          <span className="text-2xl font-bold text-white tabular-nums">{stats.totalUsers.toLocaleString('en-US')}</span>
         </div>
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4 flex flex-col gap-1">
           <span className="text-[10px] text-emerald-500/70 uppercase tracking-wide flex items-center gap-1">
             <CheckCircle2 size={10} /> {isAr ? 'أكملوا الإعداد' : 'Completed Onboarding'}
           </span>
-          <span className="text-2xl font-bold text-emerald-400 tabular-nums">{stats.completedOnboarding.toLocaleString()}</span>
+          <span className="text-2xl font-bold text-emerald-400 tabular-nums">{stats.completedOnboarding.toLocaleString('en-US')}</span>
         </div>
         <div className="rounded-xl border border-white/[0.07] bg-[#111118] p-4 flex flex-col gap-1">
           <span className="text-[10px] text-slate-500 uppercase tracking-wide">

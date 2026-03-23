@@ -118,7 +118,7 @@ export default function DiscountsPage() {
                   {d.maxUses ? `/${d.maxUses}` : ''}
                 </td>
                 <td className="px-4 py-3 text-xs text-slate-500">
-                  {d.expiresAt ? new Date(d.expiresAt).toLocaleDateString() : '∞'}
+                  {d.expiresAt ? new Date(d.expiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '∞'}
                 </td>
                 <td className="px-4 py-3">
                   <button

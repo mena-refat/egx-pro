@@ -74,7 +74,7 @@ export default function AdminGroupPage() {
   const { type } = useParams<{ type: string }>();
   const nav = useNavigate();
   const { t, i18n } = useTranslation();
-  const locale = i18n.language;
+  const locale = `${i18n.language}-u-nu-latn`;
 
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [loading, setLoading] = useState(true);

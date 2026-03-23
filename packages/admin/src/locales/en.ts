@@ -140,6 +140,7 @@ export const en = {
     lastLogin: 'Last Login',
     portfolio: 'Portfolio',
     predictions: 'Predictions',
+    referrals: 'Referrals',
     changePlan: 'Change Plan',
     deactivate: 'Deactivate',
     reactivate: 'Reactivate',

@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, Pressable, ScrollView, StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, ArrowRight, Calculator, Wallet, TrendingUp, TrendingDown,
   Crown, Trophy, Target, BarChart2, ChevronDown, ChevronUp,
@@ -49,9 +50,9 @@ function calcMonthlyNeeded(target: number, initial: number, years: number, annua
 /** EGX real trade fees */
 function calcTradeFees(value: number, brokerPct: number) {
   const broker   = value * (brokerPct / 100);
-  const fra      = value * 0.00005;   // FRA 0.005%
-  const mcsd     = Math.min(value * 0.00009, 100); // MCSD 0.009% capped 100
-  const stamp    = value * 0.001;    // stamp duty 0.1%
+  const fra      = value * 0.00005;
+  const mcsd     = Math.min(value * 0.00009, 100);
+  const stamp    = value * 0.001;
   return { broker, fra, mcsd, stamp, total: broker + fra + mcsd + stamp };
 }
 
@@ -62,12 +63,8 @@ function calcTrade(buyPrice: number, shares: number, sellPrice: number, brokerPc
   const sellFees  = calcTradeFees(sellVal, brokerPct);
   const totalFees = buyFees.total + sellFees.total;
   const netProfit = sellVal - buyVal - totalFees;
-  const breakEven = buyPrice + (buyFees.total + sellFees.total / 2) / shares; // approximate
-  // Exact break-even: buyVal + buyFees + breakEvenSellFees = breakEvenSell
-  // breakEvenSell * (1 - sellFeeRate) = buyVal + buyFees  → simplify
   const sellFeeRate = (brokerPct / 100) + 0.00005 + 0.00009 + 0.001;
   const exactBreakEven = (buyVal + buyFees.total) / (shares * (1 - sellFeeRate));
-
   return {
     buyVal, sellVal,
     buyFees, sellFees, totalFees,
@@ -76,15 +73,6 @@ function calcTrade(buyPrice: number, shares: number, sellPrice: number, brokerPc
     roi: buyVal > 0 ? (netProfit / (buyVal + buyFees.total)) * 100 : 0,
     breakEven: exactBreakEven,
   };
-}
-
-/** Format large numbers in Arabic shorthand */
-function fmt(n: number, digits = 1): string {
-  if (!Number.isFinite(n)) return '0';
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(digits)} مليار`;
-  if (n >= 1_000_000)     return `${(n / 1_000_000).toFixed(digits)} مليون`;
-  if (n >= 1_000)         return `${(n / 1_000).toFixed(digits)} ألف`;
-  return Math.round(n).toLocaleString('en-US');
 }
 
 function fmtFull(n: number): string {
@@ -97,10 +85,22 @@ function fmtPrice(n: number): string {
   return n.toFixed(2);
 }
 
+/** Locale-aware compact number formatter */
+function useFmt() {
+  const { t } = useTranslation();
+  return useCallback((n: number, digits = 1): string => {
+    if (!Number.isFinite(n)) return '0';
+    if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(digits)}${t('calc.billion')}`;
+    if (n >= 1_000_000)     return `${(n / 1_000_000).toFixed(digits)}${t('calc.million')}`;
+    if (n >= 1_000)         return `${(n / 1_000).toFixed(digits)}${t('calc.thousand')}`;
+    return Math.round(n).toLocaleString('en-US');
+  }, [t]);
+}
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function NumInput({
-  label, value, onChange, suffix = 'ج.م', placeholder = '0', hint,
+  label, value, onChange, suffix, placeholder = '0', hint,
 }: {
   label: string; value: string; onChange: (v: string) => void;
   suffix?: string; placeholder?: string; hint?: string;
@@ -119,7 +119,7 @@ function NumInput({
           style={[styles.inputField, { color: colors.text }]}
           textAlign="right"
         />
-        <Text style={[styles.inputSuffix, { color: colors.textMuted }]}>{suffix}</Text>
+        {suffix ? <Text style={[styles.inputSuffix, { color: colors.textMuted }]}>{suffix}</Text> : null}
       </View>
       {hint ? <Text style={[styles.inputHint, { color: colors.textMuted }]}>{hint}</Text> : null}
     </View>
@@ -128,10 +128,11 @@ function NumInput({
 
 function YearPicker({ value, onChange }: { value: number; onChange: (y: number) => void }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const PRESETS = [1, 3, 5, 10, 15, 20, 30];
   return (
     <View style={styles.inputWrap}>
-      <Text style={[styles.inputLabel, { color: colors.textSub }]}>مدة الاستثمار (سنوات)</Text>
+      <Text style={[styles.inputLabel, { color: colors.textSub }]}>{t('calc.durationLabel')}</Text>
       <View style={styles.pillRow}>
         {PRESETS.map((y) => (
           <Pressable
@@ -150,19 +151,18 @@ function YearPicker({ value, onChange }: { value: number; onChange: (y: number) 
   );
 }
 
-function RatePicker({
-  value, onChange,
-}: { value: number; onChange: (r: number) => void }) {
+function RatePicker({ value, onChange }: { value: number; onChange: (r: number) => void }) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [custom, setCustom] = useState('');
   const OPTIONS = [
-    { label: 'محافظ',  rate: 12 },
-    { label: 'متوازن', rate: 22 },
-    { label: 'متفائل', rate: 38 },
+    { label: t('calc.rateConservative'), rate: 12 },
+    { label: t('calc.rateBalanced'),     rate: 22 },
+    { label: t('calc.rateOptimistic'),   rate: 38 },
   ];
   return (
     <View style={styles.inputWrap}>
-      <Text style={[styles.inputLabel, { color: colors.textSub }]}>العائد السنوي المتوقع</Text>
+      <Text style={[styles.inputLabel, { color: colors.textSub }]}>{t('calc.rateLabel')}</Text>
       <View style={[styles.pillRow, { flexWrap: 'wrap' }]}>
         {OPTIONS.map((o) => (
           <Pressable
@@ -183,7 +183,7 @@ function RatePicker({
           borderColor:     custom ? BRAND : colors.border,
           minWidth: 70,
         }]}>
-          <Text style={[styles.pillSmall, { color: colors.textMuted }]}>مخصص</Text>
+          <Text style={[styles.pillSmall, { color: colors.textMuted }]}>{t('calc.rateCustom')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
             <TextInput
               value={custom}
@@ -198,7 +198,7 @@ function RatePicker({
           </View>
         </View>
       </View>
-      <Text style={[styles.inputHint, { color: colors.textMuted }]}>متوسطات تاريخية تقريبية للبورصة المصرية — ليست ضماناً</Text>
+      <Text style={[styles.inputHint, { color: colors.textMuted }]}>{t('calc.rateHint')}</Text>
     </View>
   );
 }
@@ -227,6 +227,10 @@ function StatBox({ label, value, accent, icon: Icon, sub }: {
 
 function GrowthMode() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  const fmt = useFmt();
+  const egp = t('calc.egp');
+
   const [monthly,  setMonthly ] = useState('1000');
   const [initial,  setInitial ] = useState('10000');
   const [years,    setYears   ] = useState(10);
@@ -243,20 +247,20 @@ function GrowthMode() {
 
   const profitMultiplier = result.invested > 0 ? result.total / result.invested : 1;
 
-  const milestone =
-    result.total < 100_000  ? '🌱 ابدأ الرحلة'
-    : result.total < 500_000  ? '📈 نمو واعد'
-    : result.total < 1_000_000 ? '🚀 على أعتاب المليون'
-    : result.total < 5_000_000 ? '💰 مليونير'
-    : result.total < 10_000_000 ? '👑 ثروة حقيقية'
-    : '🏆 حكيم مالي';
+  const milestoneKey =
+    result.total < 100_000  ? 'calc.milestone1'
+    : result.total < 500_000  ? 'calc.milestone2'
+    : result.total < 1_000_000 ? 'calc.milestone3'
+    : result.total < 5_000_000 ? 'calc.milestone4'
+    : result.total < 10_000_000 ? 'calc.milestone5'
+    : 'calc.milestone6';
 
   return (
     <View style={styles.modeContent}>
       {/* Inputs */}
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <NumInput label="الاستثمار الشهري"     value={monthly} onChange={setMonthly} hint="المبلغ الذي تضيفه كل شهر" />
-        <NumInput label="رأس المال الابتدائي"  value={initial} onChange={setInitial} hint="المبلغ الذي تبدأ به الآن (اختياري)" />
+        <NumInput label={t('calc.monthlyLabel')} value={monthly} onChange={setMonthly} suffix={egp} hint={t('calc.monthlyHint')} />
+        <NumInput label={t('calc.initialLabel')} value={initial} onChange={setInitial} suffix={egp} hint={t('calc.initialHint')} />
         <YearPicker value={years} onChange={setYears} />
         <RatePicker value={rate}  onChange={setRate} />
       </View>
@@ -268,49 +272,49 @@ function GrowthMode() {
         style={styles.resultHero}
       >
         <View style={styles.resultHeroOrb} />
-        <Text style={styles.resultMilestone}>{milestone}</Text>
-        <Text style={styles.resultLabel}>ثروتك بعد {years} سنة</Text>
-        <Text style={styles.resultValue}>{fmt(result.total)} ج.م</Text>
-        <Text style={styles.resultFull}>({fmtFull(result.total)} جنيه)</Text>
+        <Text style={styles.resultMilestone}>{t(milestoneKey)}</Text>
+        <Text style={styles.resultLabel}>{t('calc.wealthAfter', { years })}</Text>
+        <Text style={styles.resultValue}>{fmt(result.total)} {egp}</Text>
+        <Text style={styles.resultFull}>({fmtFull(result.total)} {egp})</Text>
         <View style={styles.resultPillRow}>
           <View style={[styles.resultPill, { backgroundColor: 'rgba(139,92,246,0.15)', borderColor: 'rgba(139,92,246,0.3)' }]}>
-            <Text style={{ color: BRAND, fontSize: 11, fontWeight: WEIGHT.bold }}>×{profitMultiplier.toFixed(1)} أضعاف</Text>
+            <Text style={{ color: BRAND, fontSize: 11, fontWeight: WEIGHT.bold }}>{t('calc.xTimes', { x: profitMultiplier.toFixed(1) })}</Text>
           </View>
           <View style={[styles.resultPill, { backgroundColor: 'rgba(16,185,129,0.12)', borderColor: 'rgba(16,185,129,0.25)' }]}>
-            <Text style={{ color: '#10b981', fontSize: 11, fontWeight: WEIGHT.bold }}>+{result.profitPct.toFixed(0)}% عائد</Text>
+            <Text style={{ color: '#10b981', fontSize: 11, fontWeight: WEIGHT.bold }}>{t('calc.returnPct', { pct: result.profitPct.toFixed(0) })}</Text>
           </View>
         </View>
       </LinearGradient>
 
       {/* Stats row */}
       <View style={styles.statsRow}>
-        <StatBox label="ما استثمرته" value={`${fmt(result.invested)} ج.م`}
+        <StatBox label={t('calc.invested')} value={`${fmt(result.invested)} ${egp}`}
           accent={colors.textSub} icon={Wallet} />
-        <StatBox label="الأرباح"    value={`${fmt(result.profit)} ج.م`}
+        <StatBox label={t('calc.profits')} value={`${fmt(result.profit)} ${egp}`}
           accent="#10b981" icon={TrendingUp} />
       </View>
 
       {/* Comparison */}
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: colors.textSub }]}>مقارنة مع بدائل الاستثمار</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textSub }]}>{t('calc.compareTitle')}</Text>
         <View style={styles.compareRow}>
           {[
-            { label: 'شهادات البنك', rate: 7,         value: compareBank.total, color: '#94a3b8' },
-            { label: 'الذهب',        rate: 14,        value: compareGold.total, color: '#f59e0b' },
-            { label: 'البورصة',      rate: rate,      value: result.total,      color: BRAND,     best: true },
+            { labelKey: 'calc.bankCerts', rate: 7,    value: compareBank.total, color: '#94a3b8' },
+            { labelKey: 'calc.gold',      rate: 14,   value: compareGold.total, color: '#f59e0b' },
+            { labelKey: 'calc.stockExchange', rate,   value: result.total,      color: BRAND, best: true },
           ].map((c) => {
             const barPct = result.total > 0 ? (c.value / result.total) : 1;
             return (
-              <View key={c.label} style={styles.compareItem}>
+              <View key={c.labelKey} style={styles.compareItem}>
                 {c.best && <View style={[styles.bestBadge, { backgroundColor: BRAND + '20', borderColor: BRAND + '40' }]}>
                   <Trophy size={8} color={BRAND} />
-                  <Text style={{ color: BRAND, fontSize: 8, fontWeight: WEIGHT.bold }}>الأفضل</Text>
+                  <Text style={{ color: BRAND, fontSize: 8, fontWeight: WEIGHT.bold }}>{t('calc.best')}</Text>
                 </View>}
                 <View style={[styles.compareBarTrack, { backgroundColor: colors.hover }]}>
                   <View style={[styles.compareBarFill, { height: `${Math.round(barPct * 100)}%` as any, backgroundColor: c.color }]} />
                 </View>
                 <Text style={[styles.compareVal, { color: c.color }]}>{fmt(c.value, 0)}</Text>
-                <Text style={[styles.compareLabel, { color: colors.textMuted }]}>{c.label}</Text>
+                <Text style={[styles.compareLabel, { color: colors.textMuted }]}>{t(c.labelKey)}</Text>
                 <Text style={[styles.compareRate, { color: colors.textMuted }]}>~{c.rate}%</Text>
               </View>
             );
@@ -324,18 +328,17 @@ function GrowthMode() {
         onPress={() => setShowBreakdown((v) => !v)}
       >
         <BarChart2 size={14} color={BRAND} />
-        <Text style={[styles.breakdownToggleText, { color: colors.textSub }]}>جدول النمو السنوي</Text>
+        <Text style={[styles.breakdownToggleText, { color: colors.textSub }]}>{t('calc.growthTable')}</Text>
         {showBreakdown ? <ChevronUp size={14} color={colors.textMuted} /> : <ChevronDown size={14} color={colors.textMuted} />}
       </Pressable>
 
       {showBreakdown && (
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, paddingVertical: 0 }]}>
-          {/* Header */}
           <View style={[styles.tableRow, styles.tableHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.tableCell, styles.tableCellHeader, { color: colors.textMuted, flex: 0.5 }]}>سنة</Text>
-            <Text style={[styles.tableCell, styles.tableCellHeader, { color: colors.textMuted }]}>استثمرته</Text>
-            <Text style={[styles.tableCell, styles.tableCellHeader, { color: '#10b981' }]}>إجمالي</Text>
-            <Text style={[styles.tableCell, styles.tableCellHeader, { color: BRAND }]}>ربح</Text>
+            <Text style={[styles.tableCell, styles.tableCellHeader, { color: colors.textMuted, flex: 0.5 }]}>{t('calc.tableYear')}</Text>
+            <Text style={[styles.tableCell, styles.tableCellHeader, { color: colors.textMuted }]}>{t('calc.tableInvested')}</Text>
+            <Text style={[styles.tableCell, styles.tableCellHeader, { color: '#10b981' }]}>{t('calc.tableTotal')}</Text>
+            <Text style={[styles.tableCell, styles.tableCellHeader, { color: BRAND }]}>{t('calc.tableProfit')}</Text>
           </View>
           {breakdown.map((row, idx) => (
             <View
@@ -362,27 +365,31 @@ function GrowthMode() {
 
 function TargetMode() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  const fmt = useFmt();
+  const egp = t('calc.egp');
+
   const [target,  setTarget  ] = useState('1000000');
   const [initial, setInitial ] = useState('0');
   const [years,   setYears   ] = useState(10);
   const [rate,    setRate    ] = useState(22);
 
-  const t   = Math.max(0, Number(target)  || 0);
+  const tv  = Math.max(0, Number(target)  || 0);
   const i   = Math.max(0, Number(initial) || 0);
-  const monthly = useMemo(() => calcMonthlyNeeded(t, i, years, rate), [t, i, years, rate]);
+  const monthly = useMemo(() => calcMonthlyNeeded(tv, i, years, rate), [tv, i, years, rate]);
   const check   = useMemo(() => calcGrowth(monthly, i, years, rate),  [monthly, i, years, rate]);
   const yearsToDouble = useMemo(() => {
     if (rate <= 0) return null;
     return (Math.log(2) / Math.log(1 + rate / 100)).toFixed(1);
   }, [rate]);
 
-  const alreadyReached = i >= t;
+  const alreadyReached = i >= tv;
 
   return (
     <View style={styles.modeContent}>
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <NumInput label="الهدف المالي" value={target} onChange={setTarget} hint="كم تريد أن تمتلك؟" placeholder="1,000,000" />
-        <NumInput label="رأس المال الابتدائي" value={initial} onChange={setInitial} hint="ما تملكه الآن (اختياري)" />
+        <NumInput label={t('calc.goalLabel')} value={target} onChange={setTarget} suffix={egp} hint={t('calc.goalHint')} placeholder="1,000,000" />
+        <NumInput label={t('calc.initialLabel')} value={initial} onChange={setInitial} suffix={egp} hint={t('calc.initialHintTarget')} />
         <YearPicker value={years} onChange={setYears} />
         <RatePicker value={rate}  onChange={setRate} />
       </View>
@@ -391,7 +398,7 @@ function TargetMode() {
         <View style={[styles.card, { backgroundColor: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.25)' }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Trophy size={20} color="#10b981" />
-            <Text style={{ color: '#10b981', fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>لقد وصلت هدفك بالفعل! 🎉</Text>
+            <Text style={{ color: '#10b981', fontSize: FONT.sm, fontWeight: WEIGHT.bold }}>{t('calc.goalReached')}</Text>
           </View>
         </View>
       ) : (
@@ -403,14 +410,14 @@ function TargetMode() {
             style={[styles.resultHero, { borderColor: 'rgba(16,185,129,0.2)' }]}
           >
             <View style={[styles.resultHeroOrb, { backgroundColor: '#10b981', opacity: 0.07 }]} />
-            <Text style={[styles.resultLabel, { color: 'rgba(16,185,129,0.7)' }]}>لتصل إلى {fmt(t)} ج.م في {years} سنة</Text>
-            <Text style={[styles.resultValue, { color: '#10b981' }]}>{fmt(monthly)} ج.م / شهر</Text>
-            <Text style={[styles.resultFull, { color: 'rgba(16,185,129,0.55)' }]}>({fmtFull(monthly)} جنيه شهرياً)</Text>
+            <Text style={[styles.resultLabel, { color: 'rgba(16,185,129,0.7)' }]}>{t('calc.toReachGoal', { amount: fmt(tv), years })}</Text>
+            <Text style={[styles.resultValue, { color: '#10b981' }]}>{fmt(monthly)} {egp}{t('calc.perMonth')}</Text>
+            <Text style={[styles.resultFull, { color: 'rgba(16,185,129,0.55)' }]}>({fmtFull(monthly)} {t('calc.perMonthFull')})</Text>
           </LinearGradient>
 
           <View style={styles.statsRow}>
-            <StatBox label="إجمالي الإيداعات"   value={`${fmt(check.invested)} ج.م`} accent={colors.textSub} icon={Wallet} />
-            <StatBox label="الأرباح المتوقعة"  value={`${fmt(check.profit)} ج.م`}   accent="#10b981"       icon={TrendingUp} />
+            <StatBox label={t('calc.totalDeposits')}   value={`${fmt(check.invested)} ${egp}`} accent={colors.textSub} icon={Wallet} />
+            <StatBox label={t('calc.expectedProfits')} value={`${fmt(check.profit)} ${egp}`}   accent="#10b981"       icon={TrendingUp} />
           </View>
         </>
       )}
@@ -419,11 +426,10 @@ function TargetMode() {
       <View style={[styles.insightBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
           <Repeat2 size={14} color={BRAND} />
-          <Text style={[styles.sectionTitle, { color: colors.textSub, marginBottom: 0 }]}>قاعدة الـ 72</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSub, marginBottom: 0 }]}>{t('calc.rule72Title')}</Text>
         </View>
         <Text style={[styles.insightText, { color: colors.textMuted }]}>
-          بمعدل <Text style={{ color: BRAND, fontWeight: WEIGHT.bold }}>{rate}%</Text> سنوياً — استثمارك يتضاعف كل{' '}
-          <Text style={{ color: '#10b981', fontWeight: WEIGHT.bold }}>{yearsToDouble} سنة</Text> تقريباً.
+          {t('calc.rule72Text', { rate, years: yearsToDouble ?? '—' })}
         </Text>
       </View>
     </View>
@@ -432,15 +438,19 @@ function TargetMode() {
 
 // ─── Mode: Trade ─────────────────────────────────────────────────────────────
 
-const EGX_FEE_BREAKDOWN = [
-  { label: 'عمولة السمسارة',   key: 'broker' as const },
-  { label: 'رسوم الهيئة (FRA)', key: 'fra'    as const },
-  { label: 'رسوم MCSD',         key: 'mcsd'   as const },
-  { label: 'رسوم دمغة',         key: 'stamp'  as const },
-];
-
 function TradeMode() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  const fmt = useFmt();
+  const egp = t('calc.egp');
+
+  const EGX_FEE_BREAKDOWN = [
+    { label: t('calc.feeBroker'), key: 'broker' as const },
+    { label: t('calc.feeFRA'),    key: 'fra'    as const },
+    { label: t('calc.feeMCSD'),   key: 'mcsd'   as const },
+    { label: t('calc.feeStamp'),  key: 'stamp'  as const },
+  ];
+
   const [buyPrice,  setBuyPrice ] = useState('10.00');
   const [shares,    setShares   ] = useState('1000');
   const [sellPrice, setSellPrice] = useState('12.50');
@@ -463,15 +473,15 @@ function TradeMode() {
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.tradeRow}>
           <View style={{ flex: 1 }}>
-            <NumInput label="سعر الشراء" value={buyPrice}  onChange={setBuyPrice}  suffix="ج.م" placeholder="0.00" />
+            <NumInput label={t('calc.buyPrice')}  value={buyPrice}  onChange={setBuyPrice}  suffix={egp} placeholder="0.00" />
           </View>
           <View style={{ flex: 1 }}>
-            <NumInput label="سعر البيع"  value={sellPrice} onChange={setSellPrice} suffix="ج.م" placeholder="0.00" />
+            <NumInput label={t('calc.sellPrice')} value={sellPrice} onChange={setSellPrice} suffix={egp} placeholder="0.00" />
           </View>
         </View>
-        <NumInput label="عدد الأسهم" value={shares} onChange={setShares} suffix="سهم" hint="عدد الأسهم المشتراة" />
+        <NumInput label={t('calc.sharesCount')} value={shares} onChange={setShares} suffix={t('calc.sharesSuffix')} hint={t('calc.sharesHint')} />
         <View style={styles.inputWrap}>
-          <Text style={[styles.inputLabel, { color: colors.textSub }]}>نسبة عمولة السمسارة</Text>
+          <Text style={[styles.inputLabel, { color: colors.textSub }]}>{t('calc.brokerFeeLabel')}</Text>
           <View style={styles.pillRow}>
             {['0.175', '0.25', '0.35', '0.5'].map((v) => (
               <Pressable
@@ -495,15 +505,15 @@ function TradeMode() {
           <View style={styles.tradeResultGrid}>
             <View style={[styles.tradeResultBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Wallet size={14} color={colors.textMuted} />
-              <Text style={[styles.tradeBoxLabel, { color: colors.textMuted }]}>قيمة الشراء</Text>
+              <Text style={[styles.tradeBoxLabel, { color: colors.textMuted }]}>{t('calc.buyValue')}</Text>
               <Text style={[styles.tradeBoxVal, { color: colors.text }]}>{fmtFull(result.buyVal)}</Text>
-              <Text style={[styles.tradeBoxUnit, { color: colors.textMuted }]}>ج.م</Text>
+              <Text style={[styles.tradeBoxUnit, { color: colors.textMuted }]}>{egp}</Text>
             </View>
             <View style={[styles.tradeResultBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <TrendingUp size={14} color={colors.textMuted} />
-              <Text style={[styles.tradeBoxLabel, { color: colors.textMuted }]}>قيمة البيع</Text>
+              <Text style={[styles.tradeBoxLabel, { color: colors.textMuted }]}>{t('calc.sellValue')}</Text>
               <Text style={[styles.tradeBoxVal, { color: colors.text }]}>{fmtFull(result.sellVal)}</Text>
-              <Text style={[styles.tradeBoxUnit, { color: colors.textMuted }]}>ج.م</Text>
+              <Text style={[styles.tradeBoxUnit, { color: colors.textMuted }]}>{egp}</Text>
             </View>
           </View>
 
@@ -518,13 +528,13 @@ function TradeMode() {
             }
             <View style={{ flex: 1 }}>
               <Text style={[styles.tradeProfitLabel, { color: colors.textMuted }]}>
-                {isProfit ? 'صافي الربح بعد الرسوم' : 'صافي الخسارة بعد الرسوم'}
+                {isProfit ? t('calc.netProfit') : t('calc.netLoss')}
               </Text>
               <Text style={[styles.tradeProfitVal, { color: profitColor }]}>
-                {isProfit ? '+' : ''}{fmtFull(result.netProfit)} ج.م
+                {isProfit ? '+' : ''}{fmtFull(result.netProfit)} {egp}
               </Text>
               <Text style={[styles.tradeRoi, { color: profitColor + 'bb' }]}>
-                العائد: {result.roi.toFixed(2)}%
+                {t('calc.returnLabel')} {result.roi.toFixed(2)}%
               </Text>
             </View>
           </View>
@@ -533,11 +543,11 @@ function TradeMode() {
           <View style={[styles.insightBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Target size={14} color="#f59e0b" />
-              <Text style={[styles.sectionTitle, { color: colors.textSub, marginBottom: 0 }]}>سعر التعادل</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textSub, marginBottom: 0 }]}>{t('calc.breakEvenTitle')}</Text>
             </View>
-            <Text style={[styles.breakEvenPrice, { color: '#f59e0b' }]}>{fmtPrice(result.breakEven)} ج.م</Text>
+            <Text style={[styles.breakEvenPrice, { color: '#f59e0b' }]}>{fmtPrice(result.breakEven)} {egp}</Text>
             <Text style={[styles.insightText, { color: colors.textMuted }]}>
-              لو باعت بـ <Text style={{ color: '#f59e0b', fontWeight: WEIGHT.semibold }}>{fmtPrice(result.breakEven)}</Text> أو أقل — لن تحقق ربحاً بعد كل الرسوم.
+              {t('calc.breakEvenText', { price: fmtPrice(result.breakEven) })}
             </Text>
           </View>
 
@@ -547,9 +557,9 @@ function TradeMode() {
             onPress={() => setShowFees((v) => !v)}
           >
             <AlertCircle size={14} color="#f59e0b" />
-            <Text style={[styles.breakdownToggleText, { color: colors.textSub }]}>تفاصيل الرسوم</Text>
+            <Text style={[styles.breakdownToggleText, { color: colors.textSub }]}>{t('calc.feesDetails')}</Text>
             <Text style={[styles.feesTotalPill, { backgroundColor: '#f59e0b18', color: '#f59e0b', borderColor: '#f59e0b30' }]}>
-              {fmtFull(result.totalFees)} ج.م
+              {fmtFull(result.totalFees)} {egp}
             </Text>
             {showFees ? <ChevronUp size={14} color={colors.textMuted} /> : <ChevronDown size={14} color={colors.textMuted} />}
           </Pressable>
@@ -561,20 +571,20 @@ function TradeMode() {
                 return (
                   <View key={side} style={{ marginBottom: side === 'buy' ? 12 : 0 }}>
                     <Text style={[styles.feesSideLabel, { color: side === 'buy' ? '#10b981' : RED }]}>
-                      رسوم {side === 'buy' ? 'الشراء' : 'البيع'} — {fmtFull(fees.total)} ج.م
+                      {side === 'buy' ? t('calc.feeBuySide') : t('calc.feeSellSide')} — {fmtFull(fees.total)} {egp}
                     </Text>
                     {EGX_FEE_BREAKDOWN.map(({ label, key }) => (
                       <View key={key} style={styles.feeRow}>
                         <Text style={[styles.feeLabel, { color: colors.textMuted }]}>{label}</Text>
-                        <Text style={[styles.feeVal, { color: colors.textSub }]}>{fmtFull(fees[key])} ج.م</Text>
+                        <Text style={[styles.feeVal, { color: colors.textSub }]}>{fmtFull(fees[key])} {egp}</Text>
                       </View>
                     ))}
                   </View>
                 );
               })}
               <View style={[styles.feesTotalRow, { borderTopColor: colors.border }]}>
-                <Text style={[styles.feeLabel, { color: colors.textSub, fontWeight: WEIGHT.bold }]}>إجمالي الرسوم</Text>
-                <Text style={[styles.feeVal, { color: '#f59e0b', fontWeight: WEIGHT.bold }]}>{fmtFull(result.totalFees)} ج.م</Text>
+                <Text style={[styles.feeLabel, { color: colors.textSub, fontWeight: WEIGHT.bold }]}>{t('calc.feeTotal')}</Text>
+                <Text style={[styles.feeVal, { color: '#f59e0b', fontWeight: WEIGHT.bold }]}>{fmtFull(result.totalFees)} {egp}</Text>
               </View>
             </View>
           )}
@@ -586,16 +596,17 @@ function TradeMode() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-const MODES: { id: Mode; label: string; icon: React.ComponentType<{ size: number; color: string }> }[] = [
-  { id: 'growth', label: 'نمو',    icon: TrendingUp  },
-  { id: 'target', label: 'هدف',    icon: Target      },
-  { id: 'trade',  label: 'تداول',  icon: BarChart2   },
-];
-
 export default function CalculatorPage() {
   const router = useRouter();
   const { colors, isRTL } = useTheme();
+  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>('growth');
+
+  const MODES: { id: Mode; label: string; icon: React.ComponentType<{ size: number; color: string }> }[] = [
+    { id: 'growth', label: t('calc.modeGrowth'), icon: TrendingUp  },
+    { id: 'target', label: t('calc.modeTarget'), icon: Target      },
+    { id: 'trade',  label: t('calc.modeTrade'),  icon: BarChart2   },
+  ];
 
   const modeColors: Record<Mode, string> = {
     growth: BRAND,
@@ -620,7 +631,7 @@ export default function CalculatorPage() {
         <View style={[styles.headerIcon, { backgroundColor: activeColor + '18', borderColor: activeColor + '30' }]}>
           <Calculator size={15} color={activeColor} />
         </View>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>حاسبة الاستثمار</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('calc.title')}</Text>
       </View>
 
       {/* Mode tabs */}
@@ -656,7 +667,7 @@ export default function CalculatorPage() {
         {mode === 'trade'  && <TradeMode />}
 
         <Text style={[styles.disclaimer, { color: colors.textMuted }]}>
-          ⚖️ للأغراض التعليمية فقط. العوائد الفعلية تختلف. تحقق دائماً من مصادر متعددة.
+          {t('calc.disclaimer')}
         </Text>
       </ScrollView>
     </ScreenWrapper>
@@ -698,77 +709,68 @@ const styles = StyleSheet.create({
   ratePill:     { flex: 1, paddingVertical: 8, paddingHorizontal: 6, borderRadius: RADIUS.lg, borderWidth: 1, alignItems: 'center', gap: 2, minWidth: 60 },
   pillSmall:    { fontSize: 10 },
   rateValue:    { fontSize: FONT.sm, fontWeight: WEIGHT.bold },
-  customRateInput: { fontSize: FONT.sm, fontWeight: WEIGHT.bold, width: 32, paddingVertical: 0 },
+  customRateInput: { width: 36, fontSize: FONT.sm, fontWeight: WEIGHT.bold, paddingVertical: 0 },
 
-  // Result hero
-  resultHero: {
-    borderRadius: RADIUS.xl, padding: SPACE.lg, alignItems: 'center', gap: 4,
-    borderWidth: 1, borderColor: 'rgba(139,92,246,0.2)', overflow: 'hidden',
+  resultHero:   {
+    borderRadius: RADIUS['2xl'], padding: SPACE.xl, alignItems: 'center',
+    gap: 6, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(139,92,246,0.2)',
   },
   resultHeroOrb: {
-    position: 'absolute', top: -50, left: -50,
-    width: 180, height: 180, borderRadius: 90,
-    backgroundColor: BRAND, opacity: 0.08,
+    position: 'absolute', width: 200, height: 200, borderRadius: 100,
+    backgroundColor: BRAND, opacity: 0.06, top: -60, right: -40,
   },
-  resultMilestone: { fontSize: FONT.xs, color: 'rgba(167,139,250,0.7)', fontWeight: WEIGHT.semibold },
-  resultLabel:     { fontSize: FONT.xs, color: 'rgba(167,139,250,0.6)', marginTop: 4 },
-  resultValue:     { fontSize: 28, fontWeight: WEIGHT.extrabold, color: BRAND_DARK, fontVariant: ['tabular-nums'] },
-  resultFull:      { fontSize: 10, color: 'rgba(139,92,246,0.45)', marginTop: 2 },
-  resultPillRow:   { flexDirection: 'row', gap: SPACE.sm, marginTop: 6 },
-  resultPill:      { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.md, borderWidth: 1 },
+  resultMilestone: { fontSize: FONT.sm, color: 'rgba(255,255,255,0.6)', fontWeight: WEIGHT.medium },
+  resultLabel:     { fontSize: FONT.sm, color: 'rgba(255,255,255,0.5)' },
+  resultValue:     { fontSize: 32, fontWeight: WEIGHT.bold, color: '#fff', letterSpacing: -0.5 },
+  resultFull:      { fontSize: 11, color: 'rgba(255,255,255,0.35)' },
+  resultPillRow:   { flexDirection: 'row', gap: SPACE.sm, marginTop: 4 },
+  resultPill:      { paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.lg, borderWidth: 1 },
 
-  statsRow:     { flexDirection: 'row', gap: SPACE.md },
+  statsRow:     { flexDirection: 'row', gap: SPACE.sm },
   statBox:      { flex: 1, borderWidth: 1, borderRadius: RADIUS.xl, padding: SPACE.md, gap: 4 },
-  statIcon:     { width: 28, height: 28, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  statIcon:     { width: 28, height: 28, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' },
   statLabel:    { fontSize: 10 },
-  statValue:    { fontSize: FONT.sm, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] },
-  statSub:      { fontSize: 9 },
+  statValue:    { fontSize: FONT.base, fontWeight: WEIGHT.bold },
+  statSub:      { fontSize: 10 },
 
-  compareRow:   { flexDirection: 'row', gap: SPACE.sm, alignItems: 'flex-end', height: 120 },
-  compareItem:  { flex: 1, alignItems: 'center', gap: 3 },
-  bestBadge:    { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: RADIUS.sm, borderWidth: 1 },
-  compareBarTrack: { width: '100%', flex: 1, borderRadius: RADIUS.sm, overflow: 'hidden', justifyContent: 'flex-end' },
-  compareBarFill:  { width: '100%', borderRadius: RADIUS.sm, minHeight: 4 },
-  compareVal:   { fontSize: 10, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] },
+  compareRow:   { flexDirection: 'row', gap: SPACE.md, alignItems: 'flex-end', height: 120 },
+  compareItem:  { flex: 1, alignItems: 'center', gap: 4 },
+  bestBadge:    { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
+  compareBarTrack: { width: '100%', flex: 1, borderRadius: 4, overflow: 'hidden', justifyContent: 'flex-end' },
+  compareBarFill:  { width: '100%', borderRadius: 4 },
+  compareVal:   { fontSize: 10, fontWeight: WEIGHT.bold },
   compareLabel: { fontSize: 9, textAlign: 'center' },
   compareRate:  { fontSize: 9 },
 
-  breakdownToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: SPACE.sm,
-    borderWidth: 1, borderRadius: RADIUS.xl, padding: SPACE.md,
-  },
-  breakdownToggleText: { flex: 1, fontSize: FONT.sm, fontWeight: WEIGHT.semibold },
+  breakdownToggle:     { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, borderWidth: 1, borderRadius: RADIUS.xl, padding: SPACE.md },
+  breakdownToggleText: { flex: 1, fontSize: FONT.sm },
 
-  tableRow:    { flexDirection: 'row', paddingHorizontal: SPACE.md, paddingVertical: 9 },
+  tableRow:    { flexDirection: 'row', paddingHorizontal: SPACE.md, paddingVertical: 10 },
   tableHeader: { borderBottomWidth: 1 },
-  tableCell:   { flex: 1, fontSize: 11, textAlign: 'center', fontVariant: ['tabular-nums'] },
-  tableCellHeader: { fontWeight: WEIGHT.semibold, fontSize: 10 },
+  tableCell:   { flex: 1, fontSize: FONT.xs, textAlign: 'center' },
+  tableCellHeader: { fontWeight: WEIGHT.semibold },
 
-  insightBox:  { borderWidth: 1, borderRadius: RADIUS.xl, padding: SPACE.md, gap: 4 },
-  insightText: { fontSize: FONT.xs, lineHeight: 18 },
+  insightBox:   { borderWidth: 1, borderRadius: RADIUS.xl, padding: SPACE.md, gap: 4 },
+  insightText:  { fontSize: FONT.xs, lineHeight: 18 },
+  breakEvenPrice: { fontSize: 22, fontWeight: WEIGHT.bold },
 
-  // Target
-  breakEvenPrice: { fontSize: 20, fontWeight: WEIGHT.extrabold, fontVariant: ['tabular-nums'], marginTop: 4 },
-
-  // Trade
-  tradeRow:   { flexDirection: 'row', gap: SPACE.md },
-  tradeResultGrid: { flexDirection: 'row', gap: SPACE.md },
-  tradeResultBox: { flex: 1, borderWidth: 1, borderRadius: RADIUS.xl, padding: SPACE.md, gap: 3, alignItems: 'center' },
-  tradeBoxLabel:  { fontSize: 10 },
-  tradeBoxVal:    { fontSize: FONT.base, fontWeight: WEIGHT.bold, fontVariant: ['tabular-nums'] },
-  tradeBoxUnit:   { fontSize: 9 },
-
+  tradeRow:     { flexDirection: 'row', gap: SPACE.md },
+  tradeResultGrid: { flexDirection: 'row', gap: SPACE.sm },
+  tradeResultBox:  { flex: 1, borderWidth: 1, borderRadius: RADIUS.xl, padding: SPACE.md, alignItems: 'center', gap: 3 },
+  tradeBoxLabel:   { fontSize: 10 },
+  tradeBoxVal:     { fontSize: FONT.base, fontWeight: WEIGHT.bold },
+  tradeBoxUnit:    { fontSize: FONT.xs },
   tradeProfitHero: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, borderWidth: 1, borderRadius: RADIUS.xl, padding: SPACE.lg },
-  tradeProfitLabel: { fontSize: 11, marginBottom: 2 },
-  tradeProfitVal:   { fontSize: 22, fontWeight: WEIGHT.extrabold, fontVariant: ['tabular-nums'] },
-  tradeRoi:         { fontSize: 11, marginTop: 2 },
+  tradeProfitLabel:{ fontSize: FONT.xs },
+  tradeProfitVal:  { fontSize: 22, fontWeight: WEIGHT.bold },
+  tradeRoi:        { fontSize: FONT.xs },
 
+  feesTotalPill: { fontSize: 11, fontWeight: WEIGHT.bold, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.lg, borderWidth: 1 },
   feesSideLabel: { fontSize: FONT.xs, fontWeight: WEIGHT.semibold, marginBottom: 6 },
-  feeRow:        { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
+  feeRow:        { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   feeLabel:      { fontSize: FONT.xs },
-  feeVal:        { fontSize: FONT.xs, fontVariant: ['tabular-nums'] },
-  feesTotalRow:  { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, marginTop: 4, borderTopWidth: 1 },
-  feesTotalPill: { fontSize: 10, fontWeight: WEIGHT.bold, paddingHorizontal: 7, paddingVertical: 3, borderRadius: RADIUS.sm, borderWidth: 1 },
+  feeVal:        { fontSize: FONT.xs },
+  feesTotalRow:  { flexDirection: 'row', justifyContent: 'space-between', paddingTop: SPACE.sm, marginTop: 4, borderTopWidth: 1 },
 
-  disclaimer: { fontSize: 10, textAlign: 'center', lineHeight: 16, paddingHorizontal: SPACE.md, marginTop: SPACE.sm },
+  disclaimer:   { fontSize: 10, textAlign: 'center', lineHeight: 15, paddingHorizontal: SPACE.sm },
 });
