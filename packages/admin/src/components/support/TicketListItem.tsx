@@ -95,9 +95,15 @@ export function TicketListItem({ tk, isSelected, managerMode, isChecked, locale,
                 </span>
               )}
               {tk.escalatedAt && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/15 flex items-center gap-0.5">
-                  <ArrowUpCircle size={8} /> {t('support.escalatedBadge')}
-                </span>
+                tk.escalatedByAdmin?.role === 'SUPER_ADMIN' ? (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/25 flex items-center gap-0.5 font-semibold">
+                    <ArrowUpCircle size={8} /> {t('support.escalatedBySuperAdmin')}
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/15 flex items-center gap-0.5">
+                    <ArrowUpCircle size={8} /> {t('support.escalatedBadge')}
+                  </span>
+                )
               )}
               {isOverdue(tk) && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-600/15 text-red-400 border border-red-600/20 flex items-center gap-0.5 font-semibold">

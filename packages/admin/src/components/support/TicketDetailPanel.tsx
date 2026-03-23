@@ -139,10 +139,15 @@ export function TicketDetailPanel({
         )}
 
         {selected.escalatedAt && (
-          <div className="rounded-xl bg-orange-500/[0.05] border border-orange-500/20 px-3 py-2.5">
+          <div className={`rounded-xl px-3 py-2.5 ${selected.escalatedByAdmin?.role === 'SUPER_ADMIN' ? 'bg-red-500/[0.06] border border-red-500/25' : 'bg-orange-500/[0.05] border border-orange-500/20'}`}>
             <div className="flex items-center gap-1.5 mb-1.5">
-              <ArrowUpCircle size={10} className="text-orange-400" />
-              <span className="text-[10px] text-orange-400 font-medium">{t('support.escalatedBadge')}</span>
+              <ArrowUpCircle size={10} className={selected.escalatedByAdmin?.role === 'SUPER_ADMIN' ? 'text-red-400' : 'text-orange-400'} />
+              <span className={`text-[10px] font-semibold ${selected.escalatedByAdmin?.role === 'SUPER_ADMIN' ? 'text-red-400' : 'text-orange-400'}`}>
+                {selected.escalatedByAdmin?.role === 'SUPER_ADMIN'
+                  ? t('support.escalatedBySuperAdmin')
+                  : `${t('support.escalatedBadge')}${selected.escalatedByAdmin ? ` · ${selected.escalatedByAdmin.fullName || selected.escalatedByAdmin.email}` : ''}`
+                }
+              </span>
               <span className="ms-auto text-[10px] text-slate-600">{timeAgo(selected.escalatedAt, locale)}</span>
             </div>
             {selected.escalationNote && (

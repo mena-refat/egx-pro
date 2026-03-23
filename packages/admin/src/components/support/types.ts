@@ -13,6 +13,7 @@ export type Ticket = {
   rating: number | null;
   escalatedAt: string | null;
   escalatedBy: number | null;
+  escalatedByAdmin: { id: number; fullName: string; email: string; role: string } | null;
   escalationNote: string | null;
   escalatedToManager: number | null;
   createdAt: string;

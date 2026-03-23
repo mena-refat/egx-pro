@@ -324,6 +324,7 @@ export const en = {
     escalating: 'Escalating...',
     escalated: 'Escalated',
     escalatedBadge: 'Escalated',
+    escalatedBySuperAdmin: '⚑ Escalated by Super Admin',
     escalatedNote: 'Escalation note',
     escalateNoManager: 'You do not have a manager assigned. Contact Super Admin.',
     alreadyEscalated: 'This ticket has already been escalated.',

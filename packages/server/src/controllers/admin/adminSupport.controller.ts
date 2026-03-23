@@ -77,8 +77,14 @@ export const AdminSupportController = {
         prisma.supportTicket.count({ where }),
       ]);
 
-      // Sort: Ultra oldest → Ultra newest → Pro oldest → Pro newest
+      // Sort: escalated-to-me first (newest escalation first), then Ultra→Pro→Free by age
+      const myId = req.admin!.id;
       allTickets.sort((a, b) => {
+        const aEsc = a.escalatedToManager === myId && !!a.escalatedAt;
+        const bEsc = b.escalatedToManager === myId && !!b.escalatedAt;
+        if (aEsc && !bEsc) return -1;
+        if (!aEsc && bEsc) return 1;
+        if (aEsc && bEsc) return b.escalatedAt!.getTime() - a.escalatedAt!.getTime();
         const wa = PLAN_WEIGHT[a.user.plan ?? ''] ?? 3;
         const wb = PLAN_WEIGHT[b.user.plan ?? ''] ?? 3;
         if (wa !== wb) return wa - wb;
@@ -87,20 +93,25 @@ export const AdminSupportController = {
 
       const tickets = allTickets.slice((pageNum - 1) * 50, pageNum * 50);
 
+      // Fetch agent info + escalator info
       const agentIds = [...new Set(tickets.map((t) => t.assignedTo).filter(Boolean))] as number[];
-      let agentMap: Record<number, { fullName: string; email: string }> = {};
-      if (agentIds.length > 0) {
-        const agents = await prisma.admin.findMany({
-          where: { id: { in: agentIds } },
-          select: { id: true, fullName: true, email: true },
+      const escalatorIds = [...new Set(tickets.map((t) => t.escalatedBy).filter(Boolean))] as number[];
+      const adminIds = [...new Set([...agentIds, ...escalatorIds])];
+
+      let adminMap: Record<number, { fullName: string; email: string; role: string }> = {};
+      if (adminIds.length > 0) {
+        const admins = await prisma.admin.findMany({
+          where: { id: { in: adminIds } },
+          select: { id: true, fullName: true, email: true, role: true },
         });
-        agentMap = Object.fromEntries(agents.map((a) => [a.id, { fullName: a.fullName, email: a.email }]));
+        adminMap = Object.fromEntries(admins.map((a) => [a.id, { fullName: a.fullName, email: a.email, role: a.role }]));
       }
 
       sendSuccess(res, {
         tickets: tickets.map((t) => ({
           ...t,
-          assignedAgent: t.assignedTo ? (agentMap[t.assignedTo] ?? null) : null,
+          assignedAgent: t.assignedTo ? (adminMap[t.assignedTo] ?? null) : null,
+          escalatedByAdmin: t.escalatedBy ? (adminMap[t.escalatedBy] ?? null) : null,
         })),
         total,
         page: pageNum,
@@ -117,32 +128,35 @@ export const AdminSupportController = {
           user: { select: { id: true, email: true, username: true, fullName: true, plan: true } },
         },
         orderBy,
-        skip: (pageNum - 1) * 20,
-        take: 20,
+        skip: (pageNum - 1) * 50,
+        take: 50,
       }),
       prisma.supportTicket.count({ where }),
     ]);
 
-    let agentMap: Record<number, { fullName: string; email: string }> = {};
+    let adminMap: Record<number, { fullName: string; email: string; role: string }> = {};
     if (manager) {
       const agentIds = [...new Set(tickets.map((t) => t.assignedTo).filter(Boolean))] as number[];
-      if (agentIds.length > 0) {
-        const agents = await prisma.admin.findMany({
-          where: { id: { in: agentIds } },
-          select: { id: true, fullName: true, email: true },
+      const escalatorIds = [...new Set(tickets.map((t) => t.escalatedBy).filter(Boolean))] as number[];
+      const adminIds = [...new Set([...agentIds, ...escalatorIds])];
+      if (adminIds.length > 0) {
+        const admins = await prisma.admin.findMany({
+          where: { id: { in: adminIds } },
+          select: { id: true, fullName: true, email: true, role: true },
         });
-        agentMap = Object.fromEntries(agents.map((a) => [a.id, { fullName: a.fullName, email: a.email }]));
+        adminMap = Object.fromEntries(admins.map((a) => [a.id, { fullName: a.fullName, email: a.email, role: a.role }]));
       }
     }
 
     sendSuccess(res, {
       tickets: tickets.map((t) => ({
         ...t,
-        assignedAgent: t.assignedTo ? (agentMap[t.assignedTo] ?? null) : null,
+        assignedAgent: t.assignedTo ? (adminMap[t.assignedTo] ?? null) : null,
+        escalatedByAdmin: t.escalatedBy ? (adminMap[t.escalatedBy] ?? null) : null,
       })),
       total,
       page: pageNum,
-      totalPages: Math.ceil(total / 20),
+      totalPages: Math.ceil(total / 50),
       isManager: manager,
     });
   },

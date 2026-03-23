@@ -324,6 +324,7 @@ export const ar = {
     escalating: 'جار التصعيد...',
     escalated: 'مُصعَّد',
     escalatedBadge: 'مُصعَّد',
+    escalatedBySuperAdmin: '⚑ مُصعَّد من السوبر ادمن',
     escalatedNote: 'ملاحظة التصعيد',
     escalateNoManager: 'لا يوجد مدير مُعين لك. تواصل مع المشرف الرئيسي.',
     alreadyEscalated: 'هذه التذكرة مُصعَّدة بالفعل.',
