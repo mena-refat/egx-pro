@@ -228,8 +228,8 @@ async function fetchJson<T>(url: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function fetchText(url: string): Promise<string> {
-  const response = await withRetry(() => fetch(url), { maxAttempts: 2, baseDelayMs: 1500 });
+async function fetchText(url: string, headers?: Record<string, string>): Promise<string> {
+  const response = await withRetry(() => fetch(url, headers ? { headers } : undefined), { maxAttempts: 2, baseDelayMs: 1500 });
   if (!response.ok) {
     throw new Error(`NEWS_FETCH_FAILED_${response.status}`);
   }
@@ -315,9 +315,16 @@ async function fetchGoogleRss(query: string, explicitTicker?: string, isMarketWi
 }
 
 async function fetchEgxDisclosures(): Promise<IngestedNews[]> {
-  const html = await fetchText('https://www.egx.com.eg/en/Disclosure_Reports.aspx');
+  const EGX_URL = 'https://www.egx.com.eg/en/Disclosure_Reports.aspx';
+  const html = await fetchText(EGX_URL, {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+  });
   const fetchedAt = new Date();
   const rowMatches = html.match(/<tr[\s\S]*?<\/tr>/gi) ?? [];
+  logger.info('EGX disclosures HTML rows found', { total: rowMatches.length, htmlLen: html.length });
+
   const rows = rowMatches
     .map((row) => {
       const hrefMatch = row.match(/href="([^"]+)"/i);
@@ -336,7 +343,7 @@ async function fetchEgxDisclosures(): Promise<IngestedNews[]> {
         summary: 'EGX disclosure report',
         source: 'EGX',
         sourceType: 'EGX_DISCLOSURE' as const,
-        url: url || 'https://www.egx.com.eg/en/Disclosure_Reports.aspx',
+        url: url || EGX_URL,
         publishedAt,
         fetchedAt,
         language: 'en',
@@ -346,6 +353,8 @@ async function fetchEgxDisclosures(): Promise<IngestedNews[]> {
       };
     })
     .filter((row) => row.title.length > 10);
+
+  logger.info('EGX disclosures parsed', { count: rows.length });
   return rows.slice(0, 30);
 }
 

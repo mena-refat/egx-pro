@@ -43,16 +43,16 @@ const RISK_LABELS: Record<string, { en: string; ar: string; color: string }> = {
 
 const HORIZON_LABELS: Record<string, { en: string; ar: string }> = {
   '1':  { en: '< 1 year',   ar: 'أقل من سنة' },
-  '3':  { en: '1–3 years',  ar: '١–٣ سنوات' },
-  '5':  { en: '3–7 years',  ar: '٣–٧ سنوات' },
-  '10': { en: '7+ years',   ar: '٧ سنوات فأكثر' },
+  '3':  { en: '1–3 years',  ar: '1–3 سنوات' },
+  '5':  { en: '3–7 years',  ar: '3–7 سنوات' },
+  '10': { en: '7+ years',   ar: '7 سنوات فأكثر' },
 };
 
 const BUDGET_LABELS: Record<string, { en: string; ar: string }> = {
-  '500':   { en: '< 1,000 EGP',       ar: 'أقل من ١٠٠٠ جنيه' },
-  '3000':  { en: '1,000–5,000 EGP',   ar: '١٠٠٠–٥٠٠٠ جنيه' },
-  '10000': { en: '5,000–20,000 EGP',  ar: '٥٠٠٠–٢٠٠٠٠ جنيه' },
-  '25000': { en: '> 20,000 EGP',      ar: 'أكثر من ٢٠٠٠٠ جنيه' },
+  '500':   { en: '< 1,000 EGP',       ar: 'أقل من 1,000 جنيه' },
+  '3000':  { en: '1,000–5,000 EGP',   ar: '1,000–5,000 جنيه' },
+  '10000': { en: '5,000–20,000 EGP',  ar: '5,000–20,000 جنيه' },
+  '25000': { en: '> 20,000 EGP',      ar: 'أكثر من 20,000 جنيه' },
 };
 
 const SECTOR_LABELS: Record<string, { en: string; ar: string }> = {

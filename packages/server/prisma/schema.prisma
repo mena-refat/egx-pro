@@ -353,7 +353,8 @@ model Admin {
   isActive     Boolean   @default(true)
   isDeleted    Boolean   @default(false)
   deletedAt    DateTime?
-  permissions  String[]  @default([])
+  permissions        String[]  @default([])
+  supportCategories  String[]  @default([])
 
   // ── Authentication ──────────────────────────────────────────────────────
   twoFactorEnabled   Boolean   @default(false)

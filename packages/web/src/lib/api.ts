@@ -78,7 +78,9 @@ api.interceptors.response.use(
 
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest?._retry) {
+    // FIX 1: also skip requests already marked _noRetry (e.g. the refresh request itself)
+    // to prevent an infinite deadlock when the refresh token is also expired.
+    if (error.response?.status === 401 && !originalRequest?._retry && !originalRequest?._noRetry) {
       if (isRefreshing) {
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
@@ -96,13 +98,28 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        // FIX 1: mark the refresh call with _noRetry so if it gets a 401
+        // (expired/invalid refresh token) it won't re-enter this flow and deadlock.
         const response = await api.post('/auth/refresh', null, {
           withCredentials: true,
-        });
-        const payload = (response.data as { data?: { accessToken?: string } })?.data ?? response.data;
-        const accessToken = payload?.accessToken;
+          _noRetry: true,
+        } as Parameters<typeof api.post>[2]);
 
-        useAuthStore.getState().setAuth(useAuthStore.getState().user, accessToken);
+        const payload = (response.data as { data?: { accessToken?: string } })?.data ?? response.data;
+        const accessToken = (payload as { accessToken?: string })?.accessToken;
+
+        // FIX 3: guard — if refresh returned no token, treat it as a failure
+        if (!accessToken) throw new Error('REFRESH_RETURNED_NO_TOKEN');
+
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser) {
+          useAuthStore.getState().setAuth(currentUser, accessToken);
+        } else {
+          // Persisted user missing — force logout so getMe can re-establish session
+          useAuthStore.getState().logout();
+          processQueue(new Error('NO_USER'), null);
+          return Promise.reject(new Error('NO_USER'));
+        }
 
         api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
