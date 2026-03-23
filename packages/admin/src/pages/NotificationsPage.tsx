@@ -6,7 +6,7 @@ import { DataTable } from '../components/DataTable';
 import { Badge } from '../components/Badge';
 import {
   Send, Clock, CalendarClock, Trash2, XCircle, PlayCircle,
-  RefreshCw, Users, Repeat2, CheckCircle2, Bell,
+  RefreshCw, Users, Repeat2, CheckCircle2,
 } from 'lucide-react';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -226,9 +226,6 @@ export default function NotificationsPage() {
         <div>
           <h1 className="text-xl font-bold text-white">{t('notifications.title')}</h1>
           <p className="text-sm text-slate-500 mt-0.5">{t('notifications.tabSendNow')} · {t('notifications.tabSchedule')}</p>
-        </div>
-        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-          <Bell size={18} className="text-emerald-400" />
         </div>
       </div>
 

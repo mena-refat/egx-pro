@@ -75,7 +75,15 @@ export const useAuthStore = create<AuthState>()(
       checkAuth: async () => {
         set({ isLoading: true });
         try {
-          const res = await apiClient.get(ENDPOINTS.auth.me);
+          // Fast path: no token stored → user is definitely not logged in.
+          // Skip the network call entirely to avoid a 15-second timeout hang.
+          const storedToken = await getAccessToken();
+          if (!storedToken) {
+            set({ user: null, isAuthenticated: false });
+            return;
+          }
+
+          const res = await apiClient.get(ENDPOINTS.auth.me, { timeout: 8_000 });
           const body = res.data as { user?: MobileUser; accessToken?: string } | MobileUser;
           const user = (body as { user?: MobileUser }).user ?? (body as MobileUser);
           // If server issued a new access token (web cookie flow), save it
@@ -88,7 +96,9 @@ export const useAuthStore = create<AuthState>()(
           }
         } catch (err: unknown) {
           // Keep user logged in on network errors — only clear auth on 401
-          const isNetworkError = (err as { error?: string })?.error === 'NETWORK_ERROR';
+          const isNetworkError =
+            (err as { error?: string })?.error === 'NETWORK_ERROR' ||
+            (err as { error?: string })?.error === 'REQUEST_TIMEOUT';
           if (!isNetworkError) {
             set({ user: null, isAuthenticated: false });
           }

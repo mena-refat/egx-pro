@@ -13,7 +13,7 @@ const subscribeSchema = z.object({
 export const PushController = {
   /** GET /notifications/push/vapid-key — public, no auth needed */
   vapidKey(_req: Request, res: Response) {
-    res.json({ ok: true, publicKey: getVapidPublicKey() });
+    res.json({ ok: true, data: { publicKey: getVapidPublicKey() } });
   },
 
   /** GET /notifications/push/status — is this user subscribed on any device? */

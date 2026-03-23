@@ -3,7 +3,9 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import apiClient from './api/client';
 
-const isExpoGo = Constants.appOwnership === 'expo';
+const isExpoGo =
+  Constants.executionEnvironment === 'storeClient' ||
+  Constants.appOwnership === 'expo';
 
 export async function registerPushToken(): Promise<void> {
   // Push tokens not supported in Expo Go SDK 53+

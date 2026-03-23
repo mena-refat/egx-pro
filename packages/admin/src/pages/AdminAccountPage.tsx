@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { adminApi } from '../lib/adminApi';
 import { useAdminStore } from '../store/adminAuthStore';
 import { Eye, EyeOff, Copy, Check, Shield, Smartphone, KeyRound } from 'lucide-react';
-import { toDataURL as qrToDataURL } from 'qrcode';
 
 interface AdminMe {
   id: number;
@@ -20,14 +19,19 @@ export default function AdminAccountPage() {
   const setAuth    = useAdminStore((s) => s.setAuth);
   const storeToken = useAdminStore((s) => s.token);
   const storeAdmin = useAdminStore((s) => s.admin);
-  const [me, setMe] = useState<AdminMe | null>(null);
+
+  // Seed from store immediately — no loading flicker
+  const [me, setMe] = useState<AdminMe | null>(storeAdmin as unknown as AdminMe | null);
   const [profileSaving, setProfileSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [twoFaSetup, setTwoFaSetup] = useState<{ secret: string; otpauthUrl?: string } | null>(null);
   const [twoFaCode, setTwoFaCode] = useState('');
   const [twoFaPassword, setTwoFaPassword] = useState('');
   const [twoFaSaving, setTwoFaSaving] = useState(false);
-  const [profileForm, setProfileForm] = useState({ fullName: '', email: '' });
+  const [profileForm, setProfileForm] = useState({
+    fullName: storeAdmin?.fullName ?? '',
+    email: storeAdmin?.email ?? '',
+  });
   const [pwdForm, setPwdForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [message, setMessage] = useState<string | null>(null);
 
@@ -45,27 +49,27 @@ export default function AdminAccountPage() {
   const [profileFullNameError, setProfileFullNameError] = useState('');
   const [newPwdError, setNewPwdError] = useState('');
 
+  // Refresh from server in background — updates 2FA status which may differ from store
   useEffect(() => {
     adminApi
       .get('/auth/me')
       .then((r) => {
-        setMe(r.data.data as AdminMe);
-        setProfileForm({
-          fullName: r.data.data.fullName ?? '',
-          email: r.data.data.email ?? '',
-        });
+        const data = r.data.data as AdminMe;
+        setMe(data);
+        setProfileForm({ fullName: data.fullName ?? '', email: data.email ?? '' });
       })
       .catch(() => null);
   }, []);
 
+  // Lazy-load qrcode only when a 2FA setup is started
   useEffect(() => {
-    if (twoFaSetup?.otpauthUrl) {
-      qrToDataURL(twoFaSetup.otpauthUrl, { width: 200, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
-        .then(setQrDataUrl)
-        .catch(() => setQrDataUrl(null));
-    } else {
-      setQrDataUrl(null);
-    }
+    if (!twoFaSetup?.otpauthUrl) { setQrDataUrl(null); return; }
+    let cancelled = false;
+    import('qrcode').then(({ toDataURL }) =>
+      toDataURL(twoFaSetup.otpauthUrl!, { width: 200, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
+    ).then((url) => { if (!cancelled) setQrDataUrl(url); })
+     .catch(() => { if (!cancelled) setQrDataUrl(null); });
+    return () => { cancelled = true; };
   }, [twoFaSetup]);
 
   // Cleanup copy timer on unmount

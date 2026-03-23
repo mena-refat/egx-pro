@@ -15,7 +15,7 @@ type NotifKey = (typeof NOTIFICATION_KEYS)[number]['key'];
 
 export function NotificationsTab({ user, onUpdateProfile }: ProfileTabProps) {
   const { t } = useTranslation('common');
-  const { supported, isSubscribed, isDenied, isLoading, subscribe, unsubscribe } = useWebPush();
+  const { supported, isSubscribed, isDenied, isLoading, error, subscribe, unsubscribe } = useWebPush();
 
   const handlePushToggle = async () => {
     if (isSubscribed) await unsubscribe();
@@ -52,15 +52,14 @@ export function NotificationsTab({ user, onUpdateProfile }: ProfileTabProps) {
               type="button"
               disabled={isLoading || isDenied}
               onClick={handlePushToggle}
-              className={`
-                relative flex items-center justify-center w-11 h-6 rounded-full shrink-0 transition-colors
-                ${isDenied       ? 'bg-[var(--border-strong)] opacity-50 cursor-not-allowed'
-                  : isSubscribed ? 'bg-[var(--brand)]'
-                  : 'bg-[var(--border-strong)]'}
-              `}
+              className={`relative w-11 h-6 rounded-full px-1 shrink-0 transition-colors flex items-center ${
+                isDenied       ? 'bg-[var(--border-strong)] opacity-50 cursor-not-allowed'
+                : isSubscribed ? 'bg-[var(--brand)]'
+                : 'bg-[var(--border-strong)]'
+              }`}
             >
               {isLoading ? (
-                <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 text-white animate-spin absolute inset-0 m-auto" />
               ) : (
                 <span className={`absolute w-4 h-4 rounded-full bg-white shadow transition-transform ${isSubscribed ? 'translate-x-6 rtl:-translate-x-6' : 'translate-x-0'}`} />
               )}
@@ -71,6 +70,12 @@ export function NotificationsTab({ user, onUpdateProfile }: ProfileTabProps) {
             <p className="mt-3 text-xs text-[var(--danger)] flex items-center gap-1.5">
               <BellOff className="w-3.5 h-3.5 shrink-0" />
               {t('settings.pushDeniedHint', { defaultValue: 'Open browser settings → Site permissions → Notifications → Allow' })}
+            </p>
+          )}
+          {error && !isDenied && (
+            <p className="mt-3 text-xs text-[var(--danger)] flex items-center gap-1.5">
+              <BellOff className="w-3.5 h-3.5 shrink-0" />
+              {error}
             </p>
           )}
         </div>

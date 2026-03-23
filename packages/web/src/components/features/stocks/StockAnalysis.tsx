@@ -494,8 +494,8 @@ export default function StockAnalysis({ stock, onBack }: StockAnalysisProps) {
             </div>
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
               {([
-                [t('stockDetail.high52w'),       `${formatNum(high52w)} ج`,   'text-emerald-400'],
-                [t('stockDetail.low52w'),        `${formatNum(low52w)} ج`,    'text-red-400'],
+                [t('stockDetail.high52w'),       `${formatNum(high52w)} EGP`,   'text-emerald-400'],
+                [t('stockDetail.low52w'),        `${formatNum(low52w)} EGP`,    'text-red-400'],
                 [t('stockDetail.marketCap'),     formatBig(stock.marketCap),   ''],
                 [t('stockDetail.dividendYield'), (financials as { dividendYield?: number })?.dividendYield != null ? `${((financials as { dividendYield?: number }).dividendYield * 100).toFixed(2)}%` : '-', ''],
                 [t('stockDetail.eps'),           formatNum((financials as { eps?: number })?.eps),  ''],

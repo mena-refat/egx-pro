@@ -15,8 +15,11 @@ import { ToastProvider } from '../components/ui/Toast';
 
 SplashScreen.preventAutoHideAsync();
 
-// Push notifications are not supported in Expo Go SDK 53+
-const isExpoGo = Constants.appOwnership === 'expo';
+// Push notifications are not supported in Expo Go.
+// appOwnership is deprecated in SDK 53+ — executionEnvironment is the reliable check.
+const isExpoGo =
+  Constants.executionEnvironment === 'storeClient' ||
+  Constants.appOwnership === 'expo';
 
 if (!isExpoGo) {
   const Notifications = require('expo-notifications');
