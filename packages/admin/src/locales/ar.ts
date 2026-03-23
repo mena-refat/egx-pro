@@ -27,6 +27,7 @@ export const ar = {
 
   nav: {
     dashboard: 'الرئيسية',
+    onboarding: 'الإعداد الأولي',
     users: 'المستخدمون',
     revenue: 'الإيرادات',
     discounts: 'كودات الخصم',

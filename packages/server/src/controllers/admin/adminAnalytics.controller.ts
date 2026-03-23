@@ -525,6 +525,89 @@ export const AdminAnalyticsController = {
       churnRisk,
     });
   },
+
+  async onboardingStats(_req: AdminRequest, res: Response): Promise<void> {
+    const [
+      totalUsers,
+      completedUsers,
+      byRisk,
+      byHorizon,
+      byBudget,
+      bySharia,
+    ] = await Promise.all([
+      prisma.user.count({ where: { isDeleted: false } }),
+      prisma.user.count({ where: { isDeleted: false, onboardingCompleted: true } }),
+      prisma.user.groupBy({
+        by: ['riskTolerance'],
+        where: { isDeleted: false, onboardingCompleted: true },
+        _count: { riskTolerance: true },
+      }),
+      prisma.user.groupBy({
+        by: ['investmentHorizon'],
+        where: { isDeleted: false, onboardingCompleted: true },
+        _count: { investmentHorizon: true },
+      }),
+      prisma.user.groupBy({
+        by: ['monthlyBudget'],
+        where: { isDeleted: false, onboardingCompleted: true },
+        _count: { monthlyBudget: true },
+      }),
+      prisma.user.groupBy({
+        by: ['shariaMode'],
+        where: { isDeleted: false, onboardingCompleted: true },
+        _count: { shariaMode: true },
+      }),
+    ]);
+
+    // Aggregate JSON fields (sectors, goal, level, hearAboutUs) in TS
+    const users = await prisma.user.findMany({
+      where: { isDeleted: false, onboardingCompleted: true },
+      select: { interestedSectors: true, investorProfile: true, hearAboutUs: true },
+    });
+
+    const sectors: Record<string, number> = {};
+    const goals: Record<string, number> = {};
+    const levels: Record<string, number> = {};
+    const hear: Record<string, number> = {};
+
+    for (const u of users) {
+      // sectors — stored as string[] JSON
+      if (Array.isArray(u.interestedSectors)) {
+        for (const s of u.interestedSectors as string[]) {
+          sectors[s] = (sectors[s] ?? 0) + 1;
+        }
+      }
+      // investorProfile JSON
+      const p = u.investorProfile as Record<string, unknown> | null;
+      if (p) {
+        if (typeof p.goal  === 'string') goals[p.goal]   = (goals[p.goal]   ?? 0) + 1;
+        if (typeof p.level === 'string') levels[p.level] = (levels[p.level] ?? 0) + 1;
+      }
+      // hearAboutUs — comma-separated string on the User model
+      if (u.hearAboutUs) {
+        for (const src of u.hearAboutUs.split(',').map((s) => s.trim()).filter(Boolean)) {
+          hear[src] = (hear[src] ?? 0) + 1;
+        }
+      }
+    }
+
+    sendSuccess(res, {
+      totalUsers,
+      completedOnboarding: completedUsers,
+      completionRate: totalUsers > 0 ? Math.round((completedUsers / totalUsers) * 100) : 0,
+      riskTolerance: Object.fromEntries(byRisk.map((r) => [r.riskTolerance, r._count.riskTolerance])),
+      investmentHorizon: Object.fromEntries(byHorizon.map((h) => [String(h.investmentHorizon), h._count.investmentHorizon])),
+      monthlyBudget: Object.fromEntries(byBudget.map((b) => [String(b.monthlyBudget), b._count.monthlyBudget])),
+      shariaMode: {
+        yes: bySharia.find((s) => s.shariaMode)?._count.shariaMode ?? 0,
+        no:  bySharia.find((s) => !s.shariaMode)?._count.shariaMode ?? 0,
+      },
+      sectors,
+      goals,
+      levels,
+      hearAboutUs: hear,
+    });
+  },
 };
 
 

@@ -17,6 +17,7 @@ import {
   DollarSign,
   Languages,
   Lock,
+  ClipboardList,
 } from 'lucide-react';
 
 export function AdminLayout() {
@@ -62,6 +63,7 @@ export function AdminLayout() {
 
   const NAV = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard, permission: 'analytics.view', end: true },
+    { to: '/onboarding', label: t('nav.onboarding'), icon: ClipboardList, permission: 'analytics.view' },
     { to: '/users', label: t('nav.users'), icon: Users, permission: 'users.view' },
     { to: '/revenue', label: t('nav.revenue'), icon: DollarSign, permission: 'analytics.view' },
     { to: '/discounts', label: t('nav.discounts'), icon: Tag, permission: 'discounts.view' },

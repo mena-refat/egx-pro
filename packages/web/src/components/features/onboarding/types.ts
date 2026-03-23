@@ -8,7 +8,7 @@ export interface FormData {
   timeline: TimelineChoice | '';
   reaction30: string;
   budgetBand: BudgetBand | '';
-  shariaMode: boolean;
+  shariaMode: boolean | null;
   sectors: string[];
   level: string;
   hearAboutUs: string[];
@@ -28,16 +28,16 @@ export const STEPS = [
 ];
 
 export const SECTORS = [
-  { id: 'banks_financial', label: 'البنوك والخدمات المالية (غير مصرفية)' },
-  { id: 'real_estate_construction', label: 'العقارات والإنشاءات' },
-  { id: 'food_beverages', label: 'الأغذية والمشروبات والتبغ' },
-  { id: 'healthcare_pharma', label: 'الرعاية الصحية والأدوية' },
-  { id: 'it_media_telecom', label: 'الاتصالات والتكنولوجيا والإعلام' },
-  { id: 'industrial_auto', label: 'السلع والخدمات الصناعية والسيارات' },
-  { id: 'tourism_entertainment', label: 'السياحة والترفيه' },
-  { id: 'basic_resources', label: 'الموارد الأساسية' },
-  { id: 'utilities', label: 'المرافق' },
-  { id: 'textiles_durables', label: 'المنسوجات والسلع المعمرة' },
-  { id: 'diversified', label: 'متنوع' },
-  { id: 'unknown', label: 'لا أعرف بعد' },
+  { id: 'banks_financial',        ar: 'البنوك والخدمات المالية',     en: 'Banking & Financial Services' },
+  { id: 'real_estate_construction', ar: 'العقارات والإنشاءات',       en: 'Real Estate & Construction'   },
+  { id: 'food_beverages',         ar: 'الأغذية والمشروبات والتبغ',   en: 'Food, Beverages & Tobacco'    },
+  { id: 'healthcare_pharma',      ar: 'الرعاية الصحية والأدوية',     en: 'Healthcare & Pharma'          },
+  { id: 'it_media_telecom',       ar: 'الاتصالات والتكنولوجيا',      en: 'Telecom, Tech & Media'        },
+  { id: 'industrial_auto',        ar: 'الصناعة والسيارات',           en: 'Industrial & Automotive'      },
+  { id: 'tourism_entertainment',  ar: 'السياحة والترفيه',            en: 'Tourism & Entertainment'      },
+  { id: 'basic_resources',        ar: 'الموارد الأساسية',            en: 'Basic Resources'              },
+  { id: 'utilities',              ar: 'المرافق',                     en: 'Utilities'                    },
+  { id: 'textiles_durables',      ar: 'المنسوجات والسلع المعمرة',    en: 'Textiles & Durables'          },
+  { id: 'diversified',            ar: 'متنوع',                      en: 'Diversified'                  },
+  { id: 'unknown',                ar: 'لا أعرف بعد',                 en: "I'm not sure yet"             },
 ];

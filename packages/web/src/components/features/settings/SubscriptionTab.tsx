@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { Check, Sparkles, ChevronDown, ChevronUp, Tag, Crown, Zap, Star, Shield } from 'lucide-react';
+import { Check, Sparkles, ChevronDown, ChevronUp, Tag, Crown, Zap, Star, Shield, CalendarClock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../../lib/api';
 import { useAuthStore } from '../../../store/authStore';
@@ -230,9 +230,13 @@ export function SubscriptionTab() {
             </p>
             <p className="text-2xl font-black text-[var(--text-primary)]">{currentPlanLabel}</p>
             {planExpiresAt && currentPlan !== 'free' && (
-              <p className="text-xs text-[var(--text-muted)] mt-1">
-                {t('billing.expiresOn', { date: new Date(planExpiresAt).toLocaleDateString(isAr ? 'ar-EG' : 'en-GB') })}
-              </p>
+              <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg bg-[var(--brand)]/10 border border-[var(--brand)]/20">
+                <CalendarClock className="w-3.5 h-3.5 text-[var(--brand)] shrink-0" />
+                <span className="text-xs font-semibold text-[var(--brand)]">
+                  {isAr ? 'يُجدَّد في' : 'Renews'}{' '}
+                  {new Date(planExpiresAt).toLocaleDateString(isAr ? 'ar-EG' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>
+              </div>
             )}
           </div>
           <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${heroIconBg} flex items-center justify-center shadow-lg shrink-0`}>

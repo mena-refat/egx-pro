@@ -9,6 +9,7 @@ import './index.css';
 
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
 const UserDetailPage = lazy(() => import('./pages/UserDetailPage'));
 const DiscountsPage = lazy(() => import('./pages/DiscountsPage'));
@@ -40,6 +41,7 @@ function AuthenticatedRoutes({ admin }: { admin: NonNullable<ReturnType<typeof u
         <Routes>
           <Route element={<AdminLayout />}>
             <Route path="/" element={canSeeDashboard ? <DashboardPage /> : <Navigate to={defaultRoute} replace />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/users/:id" element={<UserDetailPage />} />
             <Route path="/revenue" element={<RevenuePage />} />

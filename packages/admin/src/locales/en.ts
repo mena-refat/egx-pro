@@ -27,6 +27,7 @@ export const en = {
 
   nav: {
     dashboard: 'Dashboard',
+    onboarding: 'Onboarding',
     users: 'Users',
     revenue: 'Revenue',
     discounts: 'Discounts',

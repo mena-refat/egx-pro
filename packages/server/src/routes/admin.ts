@@ -430,6 +430,15 @@ router.get(
   }
 );
 
+router.get(
+  '/analytics/onboarding',
+  adminAuthenticate,
+  requirePermission('analytics.view'),
+  (req, res, next) => {
+    void AdminAnalyticsController.onboardingStats(req as any, res).catch(next);
+  }
+);
+
 router.get('/admins', adminAuthenticate, requireSuperAdmin, (req, res, next) => {
   void AdminAdminsController.list(req as any, res).catch(next);
 });
